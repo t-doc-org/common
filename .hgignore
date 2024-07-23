@@ -1,0 +1,10 @@
+syntax: glob
+*.orig
+*.sqlite3
+__pycache__
+
+syntax: regexp
+^build/
+^dist/
+^tmp/
+^[^/]+\.egg-info/
