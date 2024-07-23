@@ -5,4 +5,4 @@
 
 t-doc est un système de génération de documents pour enseignants.
 
-t-doc est distribué sous la licence [MIT](LICENSE.md).
+t-doc est distribué sous la licence [MIT](LICENSE.txt).
