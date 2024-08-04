@@ -18,7 +18,7 @@ license = {file = "LICENSE.txt"}
 keywords = []
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Framework :: Sphinx :: Extension"
+    "Framework :: Sphinx :: Extension",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
