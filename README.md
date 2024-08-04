@@ -1,9 +1,9 @@
-# t-doc - Teacher's docs
-
 <!-- Copyright 2024 Caroline Blank <caro@c-space.org> -->
 <!-- Copyright 2024 Remy Blank <remy@c-space.org> -->
 <!-- SPDX-License-Identifier: MIT -->
 
-t-doc est un système de génération de documents pour enseignants.
+# t-doc - Base commune
 
-t-doc est distribué sous la licence [MIT](LICENSE.txt).
+Ce package contient la fonctionnalité commune aux documents basés sur t-doc.
+
+Ce logiciel est distribué sous la licence [MIT](LICENSE.txt).

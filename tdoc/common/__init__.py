@@ -2,11 +2,8 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-*.orig
-*.sqlite3
-__pycache__
+__version__ = '0.1'
 
-build/
-dist/
-tmp/
-*.egg-info/
+
+def setup(app):
+    return {'parallel_read_safe': True, 'parallel_write_safe': True}

@@ -1,0 +1,50 @@
+# Copyright 2024 Caroline Blank <caro@c-space.org>
+# Copyright 2024 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+[project]
+name = "t-doc-common"
+dynamic = ["version"]
+description = "Common functionality for t-doc"
+authors = [
+    {name = "Caroline Blank", email = "caro@c-space.org"},
+    {name = "Remy Blank", email = "remy@c-space.org"},
+]
+urls.Homepage = "https://t-doc.org/"
+urls.Repository = "https://github.com/t-docs/common.git"
+urls."Source code" = "https://github.com/t-docs/common"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Sphinx :: Extension"
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Private :: Do Not Upload",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "myst-parser>=3.0.1",
+    "Sphinx>=7.3.7",
+    "sphinx-book-theme>=1.1.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx_design>=0.6.0",
+    "sphinx-exercise>=0.4.1",
+    "sphinx-proof>=0.1.3",
+    "sphinx-togglebutton>=0.3.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "tdoc/common/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tdoc"]
