@@ -27,7 +27,7 @@ jobs:
       - name: Checkout common repository
         uses: actions/checkout@v4
         with:
-          repository: t-docs/common
+          repository: t-doc-org/common
           ref: main
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
