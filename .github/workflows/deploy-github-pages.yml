@@ -37,6 +37,7 @@ jobs:
         with:
           repository: t-doc-org/common
           ref: main
+          submodules: recursive
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Install Python packages
