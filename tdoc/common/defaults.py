@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # Sphinx options.
+author = ''
 language = 'fr'
 smartquotes = False
 primary_domain = None
