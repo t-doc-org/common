@@ -48,8 +48,7 @@ jobs:
                   | sed -re 's/>=/==/g')
       - name: Install common package
         run: |
-          ${{ steps.python.outputs.python-path }} -m pip install \
-              --editable ./common
+          ${{ steps.python.outputs.python-path }} -m pip install ./common
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
