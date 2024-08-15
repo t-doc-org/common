@@ -30,10 +30,10 @@ def setup(app):
 
 
 def on_builder_inited(app):
-    app.config.html_static_path.extend([
-        str(_common / 'static'),
-        str(_root / 'ext' / 'sqlite-wasm' / 'sqlite-wasm'),
-    ])
+    app.config.html_static_path.append(str(_common / 'static'))
+    sw = _root / 'ext' / 'sqlite-wasm' / 'sqlite-wasm'
+    if (sw / 'jswasm').is_dir():
+        app.config.html_static_path.append(str(sw))
 
 
 def on_html_page_context(app, page, template, context, doctree):
@@ -44,6 +44,9 @@ def on_html_page_context(app, page, template, context, doctree):
 
 
 class Exec(CodeBlock):
+    # TODO: :after: option
+    # TODO: :show: option
+    # TODO: :immediate: or :run:
     @staticmethod
     def match_node(lang=None):
         return lambda n: isinstance(n, nodes.literal_block) \

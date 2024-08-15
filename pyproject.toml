@@ -21,7 +21,6 @@ classifiers = [
     "Intended Audience :: Education",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Private :: Do Not Upload",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
@@ -48,4 +47,8 @@ path = "tdoc/common/__init__.py"
 [tool.hatch.build.targets.sdist]
 
 [tool.hatch.build.targets.wheel]
-packages = ["tdoc"]
+only-include = [
+    "ext/sqlite-wasm/sqlite-wasm/jswasm",
+    "tdoc",
+]
+sources."ext/sqlite-wasm/sqlite-wasm" = "tdoc/common/static"

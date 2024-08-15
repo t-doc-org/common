@@ -100,8 +100,8 @@ async function execute(exec) {
     const db = await Database.open('file:db?vfs=memdb');
     try {
         // TODO: Execute dependencies
+        // TODO: Report errors in output
         for await (const res of db.query(sql)) {
-            console.log(res);
             if (!results) {
                 // TODO: Remove previous result table
                 results = document.createElement('div');
