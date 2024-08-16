@@ -5,28 +5,54 @@
 import pathlib
 
 from docutils import nodes
-
 from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __version__ = '0.1'
+
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
 makefile = str(_common / 'common.mk')
 
-log = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
+_license_urls = {
+    'CC0-1.0': 'https://creativecommons.org/publicdomain/zero/1.0/',
+    'CC-BY-4.0': 'https://creativecommons.org/licenses/by/4.0/',
+    'CC-BY-SA-4.0': 'https://creativecommons.org/licenses/by-sa/4.0/',
+    'CC-BY-NC-4.0': 'https://creativecommons.org/licenses/by-nc/4.0/',
+    'CC-BY-NC-SA-4.0': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+    'CC-BY-ND-4.0': 'https://creativecommons.org/licenses/by-nd/4.0/',
+}
 
 def setup(app):
+    app.add_config_value('license', '', 'html')
+    app.add_config_value(
+        'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
+
+    app.add_html_theme('t-doc', str(_common))
     app.add_directive('exec', Exec)
-    app.add_css_file('tdoc.css')
+
+    app.connect("config-inited", on_config_inited)
     app.connect('builder-inited', on_builder_inited)
     app.connect('html-page-context', on_html_page_context)
+
     return {
         'version': __version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
+
+
+def on_config_inited(app, config):
+    cv = config.values['html_title']
+    super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
+    config.templates_path.append(str(_common / 'components'))
+
+    opts = config.html_theme_options
+    if opts.get('repository_url'):
+        opts.setdefault('use_repository_button', True)
+        opts.setdefault('use_source_button', True)
 
 
 def on_builder_inited(app):
@@ -37,6 +63,11 @@ def on_builder_inited(app):
 
 
 def on_html_page_context(app, page, template, context, doctree):
+    license = app.config.license
+    if license: context['license'] = license
+    license_url = app.config.license_url
+    if license_url: context['license_url'] = license_url
+
     if doctree and any(doctree.findall(Exec.match_node('sql'))):
         app.add_js_file('tdoc-sql.js', type='module')
         # TODO: Add Cross-Origin-*-Policy headers in the dev server
@@ -58,5 +89,5 @@ class Exec(CodeBlock):
         for node in res:
             for n in node.findall(nodes.literal_block):
                 n['classes'] += ['tdoc-exec']
-        # log.info("res: %s", res, color='yellow')
+        # _log.info("res: %s", res, color='yellow')
         return res
