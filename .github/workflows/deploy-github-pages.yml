@@ -53,7 +53,7 @@ jobs:
           path: repo
       - name: Build HTML
         run: |
-          tdoc build --source=repo/docs --build=_build html
+          tdoc --source=repo/docs --build=_build build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload GitHub Pages artifact
