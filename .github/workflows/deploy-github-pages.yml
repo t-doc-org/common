@@ -40,12 +40,10 @@ jobs:
           submodules: recursive
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
-      - name: Install Python packages
+      - name: Fix common package dependencies
         run: |
-          ${{ steps.python.outputs.python-path }} -m pip install \
-              $(${{ steps.python.outputs.python-path }} \
-                  common/tools/deps.py common/pyproject.toml \
-                  | sed -re 's/>=/==/g')
+          ${{ steps.python.outputs.python-path }} \
+            common/tools/fix-deps.py common/pyproject.toml
       - name: Install common package
         run: |
           ${{ steps.python.outputs.python-path }} -m pip install ./common
@@ -54,13 +52,14 @@ jobs:
         with:
           path: repo
       - name: Build HTML
-        run: cd repo && tdoc build html
+        run: |
+          tdoc build --source=repo/docs --build=_build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: repo/_build/html
+          path: _build/html
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
