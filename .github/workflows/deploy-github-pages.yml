@@ -40,10 +40,6 @@ jobs:
           submodules: recursive
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
-      - name: Fix common package dependencies
-        run: |
-          ${{ steps.python.outputs.python-path }} \
-            common/tools/fix-deps.py common/pyproject.toml
       - name: Install common package
         run: |
           ${{ steps.python.outputs.python-path }} -m pip install ./common

@@ -88,7 +88,7 @@ def cmd_serve(cfg):
 
     # Start a server to serve the resulting HTML.
     for family, _, _, _, addr in socket.getaddrinfo(
-            cfg.bind if cfg.bind != 'all' else None, cfg.port,
+            cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
         break
 
