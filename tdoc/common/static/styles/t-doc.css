@@ -3,7 +3,6 @@
 /* SPDX-License-Identifier: MIT */
 
 .hidden {
-    /* TODO: Find a better solution than !important */
     display: none !important;
 }
 

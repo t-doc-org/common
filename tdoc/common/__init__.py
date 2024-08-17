@@ -49,7 +49,10 @@ def on_config_inited(app, config):
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
     config.templates_path.append(str(_common / 'components'))
 
+    # Override defaults in html_theme_options.
     opts = config.html_theme_options
+    opts.setdefault('use_sidenotes', True)
+    opts.setdefault('path_to_docs', 'docs')
     if opts.get('repository_url'):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)

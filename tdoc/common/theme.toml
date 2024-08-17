@@ -4,11 +4,3 @@ stylesheets = [
     "styles/t-doc.css",
     "styles/sphinx-book-theme.css",
 ]
-
-[options]
-# show_prev_next = false
-
-# BUG: The folowing options don't seem to be taken into account by the theme,
-# and have to be set in the config.
-# use_sidenotes = true
-

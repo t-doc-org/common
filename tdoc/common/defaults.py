@@ -2,9 +2,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-from importlib import metadata as _metadata
-import pathlib
-
 # Sphinx options.
 author = ''
 language = 'fr'
@@ -26,12 +23,12 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_copybutton',
     'sphinx_design',
-    # TODO: sphinx_exercise force "numfig = True", et la numérotation ne peut
-    #       pas être désactivée par type, page ou bloc
+    # TODO: sphinx_exercise forces "numfig = True", and numbering cannot be
+    #       disabled per type, page or block
     #       <https://github.com/sphinx-doc/sphinx/issues/10316>.
     # 'sphinx_exercise',
-    # TODO: sphinx_proof force "numfig = True", et empêche la parallélisation
-    #       de la compilation.
+    # TODO: sphinx_proof forces "numfig = True", and prevents build
+    #       parallelization.
     # 'sphinx_proof',
     'sphinx_togglebutton',
     'tdoc.common',
@@ -61,10 +58,6 @@ myst_dmath_double_inline = True
 # HTML rendering options.
 html_show_sphinx = False
 html_theme = 't-doc'
-html_theme_options = {
-    'use_sidenotes': True,
-    'path_to_docs': 'docs',
-}
 
 # LaTeX rendering options.
 latex_engine = 'xelatex'
