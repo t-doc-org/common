@@ -2,7 +2,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-name: Deploy book to GitHub Pages
+name: Publish to GitHub Pages
 on:
   workflow_call:
 
