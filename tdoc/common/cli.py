@@ -53,6 +53,8 @@ def main(argv, stdin, stdout, stderr):
     arg = p.add_argument_group("Options").add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: all interfaces).")
+    arg('--clean', action='store_true', dest='clean', default=False,
+        help="Do a clean build before serving.")
     arg('--help', action='help', help="Show this help message and exit.")
     arg('--port', metavar='PORT', dest='port', default=8000, type=int,
         help="The port to bind the server to (default: %(default)s).")
@@ -81,6 +83,7 @@ def sphinx_build(cfg, target):
 
 def cmd_serve(cfg):
     # Build the book.
+    if cfg.clean: sphinx_build(cfg, 'clean')
     sphinx_build(cfg, 'html')
 
     # Start a server to serve the resulting HTML.

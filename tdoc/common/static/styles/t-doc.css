@@ -6,6 +6,12 @@
     display: none !important;
 }
 
+/* Set the maximum width of sidebars instead of a fixed width. */
+div.sidebar, aside.sidebar {
+    max-width: 40%;
+    width: inherit;
+}
+
 /* Fix the gap left by pydata_sphinx_theme between the table and the
    scrollbar. */
 div.pst-scrollable-table-container {
