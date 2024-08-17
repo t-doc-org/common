@@ -6,8 +6,8 @@
 name = "t-doc-common"
 description = "Common functionality for t-doc"
 authors = [
-    {name = "Caroline Blank", email = "caro@c-space.org"},
     {name = "Remy Blank", email = "remy@c-space.org"},
+    {name = "Caroline Blank", email = "caro@c-space.org"},
 ]
 urls.Code = "https://github.com/t-docs/common"
 urls.Homepage = "https://t-doc.org/"

@@ -8,7 +8,7 @@ from docutils import nodes
 from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
