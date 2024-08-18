@@ -5,6 +5,7 @@
 import argparse
 import contextlib
 from http import server
+import itertools
 import pathlib
 import shutil
 import socket
@@ -62,15 +63,23 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument_group("Options").add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
-        help="The address to bind the server to (default: all interfaces).")
+        help="The address to bind the server to (default: %(default)s). "
+             "Specify ALL to bind to all interfaces.")
+    arg('--delay', metavar='DURATION', dest='delay', default=1,
+        type=float,
+        help="The delay in seconds between detecting a source change and "
+             "triggering a build (default: %(default)s).")
     arg('--help', action='help', help="Show this help message and exit.")
     arg('--interval', metavar='DURATION', dest='interval', default=1,
-        type=float, help="The interval at which to check for source changes.")
+        type=float,
+        help="The interval in seconds at which to check for source changes "
+             "(default: %(default)s).")
     arg('--port', metavar='PORT', dest='port', default=8000, type=int,
         help="The port to bind the server to (default: %(default)s).")
     arg('--protocol', metavar='VERSION', dest='protocol', default='HTTP/1.0',
         help="The HTTP protocol version to conform to (default: %(default)s).")
-    # TODO: Allow specifying other directories to watch
+    arg('--watch', metavar='PATH', action='append', dest='watch', default=[],
+        help="Additional directories to watch for changes.")
 
     cfg = parser.parse_args(argv[1:])
     cfg.stdin, cfg.stdout, cfg.stderr = stdin, stdout, stderr
@@ -100,6 +109,9 @@ def cmd_clean(cfg):
 
 
 def cmd_serve(cfg):
+    for i, p in enumerate(cfg.watch):
+        cfg.watch[i] = pathlib.Path(p).absolute()
+
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
@@ -119,14 +131,12 @@ def cmd_serve(cfg):
 
 class ServerBase(server.ThreadingHTTPServer):
 
-    idle_delay_ns = 200_000_000
-
     def __init__(self, *args, cfg, **kwargs):
         self.cfg = cfg
         self.lock = threading.Lock()
         self.directory = self.cfg.build / 'html'
         self.stop = False
-        self.builder = threading.Thread(target=self.scan_and_build)
+        self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
         super().__init__(*args, **kwargs)
 
@@ -147,38 +157,51 @@ class ServerBase(server.ThreadingHTTPServer):
         self.builder.join()
         return super().server_close()
 
-    def scan_and_build(self):
-        prev_mtime = 0
+    def watch_and_build(self):
+        interval = self.cfg.interval * 1_000_000_000
+        delay = self.cfg.delay * 1_000_000_000
+        prev, prev_mtime, build_mtime = 0, 0, None
         while True:
+            if prev != 0: time.sleep(0.1)
             with self.lock:
                 if self.stop: break
+            now = time.time_ns()
+            if now < prev + interval: continue
             mtime = self.latest_mtime()
-            if mtime > prev_mtime \
-                    and time.time_ns() >= mtime + self.idle_delay_ns:
-                if prev_mtime != 0:
-                    self.cfg.stdout.write(
-                        "\nSource change detected, rebuilding\n")
-                if build := self.build(mtime):
-                    with self.lock:
-                        self.directory = build / 'html'
-                    self.print_serving()
-                    if prev_mtime != 0: self.remove_build_dir(prev_mtime)
-                    prev_mtime = mtime
-            time.sleep(self.cfg.interval)
-        if prev_mtime != 0: self.remove_build_dir(prev_mtime)
+            if mtime <= prev_mtime:
+                prev = now
+                continue
+            if now < mtime + delay:
+                prev = mtime + delay - interval
+                continue
+            if prev_mtime != 0:
+                self.cfg.stdout.write(
+                    "\nSource change detected, rebuilding\n")
+            prev_mtime = mtime
+            if build := self.build(mtime):
+                with self.lock:
+                    self.directory = build / 'html'
+                self.print_serving()
+                if build_mtime is not None: self.remove_build_dir(build_mtime)
+                build_mtime = mtime
+            else:
+                self.remove_build_dir(mtime)
+            prev = time.time_ns()
+        if build_mtime is not None: self.remove_build_dir(build_mtime)
 
     def latest_mtime(self):
         def on_error(e):
             self.cfg.stderr.write(f"Scan: {e}\n")
         mtime = 0
-        for base, dirs, files in self.cfg.source.walk(on_error=on_error):
-            for file in files:
-                try:
-                    st = (base / file).stat()
-                    if stat.S_ISREG(st.st_mode):
-                        mtime = max(mtime, st.st_mtime_ns)
-                except Exception as e:
-                    on_error(e)
+        for path in itertools.chain([self.cfg.source], self.cfg.watch):
+            for base, dirs, files in path.walk(on_error=on_error):
+                for file in files:
+                    try:
+                        st = (base / file).stat()
+                        if stat.S_ISREG(st.st_mode):
+                            mtime = max(mtime, st.st_mtime_ns)
+                    except Exception as e:
+                        on_error(e)
         return mtime
 
     def build_dir(self, mtime):
