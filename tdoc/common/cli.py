@@ -6,8 +6,12 @@ import argparse
 import contextlib
 from http import server
 import pathlib
+import shutil
 import socket
+import stat
 import subprocess
+import threading
+import time
 
 from . import util
 
@@ -47,46 +51,55 @@ def main(argv, stdin, stdout, stderr):
     arg('--help', action='help', help="Show this help message and exit.")
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
 
+    p = subparsers.add_parser('clean', add_help=False,
+                              help="Clean the build products of a book.")
+    p.set_defaults(handler=cmd_clean)
+    arg = p.add_argument_group("Options").add_argument
+    arg('--help', action='help', help="Show this help message and exit.")
+
     p = subparsers.add_parser('serve', add_help=False,
                               help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument_group("Options").add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: all interfaces).")
-    arg('--clean', action='store_true', dest='clean', default=False,
-        help="Do a clean build before serving.")
     arg('--help', action='help', help="Show this help message and exit.")
+    arg('--interval', metavar='DURATION', dest='interval', default=1,
+        type=float, help="The interval at which to check for source changes.")
     arg('--port', metavar='PORT', dest='port', default=8000, type=int,
         help="The port to bind the server to (default: %(default)s).")
     arg('--protocol', metavar='VERSION', dest='protocol', default='HTTP/1.0',
         help="The HTTP protocol version to conform to (default: %(default)s).")
+    # TODO: Allow specifying other directories to watch
 
     cfg = parser.parse_args(argv[1:])
     cfg.stdin, cfg.stdout, cfg.stderr = stdin, stdout, stderr
     cfg.ansi = util.ansi if cfg.color else util.no_ansi
+    cfg.build = pathlib.Path(cfg.build).absolute()
+    cfg.source = pathlib.Path(cfg.source).absolute()
     return cfg.handler(cfg)
 
 
 def cmd_build(cfg):
     for target in cfg.target:
-        sphinx_build(cfg, target)
+        res = sphinx_build(cfg, target, build=cfg.build)
+        if res.returncode != 0: return res.returncode
 
 
-def sphinx_build(cfg, target):
-    argv = [cfg.sphinx_build, '-M', target, cfg.source, cfg.build,
+def sphinx_build(cfg, target, *, build, **kwargs):
+    argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
             '--jobs=auto', '--fail-on-warning']
     if cfg.debug: argv += ['--show-traceback']
     argv += cfg.sphinx_opts
-    subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout, stderr=cfg.stderr,
-                   check=True)
+    return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
+                          stderr=cfg.stderr, **kwargs)
+
+
+def cmd_clean(cfg):
+    return sphinx_build(cfg, 'clean', build=cfg.build).returncode
 
 
 def cmd_serve(cfg):
-    # Build the book.
-    if cfg.clean: sphinx_build(cfg, 'clean')
-    sphinx_build(cfg, 'html')
-
-    # Start a server to serve the resulting HTML.
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
@@ -96,26 +109,25 @@ def cmd_serve(cfg):
         address_family = family
     class Handler(HandlerBase):
         protocol = cfg.protocol
-        config = cfg
 
-    directory = pathlib.Path(cfg.build) / 'html'
-    with Server(addr, Handler, directory=directory) as srv:
-        host, port = srv.socket.getsockname()[:2]
-        if ':' in host: host = f'[{host}]'
-        print(cfg.ansi("Serving on <@{LBLUE}%s@{NORM}>")
-              % f"http://{host}:{port}/",
-              file=cfg.stdout)
+    with Server(addr, Handler, cfg=cfg) as srv:
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
-            print("Interrupted, exiting", file=cfg.stdout)
-            return
+            cfg.stderr.write("Interrupted, exiting\n")
 
 
 class ServerBase(server.ThreadingHTTPServer):
 
-    def __init__(self, *args, directory, **kwargs):
-        self.directory = directory
+    idle_delay_ns = 200_000_000
+
+    def __init__(self, *args, cfg, **kwargs):
+        self.cfg = cfg
+        self.lock = threading.Lock()
+        self.directory = self.cfg.build / 'html'
+        self.stop = False
+        self.builder = threading.Thread(target=self.scan_and_build)
+        self.builder.start()
         super().__init__(*args, **kwargs)
 
     def server_bind(self):
@@ -124,8 +136,74 @@ class ServerBase(server.ThreadingHTTPServer):
         return super().server_bind()
 
     def finish_request(self, request, client_addr):
+        with self.lock:
+            directory = self.directory
         self.RequestHandlerClass(request, client_addr, self,
-                                 directory=self.directory)
+                                 directory=directory)
+
+    def server_close(self):
+        with self.lock:
+            self.stop = True
+        self.builder.join()
+        return super().server_close()
+
+    def scan_and_build(self):
+        prev_mtime = 0
+        while True:
+            with self.lock:
+                if self.stop: break
+            mtime = self.latest_mtime()
+            if mtime > prev_mtime \
+                    and time.time_ns() >= mtime + self.idle_delay_ns:
+                if prev_mtime != 0:
+                    self.cfg.stdout.write(
+                        "\nSource change detected, rebuilding\n")
+                if build := self.build(mtime):
+                    with self.lock:
+                        self.directory = build / 'html'
+                    self.print_serving()
+                    if prev_mtime != 0: self.remove_build_dir(prev_mtime)
+                    prev_mtime = mtime
+            time.sleep(self.cfg.interval)
+        if prev_mtime != 0: self.remove_build_dir(prev_mtime)
+
+    def latest_mtime(self):
+        def on_error(e):
+            self.cfg.stderr.write(f"Scan: {e}\n")
+        mtime = 0
+        for base, dirs, files in self.cfg.source.walk(on_error=on_error):
+            for file in files:
+                try:
+                    st = (base / file).stat()
+                    if stat.S_ISREG(st.st_mode):
+                        mtime = max(mtime, st.st_mtime_ns)
+                except Exception as e:
+                    on_error(e)
+        return mtime
+
+    def build_dir(self, mtime):
+        return self.cfg.build / f'serve-{mtime}'
+
+    def build(self, mtime):
+        build = self.build_dir(mtime)
+        try:
+            res = sphinx_build(self.cfg, 'html', build=build)
+            if res.returncode == 0: return build
+        except Exception as e:
+            self.cfg.stderr.write(f"Build: {e}\n")
+
+    def remove_build_dir(self, mtime):
+        build = self.build_dir(mtime)
+        build.relative_to(self.cfg.build)  # Ensure we're below the build dir
+        def on_error(fn, path, e):
+            self.cfg.stderr.write(f"Removal: {fn}: {path}: {e}\n")
+        shutil.rmtree(build, onexc=on_error)
+
+    def print_serving(self):
+        host, port = self.socket.getsockname()[:2]
+        if ':' in host: host = f'[{host}]'
+        self.cfg.stdout.write(self.cfg.ansi("Serving at <@{LBLUE}%s@{NORM}>\n")
+                              % f"http://{host}:{port}/")
 
 
 class HandlerBase(server.SimpleHTTPRequestHandler):
@@ -134,7 +212,7 @@ class HandlerBase(server.SimpleHTTPRequestHandler):
         pass
 
     def log_message(self, format, *args):
-        self.config.stderr.write("%s - - [%s] %s\n" % (
+        self.server.cfg.stderr.write("%s - - [%s] %s\n" % (
             self.address_string(), self.log_date_time_string(),
             (format % args).translate(self._control_char_table)))
 
