@@ -8,6 +8,7 @@ from docutils import nodes
 from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
+__project__ = 't-doc-common'
 __version__ = '0.4.dev1'
 
 _common = pathlib.Path(__file__).absolute().parent
@@ -23,6 +24,7 @@ _license_urls = {
     'CC-BY-NC-4.0': 'https://creativecommons.org/licenses/by-nc/4.0/',
     'CC-BY-NC-SA-4.0': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
     'CC-BY-ND-4.0': 'https://creativecommons.org/licenses/by-nd/4.0/',
+    'MIT': 'https://opensource.org/license/mit',
 }
 
 def setup(app):
