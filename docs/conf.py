@@ -9,6 +9,7 @@ from tdoc.common.defaults import *
 project = "t-doc"
 copyright = f"{time.strftime('%Y')} Remy Blank"
 license = 'MIT'
+language = 'en'
 
 keep_warnings = True
 
