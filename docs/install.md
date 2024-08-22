@@ -20,6 +20,16 @@ t-doc requires the following software to be installed:
   winget install --id Python.Python.3.12
   ```
 
+  - Check that Python can be launched from the command-line, by running:
+
+    ```{code-block} shell-session
+    python
+    ```
+
+    If this opens the Microsoft Store, open Windows settings, search for "App
+    execution aliases", and disable the "App Installer" entries for `python.exe`
+    and `python3.exe`.
+
 - Install [Graphviz](https://graphviz.org/). The installer must be run
   interactively and the **"Add Graphviz to the system PATH for all users"**
   option must be enabled.
