@@ -10,5 +10,6 @@ This documentation describes how to install and use t-doc.
 :maxdepth: 1
 
 install
+edit
 development
 ```

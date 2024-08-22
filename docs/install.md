@@ -15,6 +15,7 @@ t-doc requires the following software to be installed:
 ### Windows
 
 - Install [Python](https://www.python.org/).
+
   ```{code-block} shell-session
   winget install --id Python.Python.3.12
   ```
@@ -22,11 +23,13 @@ t-doc requires the following software to be installed:
 - Install [Graphviz](https://graphviz.org/). The installer must be run
   interactively and the **"Add Graphviz to the system PATH for all users"**
   option must be enabled.
+
   ```{code-block} shell-session
   winget install --id Graphviz.Graphviz --interactive
   ```
 
 - Install [TortoiseHg](https://tortoisehg.bitbucket.io/).
+
   ```{code-block} shell-session
   winget install --id TortoiseHg.TortoiseHg
   ```
@@ -44,11 +47,18 @@ t-doc requires the following software to be installed:
 - (Optional, Windows 10) Install
   [Windows Terminal](https://github.com/microsoft/terminal) (it's already
   installed on Windows 11 and later).
+
   ```{code-block} shell-session
   winget install --id Microsoft.WindowsTerminal
   ```
 
-### Linux, macOS
+### macOS
+
+- Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
+  and [Mercurial](https://www.mercurial-scm.org/) either by hand or through a
+  package manager like [Homebrew](https://brew.sh/).
+
+### Linux
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) through your system's package
@@ -59,6 +69,7 @@ t-doc requires the following software to be installed:
 - Install the [required packages](#requirements).
 
 - Install the `t-doc-common` package.
+
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
@@ -67,7 +78,14 @@ t-doc requires the following software to be installed:
   python -m pip install t-doc-common
   ```
   ````
-  ````{tab-item} Linux, macOS
+  ````{tab-item} macOS
+  :sync: macos
+  ```{code-block} shell-session
+  python -m pip install --user t-doc-common
+  ```
+  You may have to add `$HOME/.local/bin` to your `PATH`.
+  ````
+  ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
   python -m pip install --user t-doc-common
@@ -79,6 +97,7 @@ t-doc requires the following software to be installed:
 ## Upgrade
 
 - Upgrade the `t-doc-common` package and any out-of-date dependencies.
+
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
@@ -87,7 +106,13 @@ t-doc requires the following software to be installed:
   python -m pip install --upgrade t-doc-common
   ```
   ````
-  ````{tab-item} Linux, macOS
+  ````{tab-item} macOS
+  :sync: macos
+  ```{code-block} shell-session
+  python -m pip install --user --upgrade t-doc-common
+  ```
+  ````
+  ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
   python -m pip install --user --upgrade t-doc-common
