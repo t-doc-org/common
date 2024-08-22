@@ -6,14 +6,18 @@ import argparse
 import contextlib
 from http import server
 import itertools
+from importlib import metadata
+import json
 import pathlib
 import shutil
 import socket
 import stat
 import subprocess
+import sys
 import threading
 import time
 
+from .. import common
 from . import util
 
 
@@ -81,6 +85,10 @@ def main(argv, stdin, stdout, stderr):
     arg('--watch', metavar='PATH', action='append', dest='watch', default=[],
         help="Additional directories to watch for changes.")
 
+    p = subparsers.add_parser('version', add_help=False,
+                              help="Display version information.")
+    p.set_defaults(handler=cmd_version)
+
     cfg = parser.parse_args(argv[1:])
     cfg.stdin, cfg.stdout, cfg.stderr = stdin, stdout, stderr
     cfg.ansi = util.ansi if cfg.color else util.no_ansi
@@ -93,15 +101,6 @@ def cmd_build(cfg):
     for target in cfg.target:
         res = sphinx_build(cfg, target, build=cfg.build)
         if res.returncode != 0: return res.returncode
-
-
-def sphinx_build(cfg, target, *, build, **kwargs):
-    argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
-            '--jobs=auto', '--fail-on-warning']
-    if cfg.debug: argv += ['--show-traceback']
-    argv += cfg.sphinx_opts
-    return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
-                          stderr=cfg.stderr, **kwargs)
 
 
 def cmd_clean(cfg):
@@ -129,15 +128,30 @@ def cmd_serve(cfg):
             cfg.stderr.write("Interrupted, exiting\n")
 
 
-class ServerBase(server.ThreadingHTTPServer):
+def cmd_version(cfg):
+    cfg.stdout.write(f"{common.__project__}-{common.__version__}\n")
 
+
+def sphinx_build(cfg, target, *, build, **kwargs):
+    argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
+            '--jobs=auto', '--fail-on-warning']
+    if cfg.debug: argv += ['--show-traceback']
+    argv += cfg.sphinx_opts
+    return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
+                          stderr=cfg.stderr, **kwargs)
+
+
+class ServerBase(server.ThreadingHTTPServer):
     def __init__(self, *args, cfg, **kwargs):
         self.cfg = cfg
         self.lock = threading.Lock()
-        self.directory = self.cfg.build / 'html'
+        self.directory = self.build_dir(0) / 'html'
+        self.upgrade_msg = None
         self.stop = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
+        self.checker = threading.Thread(target=self.check_upgrade, daemon=True)
+        self.checker.start()
         super().__init__(*args, **kwargs)
 
     def server_bind(self):
@@ -227,10 +241,28 @@ class ServerBase(server.ThreadingHTTPServer):
         if ':' in host: host = f'[{host}]'
         self.cfg.stdout.write(self.cfg.ansi("Serving at <@{LBLUE}%s@{NORM}>\n")
                               % f"http://{host}:{port}/")
+        with self.lock:
+            msg = self.upgrade_msg
+        if msg: self.cfg.stdout.write(msg)
+
+    def check_upgrade(self):
+        try:
+            project = common.__project__
+            upgrades, editable = pip_check_upgrades(self.cfg, project)
+            if project not in upgrades: return
+            msg = self.cfg.ansi(
+                "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
+                "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
+                "See <@{LBLUE}https://t-doc.org/common/%s#upgrade@{NORM}>\n"
+                % (project, metadata.version(project), upgrades[project],
+                   'development' if editable else 'install'))
+            with self.lock:
+                self.upgrade_msg = msg
+        except Exception:
+            if self.cfg.debug: raise
 
 
 class HandlerBase(server.SimpleHTTPRequestHandler):
-
     def log_request(self, code='-', size='-'):
         pass
 
@@ -238,6 +270,30 @@ class HandlerBase(server.SimpleHTTPRequestHandler):
         self.server.cfg.stderr.write("%s - - [%s] %s\n" % (
             self.address_string(), self.log_date_time_string(),
             (format % args).translate(self._control_char_table)))
+
+
+class Namespace(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+
+def pip(cfg, *args, json_output=False):
+    p = subprocess.run((sys.executable, '-m', 'pip') + args,
+        stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    if p.returncode != 0: raise Exception(p.stderr)
+    if not json_output: return p.stdout
+    return json.loads(p.stdout, object_pairs_hook=Namespace)
+
+
+def pip_check_upgrades(cfg, package):
+    data = pip(cfg, 'install', '--dry-run', '--upgrade',
+               '--upgrade-strategy=only-if-needed', '--only-binary=:all:',
+               '--report=-', '--quiet', package, json_output=True)
+    upgrades = {pkg.metadata.name: pkg.metadata.version for pkg in data.install}
+    if package not in upgrades: return {}, False
+    pkgs = pip(cfg, 'list', '--editable', '--format=json', json_output=True)
+    editable = any(pkg.name == package for pkg in pkgs)
+    return upgrades, editable
 
 
 if __name__ == '__main__':
