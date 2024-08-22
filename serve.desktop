@@ -1,0 +1,14 @@
+#!/usr/bin/env xdg-open
+# Copyright 2024 Caroline Blank <caro@c-space.org>
+# Copyright 2024 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: CC-BY-NC-SA-4.0
+[Desktop Entry]
+Name=Serve
+Type=Application
+GenericName=Start a local server
+Comment=
+Icon=document-preview
+Exec=cd "$(dirname "%k")" && "${HOME}/.local/bin/tdoc" serve
+Path=
+Terminal=true
+StartupNotify=false
