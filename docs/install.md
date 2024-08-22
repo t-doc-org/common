@@ -53,13 +53,38 @@ t-doc requires the following software to be installed:
 - Install the [required packages](#requirements).
 
 - Install the `t-doc-common` package.
+  `````{tab-set}
+  :sync-group: platform
+  ````{tab-item} Windows
+  :sync: windows
+  ```{code-block} shell-session
+  python -m pip install t-doc-common
+  ```
+  ````
+  ````{tab-item} Linux, macOS
+  :sync: linux
   ```{code-block} shell-session
   python -m pip install --user t-doc-common
   ```
+  You may have to add `$HOME/.local/bin` to your `PATH`.
+  ````
+  `````
 
 ## Upgrade
 
 - Upgrade the `t-doc-common` package and any out-of-date dependencies.
+  `````{tab-set}
+  :sync-group: platform
+  ````{tab-item} Windows
+  :sync: windows
+  ```{code-block} shell-session
+  python -m pip install --upgrade t-doc-common
+  ```
+  ````
+  ````{tab-item} Linux, macOS
+  :sync: linux
   ```{code-block} shell-session
   python -m pip install --user --upgrade t-doc-common
   ```
+  ````
+  `````
