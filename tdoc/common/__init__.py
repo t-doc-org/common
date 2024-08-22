@@ -13,7 +13,6 @@ __version__ = '0.5.dev1'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
-makefile = str(_common / 'common.mk')
 
 _log = logging.getLogger(__name__)
 
