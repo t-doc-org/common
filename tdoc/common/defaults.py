@@ -41,6 +41,8 @@ todo_include_todos = True
 # MyST options.
 myst_enable_extensions = {
     'amsmath',
+    'attrs_block',
+    'attrs_inline',
     'colon_fence',
     'deflist',
     'dollarmath',
