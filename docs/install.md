@@ -31,9 +31,15 @@ t-doc requires the following software to be installed:
   winget install --id TortoiseHg.TortoiseHg
   ```
 
-  ```{admonition} TODO
-  TODO: Describe how to update .hgrc to configure the name and email address.
-  ```
+  - Open the TortoiseHg settings, go to your user's global settings, then click
+    "Edit file" and add the following to the configuration (substitute `FIRST`
+    and `LAST` with your first and last name, and `EMAIL` with your email
+    address, e.g. `Joe Smith <joe@example.com>`):
+
+    ```ini
+    [ui]
+    username = FIRST LAST <EMAIL>
+    ```
 
 - (Optional, Windows 10) Install
   [Windows Terminal](https://github.com/microsoft/terminal) (it's already
