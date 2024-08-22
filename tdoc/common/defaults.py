@@ -39,7 +39,7 @@ graphviz_output_format = 'svg'
 todo_include_todos = True
 
 # MyST options.
-myst_enable_extensions = [
+myst_enable_extensions = {
     'amsmath',
     'colon_fence',
     'deflist',
@@ -52,8 +52,9 @@ myst_enable_extensions = [
     'strikethrough',
     'substitution',
     'tasklist',
-]
+}
 myst_dmath_double_inline = True
+myst_heading_anchors = 6
 
 # HTML rendering options.
 html_show_sphinx = False
