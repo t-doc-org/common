@@ -34,6 +34,10 @@ extensions = [
     'tdoc.common',
 ]
 
+suppress_warnings = [
+    'myst.strikethrough',  # Only supported for HTML, but that's all we want
+]
+
 # Extension options.
 graphviz_output_format = 'svg'
 todo_include_todos = True
