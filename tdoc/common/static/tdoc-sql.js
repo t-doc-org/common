@@ -81,10 +81,7 @@ async function execute(exec) {
             if (!results) {
                 results = element(`\
 <div class="pst-scrollable-table-container tdoc-exec-output">\
-<table class="table">\
-<thead><tr class="row-odd"></tr></thead>\
-<tbody></tbody>\
-</table>\
+<table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div>`);
                 const tr = results.querySelector('tr');
                 for (const col of res.columnNames) {
@@ -95,17 +92,15 @@ async function execute(exec) {
                 tbody = results.querySelector('tbody');
             }
             if (res.row) {
-                const tr = tbody.appendChild(element(
-                    `<tr class="${(res.rowNumber - 1) % 2 === 0 ? 'row-even'
-                                  : 'row-odd'}"></tr>`));
+                const tr = tbody.appendChild(element(`<tr></tr>`));
                 for (const val of res.row) {
-                    const td = tr.appendChild(element(
-                        `<td class="text-center"></td>`));
-                    td.appendChild(text(val));
+                    tr.appendChild(element(`<td class="text-center"></td>`))
+                        .appendChild(val == null ? element(`<em>NULL</em>`)
+                                     : text(val));
                 }
             } else if (tbody.children.length === 0) {
                 tbody.appendChild(element(`\
-<tr class="row-odd tdoc-no-results">\
+<tr class="tdoc-no-results">\
 <td colspan="${res.columnNames.length}">No results</td>\
 </tr>`))
             }
@@ -114,7 +109,7 @@ async function execute(exec) {
     } catch (e) {
         if (e.dbId == db.dbId) {
             results = element(`\
-<div class="tdoc-exec-output tdoc-error"><span>Error:</span></div>`);
+<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
             const msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
                         .exec(e.result.message)[2];
             results.appendChild(text(` ${msg}`));

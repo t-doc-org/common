@@ -1,6 +1,6 @@
 [theme]
 inherit = "sphinx_book_theme"
 stylesheets = [
-    "styles/t-doc.css",
     "styles/sphinx-book-theme.css",
+    "styles/t-doc.css",
 ]

@@ -2,12 +2,11 @@
 /* Copyright 2024 Remy Blank <remy@c-space.org> */
 /* SPDX-License-Identifier: MIT */
 
-.hidden {
-    display: none !important;
+:not(#_).hidden {
+    display: none;
 }
-
-.line-height-normal .highlight pre {
-    line-height: normal !important;
+:not(#_).line-height-normal .highlight pre {
+    line-height: normal;
 }
 
 /* Set the maximum width of sidebars instead of a fixed width. */
@@ -28,13 +27,12 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
-/* Cross-hatch to non-result table rows. */
-.table tbody tr.tdoc-no-results {
+/* SQL execution results */
+.table tbody tr:nth-child(odd).tdoc-no-results {
     background: repeating-linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 0px 2px,
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);
 }
-
 .tdoc-error {
     margin-bottom: 1rem;
     border: 1px solid var(--pst-color-border);
@@ -42,9 +40,6 @@ div.sidebar, aside.sidebar {
     background: repeating-linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 0px 2px,
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);
-}
-.tdoc-error span {
-    font-weight: bold;
 }
 
 /* Fix the gap left by pydata_sphinx_theme between the table and the
