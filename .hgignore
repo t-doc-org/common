@@ -4,11 +4,9 @@
 
 syntax: glob
 *.orig
-*.sqlite3
 __pycache__
 
 syntax: regexp
-^build/
+^_build/
 ^dist/
 ^tmp/
-^[^/]+\.egg-info/

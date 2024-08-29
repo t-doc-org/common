@@ -22,10 +22,10 @@ function text(value) {
     return document.createTextNode(value);
 }
 
-function addChild(parent, tag) {
-    const el = document.createElement(tag);
-    parent.appendChild(el);
-    return el;
+function element(html) {
+    const t = document.createElement('template');
+    t.innerHTML = html.trim();
+    return t.content.firstChild;
 }
 
 const promiser = await sqlite3_init({
@@ -56,37 +56,13 @@ class Database {
     }
 
     async exec(sql, on_result) {
-        // TODO: Check if final result has anything useful
         // TODO: Check if other args could be useful, e.g. for splitting a
         // script into multiple statements
         await promiser('exec', {dbId: this.dbId, sql, callback: on_result});
     }
-
-    async *query(sql) {
-        let notify, queue;
-        let promise = new Promise(resolve => { notify = resolve; });
-        const exec = this.exec(sql, res => {
-            if (queue) {
-                queue.push(res);
-            } else {
-                queue = [res]
-                notify(queue);
-                promise = new Promise(resolve => { notify = resolve; });
-            }
-        });
-        let done = false;
-        while (!done) {
-            const q = await promise;
-            queue = undefined;
-            for (const res of q) {
-                done = !res.row;
-                if (done) break;
-                yield res;
-            }
-        }
-        await exec;
-    }
 }
+
+let db_num = 0;
 
 async function execute(exec) {
     const pre = exec.querySelector('pre');
@@ -97,37 +73,55 @@ async function execute(exec) {
     // TODO: Find dependencies
     const sql = pre.innerText;
     let results, tbody;
-    const db = await Database.open('file:db?vfs=memdb');
+    const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
+        // TODO: Remove previous result and error
         // TODO: Execute dependencies
-        // TODO: Report errors in output
-        for await (const res of db.query(sql)) {
+        await db.exec(sql, res => {
             if (!results) {
-                // TODO: Remove previous result table
-                results = document.createElement('div');
-                results.classList.add('pst-scrollable-table-container',
-                                      'tdoc-sql-results');
-                const table = addChild(results, 'table');;
-                table.classList.add('table');
-                const thead = addChild(table, 'thead');
-                const tr = addChild(thead, 'tr');
-                tr.classList.add('row-odd');
+                results = element(`\
+<div class="pst-scrollable-table-container tdoc-exec-output">\
+<table class="table">\
+<thead><tr class="row-odd"></tr></thead>\
+<tbody></tbody>\
+</table>\
+</div>`);
+                const tr = results.querySelector('tr');
                 for (const col of res.columnNames) {
-                    const th = addChild(tr, 'th')
-                    th.classList.add('text-center');
+                    const th = tr.appendChild(element(
+                        `<th class="text-center"></th>`));
                     th.appendChild(text(col));
                 }
-                tbody = addChild(table, 'tbody');
+                tbody = results.querySelector('tbody');
             }
-            const tr = addChild(tbody, 'tr');
-            tr.classList.add(res.rowNumber % 2 === 0 ? 'row-odd' : 'row-even');
-            for (const val of res.row) {
-                const td = addChild(tr, 'td')
-                td.classList.add('text-center');
-                td.appendChild(text(val));
+            if (res.row) {
+                const tr = tbody.appendChild(element(
+                    `<tr class="${(res.rowNumber - 1) % 2 === 0 ? 'row-even'
+                                  : 'row-odd'}"></tr>`));
+                for (const val of res.row) {
+                    const td = tr.appendChild(element(
+                        `<td class="text-center"></td>`));
+                    td.appendChild(text(val));
+                }
+            } else if (tbody.children.length === 0) {
+                tbody.appendChild(element(`\
+<tr class="row-odd tdoc-no-results">\
+<td colspan="${res.columnNames.length}">No results</td>\
+</tr>`))
             }
-        }
+        });
         if (results) exec.after(results);
+    } catch (e) {
+        if (e.dbId == db.dbId) {
+            results = element(`\
+<div class="tdoc-exec-output tdoc-error"><span>Error:</span></div>`);
+            const msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
+                        .exec(e.result.message)[2];
+            results.appendChild(text(` ${msg}`));
+            exec.after(results);
+        } else {
+            console.error(e);
+        }
     } finally {
         await db.close();
     }
@@ -136,6 +130,11 @@ async function execute(exec) {
 await waitLoaded();
 console.info("SQLite version:", (await Database.config()).version.libVersion);
 
+// TODO: Execute concurrently
 for (const el of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
-    await execute(el);
+    try {
+        await execute(el);
+    } catch (e) {
+        console.error(e);
+    }
 }

@@ -16,6 +16,37 @@ div.sidebar, aside.sidebar {
     width: inherit;
 }
 
+/* Invert the even and odd row colors in tables, so that the first row below the
+   header has a different color than the header. */
+.table tbody tr:nth-child(even) {
+    background-color: var(--pst-color-table-row-zebra-low-bg);
+}
+.table tbody tr:nth-child(odd) {
+    background-color: var(--pst-color-table-row-zebra-high-bg);
+}
+.table tbody tr:hover {
+    background-color: var(--pst-color-table-row-hover-bg);
+}
+
+/* Cross-hatch to non-result table rows. */
+.table tbody tr.tdoc-no-results {
+    background: repeating-linear-gradient(-45deg,
+        var(--pst-color-table-row-zebra-low-bg) 0px 2px,
+        var(--pst-color-table-row-zebra-high-bg) 2px 20px);
+}
+
+.tdoc-error {
+    margin-bottom: 1rem;
+    border: 1px solid var(--pst-color-border);
+    padding: 0.5rem;
+    background: repeating-linear-gradient(-45deg,
+        var(--pst-color-table-row-zebra-low-bg) 0px 2px,
+        var(--pst-color-table-row-zebra-high-bg) 2px 20px);
+}
+.tdoc-error span {
+    font-weight: bold;
+}
+
 /* Fix the gap left by pydata_sphinx_theme between the table and the
    scrollbar. */
 div.pst-scrollable-table-container {
