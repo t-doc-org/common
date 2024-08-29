@@ -4,6 +4,12 @@
 
 # SQL
 
+```{admonition} Do not use yet
+:class: warning
+The functionality described on this page is still in development and its API is
+unstable.
+```
+
 ## Query
 
 ```{exec} sql
