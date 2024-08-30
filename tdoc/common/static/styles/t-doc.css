@@ -35,7 +35,7 @@ div.sidebar, aside.sidebar {
 }
 .tdoc-error {
     margin-bottom: 1rem;
-    border: 1px solid var(--pst-color-border);
+    border: 1px solid var(--pst-color-danger);
     padding: 0.5rem;
     background: repeating-linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 0px 2px,

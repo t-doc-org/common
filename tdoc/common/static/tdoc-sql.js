@@ -38,7 +38,6 @@ class Database {
     }
 
     static async open(filename) {
-        // TODO: Pass name and vfs separately
         let {dbId} = await promiser('open', {filename});
         return new Database(dbId);
     }
@@ -65,49 +64,59 @@ class Database {
 let db_num = 0;
 
 async function execute(exec) {
-    const pre = exec.querySelector('pre');
-    if (!pre) {
-        console.error("<pre> element not found");
-        return;
+    // Compute the chain of nodes to execute.
+    const nodes = [];
+    for (let node = exec; node;) {
+        nodes.push(node);
+        // TODO: Handle multiple names
+        node = document.getElementById(node.dataset.tdocAfter)
     }
-    // TODO: Find dependencies
-    const sql = pre.innerText;
+    nodes.reverse();
+
+    // TODO: Remove previous result and error
     let results, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
-        // TODO: Remove previous result and error
-        // TODO: Execute dependencies
-        await db.exec(sql, res => {
-            if (!results) {
-                results = element(`\
+        for (const node of nodes) {
+            const pre = node.querySelector('pre');
+            if (!pre) {
+                console.error("<pre> element not found in node ", node);
+                continue;
+            }
+            await db.exec(pre.innerText, res => {
+                if (res.columnNames.length === 0) return;
+                // TODO: Ignore results on non-final nodes
+                if (!results) {
+                    results = element(`\
 <div class="pst-scrollable-table-container tdoc-exec-output">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div>`);
-                const tr = results.querySelector('tr');
-                for (const col of res.columnNames) {
-                    const th = tr.appendChild(element(
-                        `<th class="text-center"></th>`));
-                    th.appendChild(text(col));
+                    const tr = results.querySelector('tr');
+                    for (const col of res.columnNames) {
+                        const th = tr.appendChild(element(
+                            `<th class="text-center"></th>`));
+                        th.appendChild(text(col));
+                    }
+                    tbody = results.querySelector('tbody');
                 }
-                tbody = results.querySelector('tbody');
-            }
-            if (res.row) {
-                const tr = tbody.appendChild(element(`<tr></tr>`));
-                for (const val of res.row) {
-                    tr.appendChild(element(`<td class="text-center"></td>`))
-                        .appendChild(val == null ? element(`<em>NULL</em>`)
-                                     : text(val));
-                }
-            } else if (tbody.children.length === 0) {
-                tbody.appendChild(element(`\
+                if (res.row) {
+                    const tr = tbody.appendChild(element(`<tr></tr>`));
+                    for (const val of res.row) {
+                        tr.appendChild(element(`<td class="text-center"></td>`))
+                            .appendChild(val === null ? element(`<em>NULL</em>`)
+                                         : text(val));
+                    }
+                } else if (tbody.children.length === 0) {
+                    tbody.appendChild(element(`\
 <tr class="tdoc-no-results">\
 <td colspan="${res.columnNames.length}">No results</td>\
 </tr>`))
-            }
-        });
+                }
+            });
+        }
         if (results) exec.after(results);
     } catch (e) {
-        if (e.dbId == db.dbId) {
+        if (e.dbId === db.dbId) {
             results = element(`\
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
             const msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
@@ -115,6 +124,7 @@ async function execute(exec) {
             results.appendChild(text(` ${msg}`));
             exec.after(results);
         } else {
+            // TODO: Format the error somehow anyway
             console.error(e);
         }
     } finally {

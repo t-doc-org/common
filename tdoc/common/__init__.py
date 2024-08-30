@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: MIT
 
 import pathlib
+import re
 
 from docutils import nodes
+from docutils.parsers.rst import directives
 from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
@@ -32,6 +34,7 @@ def setup(app):
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
 
     app.add_html_theme('t-doc', str(_common))
+    app.add_node(ExecBlock, html=(visit_ExecBlock, depart_ExecBlock))
     app.add_directive('exec', Exec)
 
     app.connect("config-inited", on_config_inited)
@@ -60,6 +63,7 @@ def on_config_inited(app, config):
 
 
 def on_builder_inited(app):
+    # Add our own static paths.
     app.config.html_static_path.append(str(_common / 'static'))
     sw = _root / 'ext' / 'sqlite-wasm' / 'sqlite-wasm'
     if (sw / 'jswasm').is_dir():
@@ -78,13 +82,21 @@ def on_html_page_context(app, page, template, context, doctree):
         # TODO: Work around inability to specify headers on GitHub Pages
 
 
+def format_data_attrs(translator, /, **kwargs):
+    return ' '.join(f'data-tdoc-{k}="{translator.attval(v)}"'
+                    for k, v in sorted(kwargs.items()) if v is not None)
+
+
 class Exec(CodeBlock):
-    # TODO: :after: option
-    # TODO: :show: option
     # TODO: :immediate: or :run:
+
+    option_spec = CodeBlock.option_spec | {
+        'after': directives.unchanged,
+    }
+
     @staticmethod
     def match_node(lang=None):
-        return lambda n: isinstance(n, nodes.literal_block) \
+        return lambda n: isinstance(n, ExecBlock) \
                          and 'tdoc-exec' in n['classes'] \
                          and (lang is None or n.get('language') == lang)
 
@@ -92,6 +104,33 @@ class Exec(CodeBlock):
         res = super().run()
         for node in res:
             for n in node.findall(nodes.literal_block):
+                n.__class__ = ExecBlock
+                n.tagname = n.__class__.__name__
                 n['classes'] += ['tdoc-exec']
+                if after := self.options.get('after'):
+                    # TODO: Check that the name exists
+                    n['after'] = after
         # _log.info("res: %s", res, color='yellow')
         return res
+
+
+class ExecBlock(nodes.literal_block): pass
+
+
+div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
+
+
+def visit_ExecBlock(self, node):
+    try:
+        return self.visit_literal_block(node)
+    except nodes.SkipNode:
+        attrs = format_data_attrs(self, after=node.get('after'))
+        if attrs:
+            def subst(m):
+                return f'{m.group(1)} {attrs}{m.group(2)}'
+            self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
+        raise
+
+
+def depart_ExecBlock(self, node):
+    return self.depart_literal_block(node)

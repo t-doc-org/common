@@ -208,6 +208,7 @@ class ServerBase(server.ThreadingHTTPServer):
             self.cfg.stderr.write(f"Scan: {e}\n")
         mtime = 0
         for path in itertools.chain([self.cfg.source], self.cfg.watch):
+            # TODO: Exclude files in __pycache__
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
                     try:
