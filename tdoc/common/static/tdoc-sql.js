@@ -103,8 +103,9 @@ async function execute(exec) {
                     const tr = tbody.appendChild(element(`<tr></tr>`));
                     for (const val of res.row) {
                         tr.appendChild(element(`<td class="text-center"></td>`))
-                            .appendChild(val === null ? element(`<em>NULL</em>`)
-                                         : text(val));
+                            .appendChild(val === null ?
+                                         element(`<code>NULL</code>`) :
+                                         text(val));
                     }
                 } else if (tbody.children.length === 0) {
                     tbody.appendChild(element(`\
