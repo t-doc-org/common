@@ -4,20 +4,35 @@
 
 # SQL
 
-```{admonition} Do not use yet
-:class: warning
-The functionality described on this page is still in development and its API is
-unstable.
-```
+The `{exec} sql` block allows executing SQL directly in the browser. Each block
+is executed in a new, empty database.
 
-SQL can be executed in-browser through `{exec} sql` blocks. Each block is
-executed in a new, empty database. The `:after:` attribute allows specifying
-a block to be executed before this block,
+## Directive
+
+````{rst:directive} .. {exec}:: language (sql)
+This directive is a `{code-block}` that allows executing the code directly in
+the browser. It supports all the options of `{code-block}`, and a few more
+described below.
+
+{.rubric}
+Options
+```{rst:directive:option} after: name
+:type: text
+References an `{exec}` block to be executed before this block, in the same
+environment. The referenced block can itself have an `:after:` option, forming
+a chain of blocks to execute in the environment.
+```
+```{rst:directive:option} when: value
+:type: click | load | never
+Determines when the block's code is executed: on a click by the user (`click`),
+when the page loads (`load`) or not at all (`never`).
+```
+````
 
 ## Database definition
 
-A database can be defined as a named `{exec} sql` block, to be referenced by
-subsequent blocks.
+A database can be defined as a named `{exec} sql` block, to be referenced in the
+`:after:` option of other blocks.
 
 ```{exec} sql
 :name: sql-countries
@@ -41,8 +56,8 @@ insert into countries values
 
 ## Queries
 
-The results of the first `select` statement in an `{exec}` block are displayed
-as a table.
+The results of the first `select` statement in an `{exec} sql` block are
+displayed as a table.
 
 ```{exec} sql
 :after: sql-countries

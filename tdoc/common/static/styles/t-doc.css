@@ -93,3 +93,8 @@ div.pst-scrollable-table-container {
 .table {
     margin-bottom: 0;
 }
+
+/* Reduce the bottom margin of directive definition list options. */
+dl[class]:not(.option-list,.field-list,.footnote,.glossary,.simple):not(._) {
+    margin-bottom: 1rem;
+}
