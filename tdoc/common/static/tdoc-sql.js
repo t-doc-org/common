@@ -80,7 +80,7 @@ async function execute(exec) {
     let results, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
-        for (const node of nodes) {
+        for (const [i, node] of nodes.entries()) {
             const pre = node.querySelector('pre');
             if (!pre) {
                 console.error("<pre> element not found in node ", node);
@@ -88,7 +88,7 @@ async function execute(exec) {
             }
             await db.exec(pre.innerText, res => {
                 if (res.columnNames.length === 0) return;
-                // TODO: Ignore results on non-final nodes
+                if (i < nodes.length - 1) return;
                 if (!results) {
                     results = element(`\
 <div class="pst-scrollable-table-container tdoc-exec-output">\
