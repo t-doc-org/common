@@ -11,7 +11,7 @@ from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __project__ = 't-doc-common'
-__version__ = '0.5.dev1'
+__version__ = '0.5'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
