@@ -92,7 +92,6 @@ class ExecBlock(nodes.literal_block): pass
 
 
 class Exec(CodeBlock):
-    # TODO: :immediate: or :run:
     # TODO: :include:
 
     option_spec = CodeBlock.option_spec | {

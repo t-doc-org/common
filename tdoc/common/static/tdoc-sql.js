@@ -67,9 +67,12 @@ async function execute(exec) {
     // Compute the chain of nodes to execute.
     const nodes = [];
     for (let node = exec; node;) {
-        nodes.push(node);
-        // TODO: Handle multiple names
-        node = document.getElementById(node.dataset.tdocAfter)
+        if (node.classList.contains('tdoc-exec')) {
+            nodes.push(node);
+            node = document.getElementById(node.dataset.tdocAfter)
+        } else {  // Secondary name as a nested <span>
+            node = node.parentNode;
+        }
     }
     nodes.reverse();
 
