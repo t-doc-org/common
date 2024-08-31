@@ -9,6 +9,7 @@ smartquotes = False
 primary_domain = None
 nitpicky = True
 exclude_patterns = ['_build', '.DS_Store', 'Thumbs.db']
+highlight_language = 'text'
 
 extensions = [
     'myst_parser',
