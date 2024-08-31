@@ -34,11 +34,12 @@ def setup(app):
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
 
     app.add_html_theme('t-doc', str(_common))
-    app.add_node(ExecBlock, html=(visit_ExecBlock, depart_ExecBlock))
     app.add_directive('exec', Exec)
+    app.add_node(ExecBlock, html=(visit_ExecBlock, depart_ExecBlock))
 
     app.connect("config-inited", on_config_inited)
     app.connect('builder-inited', on_builder_inited)
+    app.connect('doctree-resolved', check_after_references)
     app.connect('html-page-context', on_html_page_context)
 
     return {
@@ -87,6 +88,9 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
+class ExecBlock(nodes.literal_block): pass
+
+
 class Exec(CodeBlock):
     # TODO: :immediate: or :run:
     # TODO: :include:
@@ -115,12 +119,20 @@ class Exec(CodeBlock):
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
         if after := self.options.get('after'):
-            # TODO: Check that the name exists
             node['after'] = after
         node['when'] = self.options.get('when', 'click')
 
 
-class ExecBlock(nodes.literal_block): pass
+def check_after_references(app, doctree, docname):
+    nodes = list(doctree.findall(Exec.match_node('sql')))
+    names = set()
+    for n in nodes:
+        names.update(n['names'])
+    for n in nodes:
+        after = n.get('after')
+        if after and after not in names:
+            doctree.reporter.error(
+                f"'exec': Unknown :after: reference: {after}", base_node=n)
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
