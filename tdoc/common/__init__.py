@@ -89,9 +89,11 @@ def format_data_attrs(translator, /, **kwargs):
 
 class Exec(CodeBlock):
     # TODO: :immediate: or :run:
+    # TODO: :include:
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.unchanged,
+        'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
     @staticmethod
@@ -104,14 +106,18 @@ class Exec(CodeBlock):
         res = super().run()
         for node in res:
             for n in node.findall(nodes.literal_block):
-                n.__class__ = ExecBlock
-                n.tagname = n.__class__.__name__
-                n['classes'] += ['tdoc-exec']
-                if after := self.options.get('after'):
-                    # TODO: Check that the name exists
-                    n['after'] = after
+                self._update_node(node)
         # _log.info("res: %s", res, color='yellow')
         return res
+
+    def _update_node(self, node):
+        node.__class__ = ExecBlock
+        node.tagname = node.__class__.__name__
+        node['classes'] += ['tdoc-exec']
+        if after := self.options.get('after'):
+            # TODO: Check that the name exists
+            node['after'] = after
+        node['when'] = self.options.get('when', 'click')
 
 
 class ExecBlock(nodes.literal_block): pass
@@ -124,7 +130,8 @@ def visit_ExecBlock(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
-        attrs = format_data_attrs(self, after=node.get('after'))
+        attrs = format_data_attrs(self, after=node.get('after'),
+                                  when=node.get('when'))
         if attrs:
             def subst(m):
                 return f'{m.group(1)} {attrs}{m.group(2)}'

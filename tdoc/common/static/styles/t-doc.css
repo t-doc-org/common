@@ -27,6 +27,43 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Execution controls */
+div[class*=highlight-].tdoc-exec {
+    flex-direction: row;
+}
+div.tdoc-exec div.highlight {
+    flex-basis: 100%;
+}
+div.tdoc-exec-controls {
+    display: flex;
+    flex-direction: column;
+    margin-left: 0.3rem;
+}
+div.tdoc-exec-controls button {
+    aspect-ratio: 1;
+    border-radius: 0.25rem;
+    padding: 0.3rem;
+    border: 1px solid var(--pst-color-border);
+    background-color: var(--pst-color-surface);
+    font: var(--fa-font-solid);
+    transition: background-color .3s;
+}
+div.tdoc-exec-controls button:hover {
+    background-color: var(--pst-color-shadow);
+}
+div.tdoc-exec-controls * {
+    margin-top: 0.3rem;
+}
+div.tdoc-exec-controls *:first-child {
+    margin-top: 0;
+}
+div.tdoc-exec-controls button.tdoc-exec-run::before {
+    content: '\f04b';
+}
+div.tdoc-exec-controls button.tdoc-exec-reset::before {
+    content: '\f2ea';
+}
+
 /* SQL execution results */
 .table tbody tr:nth-child(odd).tdoc-no-results {
     background: repeating-linear-gradient(-45deg,

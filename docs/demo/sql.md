@@ -21,6 +21,7 @@ subsequent blocks.
 
 ```{exec} sql
 :name: sql-countries
+:when: never
 create table countries (
     country text not null,
     country_code text not null,
@@ -45,6 +46,7 @@ as a table.
 
 ```{exec} sql
 :after: sql-countries
+:when: load
 select * from countries;
 ```
 
@@ -52,6 +54,7 @@ The SQL code can be hidden by adding `:class: hidden`.
 
 ```{exec} sql
 :after: sql-countries
+:when: load
 :class: hidden
 select * from countries where country_code = 'CH';
 ```
@@ -60,6 +63,7 @@ select * from countries where country_code = 'CH';
 
 ```{exec} sql
 :after: sql-countries
+:when: load
 select * from countries where false;
 ```
 
@@ -67,6 +71,7 @@ select * from countries where false;
 
 ```{exec} sql
 :after: sql-countries
+:when: load
 update countries set food = 'baguette' where country_code = 'FR';
 select * from countries where country_code = 'FR';
 ```
@@ -74,5 +79,20 @@ select * from countries where country_code = 'FR';
 ## SQL errors
 
 ```{exec} sql
+:when: load
 select * from unknown_table;
 ```
+
+## Execution trigger
+
+By default, `{exec} sql` blocks are executed on click (`:when: click`), with
+controls displayed next to the block.
+
+```{exec} sql
+:after: sql-countries
+select * from countries where country_code = 'LI';
+```
+
+They can also be executed immediately on load (`:when: load`) or not at all
+(`:when: never`, useful for database definitions that are referenced by other
+blocks). In these cases, no controls aren displayed.

@@ -73,7 +73,7 @@ async function execute(exec) {
     }
     nodes.reverse();
 
-    // TODO: Remove previous result and error
+    removeResults(exec);
     let results, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
@@ -133,14 +133,38 @@ async function execute(exec) {
     }
 }
 
+async function tryExecute(exec) {
+    try {
+        await execute(exec);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function removeResults(exec) {
+    for (;;) {
+        const next = exec.nextElementSibling;
+        if (!next || !next.classList.contains('tdoc-exec-output')) break;
+        next.parentNode.removeChild(next);
+    }
+}
+
 await waitLoaded();
 console.info("SQLite version:", (await Database.config()).version.libVersion);
 
-// TODO: Execute concurrently
-for (const el of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
-    try {
-        await execute(el);
-    } catch (e) {
-        console.error(e);
+for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
+    const when = exec.dataset.tdocWhen;
+    if (when === 'load') {
+        tryExecute(exec);  // Intentionally don't await
+    } else if (when === 'click') {
+        const controls = exec.appendChild(element(`\
+<div class="tdoc-exec-controls">\
+<button class="tdoc-exec-run" title="Run"></button>\
+<button class="tdoc-exec-reset" title="Reset"></button>\
+</div>`));
+        controls.querySelector('.tdoc-exec-run').addEventListener(
+            'click', async () => { await tryExecute(exec); });
+        controls.querySelector('.tdoc-exec-reset').addEventListener(
+            'click', () => { removeResults(exec); });
     }
 }
