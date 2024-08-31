@@ -117,17 +117,17 @@ async function execute(exec) {
         }
         if (results) exec.after(results);
     } catch (e) {
+        let msg;
         if (e.dbId === db.dbId) {
-            results = element(`\
-<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
-            const msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
-                        .exec(e.result.message)[2];
-            results.appendChild(text(` ${msg}`));
-            exec.after(results);
+            msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
+                    .exec(e.result.message)[2]
         } else {
-            // TODO: Format the error somehow anyway
-            console.error(e);
+            msg = e.toString();
         }
+        results = element(`\
+<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
+        results.appendChild(text(` ${msg}`));
+        exec.after(results);
     } finally {
         await db.close();
     }
