@@ -5,6 +5,7 @@
 *.orig
 __pycache__
 
-_build/
-dist/
-tmp/
+/_build/
+/dist/
+/node_modules/
+/tmp/

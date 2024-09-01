@@ -86,7 +86,7 @@ async function execute(exec) {
                 console.error("<pre> element not found in node ", node);
                 continue;
             }
-            await db.exec(pre.innerText, res => {
+            await db.exec(pre.textContent, res => {
                 if (res.columnNames.length === 0) return;
                 if (i < nodes.length - 1) return;
                 if (!results) {
@@ -125,6 +125,7 @@ async function execute(exec) {
             msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
                     .exec(e.result.message)[2]
         } else {
+            console.error(e);
             msg = e.toString();
         }
         results = element(`\

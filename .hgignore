@@ -9,4 +9,5 @@ __pycache__
 syntax: regexp
 ^_build/
 ^dist/
+^node_modules/
 ^tmp/
