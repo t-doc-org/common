@@ -1,8 +1,10 @@
 syntax: glob
+*.gen.*
 *.orig
 __pycache__
 
 syntax: regexp
+^LICENSES.deps.txt$
 ^_build/
 ^dist/
 ^node_modules/
