@@ -1,4 +1,3 @@
-# Copyright 2024 Caroline Blank <caro@c-space.org>
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
@@ -11,7 +10,7 @@ from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __project__ = 't-doc-common'
-__version__ = '0.6.dev1'
+__version__ = '0.6.dev2'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
