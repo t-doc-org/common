@@ -1,9 +1,15 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import * as path from 'node:path';
+import path from 'node:path';
+import url from 'node:url';
 import resolve from '@rollup/plugin-node-resolve';
 import license from 'rollup-plugin-license';
+
+// import.meta.(dir|file)name require Node.js 20.11 or 21.2, but the
+// ubuntu-latest image on GitHub only has 18.20.4.
+const __filename = import.meta.filename || url.fileURLToPath(import.meta.url)
+const __dirname = import.meta.dirname || path.dirname(__filename)
 
 export default {
     input: "./tdoc/common/scripts/tdoc-editor.js",
@@ -33,7 +39,7 @@ export default {
         resolve(),
         license({
             thirdParty: {
-                output: path.join(import.meta.dirname, 'LICENSES.deps.txt'),
+                output: path.join(__dirname, 'LICENSES.deps.txt'),
                 includePrivate: true,
             },
         }),
