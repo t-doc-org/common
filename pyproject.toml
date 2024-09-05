@@ -4,14 +4,13 @@
 [project]
 name = "t-doc-common"
 description = "Common functionality for t-doc"
-authors = [
-    {name = "Remy Blank", email = "remy@c-space.org"},
-]
+authors = [{name = "Remy Blank", email = "remy@c-space.org"}]
 urls.Code = "https://github.com/t-docs/common"
 urls.Documentation = "https://t-doc.org/common/"
 urls.Homepage = "https://t-doc.org/"
 readme = "README.md"
-license.file = "LICENSE.txt"
+license = "MIT"
+license-files = {paths = ["LICENSE.txt", "LICENSES.deps.txt"]}
 keywords = []
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -46,6 +45,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "tdoc/common/__init__.py"
+
+[tool.hatch.metadata.hooks.custom]
+path = "tools/hatch_hooks.py"
+
+[tool.hatch.build.hooks.custom]
+path = "tools/hatch_hooks.py"
 
 [tool.hatch.build.targets.sdist]
 
