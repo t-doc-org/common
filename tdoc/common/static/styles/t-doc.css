@@ -26,6 +26,19 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Editor */
+div.tdoc-exec.tdoc-editable div.highlight pre,
+div.tdoc-exec.tdoc-editable div.highlight button.copybtn {
+    display: none;
+}
+div.tdoc-exec.tdoc-editable div.cm-editor {
+    border-radius: 0.25rem;
+    border: 1px solid var(--pst-color-border);
+}
+div.tdoc-exec.tdoc-editable div.cm-focused {
+    outline: none;
+}
+
 /* Execution controls */
 div[class*=highlight-].tdoc-exec {
     flex-direction: row;
@@ -41,8 +54,8 @@ div.tdoc-exec-controls {
 div.tdoc-exec-controls button {
     aspect-ratio: 1;
     border-radius: 0.25rem;
-    padding: 0.3rem;
     border: 1px solid var(--pst-color-border);
+    padding: 0.3rem;
     background-color: var(--pst-color-surface);
     font: var(--fa-font-solid);
     transition: background-color .3s;
@@ -50,14 +63,17 @@ div.tdoc-exec-controls button {
 div.tdoc-exec-controls button:hover {
     background-color: var(--pst-color-shadow);
 }
-div.tdoc-exec-controls * {
-    margin-top: 0.3rem;
-}
 div.tdoc-exec-controls *:first-child {
     margin-top: 0;
 }
+div.tdoc-exec-controls * {
+    margin-top: 0.3rem;
+}
 div.tdoc-exec-controls button.tdoc-exec-run::before {
     content: '\f04b';
+}
+div.tdoc-exec-controls button.tdoc-exec-clear::before {
+    content: '\f12d';
 }
 div.tdoc-exec-controls button.tdoc-exec-reset::before {
     content: '\f2ea';

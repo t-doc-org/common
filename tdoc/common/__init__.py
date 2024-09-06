@@ -10,7 +10,7 @@ from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __project__ = 't-doc-common'
-__version__ = '0.6.dev2'
+__version__ = '0.6.dev3'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
@@ -95,6 +95,8 @@ class Exec(CodeBlock):
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.unchanged,
+        'editable': directives.flag,
+        # TODO: Split :when: into :immediate: and :controls:
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
@@ -119,6 +121,8 @@ class Exec(CodeBlock):
         if after := self.options.get('after'):
             node['after'] = after
         node['when'] = self.options.get('when', 'click')
+        if 'editable' in self.options:
+            node['classes'] += ['tdoc-editable']
 
 
 def check_after_references(app, doctree, docname):

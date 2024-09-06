@@ -1,8 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import path from 'node:path';
-import url from 'node:url';
+import * as path from 'node:path';
+import * as url from 'node:url';
 import resolve from '@rollup/plugin-node-resolve';
 import license from 'rollup-plugin-license';
 

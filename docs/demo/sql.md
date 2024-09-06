@@ -21,6 +21,9 @@ References an `{exec}` block to be executed before this block, in the same
 environment. The referenced block can itself have an `:after:` option, forming
 a chain of blocks to execute in the environment.
 ```
+```{rst:directive:option} editable
+When set, the `{exec}` block is made editable.
+```
 ```{rst:directive:option} when: value
 :type: click | load | never
 Determines when the block's code is executed: on a click by the user (`click`),
@@ -110,3 +113,16 @@ select * from countries where country_code = 'LI';
 They can also be executed immediately on load (`:when: load`) or not at all
 (`:when: never`, useful for database definitions that are referenced by other
 blocks). In these cases, no controls aren displayed.
+
+## Editable blocks
+
+Blocks can be made editable with the `:editable:` option.
+
+```{exec} sql
+:after: sql-countries
+:when: load
+:editable:
+select * from countries
+    where population > 10000000
+    order by country_code;
+```

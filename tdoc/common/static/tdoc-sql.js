@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {default as sqlite3_init} from './jswasm/sqlite3-worker1-promiser.mjs';
+import {newEditor} from './tdoc-editor.gen.js';
 
 function waitLoaded() {
     return new Promise(resolve => {
@@ -80,12 +81,7 @@ async function execute(exec) {
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
         for (const [i, node] of nodes.entries()) {
-            const pre = node.querySelector('pre');
-            if (!pre) {
-                console.error("<pre> element not found in node ", node);
-                continue;
-            }
-            await db.exec(pre.textContent, res => {
+            await db.exec(getText(node), res => {
                 if (res.columnNames.length === 0) return;
                 if (i < nodes.length - 1) return;
                 if (!results) {
@@ -144,6 +140,15 @@ async function tryExecute(exec) {
     }
 }
 
+function getOrigText(exec) {
+    return exec.querySelector('pre').textContent;
+}
+
+function getText(exec) {
+    return exec.tdocEditor ? exec.tdocEditor.state.doc.toString()
+                           : getOrigText(exec);
+}
+
 function removeResults(exec) {
     for (;;) {
         const next = exec.nextElementSibling;
@@ -156,18 +161,39 @@ await waitLoaded();
 console.info("SQLite version:", (await Database.config()).version.libVersion);
 
 for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
-    const when = exec.dataset.tdocWhen;
-    if (when === 'load') {
-        tryExecute(exec);  // Intentionally don't await
-    } else if (when === 'click') {
-        const controls = exec.appendChild(element(`\
-<div class="tdoc-exec-controls">\
-<button class="tdoc-exec-run" title="Run"></button>\
-<button class="tdoc-exec-reset" title="Reset"></button>\
-</div>`));
-        controls.querySelector('.tdoc-exec-run').addEventListener(
-            'click', async () => { await tryExecute(exec); });
-        controls.querySelector('.tdoc-exec-reset').addEventListener(
-            'click', () => { removeResults(exec); });
+    // If the field is editable, create the editor.
+    const editable = exec.classList.contains('tdoc-editable');
+    if (editable) {
+        exec.tdocEditor = newEditor(exec.querySelector('div.highlight'), {
+            language: 'sql',
+            text: getOrigText(exec).trim(),
+        });
     }
+
+    // Execute immediately if requested.
+    const when = exec.dataset.tdocWhen;
+    if (when === 'load') tryExecute(exec);  // Intentionally don't await
+
+    // Add execution controls.
+    const controls = element(`<div class="tdoc-exec-controls"></div>`);
+    if (when === 'click' || editable) {
+        controls.appendChild(element(
+            `<button class="tdoc-exec-run" title="Run"></button>`))
+            .addEventListener('click', async () => { await tryExecute(exec); });
+        controls.appendChild(element(
+            `<button class="tdoc-exec-clear" title="Clear results"></button>`))
+            .addEventListener('click', () => { removeResults(exec); });
+    }
+    if (editable) {
+        controls.appendChild(element(
+            `<button class="tdoc-exec-reset" title="Reset input"></button>`))
+            .addEventListener('click', () => {
+                const editor = exec.tdocEditor, state = editor.state;
+                editor.dispatch(state.update({changes: {
+                    from: 0, to: state.doc.length,
+                    insert: getOrigText(exec).trim(),
+                }}));
+            });
+    }
+    if (controls.children.length > 0) exec.appendChild(controls);
 }
