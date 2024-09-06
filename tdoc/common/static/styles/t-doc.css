@@ -38,6 +38,10 @@ div.tdoc-exec.tdoc-editable div.cm-editor {
 div.tdoc-exec.tdoc-editable div.cm-focused {
     outline: none;
 }
+div.tdoc-exec.tdoc-editable div.cm-editor div.cm-scroller {
+    font-family: var(--pst-font-family-monospace);
+    font-size: .875em;
+}
 
 /* Execution controls */
 div[class*=highlight-].tdoc-exec {

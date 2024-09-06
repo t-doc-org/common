@@ -26,8 +26,8 @@ When set, the `{exec}` block is made editable.
 ```
 ```{rst:directive:option} when: value
 :type: click | load | never
-Determines when the block's code is executed: on a click by the user (`click`),
-when the page loads (`load`) or not at all (`never`).
+Determines when the block's code is executed: on user request (`click`, the
+default), when the page loads (`load`) or not at all (`never`).
 ```
 ````
 

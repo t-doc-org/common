@@ -96,7 +96,6 @@ class Exec(CodeBlock):
     option_spec = CodeBlock.option_spec | {
         'after': directives.unchanged,
         'editable': directives.flag,
-        # TODO: Split :when: into :immediate: and :controls:
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
