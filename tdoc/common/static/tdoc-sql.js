@@ -76,7 +76,8 @@ async function execute(exec) {
     }
     nodes.reverse();
 
-    // TODO: Prevent multiple parallel executions of the same node
+    // TODO: Prevent multiple parallel executions of the same node, and disable
+    //       the "Run" button while executing.
 
     let result, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
@@ -178,7 +179,7 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
         exec.tdocEditor = newEditor(exec.querySelector('div.highlight'), {
             language: 'sql',
             text: getOrigText(exec).trim(),
-            onRun: () => { tryExecute(exec); },
+            onRun: async () => { await tryExecute(exec); },
         });
     }
 
@@ -192,7 +193,7 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
         controls.appendChild(element(`\
 <button class="tdoc-exec-run" title="Run${editable ? ' (Shift+Enter)' : ''}">\
 </button>`))
-            .addEventListener('click', () => { tryExecute(exec); });
+            .addEventListener('click', async () => { await tryExecute(exec); });
         controls.appendChild(element(
             `<button class="tdoc-exec-clear" title="Clear results"></button>`))
             .addEventListener('click', () => { replaceResults(exec, []); });

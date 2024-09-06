@@ -9,6 +9,8 @@ import * as search from '@codemirror/search';
 import * as state from '@codemirror/state';
 import * as view from '@codemirror/view';
 
+import {oneDark} from '@codemirror/theme-one-dark';
+
 import {css} from '@codemirror/lang-css';
 import {html} from '@codemirror/lang-html';
 import {javascript} from '@codemirror/lang-javascript';
@@ -17,48 +19,78 @@ import {sql} from '@codemirror/lang-sql';
 
 const languages = {css, html, javascript, python, sql};
 
+// React to theme changes and update all editor themes as well.
+const theme = new state.Compartment();
+const lightTheme = view.EditorView.theme({}, {dark: false});
+const darkTheme = oneDark;
+
+function currentTheme() {
+    return document.querySelector('html').dataset.theme === 'dark' ?
+           darkTheme : lightTheme;
+}
+
+let curTheme = currentTheme();
+
+const obs = new MutationObserver((mutations) => {
+    for (const mut of mutations) {
+        if (mut.attributeName !== 'data-theme') continue;
+        const newTheme = currentTheme();
+        if (newTheme === curTheme) break;
+        curTheme = newTheme;
+        for (const div of document.querySelectorAll('div.cm-editor')) {
+            const editor = div.tdocEditor;
+            editor.dispatch({effects: theme.reconfigure(curTheme)});
+        }
+        break;
+    }
+});
+obs.observe(document.querySelector('html'), {attributes: true});
+
 function extensions(config) {
-  return [
-    autocomplete.autocompletion(),
-    autocomplete.closeBrackets(),
-    commands.history(),
-    language.bracketMatching(),
-    language.foldGutter(),
-    language.indentOnInput(),
-    language.indentUnit.of('    '),
-    language.syntaxHighlighting(language.defaultHighlightStyle,
-                                {fallback: true}),
-    search.highlightSelectionMatches(),
-    state.EditorState.allowMultipleSelections.of(true),
-    state.EditorState.tabSize.of(4),
-    view.crosshairCursor(),
-    view.drawSelection(),
-    view.dropCursor(),
-    view.highlightActiveLine(),
-    view.highlightActiveLineGutter(),
-    view.highlightSpecialChars(),
-    view.keymap.of([
-      ...(config.onRun ? [{key: "Shift-Enter", run: config.onRun}] : []),
-      ...autocomplete.closeBracketsKeymap,
-      ...autocomplete.completionKeymap,
-      ...commands.defaultKeymap,
-      ...commands.historyKeymap,
-      commands.indentWithTab,
-      ...language.foldKeymap,
-      ...lint.lintKeymap,
-      ...search.searchKeymap,
-    ]),
-    view.lineNumbers(),
-    view.rectangularSelection(),
-    view.EditorView.lineWrapping,
-    (languages[config.language] || (() => []))(),
-  ];
+    return [
+        theme.of(currentTheme()),
+        autocomplete.autocompletion(),
+        autocomplete.closeBrackets(),
+        commands.history(),
+        language.bracketMatching(),
+        language.foldGutter(),
+        language.indentOnInput(),
+        language.indentUnit.of('    '),
+        language.syntaxHighlighting(language.defaultHighlightStyle,
+                                    {fallback: true}),
+        search.highlightSelectionMatches(),
+        state.EditorState.allowMultipleSelections.of(true),
+        state.EditorState.tabSize.of(4),
+        view.crosshairCursor(),
+        view.drawSelection(),
+        view.dropCursor(),
+        view.highlightActiveLine(),
+        view.highlightActiveLineGutter(),
+        view.highlightSpecialChars(),
+        view.keymap.of([
+            ...(config.onRun ? [{key: "Shift-Enter", run: config.onRun}] : []),
+            ...autocomplete.closeBracketsKeymap,
+            ...autocomplete.completionKeymap,
+            ...commands.defaultKeymap,
+            ...commands.historyKeymap,
+            commands.indentWithTab,
+            ...language.foldKeymap,
+            ...lint.lintKeymap,
+            ...search.searchKeymap,
+        ]),
+        view.lineNumbers(),
+        view.rectangularSelection(),
+        view.EditorView.lineWrapping,
+        (languages[config.language] || (() => []))(),
+    ];
 }
 
 export function newEditor(parent, config) {
-  return new view.EditorView({
-    doc: config.text || '',
-    extensions: extensions(config),
-    parent,
-  });
+    const editor = new view.EditorView({
+        doc: config.text || '',
+        extensions: extensions(config),
+        parent,
+    });
+    parent.querySelector('div.cm-editor').tdocEditor = editor;
+    return editor;
 }

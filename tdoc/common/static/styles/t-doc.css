@@ -26,6 +26,11 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Code blocks */
+div.highlight pre {
+    padding: 0.7rem;
+}
+
 /* Editor */
 div.tdoc-exec.tdoc-editable div.highlight pre,
 div.tdoc-exec.tdoc-editable div.highlight button.copybtn {
@@ -35,10 +40,13 @@ div.tdoc-exec.tdoc-editable div.cm-editor {
     border-radius: 0.25rem;
     border: 1px solid var(--pst-color-border);
 }
-div.tdoc-exec.tdoc-editable div.cm-focused {
+html[data-theme=dark] div.tdoc-exec.tdoc-editable div.cm-editor {
+    background-color: var(--pst-color-surface);
+}
+div.cm-editor.cm-focused {
     outline: none;
 }
-div.tdoc-exec.tdoc-editable div.cm-editor div.cm-scroller {
+div.cm-editor div.cm-scroller {
     font-family: var(--pst-font-family-monospace);
     font-size: .875em;
 }
