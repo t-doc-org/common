@@ -76,26 +76,25 @@ async function execute(exec) {
     }
     nodes.reverse();
 
-    removeResults(exec);
-    let results, tbody;
+    let result, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
         for (const [i, node] of nodes.entries()) {
             await db.exec(getText(node), res => {
                 if (res.columnNames.length === 0) return;
                 if (i < nodes.length - 1) return;
-                if (!results) {
-                    results = element(`\
+                if (!result) {
+                    result = element(`\
 <div class="pst-scrollable-table-container tdoc-exec-output">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div>`);
-                    const tr = results.querySelector('tr');
+                    const tr = result.querySelector('tr');
                     for (const col of res.columnNames) {
                         const th = tr.appendChild(element(
                             `<th class="text-center"></th>`));
                         th.appendChild(text(col));
                     }
-                    tbody = results.querySelector('tbody');
+                    tbody = result.querySelector('tbody');
                 }
                 if (res.row) {
                     const tr = tbody.appendChild(element(`<tr></tr>`));
@@ -113,7 +112,6 @@ async function execute(exec) {
                 }
             });
         }
-        if (results) exec.after(results);
     } catch (e) {
         let msg;
         if (e.dbId === db.dbId) {
@@ -123,13 +121,13 @@ async function execute(exec) {
             console.error(e);
             msg = e.toString();
         }
-        results = element(`\
+        result = element(`\
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
-        results.appendChild(text(` ${msg}`));
-        exec.after(results);
+        result.appendChild(text(` ${msg}`));
     } finally {
         await db.close();
     }
+    replaceResults(exec, [result]);
 }
 
 async function tryExecute(exec) {
@@ -149,11 +147,22 @@ function getText(exec) {
                            : getOrigText(exec);
 }
 
-function removeResults(exec) {
-    for (;;) {
-        const next = exec.nextElementSibling;
+function replaceResults(exec, results) {
+    let prev = exec, i = 0;
+    for (;; ++i) {
+        const next = prev.nextElementSibling;
         if (!next || !next.classList.contains('tdoc-exec-output')) break;
-        next.parentNode.removeChild(next);
+        if (i < results.length) {
+            prev = results[i];
+            next.replaceWith(prev);
+        } else {
+            next.remove();
+        }
+    }
+    for (; i < results.length; ++i) {
+        const res = results[i];
+        prev.after(res);
+        prev = res;
     }
 }
 
@@ -182,7 +191,7 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
             .addEventListener('click', async () => { await tryExecute(exec); });
         controls.appendChild(element(
             `<button class="tdoc-exec-clear" title="Clear results"></button>`))
-            .addEventListener('click', () => { removeResults(exec); });
+            .addEventListener('click', () => { replaceResults(exec, []); });
     }
     if (editable) {
         controls.appendChild(element(
