@@ -76,6 +76,8 @@ async function execute(exec) {
     }
     nodes.reverse();
 
+    // TODO: Prevent multiple parallel executions of the same node
+
     let result, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
@@ -176,6 +178,7 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
         exec.tdocEditor = newEditor(exec.querySelector('div.highlight'), {
             language: 'sql',
             text: getOrigText(exec).trim(),
+            onRun: () => { tryExecute(exec); },
         });
     }
 
@@ -186,9 +189,10 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
     // Add execution controls.
     const controls = element(`<div class="tdoc-exec-controls"></div>`);
     if (when === 'click' || editable) {
-        controls.appendChild(element(
-            `<button class="tdoc-exec-run" title="Run"></button>`))
-            .addEventListener('click', async () => { await tryExecute(exec); });
+        controls.appendChild(element(`\
+<button class="tdoc-exec-run" title="Run${editable ? ' (Shift+Enter)' : ''}">\
+</button>`))
+            .addEventListener('click', () => { tryExecute(exec); });
         controls.appendChild(element(
             `<button class="tdoc-exec-clear" title="Clear results"></button>`))
             .addEventListener('click', () => { replaceResults(exec, []); });

@@ -38,6 +38,7 @@ function extensions(config) {
     view.highlightActiveLineGutter(),
     view.highlightSpecialChars(),
     view.keymap.of([
+      ...(config.onRun ? [{key: "Shift-Enter", run: config.onRun}] : []),
       ...autocomplete.closeBracketsKeymap,
       ...autocomplete.completionKeymap,
       ...commands.defaultKeymap,
