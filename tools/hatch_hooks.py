@@ -27,7 +27,8 @@ class BuildHook(BuildHookInterface):
         self.run(['npm', 'install'])
         self.app.display_info("Removing generated files")
         root = pathlib.Path(self.root)
-        shutil.rmtree(root / 'tdoc' / 'common' / 'static.gen')
+        shutil.rmtree(root / 'tdoc' / 'common' / 'static.gen',
+                      ignore_errors=True)
         (root / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         self.run(['npm', 'run', 'build'])
