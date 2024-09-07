@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {default as sqlite3_init} from './jswasm/sqlite3-worker1-promiser.mjs';
-import {addEditor} from './tdoc-editor.gen.js';
+import {addEditor, findEditor} from './tdoc-editor.gen.js';
 
 function waitLoaded() {
     return new Promise(resolve => {
@@ -146,8 +146,8 @@ function getOrigText(exec) {
 }
 
 function getText(exec) {
-    const div = exec.querySelector('div.cm-editor');
-    return div ? div.tdocEditor.state.doc.toString() : getOrigText(exec);
+    const editor = findEditor(exec);
+    return editor ? editor.state.doc.toString() : getOrigText(exec);
 }
 
 function replaceResults(exec, results) {
@@ -202,8 +202,7 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
         controls.appendChild(element(
             `<button class="tdoc-exec-reset" title="Reset input"></button>`))
             .addEventListener('click', () => {
-                const editor = exec.querySelector('div.cm-editor').tdocEditor;
-                const state = editor.state;
+                const editor = findEditor(exec), state = editor.state;
                 editor.dispatch(state.update({changes: {
                     from: 0, to: state.doc.length,
                     insert: getOrigText(exec).trim(),

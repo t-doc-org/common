@@ -96,3 +96,8 @@ export function addEditor(parent, config) {
     parent.querySelector('div.cm-editor').tdocEditor = editor;
     return editor;
 }
+
+// Find an editor in or below the given element.
+export function findEditor(el) {
+    return el.querySelector('div.cm-editor')?.tdocEditor;
+}
