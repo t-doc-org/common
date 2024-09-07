@@ -59,10 +59,8 @@ artifacts = [
 
 [tool.hatch.build.targets.wheel]
 only-include = [
-    "ext/sqlite-wasm/sqlite-wasm/jswasm",
     "tdoc",
 ]
 artifacts = [
     "/tdoc/common/static.gen/",
 ]
-sources."ext/sqlite-wasm/sqlite-wasm" = "tdoc/common/static"

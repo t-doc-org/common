@@ -27,10 +27,13 @@ class BuildHook(BuildHookInterface):
         self.run(['npm', 'install'])
         self.app.display_info("Removing generated files")
         root = pathlib.Path(self.root)
-        shutil.rmtree(root / 'tdoc' / 'common' / 'static.gen',
-                      ignore_errors=True)
+        static_gen = root / 'tdoc' / 'common' / 'static.gen'
+        shutil.rmtree(static_gen, ignore_errors=True)
         (root / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
+        shutil.copytree(root / 'node_modules' / '@sqlite.org' / 'sqlite-wasm'
+                        / 'sqlite-wasm' / 'jswasm',
+                        static_gen, symlinks=True)
         self.run(['npm', 'run', 'build'])
 
     def run(self, args):

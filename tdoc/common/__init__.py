@@ -10,7 +10,7 @@ from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __project__ = 't-doc-common'
-__version__ = '0.6'
+__version__ = '0.7.dev1'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
@@ -66,9 +66,10 @@ def on_builder_inited(app):
     # Add our own static paths.
     app.config.html_static_path.append(str(_common / 'static'))
     app.config.html_static_path.append(str(_common / 'static.gen'))
-    sw = _root / 'ext' / 'sqlite-wasm' / 'sqlite-wasm'
-    if (sw / 'jswasm').is_dir():
-        app.config.html_static_path.append(str(sw))
+    sqlite_path = (_root / 'node_modules' / '@sqlite.org' / 'sqlite-wasm'
+                   / 'sqlite-wasm' / 'jswasm')
+    if sqlite_path.is_dir():
+        app.config.html_static_path.append(str(sqlite_path))
 
 
 def on_html_page_context(app, page, template, context, doctree):

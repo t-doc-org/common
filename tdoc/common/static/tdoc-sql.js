@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {default as sqlite3_init} from './jswasm/sqlite3-worker1-promiser.mjs';
+import {default as sqlite3_init} from './sqlite3-worker1-promiser.mjs';
 import {addEditor, findEditor} from './tdoc-editor.js';
 
 function waitLoaded() {

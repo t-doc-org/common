@@ -1,3 +1,0 @@
-[submodule "sqlite-wasm"]
-    path = ext/sqlite-wasm
-    url = https://github.com/sqlite/sqlite-wasm.git
