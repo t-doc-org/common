@@ -130,7 +130,7 @@ async function execute(exec) {
     } finally {
         await db.close();
     }
-    replaceResults(exec, [result]);
+    replaceResults(exec, result ? [result] : []);
 }
 
 async function tryExecute(exec) {
@@ -175,21 +175,24 @@ console.info("SQLite version:", (await Database.config()).version.libVersion);
 for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
     // If the field is editable, create the editor.
     const editable = exec.classList.contains('tdoc-editable');
+    const when = exec.dataset.tdocWhen;
+    let origText;
     if (editable) {
+        origText = getOrigText(exec).trim();
         addEditor(exec.querySelector('div.highlight'), {
             language: 'sql',
-            text: getOrigText(exec).trim(),
-            onRun: async () => { await tryExecute(exec); },
+            text: origText,
+            onRun: when !== 'never' ? async () => { await tryExecute(exec); }
+                                    : undefined,
         });
     }
 
     // Execute immediately if requested.
-    const when = exec.dataset.tdocWhen;
     if (when === 'load') tryExecute(exec);  // Intentionally don't await
 
     // Add execution controls.
     const controls = element(`<div class="tdoc-exec-controls"></div>`);
-    if (when === 'click' || editable) {
+    if (when === 'click' || (editable && when !== 'never')) {
         controls.appendChild(element(`\
 <button class="tdoc-exec-run" title="Run${editable ? ' (Shift+Enter)' : ''}">\
 </button>`))
@@ -198,14 +201,14 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
             `<button class="tdoc-exec-clear" title="Clear results"></button>`))
             .addEventListener('click', () => { replaceResults(exec, []); });
     }
-    if (editable) {
+    if (editable && origText !== '') {
         controls.appendChild(element(
             `<button class="tdoc-exec-reset" title="Reset input"></button>`))
             .addEventListener('click', () => {
                 const editor = findEditor(exec), state = editor.state;
                 editor.dispatch(state.update({changes: {
                     from: 0, to: state.doc.length,
-                    insert: getOrigText(exec).trim(),
+                    insert: origText,
                 }}));
             });
     }
