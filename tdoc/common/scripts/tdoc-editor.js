@@ -46,6 +46,7 @@ const obs = new MutationObserver((mutations) => {
 });
 obs.observe(document.querySelector('html'), {attributes: true});
 
+// Return the editor extensions for the given config.
 function extensions(config) {
     return [
         theme.of(currentTheme()),
@@ -85,7 +86,8 @@ function extensions(config) {
     ];
 }
 
-export function newEditor(parent, config) {
+// Add an editor to the given element.
+export function addEditor(parent, config) {
     const editor = new view.EditorView({
         doc: config.text || '',
         extensions: extensions(config),
