@@ -197,9 +197,6 @@ for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
 <button class="tdoc-exec-run" title="Run${editable ? ' (Shift+Enter)' : ''}">\
 </button>`))
             .addEventListener('click', async () => { await tryExecute(exec); });
-        controls.appendChild(element(
-            `<button class="tdoc-exec-clear" title="Clear results"></button>`))
-            .addEventListener('click', () => { replaceResults(exec, []); });
     }
     if (editable && origText !== '') {
         controls.appendChild(element(
