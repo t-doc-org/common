@@ -17,10 +17,10 @@ const __dirname = import.meta.dirname || path.dirname(__filename)
 export default {
     input: "./tdoc/common/scripts/tdoc-editor.js",
     output: {
-        chunkFileNames: '[name].gen.js',
+        chunkFileNames: '[name].js',
         compact: true,
-        dir: './tdoc/common/static/',
-        entryFileNames: '[name].gen.js',
+        dir: './tdoc/common/static.gen/',
+        entryFileNames: '[name].js',
         format: 'es',
         generatedCode: {
             arrowFunctions: true,

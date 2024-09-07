@@ -65,6 +65,7 @@ def on_config_inited(app, config):
 def on_builder_inited(app):
     # Add our own static paths.
     app.config.html_static_path.append(str(_common / 'static'))
+    app.config.html_static_path.append(str(_common / 'static.gen'))
     sw = _root / 'ext' / 'sqlite-wasm' / 'sqlite-wasm'
     if (sw / 'jswasm').is_dir():
         app.config.html_static_path.append(str(sw))

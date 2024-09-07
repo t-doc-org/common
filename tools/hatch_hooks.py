@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import pathlib
+import shutil
 import subprocess
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -26,8 +27,7 @@ class BuildHook(BuildHookInterface):
         self.run(['npm', 'install'])
         self.app.display_info("Removing generated files")
         root = pathlib.Path(self.root)
-        for path in root.glob('tdoc/common/static/*.gen.*'):
-            path.unlink()
+        shutil.rmtree(root / 'tdoc' / 'common' / 'static.gen')
         (root / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         self.run(['npm', 'run', 'build'])

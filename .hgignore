@@ -1,5 +1,4 @@
 syntax: glob
-*.gen.*
 *.orig
 __pycache__
 
@@ -8,4 +7,5 @@ syntax: regexp
 ^_build/
 ^dist/
 ^node_modules/
+^tdoc/common/static\.gen/
 ^tmp/

@@ -54,7 +54,7 @@ path = "tools/hatch_hooks.py"
 
 [tool.hatch.build.targets.sdist]
 artifacts = [
-    "*.gen.*",
+    "/tdoc/common/static.gen/",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -63,6 +63,6 @@ only-include = [
     "tdoc",
 ]
 artifacts = [
-    "*.gen.*",
+    "/tdoc/common/static.gen/",
 ]
 sources."ext/sqlite-wasm/sqlite-wasm" = "tdoc/common/static"
