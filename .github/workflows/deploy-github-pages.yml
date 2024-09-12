@@ -4,11 +4,11 @@
 name: Publish to GitHub Pages
 on:
   workflow_call:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+    inputs:
+      dev:
+        description: "When true, use t-doc/common at head for building."
+        type: boolean
+        required: false
 
 jobs:
   deploy:
@@ -19,6 +19,10 @@ jobs:
     concurrency:
       group: pages
       cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Update system package index
         run: sudo apt-get update
@@ -31,7 +35,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Checkout common repository
+      - name: Checkout t-doc/common repository
+        if: ${{ inputs.dev }}
         uses: actions/checkout@v4
         with:
           repository: t-doc-org/common
@@ -39,9 +44,14 @@ jobs:
           submodules: recursive
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
-      - name: Install common package
+      - name: Install t-doc/common package from checkout
+        if: ${{ inputs.dev }}
         run: |
           ${{ steps.python.outputs.python-path }} -m pip install ./common
+      - name: Install t-doc/common package from PyPI
+        if: ${{ !inputs.dev }}
+        run: |
+          ${{ steps.python.outputs.python-path }} -m pip install t-doc-common
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
