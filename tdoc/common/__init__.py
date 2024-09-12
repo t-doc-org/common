@@ -4,7 +4,7 @@
 import pathlib
 import re
 
-from docutils import nodes
+from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
@@ -48,6 +48,20 @@ def setup(app):
     }
 
 
+def report_exceptions(fn):
+    def wrapper(self, /, *args, **kwargs):
+        try:
+            return fn(self, *args, **kwargs)
+        except Exception as e:
+            return [self.state.document.reporter.warning(e, line=self.lineno)]
+    return wrapper
+
+
+def format_data_attrs(translator, /, **kwargs):
+    return ' '.join(f'data-tdoc-{k}="{translator.attval(v)}"'
+                    for k, v in sorted(kwargs.items()) if v is not None)
+
+
 def on_config_inited(app, config):
     cv = config.values['html_title']
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
@@ -84,21 +98,16 @@ def on_html_page_context(app, page, template, context, doctree):
         # TODO: Work around inability to specify headers on GitHub Pages
 
 
-def format_data_attrs(translator, /, **kwargs):
-    return ' '.join(f'data-tdoc-{k}="{translator.attval(v)}"'
-                    for k, v in sorted(kwargs.items()) if v is not None)
-
-
 class ExecBlock(nodes.literal_block): pass
 
 
 class Exec(CodeBlock):
-    # TODO: :include:
     # TODO: Validate the language against the list of supported languages
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.class_option,
         'editable': directives.flag,
+        'include': directives.unchanged_required,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
@@ -108,12 +117,21 @@ class Exec(CodeBlock):
                          and 'tdoc-exec' in n['classes'] \
                          and (lang is None or n.get('language') == lang)
 
+    @report_exceptions
     def run(self):
+        if include := self.options.get('include'):
+            content = statemachine.StringList()
+            for path in include.split():
+                rel_path, path = self.env.relfn2path(path)
+                self.env.note_dependency(rel_path)
+                content.extend(statemachine.StringList(
+                    initlist=pathlib.Path(path).read_text().splitlines(),
+                    source=path))
+            self.content[:0] = content
         res = super().run()
         for node in res:
             for n in node.findall(nodes.literal_block):
                 self._update_node(node)
-        # _log.info("res: %s", res, color='yellow')
         return res
 
     def _update_node(self, node):

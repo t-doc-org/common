@@ -25,6 +25,10 @@ more than one tree branch, only the first occurrence is executed.
 ```{rst:directive:option} editable
 When set, the `{exec}` block is made editable.
 ```
+```{rst:directive:option} include: path [path...]
+:type: relative paths
+When set, prepend the content of one or more files to the block's content.
+```
 ```{rst:directive:option} when: value
 :type: click | load | never
 Determines when the block's code is executed: on user request (`click`, the
@@ -126,4 +130,15 @@ Blocks can be made editable with the `:editable:` option.
 select * from countries
   where population > 10000000
   order by country_code;
+```
+
+## Include file content
+
+Blocks can reference one or more external files to be included. The content of
+the files is prepended to the block's content.
+
+```{exec} sql
+:include: people.sql
+:when: load
+select * from people;
 ```
