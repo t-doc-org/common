@@ -1,0 +1,83 @@
+# Copyright 2024 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+name: Package
+on: push
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build packages
+        run: |
+          ${{ steps.python.outputs.python-path }} -m pip install build
+      - name: Build sdist and wheel
+        run: |
+          ${{ steps.python.outputs.python-path }} -m build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+
+  publish-to-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/t-doc-common
+    permissions:
+      id-token: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.10.1
+
+  publish-to-github:
+    name: Publish to GitHub
+    needs:
+      - publish-to-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+      - name: Sign packages
+        uses: sigstore/gh-action-sigstore-python@v2.1.1
+        with:
+          inputs: >-
+            ./dist/*.tar.gz
+            ./dist/*.whl
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ github.ref_name }}' \
+              --repo='${{ github.repository }}' \
+              --notes=''
+      - name: Upload packages and signatures
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ github.ref_name }}' dist/* \
+              --repo='${{ github.repository }}'
