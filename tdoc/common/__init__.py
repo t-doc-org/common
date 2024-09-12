@@ -141,8 +141,9 @@ class Exec(CodeBlock):
             for path in include.split():
                 rel_path, path = self.env.relfn2path(path)
                 self.env.note_dependency(rel_path)
+                text = pathlib.Path(path).read_text(self.config.source_encoding)
                 content.extend(statemachine.StringList(
-                    initlist=pathlib.Path(path).read_text().splitlines(),
+                    initlist=text.splitlines(),
                     source=path))
             self.content[:0] = content
         res = super().run()
