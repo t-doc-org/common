@@ -180,7 +180,8 @@ function replaceResults(exec, results) {
 }
 
 await waitLoaded();
-console.info("SQLite version:", (await Database.config()).version.libVersion);
+const config = await Database.config();
+console.info(`[t-doc] SQLite version: ${config.version.libVersion}`);
 
 for (const exec of document.querySelectorAll('div.tdoc-exec.highlight-sql')) {
     // If the field is editable, create the editor.

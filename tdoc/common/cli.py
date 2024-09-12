@@ -131,9 +131,10 @@ def cmd_version(cfg):
     cfg.stdout.write(f"{common.__project__}-{common.__version__}\n")
 
 
-def sphinx_build(cfg, target, *, build, **kwargs):
+def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
     argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
             '--jobs=auto', '--fail-on-warning']
+    argv += [f'--tag={tag}' for tag in tags]
     if cfg.debug: argv += ['--show-traceback']
     argv += cfg.sphinx_opts
     return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
@@ -147,6 +148,7 @@ class ServerBase(server.ThreadingHTTPServer):
         self.directory = self.build_dir(0) / 'html'
         self.upgrade_msg = None
         self.stop = False
+        self.build_mtime = None
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
@@ -191,7 +193,9 @@ class ServerBase(server.ThreadingHTTPServer):
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
             if build := self.build(mtime):
-                with self.lock: self.directory = build / 'html'
+                with self.lock:
+                    self.build_mtime = mtime
+                    self.directory = build / 'html'
                 self.print_serving()
                 if build_mtime is not None: self.remove_build_dir(build_mtime)
                 build_mtime = mtime
@@ -223,7 +227,8 @@ class ServerBase(server.ThreadingHTTPServer):
         build = self.build_dir(mtime)
         with self.lock: self.building = True
         try:
-            res = sphinx_build(self.cfg, 'html', build=build)
+            res = sphinx_build(self.cfg, 'html', build=build,
+                               tags=[build_tag(mtime)])
             if res.returncode == 0: return build
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")
@@ -271,6 +276,35 @@ class HandlerBase(server.SimpleHTTPRequestHandler):
         self.server.cfg.stderr.write("%s - - [%s] %s\n" % (
             self.address_string(), self.log_date_time_string(),
             (format % args).translate(self._control_char_table)))
+
+    def do_GET(self):
+        if self.path == '/*build':
+            if tag := self.handle_build():
+                self.wfile.write(tag)
+            return
+        super().do_GET()
+
+    def do_HEAD(self):
+        if self.path == '/*build':
+            self.handle_build()
+            return
+        super().do_HEAD()
+
+    def handle_build(self):
+        with self.server.lock: mtime = self.server.build_mtime
+        if mtime is None:
+            self.send_error(server.HTTPStatus.SERVICE_UNAVAILABLE)
+            return
+        tag = build_tag(mtime).encode('utf-8')
+        self.send_response(server.HTTPStatus.OK)
+        self.send_header('Content-type', 'text/plain')
+        self.send_header('Content-Length', str(len(tag)))
+        self.end_headers()
+        return tag
+
+
+def build_tag(mtime):
+    return f'tdoc_build_{mtime}'
 
 
 class Namespace(dict):

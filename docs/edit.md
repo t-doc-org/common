@@ -80,10 +80,12 @@ are located below the `docs` directory.
   generated pages.
 
 - **Create and edit documents** in the `docs` directory. This can be done with
-  any plain text editor. The local server watches the source files and
-  **automatically rebulids the HTML when a file changes**. Reload the page in
-  the browser to view the updated output. If a build fails, the errors can be
-  found in the terminal.
+  any plain text editor.
+  - The local server watches the source files and **automatically rebulids the
+  HTML** when a file changes.
+  - If a build is successful, the browser **automatically reloads** all open
+    pages.
+  - If a build fails, the errors can be viewed in the terminal.
 
 - **Stop the local server** with {kbd}`Ctrl+C` in the terminal, or by closing
   the terminal window.

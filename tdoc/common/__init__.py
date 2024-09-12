@@ -36,10 +36,13 @@ def setup(app):
     app.add_directive('exec', Exec)
     app.add_node(ExecBlock, html=(visit_ExecBlock, depart_ExecBlock))
 
-    app.connect("config-inited", on_config_inited)
+    app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
     app.connect('doctree-resolved', check_after_references)
     app.connect('html-page-context', on_html_page_context)
+
+    if build_tag(app):
+        app.connect('html-page-context', add_reload_js)
 
     return {
         'version': __version__,
@@ -62,6 +65,12 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
+def build_tag(app):
+    for tag in app.tags:
+        if tag.startswith('tdoc_build_'):
+            return tag
+
+
 def on_config_inited(app, config):
     cv = config.values['html_title']
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
@@ -74,6 +83,10 @@ def on_config_inited(app, config):
     if opts.get('repository_url'):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)
+
+    # Set the build tag.
+    tag = build_tag(app)
+    config['html_context']['tdoc_build'] = tag if tag is not None else ''
 
 
 def on_builder_inited(app):
@@ -96,6 +109,10 @@ def on_html_page_context(app, page, template, context, doctree):
         app.add_js_file('tdoc-sql.js', type='module')
         # TODO: Add Cross-Origin-*-Policy headers in the dev server
         # TODO: Work around inability to specify headers on GitHub Pages
+
+
+def add_reload_js(app, page, template, context, doctree):
+    app.add_js_file('tdoc-reload.js', type='module')
 
 
 class ExecBlock(nodes.literal_block): pass

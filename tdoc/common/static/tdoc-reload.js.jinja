@@ -1,0 +1,29 @@
+// Copyright 2024 Remy Blank <remy@c-space.org>
+// SPDX-License-Identifier: MIT
+
+const build = '{{ tdoc_build }}';
+console.info(`[t-doc] Build tag: ${build}`);
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function reloadOnTagChange() {
+    for (;;) {
+        await sleep(500);
+        try {
+            const resp = await fetch(document.location.origin + '/*build');
+            if (!resp.ok) {
+                console.error(`Build tag request failed: ${resp.status} ` +
+                              `${resp.statusText}`);
+                continue;
+            }
+            const tag = await resp.text();
+            if (tag !== build) location.reload();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+if (build !== '') reloadOnTagChange();
