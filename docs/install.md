@@ -114,6 +114,14 @@ t-doc requires the following software to be installed:
   ```{code-block} shell-session
   python -m pip install --upgrade t-doc-common
   ```
+  If you get the following error, then a [local server](edit.md#edit-documents)
+  is running. Stop it with {kbd}`Ctrl+C` or by closing its terminal window, then
+  try again.
+  ```
+  ERROR: Could not install packages due to an OSError: [WinError 32] The process
+  cannot access the file because it is being used by another process:
+  'c:\\users\\...\\scripts\\tdoc.exe'
+  ```
   ````
   ````{tab-item} macOS
   :sync: macos
