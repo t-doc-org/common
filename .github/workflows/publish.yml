@@ -13,7 +13,8 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
+  publish:
+    name: Publish
     uses: t-doc-org/common/.github/workflows/deploy-github-pages.yml@main
     secrets: inherit
     with:
