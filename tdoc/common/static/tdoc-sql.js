@@ -61,24 +61,34 @@ class Database {
     }
 }
 
+// Walk an {exec} :after: tree and yield nodes in depth-first order with
+// duplicates removed.
+function* walkExecTree(node, seen) {
+    if (!seen) seen = new Set();
+    if (seen.has(node)) return;
+    seen.add(node);
+    const after = node.dataset.tdocAfter;
+    for (const a of after ? after.split(/\s+/) : []) {
+        const n = document.getElementById(a);
+        if (!n) {
+            console.error(":after: node not found: ${a}");
+            continue;
+        }
+        if (!n.classList.contains('tdoc-exec')) {
+            n = n.parentNode;  // Secondary name as a nested <span>
+        }
+        yield* walkExecTree(n, seen);
+    }
+    yield node;
+}
+
 let db_num = 0;
 
 async function execute(exec) {
-    // Compute the chain of nodes to execute.
-    const nodes = [];
-    for (let node = exec; node;) {
-        if (node.classList.contains('tdoc-exec')) {
-            nodes.push(node);
-            node = document.getElementById(node.dataset.tdocAfter)
-        } else {  // Secondary name as a nested <span>
-            node = node.parentNode;
-        }
-    }
-    nodes.reverse();
-
     // TODO: Prevent multiple parallel executions of the same node, and disable
     //       the "Run" button while executing.
 
+    const nodes = [...walkExecTree(exec)];
     let result, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {

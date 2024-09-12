@@ -97,7 +97,7 @@ class Exec(CodeBlock):
     # TODO: Validate the language against the list of supported languages
 
     option_spec = CodeBlock.option_spec | {
-        'after': directives.unchanged,
+        'after': directives.class_option,
         'editable': directives.flag,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
@@ -133,10 +133,10 @@ def check_after_references(app, doctree, docname):
     for n in nodes:
         names.update(n['names'])
     for n in nodes:
-        after = n.get('after')
-        if after and after not in names:
-            doctree.reporter.error(
-                f"'exec': Unknown :after: reference: {after}", base_node=n)
+        for after in n.get('after', ()):
+            if after not in names:
+                doctree.reporter.error(
+                    f"'exec': Unknown :after: reference: {after}", base_node=n)
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
@@ -146,8 +146,10 @@ def visit_ExecBlock(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
-        attrs = format_data_attrs(self, after=node.get('after'),
-                                  when=node.get('when'))
+        after = node.get('after')
+        attrs = format_data_attrs(
+            self, after=' '.join(after) if after else None,
+            when=node.get('when'))
         if attrs:
             def subst(m):
                 return f'{m.group(1)} {attrs}{m.group(2)}'

@@ -15,11 +15,12 @@ described below.
 
 {.rubric}
 Options
-```{rst:directive:option} after: name
+```{rst:directive:option} after: name [name...]
 :type: text
-References an `{exec}` block to be executed before this block, in the same
-environment. The referenced block can itself have an `:after:` option, forming
-a chain of blocks to execute in the environment.
+References one or more `{exec}` blocks to be executed before this block, in the
+same environment. The referenced blocks can themselves have an `:after:` option,
+forming a tree of blocks to execute in the environment. If a block appears on
+more than one tree branch, only the first occurrence is executed.
 ```
 ```{rst:directive:option} editable
 When set, the `{exec}` block is made editable.
@@ -40,20 +41,20 @@ A database can be defined as a named `{exec} sql` block, to be referenced in the
 :name: sql-countries
 :when: never
 create table countries (
-    country text not null,
-    country_code text not null,
-    dial_code text not null,
-    capital text not null,
-    population int not null,
-    food text
+  country text not null,
+  country_code text not null,
+  dial_code text not null,
+  capital text not null,
+  population int not null,
+  food text
 );
 insert into countries values
-    ('Switzerland', 'CH', '+41', 'Bern', 8776000, 'fondue!'),
-    ('France', 'FR', '+33', 'Paris', 67970000, null),
-    ('Germany', 'DE', '+49', 'Berlin', 83800000, null),
-    ('Italy', 'IT', '+39', 'Rome', 58940000, null),
-    ('Austria', 'AT', '+43', 'Vienna', 9042000, 'Kaiserschmarrn'),
-    ('Lichtenstein', 'LI', '+423', 'Vaduz', 39327, null);
+  ('Switzerland', 'CH', '+41', 'Bern', 8776000, 'fondue!'),
+  ('France', 'FR', '+33', 'Paris', 67970000, null),
+  ('Germany', 'DE', '+49', 'Berlin', 83800000, null),
+  ('Italy', 'IT', '+39', 'Rome', 58940000, null),
+  ('Austria', 'AT', '+43', 'Vienna', 9042000, 'Kaiserschmarrn'),
+  ('Lichtenstein', 'LI', '+423', 'Vaduz', 39327, null);
 ```
 
 ## Queries
@@ -123,6 +124,6 @@ Blocks can be made editable with the `:editable:` option.
 :when: load
 :editable:
 select * from countries
-    where population > 10000000
-    order by country_code;
+  where population > 10000000
+  order by country_code;
 ```
