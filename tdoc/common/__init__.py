@@ -10,7 +10,7 @@ from sphinx.directives.code import CodeBlock
 from sphinx.util import logging
 
 __project__ = 't-doc-common'
-__version__ = '0.7'
+__version__ = '0.8.dev1'
 
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
@@ -94,6 +94,7 @@ class ExecBlock(nodes.literal_block): pass
 
 class Exec(CodeBlock):
     # TODO: :include:
+    # TODO: Validate the language against the list of supported languages
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.unchanged,

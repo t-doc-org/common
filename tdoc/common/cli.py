@@ -147,6 +147,7 @@ class ServerBase(server.ThreadingHTTPServer):
         self.directory = self.build_dir(0) / 'html'
         self.upgrade_msg = None
         self.stop = False
+        self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
         self.checker = threading.Thread(target=self.check_upgrade, daemon=True)
@@ -159,14 +160,12 @@ class ServerBase(server.ThreadingHTTPServer):
         return super().server_bind()
 
     def finish_request(self, request, client_addr):
-        with self.lock:
-            directory = self.directory
+        with self.lock: directory = self.directory
         self.RequestHandlerClass(request, client_addr, self,
                                  directory=directory)
 
     def server_close(self):
-        with self.lock:
-            self.stop = True
+        with self.lock: self.stop = True
         self.builder.join()
         return super().server_close()
 
@@ -192,8 +191,7 @@ class ServerBase(server.ThreadingHTTPServer):
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
             if build := self.build(mtime):
-                with self.lock:
-                    self.directory = build / 'html'
+                with self.lock: self.directory = build / 'html'
                 self.print_serving()
                 if build_mtime is not None: self.remove_build_dir(build_mtime)
                 build_mtime = mtime
@@ -223,11 +221,14 @@ class ServerBase(server.ThreadingHTTPServer):
 
     def build(self, mtime):
         build = self.build_dir(mtime)
+        with self.lock: self.building = True
         try:
             res = sphinx_build(self.cfg, 'html', build=build)
             if res.returncode == 0: return build
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")
+        finally:
+            with self.lock: self.building = False
 
     def remove_build_dir(self, mtime):
         build = self.build_dir(mtime)
@@ -241,8 +242,7 @@ class ServerBase(server.ThreadingHTTPServer):
         if ':' in host: host = f'[{host}]'
         self.cfg.stdout.write(self.cfg.ansi("Serving at <@{LBLUE}%s@{NORM}>\n")
                               % f"http://{host}:{port}/")
-        with self.lock:
-            msg = self.upgrade_msg
+        with self.lock: msg = self.upgrade_msg
         if msg: self.cfg.stdout.write(msg)
 
     def check_upgrade(self):
@@ -258,6 +258,7 @@ class ServerBase(server.ThreadingHTTPServer):
                    'development' if editable else 'install'))
             with self.lock:
                 self.upgrade_msg = msg
+                if not self.building: self.cfg.stdout.write(msg)
         except Exception:
             if self.cfg.debug: raise
 
