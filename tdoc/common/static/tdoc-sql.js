@@ -88,14 +88,13 @@ async function execute(exec) {
     // TODO: Prevent multiple parallel executions of the same node, and disable
     //       the "Run" button while executing.
 
-    const nodes = [...walkExecTree(exec)];
     let result, tbody;
     const db = await Database.open(`file:db-${db_num++}?vfs=memdb`);
     try {
-        for (const [i, node] of nodes.entries()) {
+        for (const node of walkExecTree(exec)) {
             await db.exec(getText(node), res => {
+                if (node !== exec) return;
                 if (res.columnNames.length === 0) return;
-                if (i < nodes.length - 1) return;
                 if (!result) {
                     result = element(`\
 <div class="pst-scrollable-table-container tdoc-exec-output">\
