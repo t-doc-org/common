@@ -15,6 +15,7 @@ import subprocess
 import sys
 import threading
 import time
+from urllib import parse
 
 from .. import common
 from . import util
@@ -144,7 +145,7 @@ def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
 class ServerBase(server.ThreadingHTTPServer):
     def __init__(self, *args, cfg, **kwargs):
         self.cfg = cfg
-        self.lock = threading.Lock()
+        self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
         self.upgrade_msg = None
         self.stop = False
@@ -165,6 +166,12 @@ class ServerBase(server.ThreadingHTTPServer):
         with self.lock: directory = self.directory
         self.RequestHandlerClass(request, client_addr, self,
                                  directory=directory)
+
+    IGNORED_EXCEPTIONS = (BrokenPipeError,)
+
+    def handle_error(self, request, client_addr):
+        if not isinstance(sys.exception(), self.IGNORED_EXCEPTIONS):
+            super().handle_error(request, client_addr)
 
     def server_close(self):
         with self.lock: self.stop = True
@@ -196,6 +203,7 @@ class ServerBase(server.ThreadingHTTPServer):
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
+                    self.lock.notify_all()
                 self.print_serving()
                 if build_mtime is not None: self.remove_build_dir(build_mtime)
                 build_mtime = mtime
@@ -278,23 +286,33 @@ class HandlerBase(server.SimpleHTTPRequestHandler):
             (format % args).translate(self._control_char_table)))
 
     def do_GET(self):
-        if self.path == '/*build':
-            if tag := self.handle_build():
-                self.wfile.write(tag)
-            return
-        super().do_GET()
+        if not self.dispatch_star_handler(True):
+            super().do_GET()
 
     def do_HEAD(self):
-        if self.path == '/*build':
-            self.handle_build()
-            return
-        super().do_HEAD()
+        if not self.dispatch_star_handler(False):
+            super().do_HEAD()
 
-    def handle_build(self):
-        with self.server.lock: mtime = self.server.build_mtime
-        if mtime is None:
-            self.send_error(server.HTTPStatus.SERVICE_UNAVAILABLE)
-            return
+    def dispatch_star_handler(self, write_content):
+        url = parse.urlparse(self.path)
+        if not url.path.startswith('/*'): return
+        if handler := getattr(self, f'handle_star_{url.path[2:]}', None):
+            content = handler(url)
+            if write_content and content: self.wfile.write(content)
+        else:
+            self.send_error(server.HTTPStatus.NOT_FOUND)
+        return True
+
+    def handle_star_build(self, url):
+        t = None
+        for k, v in parse.parse_qsl(url.query):
+            if k == 't':
+                t = v
+                break
+        with self.server.lock:
+            while ((mtime := self.server.build_mtime) is None
+                   or t == build_tag(mtime)):
+                self.server.lock.wait()
         tag = build_tag(mtime).encode('utf-8')
         self.send_response(server.HTTPStatus.OK)
         self.send_header('Content-type', 'text/plain')

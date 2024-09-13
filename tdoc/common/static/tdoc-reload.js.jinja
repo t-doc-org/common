@@ -10,9 +10,9 @@ function sleep(ms) {
 
 async function reloadOnTagChange() {
     for (;;) {
-        await sleep(500);
         try {
-            const resp = await fetch(document.location.origin + '/*build');
+            const resp = await fetch(
+                `${document.location.origin}/*build?t=${build}`);
             if (!resp.ok) {
                 console.error(`Build tag request failed: ${resp.status} ` +
                               `${resp.statusText}`);
@@ -22,6 +22,8 @@ async function reloadOnTagChange() {
             if (tag !== build) location.reload();
         } catch (e) {
             console.error(e);
+        } finally {
+            await sleep(1000);
         }
     }
 }
