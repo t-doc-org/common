@@ -39,6 +39,7 @@ div.tdoc-exec.tdoc-editable div.highlight button.copybtn {
 div.tdoc-exec.tdoc-editable div.cm-editor {
     border-radius: 0.25rem;
     border: 1px solid var(--pst-color-border);
+    overflow: hidden;
 }
 html[data-theme=dark] div.tdoc-exec.tdoc-editable div.cm-editor {
     background-color: var(--pst-color-surface);

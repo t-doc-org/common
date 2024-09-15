@@ -56,7 +56,7 @@ def report_exceptions(fn):
         try:
             return fn(self, *args, **kwargs)
         except Exception as e:
-            return [self.state.document.reporter.warning(e, line=self.lineno)]
+            return [self.state.document.reporter.error(e, line=self.lineno)]
     return wrapper
 
 
@@ -105,10 +105,11 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    if doctree and any(doctree.findall(Exec.match_node('sql'))):
-        app.add_js_file('tdoc-sql.js', type='module')
-        # TODO: Add Cross-Origin-*-Policy headers in the dev server
-        # TODO: Work around inability to specify headers on GitHub Pages
+    if doctree:
+        for lang in sorted(Exec.find_nodes(doctree)):
+            app.add_js_file(f'tdoc-{lang}.js', type='module')
+            # TODO: Add Cross-Origin-*-Policy headers in the dev server
+            # TODO: Work around inability to specify headers on GitHub Pages
 
 
 def add_reload_js(app, page, template, context, doctree):
@@ -119,7 +120,7 @@ class ExecBlock(nodes.literal_block): pass
 
 
 class Exec(CodeBlock):
-    # TODO: Validate the language against the list of supported languages
+    languages = {'sql'}
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.class_option,
@@ -129,10 +130,11 @@ class Exec(CodeBlock):
     }
 
     @staticmethod
-    def match_node(lang=None):
-        return lambda n: isinstance(n, ExecBlock) \
-                         and 'tdoc-exec' in n['classes'] \
-                         and (lang is None or n.get('language') == lang)
+    def find_nodes(doctree):
+        nodes = {}
+        for node in doctree.findall(ExecBlock):
+            nodes.setdefault(node['language'], []).append(node)
+        return nodes
 
     @report_exceptions
     def run(self):
@@ -153,6 +155,8 @@ class Exec(CodeBlock):
         return res
 
     def _update_node(self, node):
+        if (lang := node['language']) not in self.languages:
+            raise Exception(f"{{exec}}: Unsupported language: {lang}")
         node.__class__ = ExecBlock
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
@@ -164,15 +168,16 @@ class Exec(CodeBlock):
 
 
 def check_after_references(app, doctree, docname):
-    nodes = list(doctree.findall(Exec.match_node('sql')))
-    names = set()
-    for n in nodes:
-        names.update(n['names'])
-    for n in nodes:
-        for after in n.get('after', ()):
-            if after not in names:
-                doctree.reporter.error(
-                    f"'exec': Unknown :after: reference: {after}", base_node=n)
+    for lang, nodes in Exec.find_nodes(doctree).items():
+        names = set()
+        for n in nodes:
+            names.update(n['names'])
+        for n in nodes:
+            for after in n.get('after', ()):
+                if after not in names:
+                    doctree.reporter.error(
+                        f"{{exec}} {lang}: Unknown :after: reference: {after}",
+                        base_node=n)
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
