@@ -297,28 +297,37 @@ class HandlerBase(server.SimpleHTTPRequestHandler):
         url = parse.urlparse(self.path)
         if not url.path.startswith('/*'): return
         if handler := getattr(self, f'handle_star_{url.path[2:]}', None):
-            content = handler(url)
+            content = handler(url, write_content)
             if write_content and content: self.wfile.write(content)
         else:
             self.send_error(server.HTTPStatus.NOT_FOUND)
         return True
 
-    def handle_star_build(self, url):
+    def handle_star_build(self, url, write_content):
         t = None
         for k, v in parse.parse_qsl(url.query):
             if k == 't':
                 t = v
                 break
-        with self.server.lock:
-            while ((mtime := self.server.build_mtime) is None
-                   or t == build_tag(mtime)):
-                self.server.lock.wait()
-        tag = build_tag(mtime).encode('utf-8')
+        # We send padding back at regular intervals, which allows detecting when
+        # the client closes the connection (we get a BrokenPipeError). Since the
+        # content length is needed upfront, we return a fixed size, and
+        # terminate the request if the padding exceeds the available space.
+        size = 600
         self.send_response(server.HTTPStatus.OK)
         self.send_header('Content-type', 'text/plain')
-        self.send_header('Content-Length', str(len(tag)))
+        self.send_header('Content-Length', str(size))
         self.end_headers()
-        return tag
+        if not write_content: return
+        with self.server.lock:
+            while ((mtime := self.server.build_mtime) is None
+                   or t == build_tag(mtime)) and size > 0:
+                if self.server.lock.wait(timeout=1): continue
+                self.wfile.write(b' ')
+                size -= 1
+        tag = build_tag(mtime).encode('utf-8')
+        if len(tag) > size: tag = b''  # Not enough remaining capacity
+        return b' ' * (size - len(tag)) + tag
 
 
 def build_tag(mtime):

@@ -18,7 +18,8 @@ async function reloadOnTagChange() {
                               `${resp.statusText}`);
                 continue;
             }
-            const tag = await resp.text();
+            const tag = (await resp.text()).trim();
+            if (tag === '') continue;
             if (tag !== build) location.reload();
         } catch (e) {
             console.error(e);
