@@ -96,7 +96,7 @@ def on_builder_inited(app):
 
     # The file must be at the root of the website, to avoid limiting the scope
     # of the service worker to _static.
-    fileutil.copy_asset_file(_common / 'static.gen' / 'mini-coi.js',
+    fileutil.copy_asset_file(_common / 'static' / 'tdoc-coi.js',
                              app.builder.outdir, force=True)
 
 
@@ -106,15 +106,15 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Work around Cross-Origin Isoaltion issues when the corresponding headers
-    # cannot be set server-side.
-    app.add_js_file('../mini-coi.js', priority=0)
+    # Work around Cross-Origin Isolation issues when the relevant headers cannot
+    # be set server-side.
+    app.add_js_file('../tdoc-coi.js', priority=0,
+                    scope=context['pathto']('', resource=True))
 
+    # Add language-specific .js files.
     if doctree:
         for lang in sorted(Exec.find_nodes(doctree)):
             app.add_js_file(f'tdoc-{lang}.js', type='module')
-            # TODO: Add Cross-Origin-*-Policy headers in the dev server
-            # TODO: Work around inability to specify headers on GitHub Pages
 
 
 def add_reload_js(app, page, template, context, doctree):

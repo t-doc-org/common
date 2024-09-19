@@ -34,7 +34,6 @@ class BuildHook(BuildHookInterface):
         self.app.display_info("Generating files")
         os.makedirs(static_gen, exist_ok=True)
         node_modules = root / 'node_modules'
-        shutil.copy2(node_modules / 'mini-coi' / 'mini-coi.js', static_gen)
         shutil.copytree(node_modules / '@sqlite.org' / 'sqlite-wasm'
                         / 'sqlite-wasm' / 'jswasm',
                         static_gen, symlinks=True, dirs_exist_ok=True)
