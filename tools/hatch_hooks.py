@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import os
 import pathlib
 import shutil
 import subprocess
@@ -31,9 +32,12 @@ class BuildHook(BuildHookInterface):
         shutil.rmtree(static_gen, ignore_errors=True)
         (root / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
-        shutil.copytree(root / 'node_modules' / '@sqlite.org' / 'sqlite-wasm'
+        os.makedirs(static_gen, exist_ok=True)
+        node_modules = root / 'node_modules'
+        shutil.copy2(node_modules / 'mini-coi' / 'mini-coi.js', static_gen)
+        shutil.copytree(node_modules / '@sqlite.org' / 'sqlite-wasm'
                         / 'sqlite-wasm' / 'jswasm',
-                        static_gen, symlinks=True)
+                        static_gen, symlinks=True, dirs_exist_ok=True)
         self.run(['npm', 'run', 'build'])
 
     def run(self, args):

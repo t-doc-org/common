@@ -7,7 +7,7 @@ import re
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx.directives.code import CodeBlock
-from sphinx.util import logging
+from sphinx.util import fileutil, logging
 
 __project__ = 't-doc-common'
 __version__ = '0.10.dev1'
@@ -93,10 +93,11 @@ def on_builder_inited(app):
     # Add our own static paths.
     app.config.html_static_path.append(str(_common / 'static'))
     app.config.html_static_path.append(str(_common / 'static.gen'))
-    sqlite_path = (_root / 'node_modules' / '@sqlite.org' / 'sqlite-wasm'
-                   / 'sqlite-wasm' / 'jswasm')
-    if sqlite_path.is_dir():
-        app.config.html_static_path.append(str(sqlite_path))
+
+    # The file must be at the root of the website, to avoid limiting the scope
+    # of the service worker to _static.
+    fileutil.copy_asset_file(_common / 'static.gen' / 'mini-coi.js',
+                             app.builder.outdir, force=True)
 
 
 def on_html_page_context(app, page, template, context, doctree):
@@ -104,6 +105,10 @@ def on_html_page_context(app, page, template, context, doctree):
     if license: context['license'] = license
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
+
+    # Work around Cross-Origin Isoaltion issues when the corresponding headers
+    # cannot be set server-side.
+    app.add_js_file('../mini-coi.js', priority=0)
 
     if doctree:
         for lang in sorted(Exec.find_nodes(doctree)):
