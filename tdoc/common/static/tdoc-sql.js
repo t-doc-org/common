@@ -46,13 +46,13 @@ class SqlExecutor extends Executor {
         const db = await Database.open(
             `file:db-${SqlExecutor.db_num++}?vfs=memdb`);
         try {
-            for (const [code, last] of this.codeBlocks()) {
+            for (const [code, node] of this.codeBlocks()) {
                 await db.exec(code, res => {
-                    if (!last) return;
+                    if (node !== this.node) return;
                     if (res.columnNames.length === 0) return;
                     if (!output) {
                         output = element(`\
-<div class="pst-scrollable-table-container tdoc-exec-output">\
+<div class="tdoc-exec-output pst-scrollable-table-container">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div>`);
                         const tr = output.querySelector('tr');

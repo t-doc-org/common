@@ -31,14 +31,36 @@ div.highlight pre {
     padding: 0.7rem;
 }
 
+/* Exec outputs */
+div.tdoc-exec-output {
+    margin: 1em 0;
+}
+div.tdoc-exec-output.tdoc-captioned {
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+}
+div.tdoc-exec-output.tdoc-captioned div.tdoc-caption {
+    border-bottom: 1px solid var(--pst-color-border);
+    font-size: 1rem;
+    font-weight: var(--pst-font-weight-caption);
+    margin: 0;
+    padding: 0.3rem 0.5rem;
+}
+div.tdoc-exec-output.tdoc-captioned pre {
+    border: none;
+}
+div.tdoc-exec-output pre span.err {
+    color: var(--pst-color-danger);
+}
+
 /* Editor */
 div.tdoc-exec.tdoc-editable div.highlight pre,
 div.tdoc-exec.tdoc-editable div.highlight button.copybtn {
     display: none;
 }
 div.tdoc-exec.tdoc-editable div.cm-editor {
-    border-radius: 0.25rem;
     border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
     overflow: hidden;
 }
 html[data-theme=dark] div.tdoc-exec.tdoc-editable div.cm-editor {

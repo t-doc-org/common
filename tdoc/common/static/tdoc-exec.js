@@ -124,7 +124,7 @@ export class Executor {
     // Yield the code from the nodes in the :after: chain of the {exec} node.
     *codeBlocks() {
         for (const node of walkAfterTree(this.node, new Set())) {
-            yield [Executor.text(node), node === this.node]
+            yield [Executor.text(node), node]
         }
     }
 
@@ -142,23 +142,29 @@ export class Executor {
         }
     }
 
+    // Append output nodes associated with the {exec} node.
+    appendOutputs(outputs) {
+        let prev = this.node;
+        for (;;) {
+            const next = prev.nextElementSibling;
+            if (!next || !next.classList.contains('tdoc-exec-output')) break;
+            prev = next;
+        }
+        prev.after(...out);
+    }
     // Replace the output nodes associated with the {exec} node.
-    replaceOutputs(results) {
+    replaceOutputs(outputs) {
         let prev = this.node, i = 0;
         for (;; ++i) {
             const next = prev.nextElementSibling;
             if (!next || !next.classList.contains('tdoc-exec-output')) break;
-            if (i < results.length) {
-                prev = results[i];
+            if (i < outputs.length) {
+                prev = outputs[i];
                 next.replaceWith(prev);
             } else {
                 next.remove();
             }
         }
-        for (; i < results.length; ++i) {
-            const res = results[i];
-            prev.after(res);
-            prev = res;
-        }
+        prev.after(...outputs.slice(i));
     }
 }
