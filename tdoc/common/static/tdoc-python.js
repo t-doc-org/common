@@ -13,15 +13,15 @@ function signal() {
 // TODO: Make micropython work, and allow selecting the interpreter type
 // TODO: Use hooks to determine readiness
 
-const mpy = XWorker('/_static/tdoc-python.py', {
+const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
     config: {},
 });
 const {promise: ready, resolve: resolve_ready} = signal();
-mpy.sync.ready = () => { resolve_ready(); };
+worker.sync.ready = () => { resolve_ready(); };
 
 const stdio = {};
-mpy.sync.write = (run_id, stream, data) => {
+worker.sync.write = (run_id, stream, data) => {
     const fn = stdio[run_id];
     if (fn) {
         fn(stream, data);
@@ -76,7 +76,7 @@ class PythonExecutor extends Executor {
             for (const [code, node] of this.codeBlocks()) {
                 blocks.push([code, node.id]);
             }
-            await mpy.sync.run(run_id, blocks)
+            await worker.sync.run(run_id, blocks)
         } catch (e) {
             console.error(e);
             const msg = e.toString();
