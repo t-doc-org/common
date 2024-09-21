@@ -13,19 +13,13 @@ async function reloadOnTagChange() {
         try {
             const resp = await fetch(
                 `${document.location.origin}/*build?t=${build}`);
-            if (!resp.ok) {
-                console.error(`Build tag request failed: ${resp.status} ` +
-                              `${resp.statusText}`);
-                continue;
+            if (resp.ok) {
+                const tag = (await resp.text()).trim();
+                if (tag === '') continue;
+                if (tag !== build) location.reload();
             }
-            const tag = (await resp.text()).trim();
-            if (tag === '') continue;
-            if (tag !== build) location.reload();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            await sleep(1000);
-        }
+        } catch (e) {}
+        await sleep(1000);
     }
 }
 
