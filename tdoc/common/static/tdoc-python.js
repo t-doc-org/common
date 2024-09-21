@@ -2,16 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import {XWorker} from 'https://cdn.jsdelivr.net/npm/polyscript';
-import {Executor, element, text} from './tdoc-exec.js';
+import {Executor, element, signal, text} from './tdoc-exec.js';
 
-function signal() {
-    let resolve, reject;
-    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-    return {promise, resolve, reject};
-}
-
+// TODO: Add a button to each {exec} output to remove it
+// TODO: Make terminal output configurable. If ":output: always", then create
+//       the terminal output right away to avoid flickering.
 // TODO: Make micropython work, and allow selecting the interpreter type
-// TODO: Use hooks to determine readiness
 
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
@@ -23,9 +19,9 @@ worker.sync.ready = (msg) => {
     resolve_ready();
 };
 
-const stdio = {};
+const writers = {};
 worker.sync.write = (run_id, stream, data) => {
-    const fn = stdio[run_id];
+    const fn = writers[run_id];
     if (fn) {
         fn(stream, data);
     } else {
@@ -33,13 +29,12 @@ worker.sync.write = (run_id, stream, data) => {
     }
 };
 
-// TODO: Add a button to each {exec} output to remove it
-// TODO: Make terminal output configurable. If ":output: always", then create
-//       the terminal output right away to avoid flickering.
-
 class PythonExecutor extends Executor {
     static lang = 'python';
-    static next_run_id = 0;
+
+    static async init() {
+        await ready;
+    }
 
     addControls(controls) {
         if (this.when !== 'never') {
@@ -52,67 +47,67 @@ class PythonExecutor extends Executor {
         super.addControls(controls);
     }
 
-    async run() {
-        this.run_id = PythonExecutor.next_run_id++;
+    onReady() {
+        if (this.runCtrl) this.runCtrl.disabled = false;
+        if (this.stopCtrl) this.stopCtrl.disabled = false;
+    }
+
+    preRun(run_id) {
+        this.runCtrl.classList.add('hidden');
+        this.stopCtrl.classList.remove('hidden');
+        let pre;
+        writers[run_id] = (stream, data) => {
+            if (!pre) {
+                const output = this.terminalOutput();
+                this.appendOutputs([output]);
+                pre = output.querySelector('pre');
+            }
+            for (;;) {
+                const i = data.indexOf('\u000c');
+                if (i < 0) break;
+                pre.replaceChildren();
+                data = data.slice(i + 1);
+            }
+            let node = text(data);
+            if (stream === 2) {
+                const el = element(`<span class="err"></span>`);
+                el.appendChild(node);
+                node = el;
+            }
+            pre.appendChild(node);
+        };
+    }
+
+    postRun(run_id) {
+        delete writers[run_id];
+        this.runCtrl.classList.remove('hidden');
+        this.stopCtrl.classList.add('hidden');
+    }
+
+    async run(run_id) {
         try {
             this.replaceOutputs([]);
-            let pre;
-            stdio[this.run_id] = (stream, data) => {
-                if (!pre) {
-                    const output = element(`\
-<div class="tdoc-exec-output tdoc-captioned">\
-<div class="tdoc-caption">Terminal output</div>\
-<div class="highlight"><pre></pre></div>\
-</div>`);
-                    this.replaceOutputs([output]);
-                    pre = output.querySelector('pre');
-                }
-                for (;;) {
-                    const i = data.indexOf('\u000c');
-                    if (i < 0) break;
-                    pre.replaceChildren();
-                    data = data.slice(i + 1);
-                }
-                let node = text(data);
-                if (stream === 2) {
-                    const el = element(`<span class="err"></span>`);
-                    el.appendChild(node);
-                    node = el;
-                }
-                pre.appendChild(node);
-            };
-            await ready;
-            this.runCtrl.classList.add('hidden');
-            this.stopCtrl.classList.remove('hidden');
             const blocks = [];
             for (const [code, node] of this.codeBlocks()) {
                 blocks.push([code, node.id]);
             }
-            await worker.sync.run(this.run_id, blocks)
-        } catch (e) {
-            console.error(e);
-            const msg = e.toString();
-            const output = element(`\
-<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
-            output.appendChild(text(` ${msg}`));
-            this.appendOutputs([output]);
+            await worker.sync.run(run_id, blocks)
         } finally {
-            delete stdio[this.run_id];
-            delete this.run_id;
-            this.runCtrl.classList.remove('hidden');
-            this.stopCtrl.classList.add('hidden');
+            await worker.sync.stop(run_id);
         }
     }
 
-    async stop() {
-        if (this.run_id) await worker.sync.stop(this.run_id);
+    async stop(run_id) {
+        await worker.sync.stop(run_id);
+    }
+
+    terminalOutput() {
+        return element(`\
+<div class="tdoc-exec-output tdoc-captioned">\
+<div class="tdoc-caption">Terminal output</div>\
+<div class="highlight"><pre></pre></div>\
+</div>`);
     }
 }
 
 Executor.apply(PythonExecutor);
-await ready;
-for (const node of Executor.query(PythonExecutor)) {
-    const h = node.tdocHandler;
-    if (h.runCtrl) h.runCtrl.disabled = false;
-    if (h.stopCtrl) h.stopCtrl.disabled = false;
-}

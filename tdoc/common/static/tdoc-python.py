@@ -29,6 +29,7 @@ class OutStream(io.RawIOBase):
     def write(self, data, /):
         size = len(data)
         if size > 0:
+            # TODO: Return bytes, decode on the other end
             if not isinstance(data, str):
                 data = str(data, 'utf-8')
             write(run_id_var.get(), self.stream, data)
@@ -59,7 +60,7 @@ async def run(run_id, blocks):
         for line in te.format():
             # This is a bit primitive, but more sophisticated traceback
             # manipulations have undesirable side-effects.
-            if line.startswith('  File "<exec>", line'): continue
+            if line.startswith('  File "<exec>", line '): continue
             print(line, file=sys.stderr, end='')
     finally:
         del tasks[run_id]

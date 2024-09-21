@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import {default as sqlite3_init} from './sqlite3-worker1-promiser.mjs';
-import {Executor, element, text} from './tdoc-exec.js';
+import {Executor, UserError, element, text} from './tdoc-exec.js';
 
-const promiser = await sqlite3_init({
-    // debug: console.debug,
-});
+let promiser;
 
 class Database {
     static async config() {
@@ -39,7 +37,14 @@ class Database {
 
 class SqlExecutor extends Executor {
     static lang = 'sql';
-    static next_run_id = 0;
+
+    static async init() {
+        promiser = await sqlite3_init({
+            // debug: console.debug,
+        });
+        const config = await Database.config();
+        console.info(`[t-doc] SQLite version: ${config.version.libVersion}`);
+    }
 
     addControls(controls) {
         if (this.when === 'click' || (this.editable && this.when !== 'never')) {
@@ -49,70 +54,78 @@ class SqlExecutor extends Executor {
         super.addControls(controls);
     }
 
-    async run() {
-        let output, tbody;
-        const db = await Database.open(
-            `file:db-${SqlExecutor.next_run_id++}?vfs=memdb`);
+    onReady() {
+        if (this.runCtrl) this.runCtrl.disabled = false;
+    }
+
+    preRun(run_id) {
         if (this.runCtrl) this.runCtrl.disabled = true;
+    }
+
+    postRun(run_id) {
+        if (this.runCtrl) this.runCtrl.disabled = false;
+    }
+
+    async run(run_id) {
+        let db;
         try {
+            db = await Database.open(`file:db-${run_id}?vfs=memdb`);
+            let output, tbody
             for (const [code, node] of this.codeBlocks()) {
                 await db.exec(code, res => {
                     if (node !== this.node) return;
                     if (res.columnNames.length === 0) return;
                     if (!output) {
-                        output = element(`\
-<div class="tdoc-exec-output pst-scrollable-table-container">\
-<table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
-</div>`);
-                        const tr = output.querySelector('tr');
-                        for (const col of res.columnNames) {
-                            const th = tr.appendChild(element(
-                                `<th class="text-center"></th>`));
-                            th.appendChild(text(col));
-                        }
+                        output = this.outputTable(res.columnNames);
                         tbody = output.querySelector('tbody');
                     }
                     if (res.row) {
-                        const tr = tbody.appendChild(element(`<tr></tr>`));
-                        for (const val of res.row) {
-                            tr.appendChild(element(
-                                    `<td class="text-center"></td>`))
-                                .appendChild(val === null ?
-                                             element(`<code>NULL</code>`) :
-                                             text(val));
-                        }
+                        tbody.appendChild(this.resultRow(res.row));
                     } else if (tbody.children.length === 0) {
-                        tbody.appendChild(element(`\
-<tr class="tdoc-no-results">\
-<td colspan="${res.columnNames.length}">No results</td>\
-</tr>`))
+                        tbody.appendChild(this.noResultsRow(res.columnNames));
                     }
                 });
             }
+            this.replaceOutputs(output ? [output] : []);
         } catch (e) {
-            let msg;
-            if (e.dbId === db.dbId) {
-                msg = /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
-                        .exec(e.result.message)[2]
-            } else {
-                console.error(e);
-                msg = e.toString();
-            }
-            output = element(`\
-<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
-            output.appendChild(text(` ${msg}`));
+            if (e.dbId !== db.dbId) throw e;
+            throw new UserError(
+                /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
+                    .exec(e.result.message)[2]);
         } finally {
-            if (this.runCtrl) this.runCtrl.disabled = false;
-            await db.close();
+            if (db) await db.close();
         }
-        this.replaceOutputs(output ? [output] : []);
+    }
+
+    outputTable(columns) {
+        const output = element(`\
+<div class="tdoc-exec-output pst-scrollable-table-container">\
+<table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
+</div>`);
+        const tr = output.querySelector('tr');
+        for (const col of columns) {
+            tr.appendChild(element(`<th class="text-center"></th>`))
+                .appendChild(text(col));
+        }
+        return output;
+    }
+
+    resultRow(row) {
+        const tr = element(`<tr></tr>`);
+        for (const val of row) {
+            tr.appendChild(element(`<td class="text-center"></td>`))
+                .appendChild(val === null ? element(`<code>NULL</code>`)
+                                          : text(val));
+        }
+        return tr;
+    }
+
+    noResultsRow(columns) {
+        return element(`\
+<tr class="tdoc-no-results">\
+<td colspan="${columns.length}">No results</td>\
+</tr>`);
     }
 }
 
 Executor.apply(SqlExecutor);
-const config = await Database.config();
-console.info(`[t-doc] SQLite version: ${config.version.libVersion}`);
-for (const node of Executor.query(SqlExecutor)) {
-    const h = node.tdocHandler;
-    if (h.runCtrl) h.runCtrl.disabled = false;
-}

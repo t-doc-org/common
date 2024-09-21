@@ -30,6 +30,13 @@ export function element(html) {
     return t.content.firstChild;
 }
 
+// Return a promise and its resolve and reject functions.
+export function signal() {
+    let resolve, reject;
+    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+    return {promise, resolve, reject};
+}
+
 // Walk an {exec} :after: tree and yield nodes in depth-first order with
 // duplicates removed.
 function* walkAfterTree(node, seen) {
@@ -50,25 +57,30 @@ function* walkAfterTree(node, seen) {
     yield node;
 }
 
+// An error that is caused by the user, and that doesn't need to be logged.
+export class UserError extends Error {
+    toString() { return this.message; }
+}
+
 // A base class for {exec} block handlers.
 export class Executor {
-    // Return a list of all {exec} blocks with the given handler class.
-    static query(cls) {
-        return document.querySelectorAll(`div.tdoc-exec.highlight-${cls.lang}`);
-    }
+    static next_run_id = 0;
 
     // Apply an {exec} block handler class.
     static async apply(cls) {
+        cls.ready = cls.init();  // Initialize concurrently
         await waitLoaded();
-        for (const node of Executor.query(cls)) {
-            const handler = node.tdocHandler = new cls(node);
+        for (const node of document.querySelectorAll(
+                `div.tdoc-exec.highlight-${cls.lang}`)) {
+            const handler = new cls(node);
             if (handler.editable) handler.addEditor();
             const controls = element(`<div class="tdoc-exec-controls"></div>`);
             handler.addControls(controls);
             if (controls.children.length > 0) node.appendChild(controls);
+            cls.ready.then(() => { handler.onReady(); });
 
             // Execute immediately if requested.
-            if (handler.when === 'load') handler.tryRun();  // Don't await
+            if (handler.when === 'load') handler.doRun();  // Don't await
         }
     }
 
@@ -96,7 +108,7 @@ export class Executor {
         addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
             text: this.origText,
-            onRun: this.when !== 'never' ? async () => { await this.tryRun(); }
+            onRun: this.when !== 'never' ? async () => { await this.doRun(); }
                                          : undefined,
         });
     }
@@ -108,22 +120,25 @@ export class Executor {
         }
     }
 
+    // Create a "Run" control.
     runControl() {
         const ctrl = element(`\
 <button class="tdoc-exec-run"\
  title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
 </button>`);
-        ctrl.addEventListener('click', async () => { await this.tryRun(); });
+        ctrl.addEventListener('click', async () => { await this.doRun(); });
         return ctrl;
     }
 
+    // Create a "Stop" control.
     stopControl() {
         const ctrl = element(
             `<button class="tdoc-exec-stop" title="Stop"></button>`);
-        ctrl.addEventListener('click', async () => { await this.stop(); });
+        ctrl.addEventListener('click', async () => { await this.doStop(); });
         return ctrl;
     }
 
+    // Create a "Reset" control.
     resetControl() {
         const ctrl = element(
             `<button class="tdoc-exec-reset" title="Reset input"></button>`);
@@ -137,6 +152,15 @@ export class Executor {
         return ctrl;
     }
 
+    // Called after init() terminates.
+    onReady() {}
+
+    // Called just before run().
+    preRun() {}
+
+    // Called just after run().
+    postRun() {}
+
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkAfterTree(this.node, new Set())) {
@@ -145,15 +169,37 @@ export class Executor {
     }
 
     // Run the code in the {exec} block.
-    async run() { throw Error("not implemented"); }
+    async run(run_id) { throw Error("not implemented"); }
 
     // Stop the running code.
-    async stop() { throw Error("not implemented"); }
+    async stop(run_id) { throw Error("not implemented"); }
 
-    // Run the code in the {exec} block. Catch and log exceptions.
-    async tryRun() {
+    // Run the code in the {exec} block.
+    async doRun() {
+        await this.constructor.ready;
         try {
-            await this.run();
+            const run_id = this.run_id = Executor.next_run_id;
+            Executor.next_run_id = run_id < Number.MAX_SAFE_INTEGER ?
+                                   run_id + 1 : 0;
+            this.preRun(run_id);
+            try {
+                await this.run(run_id);
+            } finally {
+                this.postRun(run_id);
+            }
+        } catch (e) {
+            if (!(e instanceof UserError)) console.error(e);
+            this.appendErrorOutput().appendChild(text(` ${e.toString()}`));
+        } finally {
+            delete this.run_id;
+        }
+    }
+
+    // Stop the code in the {exec} block if it is running.
+    async doStop() {
+        if (!this.run_id) return;
+        try {
+            await this.stop(this.run_id);
         } catch (e) {
             console.error(e);
         }
@@ -167,8 +213,9 @@ export class Executor {
             if (!next || !next.classList.contains('tdoc-exec-output')) break;
             prev = next;
         }
-        prev.after(...out);
+        prev.after(...outputs);
     }
+
     // Replace the output nodes associated with the {exec} block.
     replaceOutputs(outputs) {
         let prev = this.node, i = 0;
@@ -183,5 +230,13 @@ export class Executor {
             }
         }
         prev.after(...outputs.slice(i));
+    }
+
+    // Append an error output node associated with the {exec} block.
+    appendErrorOutput() {
+        const output = element(`\
+<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
+        this.appendOutputs([output]);
+        return output;
     }
 }
