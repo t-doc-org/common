@@ -43,7 +43,7 @@ class SqlExecutor extends Executor {
             // debug: console.debug,
         });
         const config = await Database.config();
-        console.info(`[t-doc] SQLite version: ${config.version.libVersion}`);
+        console.info(`[t-doc] SQLite ${config.version.libVersion}`);
     }
 
     addControls(controls) {
