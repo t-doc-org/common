@@ -2,14 +2,17 @@
 # SPDX-License-Identifier: MIT
 
 import ast
+import asyncio
 import contextvars
 import io
+import platform
 import sys
 import traceback
 
 from polyscript import xworker
 
 run_id_var = contextvars.ContextVar('run_id', default=None)
+tasks = {}
 
 
 def export(fn):
@@ -42,8 +45,9 @@ sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
 @export
 async def run(run_id, blocks):
     run_id_var.set(run_id)
+    tasks[run_id] = asyncio.current_task()
     try:
-        blocks = [compile(b, name or '<block>', 'exec',
+        blocks = [compile(b, name or '<unnamed>', 'exec',
                           flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
                   for b, name in blocks]
         g = {'__name__': '__main__'}
@@ -57,6 +61,16 @@ async def run(run_id, blocks):
             # manipulations have undesirable side-effects.
             if line.startswith('  File "<exec>", line'): continue
             print(line, file=sys.stderr, end='')
+    finally:
+        del tasks[run_id]
 
 
-xworker.sync.ready()
+@export
+def stop(run_id):
+    if (task := tasks.get(run_id)) is not None:
+        task.cancel()
+
+
+xworker.sync.ready(f"{platform.python_implementation()}"
+                   f" {'.'.join(platform.python_version_tuple())}"
+                   f" on {platform.platform()}")

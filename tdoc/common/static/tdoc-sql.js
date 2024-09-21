@@ -39,12 +39,21 @@ class Database {
 
 class SqlExecutor extends Executor {
     static lang = 'sql';
-    static db_num = 0;
+    static next_run_id = 0;
+
+    addControls(controls) {
+        if (this.when === 'click' || (this.editable && this.when !== 'never')) {
+            this.runCtrl = controls.appendChild(this.runControl());
+            this.runCtrl.disabled = true;
+        }
+        super.addControls(controls);
+    }
 
     async run() {
         let output, tbody;
         const db = await Database.open(
-            `file:db-${SqlExecutor.db_num++}?vfs=memdb`);
+            `file:db-${SqlExecutor.next_run_id++}?vfs=memdb`);
+        if (this.runCtrl) this.runCtrl.disabled = true;
         try {
             for (const [code, node] of this.codeBlocks()) {
                 await db.exec(code, res => {
@@ -93,12 +102,17 @@ class SqlExecutor extends Executor {
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
             output.appendChild(text(` ${msg}`));
         } finally {
+            if (this.runCtrl) this.runCtrl.disabled = false;
             await db.close();
         }
         this.replaceOutputs(output ? [output] : []);
     }
 }
 
+Executor.apply(SqlExecutor);
 const config = await Database.config();
 console.info(`[t-doc] SQLite version: ${config.version.libVersion}`);
-Executor.apply(SqlExecutor);
+for (const node of Executor.query(SqlExecutor)) {
+    const h = node.tdocHandler;
+    if (h.runCtrl) h.runCtrl.disabled = false;
+}

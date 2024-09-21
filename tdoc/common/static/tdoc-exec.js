@@ -50,16 +50,22 @@ function* walkAfterTree(node, seen) {
     yield node;
 }
 
-// A base class for {exec} node handlers.
+// A base class for {exec} block handlers.
 export class Executor {
-    // Apply an {exec} node handler class.
+    // Return a list of all {exec} blocks with the given handler class.
+    static query(cls) {
+        return document.querySelectorAll(`div.tdoc-exec.highlight-${cls.lang}`);
+    }
+
+    // Apply an {exec} block handler class.
     static async apply(cls) {
         await waitLoaded();
-        for (const exec of document.querySelectorAll(
-                `div.tdoc-exec.highlight-${cls.lang}`)) {
-            const handler = new cls(exec);
+        for (const node of Executor.query(cls)) {
+            const handler = node.tdocHandler = new cls(node);
             if (handler.editable) handler.addEditor();
-            handler.addControls();
+            const controls = element(`<div class="tdoc-exec-controls"></div>`);
+            handler.addControls(controls);
+            if (controls.children.length > 0) node.appendChild(controls);
 
             // Execute immediately if requested.
             if (handler.when === 'load') handler.tryRun();  // Don't await
@@ -85,7 +91,7 @@ export class Executor {
         this.origText = Executor.preText(this.node).trim();
     }
 
-    // Add an editor to the {exec} node.
+    // Add an editor to the {exec} block.
     addEditor() {
         addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
@@ -95,45 +101,56 @@ export class Executor {
         });
     }
 
-    // Add controls to the {exec} node.
-    addControls() {
-        const controls = element(`<div class="tdoc-exec-controls"></div>`);
-        if (this.when === 'click' || (this.editable && this.when !== 'never')) {
-            controls.appendChild(element(`\
-<button class="tdoc-exec-run"\
- title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
-</button>`))
-                .addEventListener('click', async () => {
-                    await this.tryRun();
-                });
-        }
+    // Add controls to the {exec} block.
+    addControls(controls) {
         if (this.editable && this.origText !== '') {
-            controls.appendChild(element(`\
-<button class="tdoc-exec-reset" title="Reset input"></button>`))
-                .addEventListener('click', () => {
-                    const editor = findEditor(this.node), state = editor.state;
-                    editor.dispatch(state.update({changes: {
-                        from: 0, to: state.doc.length,
-                        insert: this.origText,
-                    }}));
-                });
+            controls.appendChild(this.resetControl());
         }
-        if (controls.children.length > 0) this.node.appendChild(controls);
     }
 
-    // Yield the code from the nodes in the :after: chain of the {exec} node.
+    runControl() {
+        const ctrl = element(`\
+<button class="tdoc-exec-run"\
+ title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
+</button>`);
+        ctrl.addEventListener('click', async () => { await this.tryRun(); });
+        return ctrl;
+    }
+
+    stopControl() {
+        const ctrl = element(
+            `<button class="tdoc-exec-stop" title="Stop"></button>`);
+        ctrl.addEventListener('click', async () => { await this.stop(); });
+        return ctrl;
+    }
+
+    resetControl() {
+        const ctrl = element(
+            `<button class="tdoc-exec-reset" title="Reset input"></button>`);
+        ctrl.addEventListener('click', () => {
+            const editor = findEditor(this.node), state = editor.state;
+            editor.dispatch(state.update({changes: {
+                from: 0, to: state.doc.length,
+                insert: this.origText,
+            }}));
+        });
+        return ctrl;
+    }
+
+    // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkAfterTree(this.node, new Set())) {
             yield [Executor.text(node), node]
         }
     }
 
-    // TODO: Prevent multiple parallel executions of the same node, and disable
-    //       the "Run" button while executing.
-
+    // Run the code in the {exec} block.
     async run() { throw Error("not implemented"); }
 
-    // Run the code in the {exec} node. Catch and log exceptions.
+    // Stop the running code.
+    async stop() { throw Error("not implemented"); }
+
+    // Run the code in the {exec} block. Catch and log exceptions.
     async tryRun() {
         try {
             await this.run();
@@ -142,7 +159,7 @@ export class Executor {
         }
     }
 
-    // Append output nodes associated with the {exec} node.
+    // Append output nodes associated with the {exec} block.
     appendOutputs(outputs) {
         let prev = this.node;
         for (;;) {
@@ -152,7 +169,7 @@ export class Executor {
         }
         prev.after(...out);
     }
-    // Replace the output nodes associated with the {exec} node.
+    // Replace the output nodes associated with the {exec} block.
     replaceOutputs(outputs) {
         let prev = this.node, i = 0;
         for (;; ++i) {

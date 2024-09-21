@@ -18,7 +18,10 @@ const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     config: {},
 });
 const {promise: ready, resolve: resolve_ready} = signal();
-worker.sync.ready = () => { resolve_ready(); };
+worker.sync.ready = (msg) => {
+    console.info(`[t-doc] ${msg}`);
+    resolve_ready();
+};
 
 const stdio = {};
 worker.sync.write = (run_id, stream, data) => {
@@ -30,10 +33,6 @@ worker.sync.write = (run_id, stream, data) => {
     }
 };
 
-// TODO: Always display the play button
-// TODO: Grey out the play button while the interpreter isn't ready
-// TODO: Toggle the play button to a stop button while the code is running.
-//       Use async cancellation when stopping.
 // TODO: Add a button to each {exec} output to remove it
 // TODO: Make terminal output configurable. If ":output: always", then create
 //       the terminal output right away to avoid flickering.
@@ -42,12 +41,23 @@ class PythonExecutor extends Executor {
     static lang = 'python';
     static next_run_id = 0;
 
+    addControls(controls) {
+        if (this.when !== 'never') {
+            this.runCtrl = controls.appendChild(this.runControl());
+            this.runCtrl.disabled = true;
+            this.stopCtrl = controls.appendChild(this.stopControl());
+            this.stopCtrl.disabled = true;
+            this.stopCtrl.classList.add('hidden');
+        }
+        super.addControls(controls);
+    }
+
     async run() {
-        const run_id = PythonExecutor.next_run_id++;
+        this.run_id = PythonExecutor.next_run_id++;
         try {
             this.replaceOutputs([]);
             let pre;
-            stdio[run_id] = (stream, data) => {
+            stdio[this.run_id] = (stream, data) => {
                 if (!pre) {
                     const output = element(`\
 <div class="tdoc-exec-output tdoc-captioned">\
@@ -72,11 +82,13 @@ class PythonExecutor extends Executor {
                 pre.appendChild(node);
             };
             await ready;
+            this.runCtrl.classList.add('hidden');
+            this.stopCtrl.classList.remove('hidden');
             const blocks = [];
             for (const [code, node] of this.codeBlocks()) {
                 blocks.push([code, node.id]);
             }
-            await worker.sync.run(run_id, blocks)
+            await worker.sync.run(this.run_id, blocks)
         } catch (e) {
             console.error(e);
             const msg = e.toString();
@@ -85,9 +97,22 @@ class PythonExecutor extends Executor {
             output.appendChild(text(` ${msg}`));
             this.appendOutputs([output]);
         } finally {
-            delete stdio[run_id];
+            delete stdio[this.run_id];
+            delete this.run_id;
+            this.runCtrl.classList.remove('hidden');
+            this.stopCtrl.classList.add('hidden');
         }
+    }
+
+    async stop() {
+        if (this.run_id) await worker.sync.stop(this.run_id);
     }
 }
 
 Executor.apply(PythonExecutor);
+await ready;
+for (const node of Executor.query(PythonExecutor)) {
+    const h = node.tdocHandler;
+    if (h.runCtrl) h.runCtrl.disabled = false;
+    if (h.stopCtrl) h.stopCtrl.disabled = false;
+}

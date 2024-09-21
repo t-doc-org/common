@@ -62,6 +62,7 @@ traceback on `sys.stderr`.
 
 ```{exec} python
 :after: python-setup
+:editable:
 def outer():
     try:
         inner()
