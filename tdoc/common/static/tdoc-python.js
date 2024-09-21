@@ -29,6 +29,9 @@ worker.sync.write = (run_id, stream, data) => {
     }
 };
 
+const utf8 = new TextDecoder();
+const form_feed = 0x0c;
+
 class PythonExecutor extends Executor {
     static lang = 'python';
 
@@ -62,13 +65,12 @@ class PythonExecutor extends Executor {
                 this.appendOutputs([output]);
                 pre = output.querySelector('pre');
             }
-            for (;;) {
-                const i = data.indexOf('\u000c');
-                if (i < 0) break;
+            const i = data.lastIndexOf(form_feed);
+            if (i >= 0) {
                 pre.replaceChildren();
-                data = data.slice(i + 1);
+                data = data.subarray(i + 1);
             }
-            let node = text(data);
+            let node = text(utf8.decode(data));
             if (stream === 2) {
                 const el = element(`<span class="err"></span>`);
                 el.appendChild(node);

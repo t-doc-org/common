@@ -13,6 +13,7 @@ from polyscript import xworker
 
 run_id_var = contextvars.ContextVar('run_id', default=None)
 tasks = {}
+write = xworker.sync.write
 
 
 def export(fn):
@@ -28,15 +29,10 @@ class OutStream(io.RawIOBase):
 
     def write(self, data, /):
         size = len(data)
-        if size > 0:
-            # TODO: Return bytes, decode on the other end
-            if not isinstance(data, str):
-                data = str(data, 'utf-8')
-            write(run_id_var.get(), self.stream, data)
+        if size > 0: write(run_id_var.get(), self.stream, data)
         return size
 
 
-write = xworker.sync.write
 sys.stdout = io.TextIOWrapper(io.BufferedWriter(OutStream(1)),
                               line_buffering=True)
 sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
