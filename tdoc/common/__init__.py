@@ -31,6 +31,7 @@ def setup(app):
     app.add_config_value('license', '', 'html')
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
+    app.add_config_value('tdoc_cross_origin_isolate', False, 'html', bool)
 
     app.add_html_theme('t-doc', str(_common))
     app.add_directive('exec', Exec)
@@ -106,9 +107,11 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Work around Cross-Origin Isolation issues when the relevant headers cannot
-    # be set server-side.
-    app.add_js_file('../tdoc-coi.js', priority=0,
+    # Set up Cross-Origin Isolation (COI).
+    coi = str(app.config.tdoc_cross_origin_isolate).lower()
+    app.add_js_file(None, priority=0,
+                    body=f'const tdocCrossOriginIsolate = {coi};')
+    app.add_js_file('../tdoc-coi.js', priority=1,
                     scope=context['pathto']('', resource=True))
 
     # Add language-specific .js files.

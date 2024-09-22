@@ -20,6 +20,8 @@ from urllib import parse
 from .. import common
 from . import util
 
+# TODO: Use current time for build tag, and mtime only for detecting change
+
 
 @util.main
 def main(argv, stdin, stdout, stderr):
