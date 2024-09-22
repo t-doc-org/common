@@ -21,10 +21,10 @@ referenced in the `:after:` option of other blocks.
 :name: python-setup
 :when: never
 def factorial(n):
-    res = 1
-    for i in range(2, n + 1):
-        res *= i
-    return res
+  res = 1
+  for i in range(2, n + 1):
+    res *= i
+  return res
 ```
 
 ## Terminal output
@@ -36,7 +36,7 @@ Output to `sys.stderr` is colored.
 ```{exec} python
 :after: python-setup
 for i in range(10):
-    print(f"factorial({i}) = {factorial(i)}")
+  print(f"factorial({i}) = {factorial(i)}")
 
 import sys
 sys.stderr.write("Program terminated.\n")
@@ -50,8 +50,8 @@ The terminal output block can be cleared with the form-feed control character
 import asyncio
 
 for i in range(10, 0, -1):
-    print(f"\x0c{i}...")
-    await asyncio.sleep(1)
+  print(f"\x0c{i}...")
+  await asyncio.sleep(1)
 print("\x0cHappy new year!")
 ```
 
@@ -64,13 +64,13 @@ traceback on `sys.stderr`.
 :after: python-setup
 :editable:
 def outer():
-    try:
-        inner()
-    except Exception as e:
-        raise Exception("inner() failed") from e
+  try:
+    inner()
+  except Exception as e:
+    raise Exception("inner() failed") from e
 
 def inner():
-    raise Exception("Something is broken")
+  raise Exception("Something is broken")
 
 outer()
 ```
@@ -89,8 +89,8 @@ import asyncio
 import time
 
 while True:
-    print(f"\x0c{time.strftime('%Y-%m-%d %H:%M:%S')}")
-    await asyncio.sleep(1)
+  print(f"\x0c{time.strftime('%Y-%m-%d %H:%M:%S')}")
+  await asyncio.sleep(1)
 ```
 
 ```{exec} python
@@ -99,7 +99,7 @@ import asyncio
 
 i = 0
 while True:
-    print(f"\x0ci={i}")
-    i += 1
-    await asyncio.sleep(0.2)
+  print(f"\x0ci={i}")
+  i += 1
+  await asyncio.sleep(0.2)
 ```
