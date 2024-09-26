@@ -13,13 +13,6 @@ from hatchling.metadata.plugin.interface import MetadataHookInterface
 LICENSES = 'LICENSES.deps.txt'
 
 
-def match_patterns(*patterns):
-    def match(path, names):
-        return [n for n in names
-                if not any(fnmatch.fnmatch(n, p) for p in patterns)]
-    return match
-
-
 class HookMixin:
     @property
     def top(self):
@@ -50,22 +43,32 @@ class BuildHook(BuildHookInterface, HookMixin):
         (self.top / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
-        self.copytree_node('polyscript/dist', 'polyscript',
-                           ignore=match_patterns('*.js'))
-        self.copytree_node('pyodide', 'pyodide', ignore=match_patterns(
+        self.copytree_node('polyscript/dist', 'polyscript', globs=['*.js'])
+        self.copytree_node('pyodide', 'pyodide', globs=[
             'pyodide.asm.*', 'pyodide-lock.json', 'pyodide.mjs',
             'python_stdlib.zip',
-        ))
+        ])
         self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
-        self.copytree_node('@sqlite.org/sqlite-wasm/sqlite-wasm/jswasm', '')
+        self.copytree_node(
+            '@sqlite.org/sqlite-wasm/sqlite-wasm/jswasm', 'sqlite', globs=[
+                'sqlite3-bundler-friendly.mjs',
+                'sqlite3-opfs-async-proxy.js',
+                'sqlite3-worker1-bundler-friendly.mjs',
+                'sqlite3-worker1-promiser.mjs',
+                'sqlite3.wasm',
+            ])
         self.run(['npm', 'run', 'build'])
 
     def copy_node(self, src, dst):
         shutil.copy2(self.node_modules / src, self.static_gen / dst)
 
-    def copytree_node(self, src, dst, **kwargs):
+    def copytree_node(self, src, dst, globs=('*',), **kwargs):
+        def ignore(path, names):
+            return [n for n in names
+                    if not any(fnmatch.fnmatch(n, p) for p in globs)]
         shutil.copytree(self.node_modules / src, self.static_gen / dst,
-                        symlinks=True, dirs_exist_ok=True, **kwargs)
+                        symlinks=True, dirs_exist_ok=True, ignore=ignore,
+                        **kwargs)
 
     def run(self, args):
         res = subprocess.run(args, cwd=self.root, stdout=subprocess.PIPE,
