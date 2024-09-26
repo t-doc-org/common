@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import fnmatch
 import os
 import pathlib
 import shutil
@@ -10,6 +11,13 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
 LICENSES = 'LICENSES.deps.txt'
+
+
+def match_patterns(*patterns):
+    def match(path, names):
+        return [n for n in names
+                if not any(fnmatch.fnmatch(n, p) for p in patterns)]
+    return match
 
 
 class HookMixin:
@@ -43,7 +51,11 @@ class BuildHook(BuildHookInterface, HookMixin):
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
         self.copytree_node('polyscript/dist', 'polyscript',
-                           ignore=shutil.ignore_patterns('*.map'))
+                           ignore=match_patterns('*.js'))
+        self.copytree_node('pyodide', 'pyodide', ignore=match_patterns(
+            'pyodide.asm.*', 'pyodide-lock.json', 'pyodide.mjs',
+            'python_stdlib.zip',
+        ))
         self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
         self.copytree_node('@sqlite.org/sqlite-wasm/sqlite-wasm/jswasm', '')
         self.run(['npm', 'run', 'build'])

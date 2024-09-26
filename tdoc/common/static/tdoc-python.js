@@ -11,6 +11,7 @@ import {Executor, element, signal, text} from './tdoc-exec.js';
 
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
+    version: import.meta.resolve('./pyodide/pyodide.mjs'),
     config: {},
 });
 const {promise: ready, resolve: resolve_ready} = signal();
