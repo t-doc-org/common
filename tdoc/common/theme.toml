@@ -7,3 +7,7 @@ stylesheets = [
     "styles/sphinx-book-theme.css",
     "styles/t-doc.css",
 ]
+
+[options]
+enable_search_shortcuts = false  # Captures the '/' key
+navigation_with_keys = false  # Captures <- and -> keys

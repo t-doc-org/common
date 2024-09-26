@@ -3,20 +3,14 @@
 
 import {addEditor, findEditor} from './tdoc-editor.js';
 
-// Wait for the DOM to be loaded.
-function waitLoaded() {
-    return new Promise(resolve => {
-        if (document.readyState !== 'loading') {
-            resolve();
-        } else if (document.addEventListener) {
-            document.addEventListener('DOMContentLoaded', resolve);
-        } else {
-            document.attachEvent('onreadystatechange', () => {
-                if (document.readyState === 'interactive') resolve();
-            });
-        }
-    });
-}
+// Resolves when the DOM content has loaded and deferred scripts have executed.
+const loaded = new Promise(resolve => {
+    if (document.readyState !== 'loading') {
+        resolve();
+    } else {
+        document.addEventListener('DOMContentLoaded', resolve);
+    }
+});
 
 // Create a text node.
 export function text(value) {
@@ -69,7 +63,7 @@ export class Executor {
     // Apply an {exec} block handler class.
     static async apply(cls) {
         cls.ready = cls.init();  // Initialize concurrently
-        await waitLoaded();
+        await loaded;
         for (const node of document.querySelectorAll(
                 `div.tdoc-exec.highlight-${cls.lang}`)) {
             const handler = new cls(node);
@@ -239,4 +233,11 @@ export class Executor {
         this.appendOutputs([output]);
         return output;
     }
+}
+
+// Prevent doctools.js from capturing editor key events, in case keyboard
+// shortcuts are enabled.
+await loaded;
+if (typeof BLACKLISTED_KEY_CONTROL_ELEMENTS !== 'undefined') {
+    BLACKLISTED_KEY_CONTROL_ELEMENTS.add('DIV');
 }
