@@ -12,32 +12,48 @@ from hatchling.metadata.plugin.interface import MetadataHookInterface
 LICENSES = 'LICENSES.deps.txt'
 
 
-class MetadataHook(MetadataHookInterface):
+class HookMixin:
+    @property
+    def top(self):
+        return pathlib.Path(self.root)
 
+    @property
+    def node_modules(self):
+        return self.top / 'node_modules'
+
+    @property
+    def static_gen(self):
+        return self.top / 'tdoc' / 'common' / 'static.gen'
+
+
+class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
         # Write an empty LICENSES file to avoid that hatchling complains. It
         # will be generated below.
-        root = pathlib.Path(self.root)
-        (root / 'LICENSES.deps.txt').write_bytes(b'')
+        (self.top / 'LICENSES.deps.txt').write_bytes(b'')
 
 
-class BuildHook(BuildHookInterface):
-
+class BuildHook(BuildHookInterface, HookMixin):
     def initialize(self, version, build_data):
         self.app.display_info("Installing node packages")
         self.run(['npm', 'install'])
         self.app.display_info("Removing generated files")
-        root = pathlib.Path(self.root)
-        static_gen = root / 'tdoc' / 'common' / 'static.gen'
-        shutil.rmtree(static_gen, ignore_errors=True)
-        (root / LICENSES).unlink(missing_ok=True)
+        shutil.rmtree(self.static_gen, ignore_errors=True)
+        (self.top / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
-        os.makedirs(static_gen, exist_ok=True)
-        node_modules = root / 'node_modules'
-        shutil.copytree(node_modules / '@sqlite.org' / 'sqlite-wasm'
-                        / 'sqlite-wasm' / 'jswasm',
-                        static_gen, symlinks=True, dirs_exist_ok=True)
+        os.makedirs(self.static_gen, exist_ok=True)
+        self.copytree_node('polyscript/dist', 'polyscript',
+                           ignore=shutil.ignore_patterns('*.map'))
+        self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
+        self.copytree_node('@sqlite.org/sqlite-wasm/sqlite-wasm/jswasm', '')
         self.run(['npm', 'run', 'build'])
+
+    def copy_node(self, src, dst):
+        shutil.copy2(self.node_modules / src, self.static_gen / dst)
+
+    def copytree_node(self, src, dst, **kwargs):
+        shutil.copytree(self.node_modules / src, self.static_gen / dst,
+                        symlinks=True, dirs_exist_ok=True, **kwargs)
 
     def run(self, args):
         res = subprocess.run(args, cwd=self.root, stdout=subprocess.PIPE,

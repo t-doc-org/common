@@ -16,4 +16,6 @@ html_theme_options = {
     'repository_url': 'https://github.com/t-doc-org/common',
 }
 
-tdoc_cross_origin_isolate = False
+tdoc_enable_sab = 'no'
+# tdoc_enable_sab = 'cross-origin-isolation'
+# tdoc_enable_sab = 'sabayon'

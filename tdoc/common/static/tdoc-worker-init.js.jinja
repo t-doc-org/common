@@ -1,0 +1,40 @@
+// Copyright 2024 Remy Blank <remy@c-space.org>
+// SPDX-License-Identifier: MIT
+
+'use strict';
+(({navigator: {serviceWorker: workers}}) => {
+    const enableSAB = '{{ tdoc_enable_sab }}';
+    const script = document.currentScript;
+    const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, script.src)
+        .toString();
+    if (enableSAB === 'no') {
+        return (async () => {
+            const reg = await workers.getRegistration(url);
+            if (reg && await reg.unregister()) {
+                console.info("[t-doc] Service worker unregistered");
+                location.reload();
+            }
+        })();
+    }
+    if (crossOriginIsolated && enableSAB === 'cross-origin-isolation') {
+        console.info("[t-doc] Cross-origin isolated");
+        return;
+    }
+    if (!isSecureContext) {
+        console.warn("[t-doc] Not a secure context; SAB disabled");
+        return;
+    }
+    if (!workers) {
+        console.warn("[t-doc] No service worker container; SAB disabled");
+        return;
+    }
+    (async () => {
+        const reg = await workers.register(
+            url, {type: 'module', scope: script.getAttribute('scope')});
+        reg.addEventListener('updatefound', () => {
+            console.info('[t-doc] Service worker update');
+            location.reload();
+        });
+        if (reg.active && !workers.controller) location.reload();
+    })();
+})(self);

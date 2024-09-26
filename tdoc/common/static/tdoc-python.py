@@ -70,4 +70,5 @@ def stop(run_id):
 
 xworker.sync.ready(f"{platform.python_implementation()}"
                    f" {'.'.join(platform.python_version_tuple())}"
-                   f" on {platform.platform()}")
+                   f" on {platform.platform()}"
+                   f" (polyfill: {xworker.polyfill})")

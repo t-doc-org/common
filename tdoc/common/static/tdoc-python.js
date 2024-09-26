@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {XWorker} from 'https://cdn.jsdelivr.net/npm/polyscript';
+import {XWorker} from './polyscript/index.js';
 import {Executor, element, signal, text} from './tdoc-exec.js';
 
 // TODO: Add a button to each {exec} output to remove it

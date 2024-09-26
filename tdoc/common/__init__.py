@@ -6,6 +6,7 @@ import re
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
+from sphinx import config
 from sphinx.directives.code import CodeBlock
 from sphinx.util import fileutil, logging
 
@@ -31,7 +32,8 @@ def setup(app):
     app.add_config_value('license', '', 'html')
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
-    app.add_config_value('tdoc_cross_origin_isolate', False, 'html', bool)
+    app.add_config_value('tdoc_enable_sab', 'no', 'html',
+                         config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
 
     app.add_html_theme('t-doc', str(_common))
     app.add_directive('exec', Exec)
@@ -85,7 +87,8 @@ def on_config_inited(app, config):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)
 
-    # Set the build tag.
+    # Set the global HTML context.
+    config['html_context']['tdoc_enable_sab'] = app.config.tdoc_enable_sab
     tag = build_tag(app)
     config['html_context']['tdoc_build'] = tag if tag is not None else ''
 
@@ -97,7 +100,7 @@ def on_builder_inited(app):
 
     # The file must be at the root of the website, to avoid limiting the scope
     # of the service worker to _static.
-    fileutil.copy_asset_file(_common / 'static' / 'tdoc-coi.js',
+    fileutil.copy_asset_file(_common / 'scripts' / 'tdoc-worker.js',
                              app.builder.outdir, force=True)
 
 
@@ -107,11 +110,8 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Set up Cross-Origin Isolation (COI).
-    coi = str(app.config.tdoc_cross_origin_isolate).lower()
-    app.add_js_file(None, priority=0,
-                    body=f'const tdocCrossOriginIsolate = {coi};')
-    app.add_js_file('../tdoc-coi.js', priority=1,
+    # Set up the service worker.
+    app.add_js_file('tdoc-worker-init.js', priority=0,
                     scope=context['pathto']('', resource=True))
 
     # Add language-specific .js files.
