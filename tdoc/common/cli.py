@@ -169,7 +169,7 @@ class ServerBase(server.ThreadingHTTPServer):
         self.RequestHandlerClass(request, client_addr, self,
                                  directory=directory)
 
-    IGNORED_EXCEPTIONS = (BrokenPipeError,)
+    IGNORED_EXCEPTIONS = (BrokenPipeError, ConnectionAbortedError)
 
     def handle_error(self, request, client_addr):
         if not isinstance(sys.exception(), self.IGNORED_EXCEPTIONS):
