@@ -32,19 +32,16 @@ function currentTheme() {
 let curTheme = currentTheme();
 
 const obs = new MutationObserver((mutations) => {
-    for (const mut of mutations) {
-        if (mut.attributeName !== 'data-theme') continue;
-        const newTheme = currentTheme();
-        if (newTheme === curTheme) break;
-        curTheme = newTheme;
-        for (const div of document.querySelectorAll('div.cm-editor')) {
-            const editor = div.tdocEditor;
-            editor.dispatch({effects: theme.reconfigure(curTheme)});
-        }
-        break;
+    const newTheme = currentTheme();
+    if (newTheme === curTheme) return;
+    curTheme = newTheme;
+    for (const div of document.querySelectorAll('div.cm-editor')) {
+        const editor = div.tdocEditor;
+        editor.dispatch({effects: theme.reconfigure(curTheme)});
     }
 });
-obs.observe(document.querySelector('html'), {attributes: true});
+obs.observe(document.documentElement,
+            {attributes: true, attributeFilter: ['data-theme']});
 
 // Return the editor extensions for the given config.
 function extensions(config) {
