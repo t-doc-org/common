@@ -44,11 +44,10 @@ async def run(run_id, blocks):
     run_id_var.set(run_id)
     tasks[run_id] = asyncio.current_task()
     try:
-        blocks = [compile(b, name or '<unnamed>', 'exec',
-                          flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-                  for b, name in blocks]
         g = {'__name__': '__main__'}
-        for code in blocks:
+        for code, name in blocks:
+            code = compile(code, name or '<unnamed>', 'exec',
+                           flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
             if (coro := eval(code, g)) is not None:
                 await coro
     except BaseException as e:
