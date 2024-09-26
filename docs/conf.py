@@ -3,6 +3,7 @@
 
 import time
 
+from tdoc import common
 from tdoc.common.defaults import *
 
 project = "t-doc"
@@ -13,6 +14,7 @@ language = 'en'
 keep_warnings = True
 
 html_theme_options = {
+    'extra_footer': f"Version: {common.__version__}",
     'repository_url': 'https://github.com/t-doc-org/common',
 }
 
