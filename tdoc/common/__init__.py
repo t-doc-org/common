@@ -110,11 +110,11 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Set up the service worker.
-    app.add_js_file('tdoc-worker-init.js', priority=0,
+    # Set up early fixes.
+    app.add_js_file('tdoc-early.js', priority=0,
                     scope=context['pathto']('', resource=True))
 
-    # Add language-specific .js files.
+    # Add language-specific .js files for {exec}.
     if doctree:
         for lang in sorted(Exec.find_nodes(doctree)):
             app.add_js_file(f'tdoc-{lang}.js', type='module')

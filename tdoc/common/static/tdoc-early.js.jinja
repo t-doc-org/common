@@ -2,7 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 'use strict';
-(({navigator: {serviceWorker: workers}}) => {
+(() => {
+    // Disable all global keydown event listeners, as they can interfere with
+    // per-element listeners. In particular, this disables the search shortcut
+    // handler installed by pydata-sphinx-theme.js.
+    const doAddEventListener = window.addEventListener;
+    window.addEventListener = (...args) => {
+        if (args[0] === 'keydown') return;
+        return doAddEventListener(...args);
+    }
+
+    // Set up the SharedArrayBuffer workaround as configured.
+    const workers = navigator.serviceWorker;
     const enableSAB = '{{ tdoc_enable_sab }}';
     const script = document.currentScript;
     const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, script.src)
@@ -37,4 +48,4 @@
         });
         if (reg.active && !workers.controller) location.reload();
     })();
-})(self);
+})();
