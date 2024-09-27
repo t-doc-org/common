@@ -35,22 +35,74 @@ div.highlight pre {
 div.tdoc-exec-output {
     margin: 1em 0;
 }
-div.tdoc-exec-output.tdoc-captioned {
+div.tdoc-exec-output.tdoc-sectioned {
     border: 1px solid var(--pst-color-border);
+    border-top: 0.25rem solid var(--pst-color-border);
     border-radius: 0.25rem;
+    overflow: hidden;
 }
-div.tdoc-exec-output.tdoc-captioned div.tdoc-caption {
+div.tdoc-exec-output.tdoc-sectioned > :not(:last-child) {
     border-bottom: 1px solid var(--pst-color-border);
-    font-size: 1rem;
-    font-weight: var(--pst-font-weight-caption);
-    margin: 0;
-    padding: 0.3rem 0.5rem;
 }
-div.tdoc-exec-output.tdoc-captioned pre {
+div.tdoc-exec-output.tdoc-sectioned div.highlight {
+    border-radius: 0;
+}
+div.tdoc-exec-output.tdoc-sectioned pre {
     border: none;
+    border-radius: 0;
 }
 div.tdoc-exec-output pre span.err {
     color: var(--pst-color-danger);
+}
+div.tdoc-exec-output div.tdoc-input {
+    display: flex;
+    flex-direction: row;
+    align-content: stretch;
+    align-items: baseline;
+    margin: 0;
+    padding: 0.3rem;
+    column-gap: 0.3rem;
+}
+div.tdoc-exec-output div.tdoc-input .prompt {
+    white-space: nowrap;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+}
+div.tdoc-exec-output div.tdoc-input .input {
+    width: 100%;
+}
+div.tdoc-exec-output div.tdoc-input input,
+div.tdoc-exec-output div.tdoc-input .autosize > textarea,
+div.tdoc-exec-output div.tdoc-input .autosize::after {
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline: 2px;
+}
+div.tdoc-exec-output div.tdoc-input .autosize {
+    display: grid;
+}
+div.tdoc-exec-output div.tdoc-input .autosize::after {
+    content: attr(data-text) " ";
+    white-space: pre-wrap;
+    visibility: hidden;
+}
+div.tdoc-exec-output div.tdoc-input .autosize > textarea {
+    resize: none;
+    overflow: hidden;
+}
+div.tdoc-exec-output div.tdoc-input .autosize > textarea,
+div.tdoc-exec-output div.tdoc-input .autosize::after {
+    font: inherit;
+    grid-area: 1 / 1 / 2 / 2;
+}
+div.tdoc-exec-output div.tdoc-input button {
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    background-color: var(--pst-color-surface);
+    transition: background-color .3s;
+}
+div.tdoc-exec-output div.tdoc-input button:hover {
+    background-color: var(--pst-color-shadow);
 }
 
 /* Editor */

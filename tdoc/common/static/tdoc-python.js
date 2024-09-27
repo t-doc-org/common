@@ -5,9 +5,6 @@ import {XWorker} from './polyscript/index.js';
 import {Executor, element, signal, text} from './tdoc-exec.js';
 
 // TODO: Add a button to each {exec} output to remove it
-// TODO: Make terminal output configurable. If ":output: always", then create
-//       the terminal output right away to avoid flickering.
-// TODO: Make micropython work, and allow selecting the interpreter type
 
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
@@ -21,14 +18,14 @@ worker.sync.ready = (msg) => {
     resolve_ready();
 };
 
-const writers = {};
-worker.sync.write = (run_id, stream, data) => {
-    const fn = writers[run_id];
-    if (fn) {
-        fn(stream, data);
-    } else {
-        console.log(`${run_id}:${stream}: ${data}`);
-    }
+const executors = {};
+worker.sync.write = (run_id, ...args) => {
+    const exec = executors[run_id];
+    if (exec) return exec.onWrite(...args);
+};
+worker.sync.input = (run_id, ...args) => {
+    const exec = executors[run_id];
+    if (exec) return exec.onInput(...args);
 };
 
 const utf8 = new TextDecoder();
@@ -60,30 +57,17 @@ class PythonExecutor extends Executor {
     preRun(run_id) {
         this.runCtrl.classList.add('hidden');
         this.stopCtrl.classList.remove('hidden');
-        let pre;
-        writers[run_id] = (stream, data) => {
-            if (!pre) {
-                const output = this.terminalOutput();
-                this.appendOutputs([output]);
-                pre = output.querySelector('pre');
-            }
-            const i = data.lastIndexOf(form_feed);
-            if (i >= 0) {
-                pre.replaceChildren();
-                data = data.subarray(i + 1);
-            }
-            let node = text(utf8.decode(data));
-            if (stream === 2) {
-                const el = element(`<span class="err"></span>`);
-                el.appendChild(node);
-                node = el;
-            }
-            pre.appendChild(node);
-        };
+        executors[run_id] = this;
     }
 
     postRun(run_id) {
-        delete writers[run_id];
+        delete executors[run_id];
+        delete this.out
+        if (this.input) {
+            this.input.remove()
+            delete this.input
+        }
+        delete this.output
         this.runCtrl.classList.remove('hidden');
         this.stopCtrl.classList.add('hidden');
     }
@@ -105,12 +89,89 @@ class PythonExecutor extends Executor {
         await worker.sync.stop(run_id);
     }
 
-    terminalOutput() {
-        return element(`\
-<div class="tdoc-exec-output tdoc-captioned">\
-<div class="tdoc-caption">Terminal output</div>\
-<div class="highlight"><pre></pre></div>\
-</div>`);
+    onWrite(stream, data) {
+        this.ensureOutput();
+        if (!this.out) {
+            const div = element(`<div class="highlight"><pre></pre></div>`);
+            this.output.prepend(div);
+            this.out = div.querySelector('pre');
+        }
+        const i = data.lastIndexOf(form_feed);
+        if (i >= 0) {
+            this.out.replaceChildren();
+            data = data.subarray(i + 1);
+        }
+        let node = text(utf8.decode(data));
+        if (stream === 2) {
+            const el = element(`<span class="err"></span>`);
+            el.appendChild(node);
+            node = el;
+        }
+        this.out.appendChild(node);
+    }
+
+    async onInput(prompt, type) {
+        this.ensureOutput();
+        const div = this.input = this.output.appendChild(element(
+            `<div class="tdoc-input"></div>`));
+        try {
+            if (prompt && prompt !== '') {
+                div.appendChild(element(`<div class="prompt"></div>`))
+                    .textContent = prompt;
+            }
+            let input, button;
+            switch (type) {
+            case 'line':
+                input = div.appendChild(element(`\
+<input class="input" autocapitalize="off" autocomplete="off"\
+ autocorrect="off" spellcheck="false"></input>`));
+                input.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter' && !e.altKey && !e.ctrlKey &&
+                            !e.metaKey) {
+                        e.preventDefault();
+                        button.click();
+                    }
+                });
+                button = div.appendChild(element(
+                    `<button title="Send input (Enter)">Send</button>`));
+                break;
+            case 'text':
+                const grow = div.appendChild(element(`\
+<div class="input autosize">\
+<textarea rows="1" autocapitalize="off" autocomplete="off"\
+ autocorrect="off" spellcheck="false"\
+ oninput="this.parentNode.dataset.text = this.value"></textarea>\
+</div>`));
+                input = grow.querySelector('textarea');
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
+                            !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        button.click();
+                    }
+                });
+                button = div.appendChild(element(
+                    `<button title="Send input (Shift+Enter)">Send</button>`));
+                break;
+            default:
+                return;
+            }
+            const {promise, resolve} = Promise.withResolvers();
+            button.addEventListener('click', () => { resolve(); });
+            await promise;
+            return input.value;
+        } finally {
+            div.remove();
+            delete this.input
+        }
+    }
+
+    ensureOutput() {
+        if (!this.output) {
+            this.output = element(
+                `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
+            this.appendOutputs([this.output]);
+        }
     }
 }
 

@@ -13,7 +13,8 @@ from polyscript import xworker
 
 run_id_var = contextvars.ContextVar('run_id', default=None)
 tasks = {}
-write = xworker.sync.write
+js_input = xworker.sync.input
+js_write = xworker.sync.write
 
 
 def export(fn):
@@ -29,7 +30,7 @@ class OutStream(io.RawIOBase):
 
     def write(self, data, /):
         size = len(data)
-        if size > 0: write(run_id_var.get(), self.stream, data)
+        if size > 0: js_write(run_id_var.get(), self.stream, data)
         return size
 
 
@@ -39,12 +40,24 @@ sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
                               line_buffering=True)
 
 
+async def input_line(prompt=None):
+    return await js_input(run_id_var.get(), prompt, 'line')
+
+
+async def input_text(prompt=None):
+    return await js_input(run_id_var.get(), prompt, 'text')
+
+
 @export
 async def run(run_id, blocks):
     run_id_var.set(run_id)
     tasks[run_id] = asyncio.current_task()
     try:
-        g = {'__name__': '__main__'}
+        g = {
+            '__name__': '__main__',
+            'input_line': input_line,
+            'input_text': input_text,
+        }
         for code, name in blocks:
             code = compile(code, name or '<unnamed>', 'exec',
                            flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
