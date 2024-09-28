@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-12)=
+## 0.12
+
+- Add user input functionality for `{exec} python` blocks.
+
 (release-0-11)=
 ## 0.11
 
