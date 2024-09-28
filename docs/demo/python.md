@@ -7,6 +7,7 @@ The `{exec} python` block allows executing Python code directly in the browser.
 
 ```{exec} python
 :when: load
+:class: hidden
 import platform
 print(f"{platform.python_implementation()} {'.'.join(platform.python_version_tuple())}"
       f" on {platform.platform()}")

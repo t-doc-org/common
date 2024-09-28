@@ -6,35 +6,11 @@
 The `{exec} sql` block allows executing SQL directly in the browser. Each block
 is executed in a new, empty database.
 
-## Directive
-
-````{rst:directive} .. {exec}:: language (sql)
-This directive is a `{code-block}` that allows executing the code directly in
-the browser. It supports all the options of `{code-block}`, and a few more
-described below.
-
-{.rubric}
-Options
-```{rst:directive:option} after: name [name...]
-:type: text
-References one or more `{exec}` blocks to be executed before this block, in the
-same environment. The referenced blocks can themselves have an `:after:` option,
-forming a tree of blocks to execute in the environment. If a block appears on
-more than one tree branch, only the first occurrence is executed.
+```{exec} sql
+:when: load
+:class: hidden
+select concat('SQLite ', sqlite_version()) as Database;
 ```
-```{rst:directive:option} editable
-When set, the `{exec}` block is made editable.
-```
-```{rst:directive:option} include: path [path...]
-:type: relative paths
-When set, prepend the content of one or more files to the block's content.
-```
-```{rst:directive:option} when: value
-:type: click | load | never
-Determines when the block's code is executed: on user request (`click`, the
-default), when the page loads (`load`) or not at all (`never`).
-```
-````
 
 ## Database definition
 
@@ -69,6 +45,7 @@ displayed as a table.
 ```{exec} sql
 :after: sql-countries
 :when: load
+:editable:
 select * from countries;
 ```
 
@@ -94,6 +71,7 @@ select * from countries where false;
 ```{exec} sql
 :after: sql-countries
 :when: load
+:editable:
 update countries set food = 'baguette' where country_code = 'FR';
 select * from countries where country_code = 'FR';
 ```
@@ -103,42 +81,4 @@ select * from countries where country_code = 'FR';
 ```{exec} sql
 :when: load
 select * from unknown_table;
-```
-
-## Execution trigger
-
-By default, `{exec} sql` blocks are executed on click (`:when: click`), with
-controls displayed next to the block.
-
-```{exec} sql
-:after: sql-countries
-select * from countries where country_code = 'LI';
-```
-
-They can also be executed immediately on load (`:when: load`) or not at all
-(`:when: never`, useful for database definitions that are referenced by other
-blocks). In these cases, no controls aren displayed.
-
-## Editable blocks
-
-Blocks can be made editable with the `:editable:` option.
-
-```{exec} sql
-:after: sql-countries
-:when: load
-:editable:
-select * from countries
-  where population > 10000000
-  order by country_code;
-```
-
-## Include file content
-
-Blocks can reference one or more external files to be included. The content of
-the files is prepended to the block's content.
-
-```{exec} sql
-:include: people.sql
-:when: load
-select * from people;
 ```
