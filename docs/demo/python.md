@@ -59,11 +59,16 @@ print("\x0cHappy new year!")
 
 ## Program input
 
-User input can be requested by `await`ing special `input_*()` functions.
-Unfortunately, `sys.stdin` (and anything that depends on it) cannot be used, due
-to its blocking nature.
+User input can be requested by `await`ing functions available in the global
+environment. Unfortunately, `sys.stdin` (and anything that depends on it) cannot
+be used, due to its blocking nature.
 
 ### Line of text
+
+`await input_line(prompt=None)`
+
+- `prompt`: The text to display before the input field.
+- Returns the content of the input field as a `str`.
 
 ```{exec} python
 :when: load
@@ -74,12 +79,56 @@ print(f"Hello, {name}!")
 
 ### Multi-line text
 
+`await input_text(prompt=None)`
+
+- `prompt`: The text to display before the input field.
+- Returns the content of the input field as a `str`.
+
 ```{exec} python
 :when: load
 :editable:
 print("Please enter some text.")
 text = await input_text()
 print(f"\x0cThe text was:\n-------------\n{text}")
+```
+
+### Buttons
+
+`await input_buttons(prompt, labels)`
+
+- `prompt`: The text to display before the buttons, or `None` to not display a
+  prompt.
+- `labels`: The labels of the buttons, as a `list`.
+- Returns the index of the button that was clicked, as an `int`.
+
+```{exec} python
+:when: load
+:editable:
+colors = ["Red", "Green", "Blue"]
+index = await input_buttons("Pick a color:", colors)
+print(f"You picked: {colors[index]}")
+```
+
+### Pause
+
+`await pause(prompt=None, label="@icon{forward-step}")`
+
+- `prompt`: The text to display before the button, or `None` to not display a
+  prompt.
+- `label`: The label of the button. If the label has the format `@icon{...}`,
+  the corresponding icon from
+  [Font Awesome](https://fontawesome.com/icons/categories) is used.
+
+```{exec} python
+:when: load
+:editable:
+
+n = 5
+fact = 1
+for i in range(2, n + 1):
+  fact *= i
+  await pause(f"i={i}, fact={fact}")
+print(f"The factorial of {n} is {fact}")
 ```
 
 ## Exceptions

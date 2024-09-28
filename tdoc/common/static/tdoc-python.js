@@ -110,56 +110,72 @@ class PythonExecutor extends Executor {
         this.out.appendChild(node);
     }
 
-    async onInput(prompt, type) {
+    async onInput(type, prompt, ...args) {
         this.ensureOutput();
         const div = this.input = this.output.appendChild(element(
             `<div class="tdoc-input"></div>`));
         try {
             if (prompt && prompt !== '') {
                 div.appendChild(element(`<div class="prompt"></div>`))
-                    .textContent = prompt;
+                    .appendChild(text(prompt));
             }
-            let input, button;
+            const {promise, resolve} = Promise.withResolvers();
             switch (type) {
-            case 'line':
-                input = div.appendChild(element(`\
+            case 'line': {
+                const input = div.appendChild(element(`\
 <input class="input" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"></input>`));
-                input.addEventListener('keyup', (e) => {
+                const btn = div.appendChild(element(
+                    `<button title="Send input (Enter)">Send</button>`));
+                btn.addEventListener('click', () => { resolve(input.value); });
+                input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.altKey && !e.ctrlKey &&
                             !e.metaKey) {
                         e.preventDefault();
-                        button.click();
+                        btn.click();
                     }
                 });
-                button = div.appendChild(element(
-                    `<button title="Send input (Enter)">Send</button>`));
                 break;
-            case 'text':
-                const grow = div.appendChild(element(`\
+            }
+            case 'text': {
+                const input = div.appendChild(element(`\
 <div class="input autosize">\
 <textarea rows="1" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"\
  oninput="this.parentNode.dataset.text = this.value"></textarea>\
-</div>`));
-                input = grow.querySelector('textarea');
+</div>`))
+                    .querySelector('textarea');
+                const btn = div.appendChild(element(
+                    `<button title="Send input (Shift+Enter)">Send</button>`));
+                btn.addEventListener('click', () => { resolve(input.value); });
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
                             !e.ctrlKey && !e.metaKey) {
                         e.preventDefault();
-                        button.click();
+                        btn.click();
                     }
                 });
-                button = div.appendChild(element(
-                    `<button title="Send input (Shift+Enter)">Send</button>`));
                 break;
+            }
+            case 'buttons-right':
+                div.appendChild(element(`<div class="input"></div>`));
+            case 'buttons': {
+                for (const [index, label] of args[0].entries()) {
+                    const btn = div.appendChild(element(`<button></button>`));
+                    const icon = /^@icon\{([^}]+)\}$/.exec(label);
+                    if (icon) {
+                        btn.classList.add('icon', `fa-${icon[1]}`);
+                    } else {
+                        btn.appendChild(text(label));
+                    }
+                    btn.addEventListener('click', () => { resolve(index); });
+                }
+                break;
+            }
             default:
                 return;
             }
-            const {promise, resolve} = Promise.withResolvers();
-            button.addEventListener('click', () => { resolve(); });
-            await promise;
-            return input.value;
+            return await promise;
         } finally {
             div.remove();
             delete this.input

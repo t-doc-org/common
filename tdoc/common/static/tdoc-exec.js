@@ -102,6 +102,7 @@ export class Executor {
         addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
             text: this.origText,
+            // TODO: Prevent onRun if already running, or stop first
             onRun: this.when !== 'never' ? async () => { await this.doRun(); }
                                          : undefined,
         });
@@ -117,8 +118,7 @@ export class Executor {
     // Create a "Run" control.
     runControl() {
         const ctrl = element(`\
-<button class="tdoc-exec-run"\
- title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
+<button class="fa-play" title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
 </button>`);
         ctrl.addEventListener('click', async () => { await this.doRun(); });
         return ctrl;
@@ -127,7 +127,7 @@ export class Executor {
     // Create a "Stop" control.
     stopControl() {
         const ctrl = element(
-            `<button class="tdoc-exec-stop" title="Stop"></button>`);
+            `<button class="fa-stop" title="Stop"></button>`);
         ctrl.addEventListener('click', async () => { await this.doStop(); });
         return ctrl;
     }
@@ -135,7 +135,7 @@ export class Executor {
     // Create a "Reset" control.
     resetControl() {
         const ctrl = element(
-            `<button class="tdoc-exec-reset" title="Reset input"></button>`);
+            `<button class="fa-rotate-left" title="Reset input"></button>`);
         ctrl.addEventListener('click', () => {
             const editor = findEditor(this.node), state = editor.state;
             editor.dispatch(state.update({changes: {
