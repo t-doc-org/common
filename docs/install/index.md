@@ -3,6 +3,13 @@
 
 # Install & upgrade
 
+```{toctree}
+:maxdepth: 1
+:hidden:
+
+release_notes
+```
+
 ## Requirements
 
 t-doc requires the following software to be installed:
@@ -105,6 +112,9 @@ t-doc requires the following software to be installed:
 
 ## Upgrade
 
+- Check the changes introduced in the new version in the
+  [release notes](release_notes.md).
+
 - Upgrade the `t-doc-common` package and any out-of-date dependencies.
 
   `````{tab-set}
@@ -114,9 +124,9 @@ t-doc requires the following software to be installed:
   ```{code-block} shell-session
   python -m pip install --upgrade t-doc-common
   ```
-  If you get the following error, then a [local server](edit.md#edit-documents)
-  is running. Stop it with {kbd}`Ctrl+C` or by closing its terminal window, then
-  try again.
+  If you get the following error, then a
+  [local server](../edit.md#edit-documents) is running. Stop it with
+  {kbd}`Ctrl+C` or by closing its terminal window, then try again.
   ```
   ERROR: Could not install packages due to an OSError: [WinError 32] The process
   cannot access the file because it is being used by another process:
