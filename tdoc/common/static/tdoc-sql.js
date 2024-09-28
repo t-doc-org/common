@@ -97,6 +97,8 @@ class SqlExecutor extends Executor {
         }
     }
 
+    async stop(run_id) {}
+
     outputTable(columns) {
         const output = element(`\
 <div class="tdoc-exec-output pst-scrollable-table-container">\

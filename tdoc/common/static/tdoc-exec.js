@@ -102,7 +102,6 @@ export class Executor {
         addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
             text: this.origText,
-            // TODO: Prevent onRun if already running, or stop first
             onRun: this.when !== 'never' ? async () => { await this.doRun(); }
                                          : undefined,
         });
@@ -171,10 +170,13 @@ export class Executor {
     // Run the code in the {exec} block.
     async doRun() {
         await this.constructor.ready;
+        while (this.running) await this.doStop();
+        const {promise, resolve} = Promise.withResolvers();
+        this.running = promise;
+        const run_id = this.run_id = Executor.next_run_id;
+        Executor.next_run_id = run_id < Number.MAX_SAFE_INTEGER ?
+                               run_id + 1 : 0;
         try {
-            const run_id = this.run_id = Executor.next_run_id;
-            Executor.next_run_id = run_id < Number.MAX_SAFE_INTEGER ?
-                                   run_id + 1 : 0;
             this.preRun(run_id);
             try {
                 await this.run(run_id);
@@ -186,16 +188,20 @@ export class Executor {
             this.appendErrorOutput().appendChild(text(` ${e.toString()}`));
         } finally {
             delete this.run_id;
+            resolve();
+            delete this.running;
         }
     }
 
     // Stop the code in the {exec} block if it is running.
     async doStop() {
-        if (!this.run_id) return;
+        if (!this.running) return;
         try {
             await this.stop(this.run_id);
         } catch (e) {
             console.error(e);
+        } finally {
+            if (this.running) await this.running;
         }
     }
 
