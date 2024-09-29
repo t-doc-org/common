@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-13)=
+## 0.13
+
+- Added support for executing blocks after a block with `{exec} :then:`.
+
 (release-0-12)=
 ## 0.12
 
