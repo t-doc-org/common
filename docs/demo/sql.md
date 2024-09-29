@@ -39,8 +39,9 @@ insert into countries values
 
 ## Queries
 
-The results of the first `select` statement in an `{exec} sql` block are
-displayed as a table.
+The results of the **first** `select` statement in each `{exec} sql` block of
+the `:after:` and `:then:` [sequence](../reference/exec.md#sequencing) are
+displayed as tables.
 
 ```{exec} sql
 :after: sql-countries

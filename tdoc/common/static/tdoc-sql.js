@@ -69,24 +69,29 @@ class SqlExecutor extends Executor {
     async run(run_id) {
         let db;
         try {
+            this.replaceOutputs([]);
             db = await Database.open(`file:db-${run_id}?vfs=memdb`);
             let output, tbody
             for (const [code, node] of this.codeBlocks()) {
                 await db.exec(code, res => {
-                    if (node !== this.node) return;
                     if (res.columnNames.length === 0) return;
                     if (!output) {
                         output = this.outputTable(res.columnNames);
                         tbody = output.querySelector('tbody');
+                        this.appendOutputs([output]);
                     }
                     if (res.row) {
                         tbody.appendChild(this.resultRow(res.row));
-                    } else if (tbody.children.length === 0) {
-                        tbody.appendChild(this.noResultsRow(res.columnNames));
+                    } else {
+                        if (tbody.children.length === 0) {
+                            tbody.appendChild(
+                                this.noResultsRow(res.columnNames));
+                        }
+                        output = undefined;
+                        tbody = undefined;
                     }
                 });
             }
-            this.replaceOutputs(output ? [output] : []);
         } catch (e) {
             if (e.dbId !== db.dbId) throw e;
             throw new UserError(

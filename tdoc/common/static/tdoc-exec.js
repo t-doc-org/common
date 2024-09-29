@@ -31,24 +31,41 @@ export function signal() {
     return {promise, resolve, reject};
 }
 
-// Walk an {exec} :after: tree and yield nodes in depth-first order with
-// duplicates removed.
-function* walkAfterTree(node, seen) {
+// Walk an {exec} :after: graph and yield nodes in depth-first order. Then walk
+// the :after: graph of :then: references. Remove duplicates.
+function* walkNodes(node, seen) {
+    const isRoot = !seen;
+    if (!seen) seen = new Set();
     if (seen.has(node)) return;
     seen.add(node);
     const after = node.dataset.tdocAfter;
-    for (const a of after ? after.split(/\s+/) : []) {
-        const n = document.getElementById(a);
+    for (const id of after ? after.split(/\s+/) : []) {
+        const n = nodeById(id);
         if (!n) {
-            console.error(":after: node not found: ${a}");
+            console.error(":after: node not found: ${id}");
             continue;
         }
-        if (!n.classList.contains('tdoc-exec')) {
-            n = n.parentNode;  // Secondary name as a nested <span>
-        }
-        yield* walkAfterTree(n, seen);
+        yield* walkNodes(n, seen);
     }
     yield node;
+    if (!isRoot) return;
+    const then_ = node.dataset.tdocThen;
+    for (const id of then_ ? then_.split(/\s+/) : []) {
+        const n = nodeById(id);
+        if (!n) {
+            console.error(":then: node not found: ${id}");
+            continue;
+        }
+        yield* walkNodes(n, seen);
+    }
+}
+
+// Return the {exec} node with the given ID.
+function nodeById(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    if (node.classList.contains('tdoc-exec')) return node;
+    return node.parentNode;  // Secondary name as a nested <span>
 }
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -156,7 +173,7 @@ export class Executor {
 
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
-        for (const node of walkAfterTree(this.node, new Set())) {
+        for (const node of walkNodes(this.node)) {
             yield [Executor.text(node), node]
         }
     }

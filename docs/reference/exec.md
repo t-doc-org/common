@@ -46,6 +46,10 @@ Make the `{exec}` block editable.
 :type: relative paths
 Prepend the content of one or more files to the block's content.
 ```
+```{rst:directive:option} then: name [name...]
+:type: IDs
+Execute one or more `{exec}` blocks after this block, in the same environment.
+```
 ```{rst:directive:option} when: value
 :type: click | load | never
 Determine when the block's code is executed: on user request (`click`, the
@@ -53,7 +57,7 @@ default), when the page loads (`load`) or not at all (`never`).
 ```
 ````
 
-## Execution trigger
+## Trigger
 
 By default, `{exec}` blocks are executed on click (`:when: click`), with
 controls displayed next to the block.
@@ -85,13 +89,42 @@ select * from countries
   order by country_code;
 ```
 
-## Dependencies
+## Sequencing
 
 The `:after:` option allows referencing one or more `{exec}` blocks on the same
-page to be executed before a block, in the same environment. The referenced
-blocks can themselves have an `:after:` option, forming a tree of blocks to
-execute in the environment. If a block appears on more than one tree branch,
-only the first occurrence is executed.
+page to be executed before the block, in the same environment. The referenced
+blocks can themselves have `:after:` options, forming a dependency graph.
+
+Similarly, the `:then:` option allows referencing one or more `{exec}` blocks
+to be executed after the block. Unlike `:after:`, only the blocks referenced by
+the `:then:` option of the block itself are executed; the `:then:` options of
+referenced blocks are ignored.
+
+If a block appears more than once in the graph, only the first occurrence is
+executed.
+
+```{exec} sql
+:name: sql-people
+:when: never
+-- :name: sql-people
+create table people (first_name text not null, last_name text not null);
+```
+
+```{exec} sql
+:name: sql-people-select
+:when: never
+-- :name: sql-people-select
+select * from people;
+```
+
+```{exec} sql
+:after: sql-people
+:then: sql-people-select
+:editable:
+-- :after: sql-people
+-- :then: sql-people-select
+insert into people values ('Joe', 'Bar'), ('Jack', 'Sparrow');
+```
 
 ## Include file content
 

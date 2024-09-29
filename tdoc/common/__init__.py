@@ -41,7 +41,7 @@ def setup(app):
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
-    app.connect('doctree-resolved', check_after_references)
+    app.connect('doctree-resolved', check_references)
     app.connect('html-page-context', on_html_page_context)
 
     if build_tag(app):
@@ -134,6 +134,7 @@ class Exec(CodeBlock):
         'after': directives.class_option,
         'editable': directives.flag,
         'include': directives.unchanged_required,
+        'then': directives.class_option,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
@@ -170,22 +171,29 @@ class Exec(CodeBlock):
         node['classes'] += ['tdoc-exec']
         if after := self.options.get('after'):
             node['after'] = after
+        if then := self.options.get('then'):
+            node['then'] = then
         node['when'] = self.options.get('when', 'click')
         if 'editable' in self.options:
             node['classes'] += ['tdoc-editable']
 
 
-def check_after_references(app, doctree, docname):
+def check_references(app, doctree, docname):
     for lang, nodes in Exec.find_nodes(doctree).items():
         names = set()
-        for n in nodes:
-            names.update(n['names'])
-        for n in nodes:
-            for after in n.get('after', ()):
-                if after not in names:
-                    doctree.reporter.error(
-                        f"{{exec}} {lang}: Unknown :after: reference: {after}",
-                        base_node=n)
+        for node in nodes:
+            names.update(node['names'])
+        for node in nodes:
+            check_refs(node, names, 'after', doctree)
+            check_refs(node, names, 'then', doctree)
+
+
+def check_refs(node, names, typ, doctree):
+    for ref in node.get(typ, ()):
+        if ref not in names:
+            doctree.reporter.error(
+                f"{{exec}} {lang}: Unknown :{typ}: reference: {ref}",
+                base_node=node)
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
@@ -196,8 +204,10 @@ def visit_ExecBlock(self, node):
         return self.visit_literal_block(node)
     except nodes.SkipNode:
         after = node.get('after')
+        then = node.get('then')
         attrs = format_data_attrs(
             self, after=' '.join(after) if after else None,
+            then=' '.join(then) if then else None,
             when=node.get('when'))
         if attrs:
             def subst(m):
