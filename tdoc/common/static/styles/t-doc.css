@@ -16,14 +16,16 @@ div.sidebar, aside.sidebar {
 
 /* Invert the even and odd row colors in tables, so that the first row below the
    header has a different color than the header. */
-.table tbody tr:nth-child(even) {
-    background-color: var(--pst-color-table-row-zebra-low-bg);
-}
-.table tbody tr:nth-child(odd) {
-    background-color: var(--pst-color-table-row-zebra-high-bg);
-}
-.table tbody tr:hover {
-    background-color: var(--pst-color-table-row-hover-bg);
+.table > tbody > tr {
+    &:nth-child(even) {
+        background-color: var(--pst-color-table-row-zebra-low-bg);
+    }
+    &:nth-child(odd) {
+        background-color: var(--pst-color-table-row-zebra-high-bg);
+    }
+    &:hover {
+        background-color: var(--pst-color-table-row-hover-bg);
+    }
 }
 
 /* Code blocks */
@@ -31,134 +33,133 @@ div.highlight pre {
     padding: 0.7rem;
 }
 
+/* Buttons */
+[class*=tdoc-] button {
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    background-color: var(--pst-color-surface);
+    transition: background-color .3s;
+
+    &:hover {
+        background-color: var(--pst-color-shadow);
+    }
+    &[class^=fa-] {
+        width: 1.8rem;
+        height: 1.8rem;
+        font: var(--fa-font-solid);
+    }
+}
+
 /* Exec outputs */
 div.tdoc-exec-output {
     margin: 1em 0;
-}
-div.tdoc-exec-output.tdoc-sectioned {
-    border: 1px solid var(--pst-color-border);
-    border-top: 0.25rem solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    overflow: hidden;
-}
-div.tdoc-exec-output.tdoc-sectioned > :not(:last-child) {
-    border-bottom: 1px solid var(--pst-color-border);
-}
-div.tdoc-exec-output.tdoc-sectioned div.highlight {
-    border-radius: 0;
-}
-div.tdoc-exec-output.tdoc-sectioned pre {
-    border: none;
-    border-radius: 0;
-}
-div.tdoc-exec-output pre span.err {
-    color: var(--pst-color-danger);
-}
-div.tdoc-exec-output div.tdoc-input {
-    display: flex;
-    flex-direction: row;
-    align-content: stretch;
-    align-items: baseline;
-    margin: 0;
-    padding: 0.3rem;
-    column-gap: 0.3rem;
-}
-div.tdoc-exec-output div.tdoc-input .prompt {
-    white-space: pre;
-    padding-left: 0.2rem;
-    padding-right: 0.2rem;
-}
-div.tdoc-exec-output div.tdoc-input .input {
-    width: 100%;
-}
-div.tdoc-exec-output div.tdoc-input input,
-div.tdoc-exec-output div.tdoc-input .autosize > textarea,
-div.tdoc-exec-output div.tdoc-input .autosize::after {
-    border: 1px solid var(--pst-color-border);
-    padding-block: 1px;
-    padding-inline: 2px;
-}
-div.tdoc-exec-output div.tdoc-input .autosize {
-    display: grid;
-}
-div.tdoc-exec-output div.tdoc-input .autosize::after {
-    content: attr(data-text) " ";
-    white-space: pre-wrap;
-    visibility: hidden;
-}
-div.tdoc-exec-output div.tdoc-input .autosize > textarea {
-    resize: none;
-    overflow: hidden;
-}
-div.tdoc-exec-output div.tdoc-input .autosize > textarea,
-div.tdoc-exec-output div.tdoc-input .autosize::after {
-    font: inherit;
-    grid-area: 1 / 1 / 2 / 2;
-}
-div.tdoc-exec-output div.tdoc-input button {
-    border: 1px solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    background-color: var(--pst-color-surface);
-    transition: background-color .3s;
-}
-div.tdoc-exec-output div.tdoc-input button:hover {
-    background-color: var(--pst-color-shadow);
-}
-div.tdoc-exec-output div.tdoc-input button.icon {
-    width: 1.8rem;
-    height: 1.8rem;
-    font: var(--fa-font-solid);
+
+    &.tdoc-sectioned {
+        border: 1px solid var(--pst-color-border);
+        border-top: 0.25rem solid var(--pst-color-border);
+        border-radius: 0.25rem;
+        overflow: hidden;
+
+        & > :not(:last-child) {
+            border-bottom: 1px solid var(--pst-color-border);
+        }
+        & div.highlight {
+            border-radius: 0;
+        }
+        & pre {
+            border: none;
+            border-radius: 0;
+        }
+    }
+    & pre span.err {
+        color: var(--pst-color-danger);
+    }
+    & div.tdoc-input {
+        display: flex;
+        flex-direction: row;
+        align-content: stretch;
+        align-items: baseline;
+        margin: 0;
+        padding: 0.3rem;
+        column-gap: 0.3rem;
+
+        & .prompt {
+            white-space: pre;
+            padding-left: 0.2rem;
+            padding-right: 0.2rem;
+        }
+        & .input {
+            width: 100%;
+        }
+        & input, & .autosize > textarea, & .autosize::after {
+            border: 1px solid var(--pst-color-border);
+            padding-block: 1px;
+            padding-inline: 2px;
+        }
+        & .autosize {
+            display: grid;
+        }
+        & .autosize::after {
+            content: attr(data-text) " ";
+            white-space: pre-wrap;
+            visibility: hidden;
+        }
+        & .autosize > textarea {
+            resize: none;
+            overflow: hidden;
+        }
+        & .autosize > textarea,
+        & .autosize::after {
+            font: inherit;
+            grid-area: 1 / 1 / 2 / 2;
+        }
+    }
 }
 
 /* Editor */
-div.tdoc-exec.tdoc-editable div.highlight pre,
-div.tdoc-exec.tdoc-editable div.highlight button.copybtn {
-    display: none;
+div.tdoc-exec.tdoc-editable {
+    & div.highlight {
+        pre, button.copybtn {
+            display: none;
+        }
+    }
+    & div.cm-editor {
+        border: 1px solid var(--pst-color-border);
+        border-radius: 0.25rem;
+        overflow: hidden;
+    }
 }
-div.tdoc-exec.tdoc-editable div.cm-editor {
-    border: 1px solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    overflow: hidden;
-}
-html[data-theme=dark] div.tdoc-exec.tdoc-editable div.cm-editor {
-    background-color: var(--pst-color-surface);
-}
-div.cm-editor.cm-focused {
-    outline: none;
-}
-div.cm-editor div.cm-scroller {
-    font-family: var(--pst-font-family-monospace);
-    font-size: .875em;
+div.cm-editor {
+    &.cm-focused {
+        outline: none;
+    }
+    & div.cm-scroller {
+        font-family: var(--pst-font-family-monospace);
+        font-size: .875em;
+    }
+    html[data-theme=dark] & {
+        background-color: var(--pst-color-surface);
+    }
 }
 
 /* Execution controls */
-div[class*=highlight-].tdoc-exec {
-    flex-direction: row;
-    column-gap: 0.3rem;
-}
-div.tdoc-exec div.highlight {
-    flex-basis: 100%;
-}
-div.tdoc-exec-controls {
-    display: flex;
-    flex-direction: column;
-    row-gap: 0.3rem;
-}
-div.tdoc-exec-controls button {
-    width: 1.8rem;
-    height: 1.8rem;
-    font: var(--fa-font-solid);
-    border: 1px solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    background-color: var(--pst-color-surface);
-    transition: background-color .3s;
-}
-div.tdoc-exec-controls button:hover {
-    background-color: var(--pst-color-shadow);
+div.tdoc-exec {
+    &[class*=highlight-] {
+        flex-direction: row;
+        column-gap: 0.3rem;
+    }
+    & div.highlight {
+        flex-basis: 100%;
+    }
+    & div.tdoc-exec-controls {
+        display: flex;
+        flex-direction: column;
+        row-gap: 0.3rem;
+    }
 }
 
 /* SQL execution results */
-.table tbody tr:nth-child(odd).tdoc-no-results {
+.table > tbody > tr:nth-child(odd).tdoc-no-results {
     background: repeating-linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 0px 2px,
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);

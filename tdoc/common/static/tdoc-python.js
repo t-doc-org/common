@@ -164,7 +164,7 @@ class PythonExecutor extends Executor {
                     const btn = div.appendChild(element(`<button></button>`));
                     const icon = /^@icon\{([^}]+)\}$/.exec(label);
                     if (icon) {
-                        btn.classList.add('icon', `fa-${icon[1]}`);
+                        btn.classList.add(`fa-${icon[1]}`);
                     } else {
                         btn.appendChild(text(label));
                     }
