@@ -31,6 +31,11 @@ export function signal() {
     return {promise, resolve, reject};
 }
 
+// An error that is caused by the user, and that doesn't need to be logged.
+export class UserError extends Error {
+    toString() { return this.message; }
+}
+
 // Walk an {exec} :after: graph and yield nodes in depth-first order. Then walk
 // the :after: graph of :then: references. Remove duplicates.
 function* walkNodes(node, seen) {
@@ -68,9 +73,13 @@ function nodeById(id) {
     return node.parentNode;  // Secondary name as a nested <span>
 }
 
-// An error that is caused by the user, and that doesn't need to be logged.
-export class UserError extends Error {
-    toString() { return this.message; }
+// Move the content of .lineno nodes to the data-n attribute. It is added back
+// in CSS, but won't appear in text content.
+function fixLineNos(node) {
+    for (const ln of node.querySelectorAll('.linenos')) {
+        ln.dataset.n = ln.textContent;
+        ln.replaceChildren();
+    }
 }
 
 // A base class for {exec} block handlers.
@@ -83,6 +92,7 @@ export class Executor {
         await loaded;
         for (const node of document.querySelectorAll(
                 `div.tdoc-exec.highlight-${cls.lang}`)) {
+            fixLineNos(node);
             const handler = new cls(node);
             if (handler.editable) handler.addEditor();
             const controls = element(`<div class="tdoc-exec-controls"></div>`);

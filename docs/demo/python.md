@@ -21,6 +21,7 @@ referenced in the `:after:` option of other blocks.
 ```{exec} python
 :name: python-setup
 :when: never
+:linenos:
 def factorial(n):
   res = 1
   for i in range(2, n + 1):

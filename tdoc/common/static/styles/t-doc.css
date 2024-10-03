@@ -30,7 +30,16 @@ div.sidebar, aside.sidebar {
 
 /* Code blocks */
 div.highlight pre {
-    padding: 0.7rem;
+    padding: 0.5rem;
+
+    & > .linenos {
+        margin-right: 8px;
+        border-right: 1px solid var(--pst-color-border);
+
+        &::before {
+            content: attr(data-n);
+        }
+    }
 }
 
 /* Buttons */
@@ -186,10 +195,22 @@ div.tdoc-exec {
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);
 }
 
-/* Prevent the wrapper background from being visible if the wrapper is larger
-   than its content. */
+/* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
+   if it's empty, as it causes the scrollbar to always appear. */
+.bd-sidebar-primary div#rtd-footer-container:empty {
+    display: none;
+}
+
+/* Prevent the wrapper background set by pygments from being visible if the
+   wrapper is larger than its content (visible in dark mode). */
 .highlight.highlight.highlight {
     background: none;
+}
+
+/* Prevent the wrapper background set by pygments from overriding code literal
+   styles. */
+code.literal.literal.literal {
+    background-color: var(--pst-color-surface);
 }
 
 /* Fix the gap left by pydata_sphinx_theme between the table and the

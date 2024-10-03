@@ -31,6 +31,7 @@ class Database {
     async exec(sql, on_result) {
         // TODO: Check if other args could be useful, e.g. for splitting a
         // script into multiple statements
+        if (!sql) sql = ' ';  // Avoid exception on empty statements
         await promiser('exec', {dbId: this.dbId, sql, callback: on_result});
     }
 }
