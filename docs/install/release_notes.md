@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-14)=
+## 0.14
+
+ - Added a button to remove `{exec}` output.
+ - Fixed `{exec} :linenos:`.
+
 (release-0-13)=
 ## 0.13
 
