@@ -67,6 +67,10 @@ class PythonExecutor extends Executor {
             this.input.remove()
             delete this.input
         }
+        if (this.output) {
+            const btn = this.output.querySelector('button.tdoc-remove');
+            if (btn) btn.classList.remove('hidden');
+        }
         delete this.output
         this.runCtrl.classList.remove('hidden');
         this.stopCtrl.classList.add('hidden');
@@ -93,6 +97,12 @@ class PythonExecutor extends Executor {
         this.ensureOutput();
         if (!this.out) {
             const div = element(`<div class="highlight"><pre></pre></div>`);
+            if (this.runCtrl && !this.node.classList.contains('hidden')) {
+                const output = this.output;
+                div.appendChild(element(`\
+<button class="fa-xmark tdoc-remove hidden" title="Remove"></button>`))
+                    .addEventListener('click', () => { output.remove(); });
+            }
             this.output.prepend(div);
             this.out = div.querySelector('pre');
         }

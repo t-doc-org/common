@@ -38,7 +38,7 @@ div.highlight pre {
     border: 1px solid var(--pst-color-border);
     border-radius: 0.25rem;
     background-color: var(--pst-color-surface);
-    transition: background-color .3s;
+    transition: background-color 0.3s;
 
     &:hover {
         background-color: var(--pst-color-shadow);
@@ -52,8 +52,21 @@ div.highlight pre {
 
 /* Exec outputs */
 div.tdoc-exec-output {
+    position: relative;
     margin: 1em 0;
 
+    & button.tdoc-remove {
+        position: absolute;
+        top: 0.3rem;
+        right: 0.3rem;
+        border: none;
+        user-select: none;
+        opacity: 0;
+        transition: background-color 0.3s, opacity 0.3s;
+    }
+    &:hover button.tdoc-remove {
+        opacity: 1;
+    }
     &.tdoc-sectioned {
         border: 1px solid var(--pst-color-border);
         border-top: 0.25rem solid var(--pst-color-border);
@@ -135,7 +148,7 @@ div.cm-editor {
     }
     & div.cm-scroller {
         font-family: var(--pst-font-family-monospace);
-        font-size: .875em;
+        font-size: 0.875em;
     }
     html[data-theme=dark] & {
         background-color: var(--pst-color-surface);

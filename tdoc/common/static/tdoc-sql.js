@@ -114,6 +114,11 @@ class SqlExecutor extends Executor {
             tr.appendChild(element(`<th class="text-center"></th>`))
                 .appendChild(text(col));
         }
+        if (this.runCtrl) {
+            output.appendChild(element(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
+                .addEventListener('click', () => { output.remove(); });
+        }
         return output;
     }
 

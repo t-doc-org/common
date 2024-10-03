@@ -150,8 +150,8 @@ export class Executor {
 
     // Create a "Reset" control.
     resetControl() {
-        const ctrl = element(
-            `<button class="fa-rotate-left" title="Reset input"></button>`);
+        const ctrl = element(`
+<button class="fa-rotate-left" title="Reset editor content"></button>`);
         ctrl.addEventListener('click', () => {
             const editor = findEditor(this.node), state = editor.state;
             editor.dispatch(state.update({changes: {
