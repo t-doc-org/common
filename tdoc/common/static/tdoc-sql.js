@@ -96,7 +96,7 @@ class SqlExecutor extends Executor {
         } catch (e) {
             if (e.dbId !== db.dbId) throw e;
             throw new UserError(
-                /^(SQLITE_ERROR: sqlite3 result code \d+: )?(.*)$/
+                /^(SQLITE_[A-Z0-9_]+: sqlite3 result code \d+: )?(.*)$/
                     .exec(e.result.message)[2]);
         } finally {
             if (db) await db.close();
