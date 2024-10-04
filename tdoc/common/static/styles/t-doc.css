@@ -50,7 +50,7 @@ div.highlight pre {
     transition: background-color 0.3s;
 
     &:hover {
-        background-color: var(--pst-color-shadow);
+        background-color: var(--pst-color-border);
     }
     &[class^=fa-] {
         width: 1.8rem;
@@ -68,7 +68,6 @@ div.tdoc-exec-output {
         position: absolute;
         top: 0.3rem;
         right: 0.3rem;
-        border: none;
         user-select: none;
         opacity: 0;
         transition: background-color 0.3s, opacity 0.3s;
@@ -215,9 +214,6 @@ code.literal.literal.literal {
 
 /* Fix the gap left by pydata_sphinx_theme between the table and the
    scrollbar. */
-div.pst-scrollable-table-container {
-    margin-bottom: 1rem;
-}
 .table {
     margin-bottom: 0;
 }

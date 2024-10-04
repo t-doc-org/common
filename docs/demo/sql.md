@@ -67,6 +67,36 @@ select * from countries where country_code = 'CH';
 select * from countries where false;
 ```
 
+### Wide results
+
+```{exec} sql
+:name: sql-wide
+:when: never
+:class: hidden
+create table wide (
+  column0 text,
+  column1 text,
+  column2 text,
+  column3 text,
+  column4 text,
+  column5 text,
+  column6 text,
+  column7 text,
+  column8 text,
+  column9 text,
+  column10 text,
+  column11 text,
+  column12 text,
+  column13 text,
+  column14 text,
+  column15 text
+);
+```
+```{exec} sql
+:after: sql-wide
+select * from wide;
+```
+
 ## Mutations
 
 ```{exec} sql

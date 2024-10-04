@@ -107,9 +107,9 @@ class SqlExecutor extends Executor {
 
     outputTable(columns) {
         const output = element(`\
-<div class="tdoc-exec-output pst-scrollable-table-container">\
+<div class="tdoc-exec-output"><div class="pst-scrollable-table-container">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
-</div>`);
+</div></div>`);
         const tr = output.querySelector('tr');
         for (const col of columns) {
             tr.appendChild(element(`<th class="text-center"></th>`))
