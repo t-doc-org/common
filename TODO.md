@@ -3,9 +3,6 @@
 - TODO: Remove the "Click to show" in dropdowns. This should be possible just
   with CSS.
 
-- TODO: Improve the presentation of numbering in {code-block}: more space
-  between number and code, border around number.
-
 - TODO: Render as pdf with solutions (open dropdowns).
 
 - TODO: Make the `name` attribute in graphviz work. This requires a fix in

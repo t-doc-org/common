@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {XWorker} from './polyscript/index.js';
-import {Executor, element, signal, text} from './tdoc-exec.js';
-
-// TODO: Add a button to each {exec} output to remove it
+import {Executor, element, focusIfVisible, text} from './tdoc-exec.js';
 
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
@@ -12,7 +10,7 @@ const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     // https://docs.pyscript.net/latest/user-guide/configuration/
     config: {},
 });
-const {promise: ready, resolve: resolve_ready} = signal();
+const {promise: ready, resolve: resolve_ready} = Promise.withResolvers();
 worker.sync.ready = (msg) => {
     console.info(`[t-doc] ${msg}`);
     resolve_ready();
@@ -145,6 +143,7 @@ class PythonExecutor extends Executor {
                         btn.click();
                     }
                 });
+                focusIfVisible(input);
                 break;
             }
             case 'text': {
@@ -165,6 +164,7 @@ class PythonExecutor extends Executor {
                         btn.click();
                     }
                 });
+                focusIfVisible(input);
                 break;
             }
             case 'buttons-right':
