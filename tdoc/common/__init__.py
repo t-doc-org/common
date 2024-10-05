@@ -3,12 +3,13 @@
 
 import pathlib
 import re
+import zipfile
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx import config
 from sphinx.directives.code import CodeBlock
-from sphinx.util import fileutil, logging
+from sphinx.util import fileutil, logging, osutil
 
 __project__ = 't-doc-common'
 __version__ = '0.15.dev1'
@@ -43,9 +44,9 @@ def setup(app):
     app.connect('builder-inited', on_builder_inited)
     app.connect('doctree-resolved', check_references)
     app.connect('html-page-context', on_html_page_context)
-
     if build_tag(app):
         app.connect('html-page-context', add_reload_js)
+    app.connect('write-started', write_static_files)
 
     return {
         'version': __version__,
@@ -98,11 +99,6 @@ def on_builder_inited(app):
     app.config.html_static_path.append(str(_common / 'static'))
     app.config.html_static_path.append(str(_common / 'static.gen'))
 
-    # The file must be at the root of the website, to avoid limiting the scope
-    # of the service worker to _static.
-    fileutil.copy_asset_file(_common / 'scripts' / 'tdoc-worker.js',
-                             app.builder.outdir, force=True)
-
 
 def on_html_page_context(app, page, template, context, doctree):
     license = app.config.license
@@ -122,6 +118,35 @@ def on_html_page_context(app, page, template, context, doctree):
 
 def add_reload_js(app, page, template, context, doctree):
     app.add_js_file('tdoc-reload.js', type='module')
+
+
+def write_static_files(app, builder):
+    if builder.format != 'html': return
+
+    # The file must be at the root of the website, to avoid limiting the scope
+    # of the service worker to _static.
+    fileutil.copy_asset_file(_common / 'scripts' / 'tdoc-worker.js',
+                             builder.outdir, force=True)
+
+    # Package all files under tdoc/common/python into a .zip, below tdoc/, and
+    # write it to _static.
+    client = _common / 'python'
+    rel = lambda p: p.relative_to(client)
+    static = builder.outdir / '_static'
+    osutil.ensuredir(static)
+    with zipfile.ZipFile(static / 'tdoc-python.zip', mode='x') as f:
+        f.mkdir('tdoc')
+        for root, dirs, files in client.walk():
+            dirs.sort()
+            for dn in dirs:
+                f.mkdir(f'tdoc/{rel(root / dn)}')
+            files.sort()
+            for fn in files:
+                path = root / fn
+                data = path.read_bytes()
+                ct = zipfile.ZIP_DEFLATED if data else zipfile.ZIP_STORED
+                f.writestr(zipfile.ZipInfo(f'tdoc/{rel(path)}'),
+                           data, compress_type=ct, compresslevel=9)
 
 
 class ExecBlock(nodes.literal_block): pass

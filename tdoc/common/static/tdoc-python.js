@@ -4,11 +4,14 @@
 import {XWorker} from './polyscript/index.js';
 import {Executor, element, focusIfVisible, text} from './tdoc-exec.js';
 
+const files = {}
+files[import.meta.resolve('./tdoc-python.zip')] = '/lib/tdoc.zip';
+
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
     type: 'pyodide',
     version: import.meta.resolve('./pyodide/pyodide.mjs'),
     // https://docs.pyscript.net/latest/user-guide/configuration/
-    config: {},
+    config: {files},
 });
 const {promise: ready, resolve: resolve_ready} = Promise.withResolvers();
 worker.sync.ready = (msg) => {
@@ -60,7 +63,7 @@ class PythonExecutor extends Executor {
 
     postRun(run_id) {
         delete executors[run_id];
-        delete this.out
+        delete this.out;
         if (this.input) {
             this.input.remove()
             delete this.input
@@ -69,7 +72,7 @@ class PythonExecutor extends Executor {
             const btn = this.output.querySelector('button.tdoc-remove');
             if (btn) btn.classList.remove('hidden');
         }
-        delete this.output
+        delete this.output;
         this.runCtrl.classList.remove('hidden');
         this.stopCtrl.classList.add('hidden');
     }
@@ -81,7 +84,7 @@ class PythonExecutor extends Executor {
             for (const [code, node] of this.codeBlocks()) {
                 blocks.push([code, node.id]);
             }
-            await worker.sync.run(run_id, blocks)
+            await worker.sync.run(run_id, blocks);
         } finally {
             await worker.sync.stop(run_id);
         }
@@ -188,7 +191,7 @@ class PythonExecutor extends Executor {
             return await promise;
         } finally {
             div.remove();
-            delete this.input
+            delete this.input;
         }
     }
 
