@@ -78,7 +78,7 @@ def build_tag(app):
 def on_config_inited(app, config):
     cv = config.values['html_title']
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
-    config.templates_path.append(str(_common / 'components'))
+    config.templates_path.append(str(_common / 'templates'))
 
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
