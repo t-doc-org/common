@@ -17,6 +17,7 @@ tasks = {}
 env = {'__name__': '__main__'}
 
 js_input = xworker.sync.input
+js_render = xworker.sync.render
 js_write = xworker.sync.write
 
 
@@ -49,6 +50,12 @@ sys.stdout = io.TextIOWrapper(io.BufferedWriter(OutStream(1)),
                               line_buffering=True)
 sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
                               line_buffering=True)
+
+
+@public
+def render(html, name=''):
+    if not isinstance(html, str): html = ''.join(html)
+    js_render(run_id(), html, name)
 
 
 @public

@@ -28,6 +28,10 @@ worker.sync.input = (run_id, ...args) => {
     const exec = executors[run_id];
     if (exec) return exec.onInput(...args);
 };
+worker.sync.render = (run_id, ...args) => {
+    const exec = executors[run_id];
+    if (exec) return exec.onRender(...args);
+};
 
 const utf8 = new TextDecoder();
 const form_feed = 0x0c;
@@ -95,16 +99,15 @@ class PythonExecutor extends Executor {
     }
 
     onWrite(stream, data) {
-        this.ensureOutput();
         if (!this.out) {
-            const div = element(`<div class="highlight"><pre></pre></div>`);
+            const div = this.render(
+                '\uffff_0', `<div class="highlight"><pre></pre></div>`);
             if (this.runCtrl && !this.node.classList.contains('hidden')) {
                 const output = this.output;
                 div.appendChild(element(`\
 <button class="fa-xmark tdoc-remove hidden" title="Remove"></button>`))
                     .addEventListener('click', () => { output.remove(); });
             }
-            this.output.prepend(div);
             this.out = div.querySelector('pre');
         }
         const i = data.lastIndexOf(form_feed);
@@ -122,9 +125,8 @@ class PythonExecutor extends Executor {
     }
 
     async onInput(type, prompt, ...args) {
-        this.ensureOutput();
-        const div = this.input = this.output.appendChild(element(
-            `<div class="tdoc-input"></div>`));
+        const div = this.input = this.render(
+            '\uffff_1', `<div class="tdoc-input"></div>`);
         try {
             if (prompt && prompt !== '') {
                 div.appendChild(element(`<div class="prompt"></div>`))
@@ -195,12 +197,30 @@ class PythonExecutor extends Executor {
         }
     }
 
-    ensureOutput() {
+    onRender(html, name) {
+        this.render(name, html);
+    }
+
+    render(name, html) {
+        const new_el = element(html);
+        new_el.tdocName = name;
         if (!this.output) {
             this.output = element(
                 `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
             this.appendOutputs([this.output]);
         }
+        for (const el of this.output.children) {
+            if (el.tdocName > name) {
+                el.before(new_el);
+                return;
+            }
+            if (el.tdocName === name) {
+                el.replaceWith(new_el);
+                return;
+            }
+        }
+        this.output.appendChild(new_el);
+        return new_el;
     }
 }
 
