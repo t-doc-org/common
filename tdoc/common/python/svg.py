@@ -3,7 +3,6 @@
 
 import html
 
-# TODO: Add <style> element
 
 def esc(v, quote=True):
     if not isinstance(v, str): v = str(v)
@@ -128,69 +127,83 @@ def skew_x(*args, **kwargs): return Transform().skew_x(*args, **kwargs)
 def skew_y(*args, **kwargs): return Transform().skew_y(*args, **kwargs)
 
 
-class _Shape:
-    def __init__(self, stroke, fill, transform, style):
-        self.stroke, self.fill = Stroke(stroke), Fill(fill)
-        self.transform, self.style = transform, style
+class _Element:
+    _slots = ('stroke', 'fill', 'style', 'id')
 
-    def __iter__(self):
+    def __init__(self, stroke, fill, style, id):
+        self.stroke, self.fill = Stroke(stroke), Fill(fill)
+        self.style, self.id = style, id
+
+    def _attrs(self):
         yield from self.stroke
         yield from self.fill
-        if (v := self.transform) is not None: yield from v
         if (v := self.style) is not None: yield f' style="{esc(v)}"'
+        if (v := self.id) is not None: yield f' id="{esc(v)}"'
+
+
+class _Shape(_Element):
+    _slots = _Element._slots + ('transform',)
+
+    def __init__(self, stroke, fill, style, id, transform):
+        super().__init__(stroke, fill, style, id)
+        self.transform = transform
+
+    def _attrs(self):
+        yield from super()._attrs()
+        if (v := self.transform) is not None: yield from v
 
 
 class Circle(_Shape):
-    __slots__ = ('x', 'y', 'r', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Shape._slots + ('x', 'y', 'r')
 
-    def __init__(self, x, y, r, *, stroke=None, fill=None, transform=None,
-               style=None):
+    def __init__(self, x, y, r, *, stroke=None, fill=None, style=None, id=None,
+                 transform=None):
         self.x, self.y, self.r = x, y, r
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<circle cx="{esc(self.x)}" cy="{esc(self.y)}" r="{esc(self.r)}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class Ellipse(_Shape):
-    __slots__ = ('x', 'y', 'rx', 'ry', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Shape._slots + ('x', 'y', 'rx', 'ry')
 
-    def __init__(self, x, y, rx, ry, *, stroke=None, fill=None, transform=None,
-               style=None):
+    def __init__(self, x, y, rx, ry, *, stroke=None, fill=None, style=None,
+                 id=None, transform=None):
         self.x, self.y, self.rx, self.ry = x, y, rx, ry
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<ellipse cx="{esc(self.x)}" cy="{esc(self.y)}"'
         yield f' rx="{esc(self.rx)}" ry="{esc(self.ry)}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class Line(_Shape):
-    __slots__ = ('x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Shape._slots + ('x1', 'y1', 'x2', 'y2')
 
-    def __init__(self, x1, y1, x2, y2, *, stroke=None, transform=None,
-                 style=None):
+    def __init__(self, x1, y1, x2, y2, *, stroke=None, style=None, id=None,
+                 transform=None):
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
-        super().__init__(stroke, None, transform, style)
+        super().__init__(stroke, None, style, id, transform)
 
     def __iter__(self):
         yield f'<line x1="{esc(self.x1)}" y1="{esc(self.y1)}"'
         yield f' x2="{esc(self.x2)}" y2="{esc(self.y2)}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class Path(_Shape):
-    __slots__ = ('path', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Shape._slots + ('path',)
 
-    def __init__(self, *path, stroke=None, fill=None, transform=None,
-                 style=None):
+    def __init__(self, *path, stroke=None, fill=None, style=None, id=None,
+                 transform=None):
         self.path = path
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<path d="'
@@ -201,69 +214,78 @@ class Path(_Shape):
             else:
                 yield esc(el)
         yield '"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class _Poly(_Shape):
-    def __init__(self, *points, stroke=None, fill=None, transform=None,
-                 style=None):
+    def __init__(self, *points, stroke=None, fill=None, style=None, id=None,
+                 transform=None):
         self.points = points
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<{self._tag} points="{esc(' '.join(f'{p[0]},{p[1]}'
                                                    for p in self.points))}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class Polygon(_Poly):
-    __slots__ = ('points', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Poly._slots + ('points',)
     _tag = 'polygon'
 
 
 class Polyline(_Poly):
-    __slots__ = ('points', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Poly._slots + ('points',)
     _tag = 'polyline'
 
 
 class Rect(_Shape):
-    __slots__ = ('x', 'y', 'width', 'height', 'rx', 'ry', 'stroke', 'fill',
-                 'transform', 'style')
+    __slots__ = _Shape._slots + ('x', 'y', 'width', 'height', 'rx', 'ry')
 
     def __init__(self, x, y, width, height, *, rx=None, ry=None, stroke=None,
-                 fill=None, transform=None, style=None):
+                 fill=None, style=None, id=None, transform=None):
         self.x, self.y, self.width, self.height = x, y, width, height
         self.rx, self.ry = rx, ry
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<rect x="{esc(self.x)}" y="{esc(self.y)}"'
         yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
         if (v := self.rx) is not None: yield f' rx="{esc(v)}"'
         if (v := self.ry) is not None: yield f' ry="{esc(v)}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield '/>'
 
 
 class Text(_Shape):
-    __slots__ = ('x', 'y', 'text', 'stroke', 'fill', 'transform', 'style')
+    __slots__ = _Shape._slots + ('x', 'y', 'text')
 
     def __init__(self, x, y, text, *, stroke='transparent', fill=None,
-                 transform=None, style=None):
+                 style=None, id=None, transform=None):
         self.x, self.y, self.text = x, y, text
-        super().__init__(stroke, fill, transform, style)
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield f'<text x="{esc(self.x)}" y="{esc(self.y)}"'
-        yield from super().__iter__()
+        yield from self._attrs()
         yield f'>{esc(self.text, False)}</text>'
 
 
-class _Container:
-    def __init__(self, stroke, fill, style):
-        self.stroke, self.fill, self.style = Stroke(stroke), Fill(fill), style
+class Styles:
+    def __init__(self, styles):
+        self.styles = styles
+
+    def __iter__(self):
+        yield f'<style>{esc(self.styles)}</style>'
+
+
+class _Container(_Element):
+    _slots = ('children',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.children = []
 
     def clear(self):
@@ -300,35 +322,31 @@ class _Container:
     def group(self, *args, **kwargs):
         return self.add(Group(*args, **kwargs))
 
-    def __iter__(self):
-        for child in self.children:
-            yield from child
+    def styles(self, *args, **kwargs):
+        return self.add(Styles(*args, **kwargs))
 
 
-class Group(_Container):
-    __slots__ = ('stroke', 'fill', 'style', 'children')
+class Group(_Shape, _Container):
+    __slots__ = _Shape._slots + _Container._slots
 
-    def __init__(self, *, stroke=None, fill=None, transform=None, style=None):
-        super().__init__(stroke, fill, style)
-        self.transform = transform
+    def __init__(self, *, stroke=None, fill=None, style=None, id=None,
+                 transform=None):
+        super().__init__(stroke, fill, style, id, transform)
 
     def __iter__(self):
         yield '<g'
-        yield from self.stroke
-        yield from self.fill
-        if (v := self.transform) is not None: yield from v
-        if self.style is not None: yield f' style="{esc(self.style)}"'
+        yield from self._attrs()
         yield '>'
-        yield from super().__iter__()
+        for child in self.children: yield from child
         yield '</g>'
 
 
-class Image(_Container):
-    __slots__ = ('stroke', 'fill', 'style', 'children', 'width', 'height')
+class Image(_Shape, _Container):
+    __slots__ = _Shape._slots + _Container._slots + ('width', 'height')
 
     def __init__(self, width, height, *, stroke=Stroke.default,
-                 fill=Fill.default, style=None):
-        super().__init__(stroke, fill, style)
+                 fill=Fill.default, style=None, id=None, transform=None):
+        super().__init__(stroke, fill, style, id, transform)
         self.width, self.height = width, height
 
     def __iter__(self):
@@ -336,9 +354,7 @@ class Image(_Container):
                ' xmlns:xlink="http://www.w3.org/1999/xlink"')
         yield f' viewBox="0 0 {esc(self.width)} {esc(self.height)}"'
         yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
-        yield from self.stroke
-        yield from self.fill
-        if self.style is not None: yield f' style="{esc(self.style)}"'
+        yield from self._attrs()
         yield '>'
-        yield from super().__iter__()
+        for child in self.children: yield from child
         yield '</svg>'

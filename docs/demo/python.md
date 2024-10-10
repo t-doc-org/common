@@ -92,14 +92,21 @@ def paint_heart(g):
          'M 40,-50 50,-50 50,-40',
          stroke=svg.Stroke('black', width=2), fill='transparent')
 
-img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
-                style='width: 100%; height: 100%')
+img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff', id='graphics')
+img.styles("""
+#graphics {
+  width: 100%;
+  height: 100%;
+
+  polygon { fill: #c0ffc0; }
+}
+""")
 img.circle(20, 30, 10)
 img.ellipse(20, 70, 10, 20)
 img.line(0, 0, 400, 100)
-img.polygon((250, 10), (280, 10), (290, 30))
-img.polyline((250, 10), (280, 10), (290, 30), fill='transparent',
-             transform=svg.translate(x=40, y=10))
+img.polygon((200, 10), (230, 10), (240, 30))
+img.polyline((200, 10), (230, 10), (240, 30), fill='transparent',
+             transform=svg.translate(x=50, y=10))
 img.rect(0, 0, 400, 100, fill='transparent')
 img.text(50, 90, "Some text", fill='green')
 paint_heart(img.group(transform=svg.translate(360, 30).rotate(20).scale(0.5)))
@@ -116,15 +123,14 @@ becomes unstoppable and the page must be reloaded.
 :editable:
 import asyncio
 
+img = svg.Image(400, 100, style='width: 100%; height: 100%')
+g = img.group()
+paint_heart(g)
+
 def saw(value, amplitude):
   return abs((value + amplitude) % (2 * amplitude) - amplitude)
 
 vx, vy, va = 101, 79, 181
-
-img = svg.Image(400, 100, stroke='red', style='width: 100%; height: 100%')
-g = img.group()
-paint_heart(g)
-
 loop = asyncio.get_running_loop()
 start = loop.time()
 while True:
