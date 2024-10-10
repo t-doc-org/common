@@ -81,12 +81,16 @@ image creates an output block displaying the image.
 :editable:
 from tdoc import svg
 
-def paint_heart(img, x, y, angle, scale=0.5):
-  img.path('M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20 '
-           'Q 40,10 0,40 Q -40,10 -40,-20 z', fill='transparent',
-           transform=svg.translate(x=x, y=y).rotate(angle).scale(scale))
+def paint_heart(g):
+  g.path('M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20 '
+         'Q 40,10 0,40 Q -40,10 -40,-20 z',
+         stroke='red', fill='transparent')
+  g.path('M -40,30 -30,30 -30,40 '
+         'M -30,30 0,0 M 34,-34 50,-50'
+         'M 40,-50 50,-50 50,-40',
+         stroke=svg.Stroke('black', width=2), fill='transparent')
 
-img = svg.Image(400, 100, stroke='red', fill='#c0c0ff',
+img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
                 style='width: 100%; height: 100%')
 img.circle(20, 30, 10)
 img.ellipse(20, 70, 10, 20)
@@ -96,7 +100,7 @@ img.polyline((250, 10), (280, 10), (290, 30), fill='transparent',
              transform=svg.translate(x=40, y=10))
 img.rect(0, 0, 400, 100, fill='transparent')
 img.text(50, 90, "Some text", fill='green')
-paint_heart(img, 370, 30, 20)
+paint_heart(img.group(transform=svg.translate(360, 30).rotate(20).scale(0.5)))
 render(img)
 ```
 
@@ -110,21 +114,25 @@ becomes unstoppable and the page must be reloaded.
 :editable:
 import asyncio
 
-x, y, angle = 200, 50, 0.0
-step_x, step_y, step_angle = 1.7, 1.3, 3.0
+def saw(value, amplitude):
+  return abs((value + amplitude) % (2 * amplitude) - amplitude)
+
+img = svg.Image(400, 100, stroke='red', style='width: 100%; height: 100%')
+g = img.group()
+paint_heart(g)
+
 margin = 20
+vx, vy, va = 101, 79, 181
 
+loop = asyncio.get_running_loop()
+start = loop.time()
 while True:
-  img = svg.Image(400, 100, stroke='red', style='width: 100%; height: 100%')
-  paint_heart(img, x, y, angle)
+  t = loop.time() - start
+  x = margin + saw(t * vx, img.width - 2 * margin)
+  y = margin + saw(t * vy, img.height - 2 * margin)
+  a = (t * va) % 360.0
+  g.transform = svg.translate(x, y).rotate(a).scale(0.5)
   render(img)
-
-  x += step_x
-  if x < margin or x > img.width - margin: step_x = -step_x
-  y += step_y
-  if y < margin or y > img.height - margin: step_y = -step_y
-  angle = (angle + step_angle) % 360.0
-
   await asyncio.sleep(1 / 60)
 ```
 

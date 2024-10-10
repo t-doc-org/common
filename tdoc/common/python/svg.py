@@ -2,19 +2,20 @@
 # SPDX-License-Identifier: MIT
 
 # TODO: Escape content during interpolation
-# TODO: Make use of Group
 # TODO: Add <style> element
 # TODO: Make the output width accessible; maybe return it from render()
 
-class AttributesMeta(type):
+class _AttributesMeta(type):
     def __call__(cls, *args, **kwargs):
-        if len(args) != 1: return super().__call__(*args, **kwargs)
-        obj = args[0]
-        if isinstance(obj, cls): return obj
-        return super().__call__(**{next(iter(cls._attrs)): obj})
+        if len(args) == 1:
+            obj = args[0]
+            if isinstance(obj, cls): return obj
+            args = ()
+            kwargs[next(iter(cls._attrs))] = obj
+        return super().__call__(*args, **kwargs)
 
 
-class Attributes(metaclass=AttributesMeta):
+class _Attributes(metaclass=_AttributesMeta):
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             if k not in self._attrs:
@@ -22,12 +23,12 @@ class Attributes(metaclass=AttributesMeta):
             setattr(self, k, v)
 
     def __iter__(self):
-        for k, v in self.__dict__.items():
-            yield f' {self._attrs[k]}="{v}"'
+        for k, a in self._attrs.items():
+            if (v := getattr(self, k, None)) is not None:
+                yield f' {a}="{v}"'
 
 
-class Stroke(Attributes):
-    """Stroke attributes."""
+class Stroke(_Attributes):
     _attrs = {
         'color': 'stroke',
         'width': 'stroke-width',
@@ -38,23 +39,25 @@ class Stroke(Attributes):
         'line_join': 'stroke-linejoin',
         'miter_limit': 'stroke-miterlimit',
     }
+    __slots__ = _attrs.keys()
 
 Stroke.default = Stroke(color='black', width=1, opacity=1)
 
 
-class Fill(Attributes):
-    """Fill attributes."""
+class Fill(_Attributes):
     _attrs = {
         'color': 'fill',
         'opacity': 'fill-opacity',
         'rule': 'fill-rule',
     }
+    __slots__ = _attrs.keys()
 
 Fill.default = Fill(color='black', opacity=1)
 
 
 class Transform:
-    """A transform attribute."""
+    __slots__ = ('renders',)
+
     def __init__(self):
         self.renders = []
 
@@ -117,140 +120,217 @@ def skew_x(*args, **kwargs): return Transform().skew_x(*args, **kwargs)
 def skew_y(*args, **kwargs): return Transform().skew_y(*args, **kwargs)
 
 
-class Container:
-    """An container for shape elements."""
-    def __init__(self):
-        self.renders = []
-
-    def circle(self, x, y, r, *, stroke=None, fill=None, transform=None,
-               style=None):
-        @self.renders.append
-        def render():
-            yield f'<circle cx="{x}" cy="{y}" r="{r}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def ellipse(self, x, y, rx, ry, *, stroke=None, fill=None, transform=None,
-               style=None):
-        @self.renders.append
-        def render():
-            yield f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def line(self, x1, y1, x2, y2, *, stroke=None, transform=None,
-             style=None):
-        @self.renders.append
-        def render():
-            yield f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def path(self, d, *, stroke=None, fill=None, transform=None,
-             style=None):
-        @self.renders.append
-        def render():
-            yield f'<path d="{d}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def polygon(self, *points, stroke=None, fill=None, transform=None,
-                style=None):
-        @self.renders.append
-        def render():
-            yield f'<polygon points="{' '.join(f'{p[0]},{p[1]}'
-                                               for p in points)}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def polyline(self, *points, stroke=None, fill=None, transform=None,
-                 style=None):
-        @self.renders.append
-        def render():
-            yield f'<polyline points="{' '.join(f'{p[0]},{p[1]}'
-                                                for p in points)}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def rect(self, x, y, width, height, *, rx=None, ry=None, stroke=None,
-             fill=None, transform=None, style=None):
-        @self.renders.append
-        def render():
-            yield f'<rect x="{x}" y="{y}" width="{width}" height="{height}"'
-            if rx is not None: yield f' rx="{rx}"'
-            if ry is not None: yield f' ry="{ry}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield '/>'
-
-    def text(self, x, y, text, *, stroke='transparent', fill=None,
-             transform=None, style=None):
-        @self.renders.append
-        def render():
-            yield f'<text x="{x}" y="{y}"'
-            if stroke is not None: yield from Stroke(stroke)
-            if fill is not None: yield from Fill(fill)
-            if transform is not None: yield from transform
-            if style is not None: yield f' style="{style}"'
-            yield f'>{text}</text>'
+class _Shape:
+    def __init__(self, stroke, fill, transform, style):
+        self.stroke, self.fill = Stroke(stroke), Fill(fill)
+        self.transform, self.style = transform, style
 
     def __iter__(self):
-        for render in self.renders:
-            yield from render()
+        yield from self.stroke
+        yield from self.fill
+        if (v := self.transform) is not None: yield from v
+        if (v := self.style) is not None: yield f' style="{v}"'
 
 
-class Group(Container):
-    """A group."""
-    def __init__(self, *, stroke=None, fill=None):
-        super().__init__()
-        self.stroke, self.fill = stroke, fill
+class Circle(_Shape):
+    __slots__ = ('x', 'y', 'r', 'stroke', 'fill', 'transform', 'style')
+
+    def __init__(self, x, y, r, *, stroke=None, fill=None, transform=None,
+               style=None):
+        self.x, self.y, self.r = x, y, r
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<circle cx="{self.x}" cy="{self.y}" r="{self.r}"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class Ellipse(_Shape):
+    __slots__ = ('x', 'y', 'rx', 'ry', 'stroke', 'fill', 'transform', 'style')
+
+    def __init__(self, x, y, rx, ry, *, stroke=None, fill=None, transform=None,
+               style=None):
+        self.x, self.y, self.rx, self.ry = x, y, rx, ry
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<ellipse cx="{self.x}" cy="{self.y}"'
+        yield f' rx="{self.rx}" ry="{self.ry}"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class Line(_Shape):
+    __slots__ = ('x1', 'y1', 'x2', 'y2', 'stroke', 'fill', 'transform', 'style')
+
+    def __init__(self, x1, y1, x2, y2, *, stroke=None, transform=None,
+                 style=None):
+        self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
+        super().__init__(stroke, None, transform, style)
+
+    def __iter__(self):
+        yield f'<line x1="{self.x1}" y1="{self.y1}"'
+        yield f' x2="{self.x2}" y2="{self.y2}"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class Path(_Shape):
+    __slots__ = ('path', 'stroke', 'fill', 'transform', 'style')
+
+    def __init__(self, *path, stroke=None, fill=None, transform=None,
+                 style=None):
+        self.path = path
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<path d="'
+        for i, el in enumerate(self.path):
+            if i > 0: yield ' '
+            if isinstance(el, (tuple, list)):
+                yield ','.join(str(it) for it in el)
+            else:
+                yield str(el)
+        yield '"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class _Poly(_Shape):
+    def __init__(self, *points, stroke=None, fill=None, transform=None,
+                 style=None):
+        self.points = points
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<{self._tag} points="{' '.join(f'{p[0]},{p[1]}'
+                                               for p in self.points)}"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class Polygon(_Poly):
+    __slots__ = ('points', 'stroke', 'fill', 'transform', 'style')
+    _tag = 'polygon'
+
+
+class Polyline(_Poly):
+    __slots__ = ('points', 'stroke', 'fill', 'transform', 'style')
+    _tag = 'polyline'
+
+
+class Rect(_Shape):
+    __slots__ = ('x', 'y', 'width', 'height', 'rx', 'ry', 'stroke', 'fill',
+                 'transform', 'style')
+
+    def __init__(self, x, y, width, height, *, rx=None, ry=None, stroke=None,
+                 fill=None, transform=None, style=None):
+        self.x, self.y, self.width, self.height = x, y, width, height
+        self.rx, self.ry = rx, ry
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<rect x="{self.x}" y="{self.y}"'
+        yield f' width="{self.width}" height="{self.height}"'
+        if (v := self.rx) is not None: yield f' rx="{v}"'
+        if (v := self.ry) is not None: yield f' ry="{v}"'
+        yield from super().__iter__()
+        yield '/>'
+
+
+class Text(_Shape):
+    __slots__ = ('x', 'y', 'text', 'stroke', 'fill', 'transform', 'style')
+
+    def __init__(self, x, y, text, *, stroke='transparent', fill=None,
+                 transform=None, style=None):
+        self.x, self.y, self.text = x, y, text
+        super().__init__(stroke, fill, transform, style)
+
+    def __iter__(self):
+        yield f'<text x="{self.x}" y="{self.y}"'
+        yield from super().__iter__()
+        yield f'>{self.text}</text>'
+
+
+class _Container:
+    def __init__(self, stroke, fill, style):
+        self.stroke, self.fill, self.style = Stroke(stroke), Fill(fill), style
+        self.children = []
+
+    def clear(self):
+        self.children = []
+
+    def add(self, child):
+        self.children.append(child)
+        return child
+
+    def circle(self, *args, **kwargs):
+        return self.add(Circle(*args, **kwargs))
+
+    def ellipse(self, *args, **kwargs):
+        return self.add(Ellipse(*args, **kwargs))
+
+    def line(self, *args, **kwargs):
+        return self.add(Line(*args, **kwargs))
+
+    def path(self, *args, **kwargs):
+        return self.add(Path(*args, **kwargs))
+
+    def polygon(self, *args, **kwargs):
+        return self.add(Polygon(*args, **kwargs))
+
+    def polyline(self, *args, **kwargs):
+        return self.add(Polyline(*args, **kwargs))
+
+    def rect(self, *args, **kwargs):
+        return self.add(Rect(*args, **kwargs))
+
+    def text(self, *args, **kwargs):
+        return self.add(Text(*args, **kwargs))
+
+    def group(self, *args, **kwargs):
+        return self.add(Group(*args, **kwargs))
+
+    def __iter__(self):
+        for child in self.children:
+            yield from child
+
+
+class Group(_Container):
+    __slots__ = ('stroke', 'fill', 'style', 'children')
+
+    def __init__(self, *, stroke=None, fill=None, transform=None, style=None):
+        super().__init__(stroke, fill, style)
+        self.transform = transform
 
     def __iter__(self):
         yield '<g'
-        yield from Stroke(self.stroke)
-        yield from Fill(self.fill)
+        yield from self.stroke
+        yield from self.fill
+        if (v := self.transform) is not None: yield from v
+        if self.style is not None: yield f' style="{self.style}"'
         yield '>'
         yield from super().__iter__()
         yield '</g>'
 
 
-class Image(Container):
-    """An SVG image."""
-    def __init__(self, width, height, *, stretch=False, stroke=Stroke.default,
+class Image(_Container):
+    __slots__ = ('stroke', 'fill', 'style', 'children', 'width', 'height')
+
+    def __init__(self, width, height, *, stroke=Stroke.default,
                  fill=Fill.default, style=None):
-        super().__init__()
-        self.width, self.height, self.stretch = width, height, stretch
-        self.stroke, self.fill = stroke, fill
-        self.style = style
+        super().__init__(stroke, fill, style)
+        self.width, self.height = width, height
 
     def __iter__(self):
         yield ('<svg xmlns="http://www.w3.org/2000/svg"'
                ' xmlns:xlink="http://www.w3.org/1999/xlink"')
         yield f' viewBox="0 0 {self.width} {self.height}"'
-        if not self.stretch:
-            yield f' width="{self.width}" height="{self.height}"'
+        yield f' width="{self.width}" height="{self.height}"'
+        yield from self.stroke
+        yield from self.fill
         if self.style is not None: yield f' style="{self.style}"'
-        if self.stroke is not None: yield from Stroke(self.stroke)
-        if self.fill is not None: yield from Fill(self.fill)
         yield '>'
         yield from super().__iter__()
         yield '</svg>'
