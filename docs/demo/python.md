@@ -88,8 +88,8 @@ def paint_heart(g):
          'Q 40,10 0,40 Q -40,10 -40,-20 z',
          stroke='red', fill='transparent')
   g.path('M -40,30 -30,30 -30,40 '
-         'M -30,30 0,0 M 34,-34 50,-50'
-         'M 40,-50 50,-50 50,-40',
+         'M -30,30 0,0 M 34,-34 45,-45'
+         'M 35,-45 45,-45 45,-35',
          stroke=svg.Stroke('black', width=2), fill='transparent')
 
 img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff', id='graphics')
@@ -97,7 +97,6 @@ img.styles("""
 #graphics {
   width: 100%;
   height: 100%;
-
   polygon { fill: #c0ffc0; }
 }
 """)
@@ -122,21 +121,29 @@ becomes unstoppable and the page must be reloaded.
 :when: load
 :editable:
 import asyncio
+import random
 
 img = svg.Image(400, 100, style='width: 100%; height: 100%')
-g = img.group()
-paint_heart(g)
+sym = img.symbol(id='heart')
+paint_heart(sym)
+hearts = [
+  (img.use(href='#heart'),
+   random.uniform(0, 100), random.uniform(0, 100), random.uniform(-180, 180))
+  for _ in range(20)]
 
 def saw(value, amplitude):
   return abs((value + amplitude) % (2 * amplitude) - amplitude)
 
-vx, vy, va = 101, 79, 181
+def pose(t, vx, vy, va):
+  return saw(t * vx, img.width), saw(t * vy, img.height), (t * va) % 360.0
+
 loop = asyncio.get_running_loop()
 start = loop.time()
 while True:
   t = loop.time() - start
-  x, y, a = saw(t * vx, img.width), saw(t * vy, img.height), (t * va) % 360.0
-  g.transform = svg.translate(x, y).rotate(a)
+  for heart, vx, vy, va in hearts:
+    heart.x, heart.y, a = pose(t, vx, vy, va)
+    heart.transform = svg.rotate(a, heart.x, heart.y)
   img.width, img.height = await render(img)
   await asyncio.sleep(1 / 60)
 ```

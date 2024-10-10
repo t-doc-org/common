@@ -273,7 +273,24 @@ class Text(_Shape):
         yield f'>{esc(self.text, False)}</text>'
 
 
+class Use(_Shape):
+    __slots__ = _Shape._slots + ('href', 'x', 'y')
+
+    def __init__(self, href, *, x=0, y=0, stroke=None, fill=None, style=None,
+                 id=None, transform=None):
+        self.href, self.x, self.y = href, x, y
+        super().__init__(stroke, fill, style, id, transform)
+
+    def __iter__(self):
+        yield f'<use href="{esc(self.href)}" '
+        yield f' x="{esc(self.x)}" y="{esc(self.y)}"'
+        yield from self._attrs()
+        yield '/>'
+
+
 class Styles:
+    __slots__ = ('styles',)
+
     def __init__(self, styles):
         self.styles = styles
 
@@ -281,8 +298,8 @@ class Styles:
         yield f'<style>{esc(self.styles)}</style>'
 
 
-class _Container(_Element):
-    _slots = ('children',)
+class _Container(_Shape):
+    _slots = _Shape._slots + ('children',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -322,39 +339,58 @@ class _Container(_Element):
     def group(self, *args, **kwargs):
         return self.add(Group(*args, **kwargs))
 
+    def symbol(self, *args, **kwargs):
+        return self.add(Symbol(*args, **kwargs))
+
+    def use(self, *args, **kwargs):
+        return self.add(Use(*args, **kwargs))
+
     def styles(self, *args, **kwargs):
         return self.add(Styles(*args, **kwargs))
 
+    def __iter__(self):
+        yield f'<{self._tag}'
+        yield from self._attrs()
+        yield '>'
+        for child in self.children: yield from child
+        yield f'</{self._tag}>'
 
-class Group(_Shape, _Container):
-    __slots__ = _Shape._slots + _Container._slots
+
+class Group(_Container):
+    __slots__ = _Container._slots
+    _tag = 'g'
 
     def __init__(self, *, stroke=None, fill=None, style=None, id=None,
                  transform=None):
         super().__init__(stroke, fill, style, id, transform)
 
-    def __iter__(self):
-        yield '<g'
-        yield from self._attrs()
-        yield '>'
-        for child in self.children: yield from child
-        yield '</g>'
+
+class Symbol(_Container):
+    __slots__ = _Container._slots
+    _tag = 'symbol'
+
+    def __init__(self, *, stroke=None, fill=None, style=None, id=None,
+                 transform=None):
+        super().__init__(stroke, fill, style, id, transform)
+
+    def _attrs(self):
+        yield from super()._attrs()
+        yield ' overflow="visible"'
 
 
-class Image(_Shape, _Container):
-    __slots__ = _Shape._slots + _Container._slots + ('width', 'height')
+class Image(_Container):
+    __slots__ = _Container._slots + ('width', 'height')
+    _tag = 'svg'
 
     def __init__(self, width, height, *, stroke=Stroke.default,
                  fill=Fill.default, style=None, id=None, transform=None):
         super().__init__(stroke, fill, style, id, transform)
         self.width, self.height = width, height
 
-    def __iter__(self):
-        yield ('<svg xmlns="http://www.w3.org/2000/svg"'
-               ' xmlns:xlink="http://www.w3.org/1999/xlink"')
+    def _attrs(self):
+        yield ' xmlns="http://www.w3.org/2000/svg"'
+        yield ' xmlns:xlink="http://www.w3.org/1999/xlink"'
+        yield ' version="2"'
         yield f' viewBox="0 0 {esc(self.width)} {esc(self.height)}"'
         yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
-        yield from self._attrs()
-        yield '>'
-        for child in self.children: yield from child
-        yield '</svg>'
+        yield from super()._attrs()
