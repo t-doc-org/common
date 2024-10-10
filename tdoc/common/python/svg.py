@@ -1,12 +1,21 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-# TODO: Escape content during interpolation
+import html
+
 # TODO: Add <style> element
 # TODO: Make the output width accessible; maybe return it from render()
 
+def esc(v, quote=True):
+    if not isinstance(v, str): v = str(v)
+    return html.escape(v, quote)
+
+
 class _AttributesMeta(type):
     def __call__(cls, *args, **kwargs):
+        if len(args) > 1:
+            raise TypeError(
+                f"{cls.__name__} takes at most 1 positional argument")
         if len(args) == 1:
             obj = args[0]
             if isinstance(obj, cls): return obj
@@ -25,7 +34,7 @@ class _Attributes(metaclass=_AttributesMeta):
     def __iter__(self):
         for k, a in self._attrs.items():
             if (v := getattr(self, k, None)) is not None:
-                yield f' {a}="{v}"'
+                yield f' {a}="{esc(v)}"'
 
 
 class Stroke(_Attributes):
@@ -108,7 +117,7 @@ class Transform:
         yield ' transform="'
         for i, render in enumerate(self.renders):
             if i > 0: yield ' '
-            yield from render()
+            for v in render(): yield esc(v)
         yield '"'
 
 
@@ -129,7 +138,7 @@ class _Shape:
         yield from self.stroke
         yield from self.fill
         if (v := self.transform) is not None: yield from v
-        if (v := self.style) is not None: yield f' style="{v}"'
+        if (v := self.style) is not None: yield f' style="{esc(v)}"'
 
 
 class Circle(_Shape):
@@ -141,7 +150,7 @@ class Circle(_Shape):
         super().__init__(stroke, fill, transform, style)
 
     def __iter__(self):
-        yield f'<circle cx="{self.x}" cy="{self.y}" r="{self.r}"'
+        yield f'<circle cx="{esc(self.x)}" cy="{esc(self.y)}" r="{esc(self.r)}"'
         yield from super().__iter__()
         yield '/>'
 
@@ -155,8 +164,8 @@ class Ellipse(_Shape):
         super().__init__(stroke, fill, transform, style)
 
     def __iter__(self):
-        yield f'<ellipse cx="{self.x}" cy="{self.y}"'
-        yield f' rx="{self.rx}" ry="{self.ry}"'
+        yield f'<ellipse cx="{esc(self.x)}" cy="{esc(self.y)}"'
+        yield f' rx="{esc(self.rx)}" ry="{esc(self.ry)}"'
         yield from super().__iter__()
         yield '/>'
 
@@ -170,8 +179,8 @@ class Line(_Shape):
         super().__init__(stroke, None, transform, style)
 
     def __iter__(self):
-        yield f'<line x1="{self.x1}" y1="{self.y1}"'
-        yield f' x2="{self.x2}" y2="{self.y2}"'
+        yield f'<line x1="{esc(self.x1)}" y1="{esc(self.y1)}"'
+        yield f' x2="{esc(self.x2)}" y2="{esc(self.y2)}"'
         yield from super().__iter__()
         yield '/>'
 
@@ -189,9 +198,9 @@ class Path(_Shape):
         for i, el in enumerate(self.path):
             if i > 0: yield ' '
             if isinstance(el, (tuple, list)):
-                yield ','.join(str(it) for it in el)
+                yield esc(','.join(str(it) for it in el))
             else:
-                yield str(el)
+                yield esc(el)
         yield '"'
         yield from super().__iter__()
         yield '/>'
@@ -204,8 +213,8 @@ class _Poly(_Shape):
         super().__init__(stroke, fill, transform, style)
 
     def __iter__(self):
-        yield f'<{self._tag} points="{' '.join(f'{p[0]},{p[1]}'
-                                               for p in self.points)}"'
+        yield f'<{self._tag} points="{esc(' '.join(f'{p[0]},{p[1]}'
+                                                   for p in self.points))}"'
         yield from super().__iter__()
         yield '/>'
 
@@ -231,10 +240,10 @@ class Rect(_Shape):
         super().__init__(stroke, fill, transform, style)
 
     def __iter__(self):
-        yield f'<rect x="{self.x}" y="{self.y}"'
-        yield f' width="{self.width}" height="{self.height}"'
-        if (v := self.rx) is not None: yield f' rx="{v}"'
-        if (v := self.ry) is not None: yield f' ry="{v}"'
+        yield f'<rect x="{esc(self.x)}" y="{esc(self.y)}"'
+        yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
+        if (v := self.rx) is not None: yield f' rx="{esc(v)}"'
+        if (v := self.ry) is not None: yield f' ry="{esc(v)}"'
         yield from super().__iter__()
         yield '/>'
 
@@ -248,9 +257,9 @@ class Text(_Shape):
         super().__init__(stroke, fill, transform, style)
 
     def __iter__(self):
-        yield f'<text x="{self.x}" y="{self.y}"'
+        yield f'<text x="{esc(self.x)}" y="{esc(self.y)}"'
         yield from super().__iter__()
-        yield f'>{self.text}</text>'
+        yield f'>{esc(self.text, False)}</text>'
 
 
 class _Container:
@@ -309,7 +318,7 @@ class Group(_Container):
         yield from self.stroke
         yield from self.fill
         if (v := self.transform) is not None: yield from v
-        if self.style is not None: yield f' style="{self.style}"'
+        if self.style is not None: yield f' style="{esc(self.style)}"'
         yield '>'
         yield from super().__iter__()
         yield '</g>'
@@ -326,11 +335,11 @@ class Image(_Container):
     def __iter__(self):
         yield ('<svg xmlns="http://www.w3.org/2000/svg"'
                ' xmlns:xlink="http://www.w3.org/1999/xlink"')
-        yield f' viewBox="0 0 {self.width} {self.height}"'
-        yield f' width="{self.width}" height="{self.height}"'
+        yield f' viewBox="0 0 {esc(self.width)} {esc(self.height)}"'
+        yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
         yield from self.stroke
         yield from self.fill
-        if self.style is not None: yield f' style="{self.style}"'
+        if self.style is not None: yield f' style="{esc(self.style)}"'
         yield '>'
         yield from super().__iter__()
         yield '</svg>'
