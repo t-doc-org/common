@@ -4,7 +4,6 @@
 import html
 
 # TODO: Add <style> element
-# TODO: Make the output width accessible; maybe return it from render()
 
 def esc(v, quote=True):
     if not isinstance(v, str): v = str(v)

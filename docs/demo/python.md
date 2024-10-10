@@ -68,12 +68,14 @@ The
 module allows creating SVG images using simple drawing primitives. Rendering an
 image creates an output block displaying the image.
 
-`render(image, name='')`
+`render(image, name='') -> Future`
 
 - `image`: The image to be rendered.
 - `name`: The name of the output block. If a block with the same name already
   exists, it is replaced. Otherwise, a new block is added, keeping blocks
   ordered by name.
+- The returned future resolves to a tuple `(width, height)` that specifies the
+  size of the rendered image.
 
 ```{exec} python
 :name: python-graphics
@@ -117,22 +119,19 @@ import asyncio
 def saw(value, amplitude):
   return abs((value + amplitude) % (2 * amplitude) - amplitude)
 
+vx, vy, va = 101, 79, 181
+
 img = svg.Image(400, 100, stroke='red', style='width: 100%; height: 100%')
 g = img.group()
 paint_heart(g)
-
-margin = 20
-vx, vy, va = 101, 79, 181
 
 loop = asyncio.get_running_loop()
 start = loop.time()
 while True:
   t = loop.time() - start
-  x = margin + saw(t * vx, img.width - 2 * margin)
-  y = margin + saw(t * vy, img.height - 2 * margin)
-  a = (t * va) % 360.0
-  g.transform = svg.translate(x, y).rotate(a).scale(0.5)
-  render(img)
+  x, y, a = saw(t * vx, img.width), saw(t * vy, img.height), (t * va) % 360.0
+  g.transform = svg.translate(x, y).rotate(a)
+  img.width, img.height = await render(img)
   await asyncio.sleep(1 / 60)
 ```
 

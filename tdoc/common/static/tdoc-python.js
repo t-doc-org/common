@@ -198,7 +198,8 @@ class PythonExecutor extends Executor {
     }
 
     onRender(html, name) {
-        this.render(name, html);
+        const el = this.render(name, html);
+        return [el.scrollWidth, el.scrollHeight];
     }
 
     render(name, html) {
@@ -212,11 +213,11 @@ class PythonExecutor extends Executor {
         for (const el of this.output.children) {
             if (el.tdocName > name) {
                 el.before(new_el);
-                return;
+                return new_el;
             }
             if (el.tdocName === name) {
                 el.replaceWith(new_el);
-                return;
+                return new_el;
             }
         }
         this.output.appendChild(new_el);

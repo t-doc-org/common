@@ -54,8 +54,9 @@ sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
 
 @public
 def render(html, name=''):
+    """Render some HTML in an output block."""
     if not isinstance(html, str): html = ''.join(html)
-    js_render(run_id(), html, name)
+    return js_render(run_id(), html, name).then(lambda res: tuple(res))
 
 
 @public
