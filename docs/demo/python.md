@@ -83,29 +83,31 @@ image creates an output block displaying the image.
 :editable:
 from tdoc import svg
 
-def paint_heart(g):
-  g.path('M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20 '
+def paint_heart(c):
+  c.path('M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20 '
          'Q 40,10 0,40 Q -40,10 -40,-20 z',
          stroke='red', fill='transparent')
-  g.path('M -40,30 -30,30 -30,40 '
+  c.path('M -40,30 -30,30 -30,40 '
          'M -30,30 0,0 M 34,-34 45,-45'
          'M 35,-45 45,-45 45,-35',
          stroke=svg.Stroke('black', width=2), fill='transparent')
 
-img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff', id='graphics')
-img.styles("""
-#graphics {
-  width: 100%;
-  height: 100%;
-  polygon { fill: #c0ffc0; }
+img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
+                style='width: 100%; height: 100%')
+img.styles = """
+.bold {
+  stroke: blue;
+  stroke-width: 2;
+  fill: #c0ffc0;
 }
-""")
+"""
 img.circle(20, 30, 10)
-img.ellipse(20, 70, 10, 20)
+img.ellipse(20, 70, 10, 20, klass='bold')
 img.line(0, 0, 400, 100)
-img.polygon((200, 10), (230, 10), (240, 30))
-img.polyline((200, 10), (230, 10), (240, 30), fill='transparent',
-             transform=svg.translate(x=50, y=10))
+g = img.group(transform=svg.translate(200, 10))
+g.polygon((0, 0), (30, 0), (40, 20), klass='bold')
+g.polyline((0, 0), (30, 0), (40, 20), fill='transparent',
+           transform=svg.translate(x=50, y=10))
 img.rect(0, 0, 400, 100, fill='transparent')
 img.text(50, 90, "Some text", fill='green')
 paint_heart(img.group(transform=svg.translate(360, 30).rotate(20).scale(0.5)))
@@ -124,12 +126,12 @@ import asyncio
 import random
 
 img = svg.Image(400, 100, style='width: 100%; height: 100%')
-sym = img.symbol(id='heart')
+sym = img.symbol()
 paint_heart(sym)
-hearts = [
-  (img.use(href='#heart'),
-   random.uniform(0, 100), random.uniform(0, 100), random.uniform(-180, 180))
-  for _ in range(20)]
+hearts = [(img.use(href=f'#{sym.id}'),
+           random.uniform(0, 100), random.uniform(0, 100),
+           random.uniform(-180, 180))
+          for _ in range(20)]
 
 def saw(value, amplitude):
   return abs((value + amplitude) % (2 * amplitude) - amplitude)

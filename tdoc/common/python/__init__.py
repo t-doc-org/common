@@ -52,6 +52,17 @@ sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
                               line_buffering=True)
 
 
+_next_id = 0
+
+@public
+def new_id():
+    """Generate a unique ID, usable in id= attributes."""
+    global _next_id
+    v = _next_id
+    _next_id += 1
+    return f'tdoc-id-{v}'
+
+
 @public
 def render(html, name=''):
     """Render some HTML in an output block."""
