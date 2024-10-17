@@ -3,6 +3,18 @@
 
 import * as sl from './_static/sabayon-listeners.js';
 
+// Polyfill Promise.withResolvers if necessary.
+if (!Promise.withResolvers) {
+    Promise.withResolvers = () => {
+        let resolve, reject;
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return {promise, resolve, reject};
+    };
+}
+
 const enableSAB = new URL(location).searchParams.get('sab');
 
 addEventListener('install', () => skipWaiting());
