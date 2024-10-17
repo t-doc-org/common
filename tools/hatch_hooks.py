@@ -43,10 +43,12 @@ class BuildHook(BuildHookInterface, HookMixin):
         (self.top / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
-        self.copytree_node('polyscript/dist', 'polyscript', globs=['*.js'])
+        self.copytree_node('polyscript/dist', 'polyscript', globs=[
+            '*.js', '*.js.map',
+        ])
         self.copytree_node('pyodide', 'pyodide', globs=[
             'pyodide.asm.*', 'pyodide-lock.json', 'pyodide.mjs',
-            'python_stdlib.zip',
+            'pyodide.mjs.map', 'python_stdlib.zip',
         ])
         self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
         self.copytree_node(
