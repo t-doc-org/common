@@ -3,6 +3,18 @@
 
 'use strict';
 (() => {
+    // Polyfill Promise.withResolvers if necessary.
+    if (!Promise.withResolvers) {
+        Promise.withResolvers = () => {
+            let resolve, reject;
+            const promise = new Promise((res, rej) => {
+                resolve = res;
+                reject = rej;
+            });
+            return {promise, resolve, reject};
+        };
+    }
+
     // Disable all global keydown event listeners, as they can interfere with
     // per-element listeners. In particular, this disables the search shortcut
     // handler installed by pydata-sphinx-theme.js.
