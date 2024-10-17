@@ -94,7 +94,7 @@ def paint_heart(c):
 
 img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
                 style='width: 100%; height: 100%')
-img.styles = """
+img.stylesheet = """
 .bold {
   stroke: blue;
   stroke-width: 2;
@@ -128,7 +128,7 @@ import random
 img = svg.Image(400, 100, style='width: 100%; height: 100%')
 sym = img.symbol()
 paint_heart(sym)
-hearts = [(img.use(href=f'#{sym.id}'),
+hearts = [(img.use(href=sym),
            random.uniform(0, 100), random.uniform(0, 100),
            random.uniform(-180, 180))
           for _ in range(20)]

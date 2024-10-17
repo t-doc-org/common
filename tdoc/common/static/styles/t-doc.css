@@ -181,6 +181,12 @@ div.tdoc-exec div.tdoc-exec-controls {
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);
 }
 
+/* Create a hanging indent for signatures. */
+.sig {
+    padding-left: 3rem;
+    text-indent: -3rem;
+}
+
 /* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
    if it's empty, as it causes the scrollbar to always appear. */
 .bd-sidebar-primary div#rtd-footer-container:empty {

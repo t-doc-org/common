@@ -152,7 +152,7 @@ class _Element:
         yield from self.fill
 
 
-class _Shape(_Element):
+class Shape(_Element):
     _slots = _Element._slots + ('transform',)
 
     def __init__(self, *, transform=None, **kwargs):
@@ -164,8 +164,8 @@ class _Shape(_Element):
         if (v := self.transform) is not None: yield from v
 
 
-class Circle(_Shape):
-    __slots__ = _Shape._slots + ('x', 'y', 'r')
+class Circle(Shape):
+    __slots__ = Shape._slots + ('x', 'y', 'r')
 
     def __init__(self, x, y, r, **kwargs):
         self.x, self.y, self.r = x, y, r
@@ -177,8 +177,8 @@ class Circle(_Shape):
         yield '/>'
 
 
-class Ellipse(_Shape):
-    __slots__ = _Shape._slots + ('x', 'y', 'rx', 'ry')
+class Ellipse(Shape):
+    __slots__ = Shape._slots + ('x', 'y', 'rx', 'ry')
 
     def __init__(self, x, y, rx, ry, **kwargs):
         self.x, self.y, self.rx, self.ry = x, y, rx, ry
@@ -191,8 +191,8 @@ class Ellipse(_Shape):
         yield '/>'
 
 
-class Line(_Shape):
-    __slots__ = _Shape._slots + ('x1', 'y1', 'x2', 'y2')
+class Line(Shape):
+    __slots__ = Shape._slots + ('x1', 'y1', 'x2', 'y2')
 
     def __init__(self, x1, y1, x2, y2, **kwargs):
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
@@ -205,8 +205,8 @@ class Line(_Shape):
         yield '/>'
 
 
-class Path(_Shape):
-    __slots__ = _Shape._slots + ('path',)
+class Path(Shape):
+    __slots__ = Shape._slots + ('path',)
 
     def __init__(self, *path, **kwargs):
         self.path = path
@@ -225,7 +225,7 @@ class Path(_Shape):
         yield '/>'
 
 
-class _Poly(_Shape):
+class _Poly(Shape):
     def __init__(self, *points, **kwargs):
         self.points = points
         super().__init__(**kwargs)
@@ -247,8 +247,8 @@ class Polyline(_Poly):
     _tag = 'polyline'
 
 
-class Rect(_Shape):
-    __slots__ = _Shape._slots + ('x', 'y', 'width', 'height', 'rx', 'ry')
+class Rect(Shape):
+    __slots__ = Shape._slots + ('x', 'y', 'width', 'height', 'rx', 'ry')
 
     def __init__(self, x, y, width, height, *, rx=None, ry=None, **kwargs):
         self.x, self.y, self.width, self.height = x, y, width, height
@@ -264,8 +264,8 @@ class Rect(_Shape):
         yield '/>'
 
 
-class Text(_Shape):
-    __slots__ = _Shape._slots + ('x', 'y', 'text')
+class Text(Shape):
+    __slots__ = Shape._slots + ('x', 'y', 'text')
 
     def __init__(self, x, y, text, *, stroke='transparent', **kwargs):
         self.x, self.y, self.text = x, y, text
@@ -277,10 +277,11 @@ class Text(_Shape):
         yield f'>{esc(self.text, False)}</text>'
 
 
-class Use(_Shape):
-    __slots__ = _Shape._slots + ('href', 'x', 'y')
+class Use(Shape):
+    __slots__ = Shape._slots + ('href', 'x', 'y')
 
     def __init__(self, href, *, x=0, y=0, **kwargs):
+        if not isinstance(href, str): href = f'#{href.id}'
         self.href, self.x, self.y = href, x, y
         super().__init__(**kwargs)
 
@@ -291,14 +292,11 @@ class Use(_Shape):
         yield '/>'
 
 
-class _Container(_Shape):
-    _slots = _Shape._slots + ('children',)
+class Container(Shape):
+    _slots = Shape._slots + ('children',)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.children = []
-
-    def clear(self):
         self.children = []
 
     def add(self, child):
@@ -346,13 +344,13 @@ class _Container(_Shape):
         yield f'</{self._tag}>'
 
 
-class Group(_Container):
-    __slots__ = _Container._slots
+class Group(Container):
+    __slots__ = Container._slots
     _tag = 'g'
 
 
-class Symbol(_Container):
-    __slots__ = _Container._slots
+class Symbol(Container):
+    __slots__ = Container._slots
     _tag = 'symbol'
 
     def _attrs(self):
@@ -360,11 +358,11 @@ class Symbol(_Container):
         yield ' overflow="visible"'
 
 
-class Image(_Container):
-    __slots__ = _Container._slots + ('width', 'height', 'styles')
+class Image(Container):
+    __slots__ = Container._slots + ('width', 'height', 'stylesheet')
 
-    def __init__(self, width, height, *, styles=None, **kwargs):
-        self.width, self.height, self.styles = width, height, styles
+    def __init__(self, width, height, *, stylesheet=None, **kwargs):
+        self.width, self.height, self.stylesheet = width, height, stylesheet
         super().__init__(**kwargs)
 
     def _attrs(self):
@@ -375,10 +373,10 @@ class Image(_Container):
         yield from super()._attrs()
 
     def __iter__(self):
-        if styles := self.styles: id = self.id  # Force the allocation of an ID
+        if stylesheet := self.stylesheet: id = self.id  # Force ID allocation
         yield '<svg'
         yield from self._attrs()
         yield '>'
-        if styles: yield f'<style>\n#{id} {{{esc(styles)}}}\n</style>'
+        if stylesheet: yield f'<style>\n#{id} {{{esc(stylesheet)}}}\n</style>'
         for child in self.children: yield from child
         yield '</svg>'
