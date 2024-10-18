@@ -72,7 +72,7 @@ class SqlExecutor extends Executor {
         try {
             this.replaceOutputs([]);
             db = await Database.open(`file:db-${run_id}?vfs=memdb`);
-            let output, tbody
+            let output, tbody;
             for (const [code, node] of this.codeBlocks()) {
                 await db.exec(code, res => {
                     if (res.columnNames.length === 0) return;

@@ -191,7 +191,7 @@ export class Executor {
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkNodes(this.node)) {
-            yield [Executor.text(node), node]
+            yield [Executor.text(node), node];
         }
     }
 

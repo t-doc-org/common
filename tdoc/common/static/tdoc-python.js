@@ -4,7 +4,7 @@
 import {XWorker} from './polyscript/index.js';
 import {Executor, element, focusIfVisible, text} from './tdoc-exec.js';
 
-const files = {}
+const files = {};
 files[import.meta.resolve('./tdoc-python.zip')] = '/lib/tdoc.zip';
 
 const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
@@ -69,8 +69,8 @@ class PythonExecutor extends Executor {
         delete executors[run_id];
         delete this.out;
         if (this.input) {
-            this.input.remove()
-            delete this.input
+            this.input.remove();
+            delete this.input;
         }
         if (this.output) {
             const btn = this.output.querySelector('button.tdoc-remove');

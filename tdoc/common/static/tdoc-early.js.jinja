@@ -22,7 +22,7 @@
     window.addEventListener = (...args) => {
         if (args[0] === 'keydown') return;
         return doAddEventListener(...args);
-    }
+    };
 
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;
