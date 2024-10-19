@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-15)=
+## 0.15
+
+ - Added a mechanism to render arbitrary HTML from `{exec} python` blocks.
+ - Added a Python module to create SVG images.
+ - Added automatic focusing of `{exec} python` text input elements.
+ - Fixed the positioning of the "Remove" button on scrollable tables.
+
 (release-0-14)=
 ## 0.14
 
