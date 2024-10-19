@@ -3,6 +3,16 @@
 
 # Embedding
 
+## Math
+
+The equation $ax^2 + bx + c = 0$ has two solutions:
+
+$$
+&x_1=\frac{-b-\sqrt{D}}{2a}\quad\textrm{and}\quad x_2=\frac{-b+\sqrt{D}}{2a}\\
+\\
+&\textrm{with } D=b^2-4ac
+$$
+
 ## SVG
 
 <svg xmlns="http://www.w3.org/2000/svg"

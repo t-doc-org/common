@@ -221,3 +221,8 @@ dl[class]:not(.option-list,.field-list,.footnote,.glossary,.simple):not(._) {
 .bd-search .search-button__kbd-shortcut {
     display: none;
 }
+
+/* Avoid that math blocks sometimes get cut off at the top. */
+div.math.math > mjx-container {
+    padding-top: 0.2rem;
+}
