@@ -63,19 +63,7 @@ print("\x0cHappy new year!")
 
 ### Graphics
 
-The
-[`tdoc.svg`](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/svg.py)
-module allows creating SVG images using simple drawing primitives. Rendering an
-image creates an output block displaying the image.
-
-`render(image, name='') -> Future`
-
-- `image`: The image to be rendered.
-- `name`: The name of the output block. If a block with the same name already
-  exists, it is replaced. Otherwise, a new block is added, keeping blocks
-  ordered by name.
-- The returned future resolves to a tuple `(width, height)` that specifies the
-  size of the rendered image.
+See the {py:mod}`tdoc.svg` module.
 
 ```{exec} python
 :name: python-graphics
@@ -158,10 +146,7 @@ be used, due to its blocking nature.
 
 ### Line of text
 
-`await input_line(prompt=None)`
-
-- `prompt`: The text to display before the input field.
-- Returns the content of the input field as a `str`.
+See {py:func}`~tdoc.input_line`.
 
 ```{exec} python
 :when: load
@@ -172,10 +157,7 @@ print(f"Hello, {name}!")
 
 ### Multi-line text
 
-`await input_text(prompt=None)`
-
-- `prompt`: The text to display before the input field.
-- Returns the content of the input field as a `str`.
+See {py:func}`~tdoc.input_text`.
 
 ```{exec} python
 :when: load
@@ -187,12 +169,7 @@ print(f"\x0cThe text was:\n-------------\n{text}")
 
 ### Buttons
 
-`await input_buttons(prompt, labels)`
-
-- `prompt`: The text to display before the buttons, or `None` to not display a
-  prompt.
-- `labels`: The labels of the buttons, as a `list`.
-- Returns the index of the button that was clicked, as an `int`.
+See {py:func}`~tdoc.input_buttons`.
 
 ```{exec} python
 :when: load
@@ -204,13 +181,7 @@ print(f"You picked: {colors[index]}")
 
 ### Pause
 
-`await pause(prompt=None, label="@icon{forward-step}")`
-
-- `prompt`: The text to display before the button, or `None` to not display a
-  prompt.
-- `label`: The label of the button. If the label has the format `@icon{...}`,
-  the corresponding icon from
-  [Font Awesome](https://fontawesome.com/icons/categories) is used.
+See {py:func}`~tdoc.pause`.
 
 ```{exec} python
 :when: load
@@ -249,8 +220,8 @@ outer()
 All `{exec} python` blocks on a page are executed in a shared, single-threaded
 interpreter. Therefore, only one block can run at any given time. Nevertheless,
 concurrent execution is possible through `async` coroutines. The
-[`asyncio`](https://docs.python.org/3/library/asyncio.html) module provides a
-lot of functionality related to `async` concurrency.
+{py:mod}`asyncio` module provides a lot of functionality related to `async`
+concurrency.
 
 ```{exec} python
 :when: load

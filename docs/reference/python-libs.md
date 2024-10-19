@@ -3,16 +3,71 @@
 
 # Python libraries
 
+## `tdoc`
+
+````{py:module} tdoc
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/__init__.py))
+provides basic functionality for `{exec} python` blocks. It doesn't need to be
+imported explicitly: all its public symbols are available in the global scope of
+`{exec} python` blocks.
+````
+
+```{py:function} new_id() -> str
+Generate a unique ID, usable in the `id=` attribute of an HTML element.
+```
+
+```{py:function} render(html, name='') -> asyncio.Future
+Render an HTML snippet as an output block. Output blocks are displayed ordered
+by name. If an output block with the same name already exists, it is replaced
+with the new one.
+:arg str | Iterator(str) html: The HTML snippet to be rendered.
+:arg str name: The name of the output block.
+:returns: A `Future` that resolves to the size of the output block, as a
+`(width, height)` tuple.
+```
+
+```{py:function} input_line(prompt=None) -> str
+:async:
+Request a single line of text from the user, and wait for them to submit a
+reply.
+:arg str prompt: An optional prompt to display before the input field.
+```
+
+```{py:function} input_text(prompt=None) -> str
+:async:
+Request a multi-line text from the user, and wait for them to submit a reply.
+:arg str prompt: An optional prompt to display before the input field.
+```
+
+```{py:function} input_buttons(prompt, labels) -> int
+:async:
+Present a list of buttons and wait for the user to click one of them.
+:arg str prompt: An optional prompt to display before the buttons.
+:arg list(str) labels: The labels of the buttons to display.
+:returns: The index in `labels` of the button that was clicked.
+```
+
+```{py:function} pause(prompt=None, label="@icon{forward-step}")
+:async:
+Present a button, and wait for the user to click it.
+:arg str prompt: An optional prompt to display before the button.
+:arg str label: The label of the button. If the label has the format
+`@icon{...}`, the corresponding icon from
+[Font Awesome](https://fontawesome.com/icons/categories) is used.
+```
+
 ## `tdoc.svg`
 
 ````{py:module} tdoc.svg
-This module allows creating
-[SVG](https://developer.mozilla.org/en-US/docs/Web/SVG) images that can be
-rendered in an output block.
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/svg.py))
+allows creating [SVG](https://developer.mozilla.org/en-US/docs/Web/SVG) images
+using simple drawing primitives and rendering them in an output block.
 
 To create an SVG image, instantiate the {py:class}`Image` class,
 [add elements](#tdoc.svg.Container) to it, then display it with `render()`.
-Animations can be achieved by repeatedly rendering images.
+Animations can be implemented by repeatedly rendering images.
 
 ```{exec} python
 :when: load
