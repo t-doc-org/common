@@ -153,7 +153,7 @@ class ExecBlock(nodes.literal_block): pass
 
 
 class Exec(CodeBlock):
-    languages = {'python', 'sql'}
+    languages = {'html', 'python', 'sql'}
 
     option_spec = CodeBlock.option_spec | {
         'after': directives.class_option,

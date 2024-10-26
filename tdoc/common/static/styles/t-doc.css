@@ -130,6 +130,18 @@ div.tdoc-exec-output div.tdoc-input .autosize::after {
     font: inherit;
     grid-area: 1 / 1 / 2 / 2;
 }
+div.tdoc-exec-output > .tdoc-navbar {
+    padding: 0.3rem;
+}
+div.tdoc-exec-output > .tdoc-navbar > button:not(:last-child) {
+    margin-right: 0.3rem;
+}
+div.tdoc-exec-output > iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: white;
+}
 
 /* Editor */
 div.tdoc-exec.tdoc-editable div.highlight pre,

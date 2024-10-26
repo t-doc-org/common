@@ -8,5 +8,6 @@
 
 python
 sql
+html
 embedding
 ```

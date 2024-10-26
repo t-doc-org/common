@@ -21,6 +21,7 @@ from .. import common
 from . import util
 
 # TODO: Use current time for build tag, and mtime only for detecting change
+# TODO: Implement incremental builds, by copying previous build output
 
 
 @util.main
