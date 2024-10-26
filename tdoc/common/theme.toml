@@ -5,7 +5,7 @@
 inherit = "sphinx_book_theme"
 stylesheets = [
     "styles/sphinx-book-theme.css",
-    "styles/t-doc.css",
+    "styles/tdoc.css",
 ]
 
 [options]
