@@ -223,6 +223,9 @@ dl[class]:not(.option-list,.field-list,.footnote,.glossary,.simple):not(._) {
 }
 
 /* Avoid that math blocks sometimes get cut off at the top. */
-div.math.math > mjx-container {
+div.math, span.math {
+    overflow: visible;
+}
+div.math mjx-container {
     padding-top: 0.2rem;
 }
