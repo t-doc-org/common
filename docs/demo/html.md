@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </head>
 <body>
   <h1>Hello, </h1>
+  <p>A link to <a href="https://t-doc.org/">this site</a>.
 </body>
 </html>
 ```

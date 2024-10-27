@@ -132,15 +132,40 @@ div.tdoc-exec-output div.tdoc-input .autosize::after {
 }
 div.tdoc-exec-output > .tdoc-navbar {
     padding: 0.3rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.3rem;
+    background-color: var(--pst-color-background);
 }
-div.tdoc-exec-output > .tdoc-navbar > button:not(:last-child) {
-    margin-right: 0.3rem;
+div.tdoc-exec-output > .tdoc-navbar > .tdoc-stretch {
+    width: 100%;
 }
 div.tdoc-exec-output > iframe {
     display: block;
     width: 100%;
     aspect-ratio: 16/9;
     background: white;
+}
+div.tdoc-exec-output.tdoc-fullscreen {
+    position: absolute;
+    display: block;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2000;
+    margin: 0;
+    border: none;
+}
+div.tdoc-exec-output:not(.tdoc-fullscreen) > .tdoc-navbar .tdoc-restore {
+    display: none;
+}
+div.tdoc-exec-output.tdoc-fullscreen > .tdoc-navbar .tdoc-maximize {
+    display: none;
+}
+div.tdoc-exec-output.tdoc-fullscreen > iframe {
+    height: 100%;
+    aspect-ratio: auto;
 }
 
 /* Editor */

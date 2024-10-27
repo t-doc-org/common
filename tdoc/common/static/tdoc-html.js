@@ -16,30 +16,50 @@ class HtmlExecutor extends Executor {
     }
 
     async run(run_id) {
-        const blocks = [];
-        for (const [code, node] of this.codeBlocks()) blocks.push(code);
         const output = element(`\
 <div class="tdoc-exec-output tdoc-sectioned">\
 <div class="tdoc-navbar">\
-<button class="fa-arrow-left tdoc-back" title="Back">\
-<button class="fa-arrow-right tdoc-forward" title="Forward">\
-<button class="fa-rotate-right tdoc-reload" title="Reload">\
+<button class="fa-arrow-left tdoc-back" title="Back"></button>\
+<button class="fa-arrow-right tdoc-forward" title="Forward"></button>\
+<button class="fa-rotate-right tdoc-reload" title="Reload"></button>\
+<div class="tdoc-stretch"></div>\
+<button class="fa-expand tdoc-maximize" title="Maximize"></button>\
+<button class="fa-compress tdoc-restore" title="Restore"></button>\
+<button class="fa-xmark tdoc-close" title="Remove"></button>\
 </div>\
-<iframe></iframe></div>`);
-        this.iframe = output.querySelector('iframe');
-        this.iframe.srcdoc = blocks.join('');
+<iframe credentialless\
+ allow="accelerometer; ambient-light-sensor; autoplay; bluetooth; camera;\
+ clipboard-write; encrypted-media; fullscreen; gamepad; geolocation; gyroscope;\
+ hid; idle-detection; local-fonts; magnetometer; microphone; midi;\
+ picture-in-picture; screen-wake-lock;\
+ serial; usb; web-share"\
+ referrerpolicy="no-referrer">\
+</iframe>\
+</div>`);
+        const iframe = output.querySelector('iframe');
+        const blocks = [];
+        for (const [code, node] of this.codeBlocks()) blocks.push(code);
+        iframe.srcdoc = blocks.join('');
         output.querySelector('.tdoc-back')
-            .addEventListener('click', () => {
-                this.iframe.contentWindow.history.back();
-            });
+            .addEventListener('click', () => { history.back(); });
         output.querySelector('.tdoc-forward')
-            .addEventListener('click', () => {
-                this.iframe.contentWindow.history.forward();
-            });
+            .addEventListener('click', () => { history.forward(); });
         output.querySelector('.tdoc-reload')
             .addEventListener('click', () => {
-                this.iframe.contentWindow.history.go();
+                try {  // Try to reload if non-cross-origin
+                    iframe.contentWindow.history.go();
+                } catch (e) {}
             });
+        output.querySelector('.tdoc-maximize')
+            .addEventListener('click', () => {
+                output.classList.add('tdoc-fullscreen');
+            });
+        output.querySelector('.tdoc-restore')
+            .addEventListener('click', () => {
+                output.classList.remove('tdoc-fullscreen');
+            });
+        output.querySelector('.tdoc-close')
+            .addEventListener('click', () => { output.remove(); });
         this.replaceOutputs([output]);
     }
 
