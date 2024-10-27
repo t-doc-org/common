@@ -46,6 +46,9 @@ Make the `{exec}` block editable.
 :type: relative paths
 Prepend the content of one or more files to the block's content.
 ```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the code block and editor, e.g. `max-height: 20rem`.
+```
 ```{rst:directive:option} then: name [name...]
 :type: IDs
 Execute one or more `{exec}` blocks after this block, in the same environment.

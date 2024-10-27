@@ -3,12 +3,13 @@
 
 # HTML, CSS, Javascript
 
-The `{exec} html` block allows displaying complete HTML documents within a page,
-as `<iframe>` blocks.
+The `{exec} html` block allows displaying a complete HTML document, as an
+`<iframe>`.
 
 ```{exec} html
 :when: load
 :editable:
+:style: height: 14rem
 <!DOCTYPE html>
 <html lang="en">
 <head>

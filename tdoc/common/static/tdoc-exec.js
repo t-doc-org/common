@@ -117,10 +117,10 @@ export class Executor {
         return node.querySelector('pre').textContent;
     }
 
-    // Return the text content of the editor associated with a node, an editor
+    // Return the text content of the editor associated with a node if an editor
     // was added, or the content of the <pre> tag.
     static text(node) {
-        const editor = findEditor(node);
+        const [editor, _] = findEditor(node);
         return editor ? editor.state.doc.toString() : this.preText(node);
     }
 
@@ -133,12 +133,14 @@ export class Executor {
 
     // Add an editor to the {exec} block.
     addEditor() {
-        addEditor(this.node.querySelector('div.highlight'), {
+        const [_, node] = addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
             text: this.origText,
             onRun: this.when !== 'never' ? async () => { await this.doRun(); }
                                          : undefined,
         });
+        node.setAttribute('style',
+                          this.node.querySelector('pre').getAttribute('style'));
     }
 
     // Add controls to the {exec} block.
@@ -170,7 +172,7 @@ export class Executor {
         const ctrl = element(`
 <button class="fa-rotate-left" title="Reset editor content"></button>`);
         ctrl.addEventListener('click', () => {
-            const editor = findEditor(this.node), state = editor.state;
+            const [editor, _] = findEditor(this.node), state = editor.state;
             editor.dispatch(state.update({changes: {
                 from: 0, to: state.doc.length,
                 insert: this.origText,

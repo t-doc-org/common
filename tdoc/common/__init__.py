@@ -64,8 +64,13 @@ def report_exceptions(fn):
     return wrapper
 
 
+def format_attrs(translator, /, **kwargs):
+    return ' '.join(f'{k.replace('_', '-')}="{translator.attval(v)}"'
+                    for k, v in sorted(kwargs.items()) if v is not None)
+
+
 def format_data_attrs(translator, /, **kwargs):
-    return ' '.join(f'data-tdoc-{k}="{translator.attval(v)}"'
+    return ' '.join(f'data-tdoc-{k.replace('_', '-')}="{translator.attval(v)}"'
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
@@ -159,6 +164,7 @@ class Exec(CodeBlock):
         'after': directives.class_option,
         'editable': directives.flag,
         'include': directives.unchanged_required,
+        'style': directives.unchanged,
         'then': directives.class_option,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
@@ -194,13 +200,11 @@ class Exec(CodeBlock):
         node.__class__ = ExecBlock
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
-        if after := self.options.get('after'):
-            node['after'] = after
-        if then := self.options.get('then'):
-            node['then'] = then
+        if v := self.options.get('after'): node['after'] = v
+        if v := self.options.get('style'): node['style'] = v
+        if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
-        if 'editable' in self.options:
-            node['classes'] += ['tdoc-editable']
+        if 'editable' in self.options: node['classes'] += ['tdoc-editable']
 
 
 def check_references(app, doctree, docname):
@@ -222,6 +226,7 @@ def check_refs(node, names, typ, doctree):
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
+pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
 
 
 def visit_ExecBlock(self, node):
@@ -230,14 +235,15 @@ def visit_ExecBlock(self, node):
     except nodes.SkipNode:
         after = node.get('after')
         then = node.get('then')
-        attrs = format_data_attrs(
-            self, after=' '.join(after) if after else None,
+        def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
+        attrs = format_data_attrs(self,
+            after=' '.join(after) if after else None,
             then=' '.join(then) if then else None,
             when=node.get('when'))
         if attrs:
-            def subst(m):
-                return f'{m.group(1)} {attrs}{m.group(2)}'
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
+        if attrs := format_attrs(self, style=node.get('style')):
+            self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], 1)
         raise
 
 

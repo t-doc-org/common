@@ -90,11 +90,13 @@ export function addEditor(parent, config) {
         extensions: extensions(config),
         parent,
     });
-    parent.querySelector('div.cm-editor').tdocEditor = editor;
-    return editor;
+    const node = parent.querySelector('div.cm-editor');
+    node.tdocEditor = editor;
+    return [editor, node];
 }
 
 // Find an editor in or below the given element.
 export function findEditor(el) {
-    return el.querySelector('div.cm-editor')?.tdocEditor;
+    const node = el.querySelector('div.cm-editor');
+    return [node?.tdocEditor, node];
 }
