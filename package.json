@@ -15,6 +15,7 @@
     "@codemirror/view": "^6.34.0",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@sqlite.org/sqlite-wasm": "^3.46.1-build3",
+    "mathjax": "^3.2.2",
     "polyscript": "^0.15.9",
     "pyodide": "^0.26.2",
     "rollup": "^4.22.4",

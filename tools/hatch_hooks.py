@@ -43,6 +43,7 @@ class BuildHook(BuildHookInterface, HookMixin):
         (self.top / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
+        self.copytree_node('mathjax/es5', 'mathjax')
         self.copytree_node('polyscript/dist', 'polyscript', globs=[
             '*.js', '*.js.map',
         ])

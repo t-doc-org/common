@@ -71,5 +71,11 @@ myst_heading_anchors = 6
 html_show_sphinx = False
 html_theme = 't-doc'
 
+# MathJax options.
+mathjax_path = 'mathjax/tex-chtml-full.js'
+mathjax3_config = {
+    'loader': {'load': ['input/mml']},
+}
+
 # LaTeX rendering options.
 latex_engine = 'xelatex'
