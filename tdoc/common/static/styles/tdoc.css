@@ -164,7 +164,8 @@ div.tdoc-exec-output.tdoc-fullscreen > .tdoc-navbar .tdoc-maximize {
     display: none;
 }
 div.tdoc-exec-output.tdoc-fullscreen > iframe {
-    height: 100%;
+    /* TODO: Fix fullscreen when page is taller than screen */
+    height: 100% !important;  /* Override element style */
     aspect-ratio: auto;
 }
 

@@ -61,6 +61,15 @@ for i in range(10, 0, -1):
 print("\x0cHappy new year!")
 ```
 
+The height of the terminal output block can be limited with `:output-style:`.
+
+```{exec} python
+:editable:
+:output-style: max-height: 10rem
+for i in range(100):
+  print(i)
+```
+
 ### Graphics
 
 See the {py:mod}`tdoc.svg` module.

@@ -275,6 +275,11 @@ export class Executor {
         this.appendOutputs([output]);
         return output;
     }
+
+    setOutputStyle(el) {
+        const style = this.node.dataset.tdocOutputStyle;
+        if (style) el.setAttribute('style', style);
+    }
 }
 
 // Prevent doctools.js from capturing editor key events, in case keyboard

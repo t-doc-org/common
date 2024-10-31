@@ -97,6 +97,23 @@ create table wide (
 select * from wide;
 ```
 
+### Tall results
+
+The height of large results tables can be limited with `:output-style:`.
+
+```{exec} sql
+:name: sql-tall
+:when: never
+:class: hidden
+create table tall (value integer);
+insert into tall values (0), (1), (2), (3), (4), (5), (6), (7);
+```
+```{exec} sql
+:after: sql-tall
+:output-style: max-height: 10rem
+select t1.value, t2.value from tall as t1, tall as t2;
+```
+
 ## Mutations
 
 ```{exec} sql

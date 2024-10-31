@@ -164,6 +164,7 @@ class Exec(CodeBlock):
         'after': directives.class_option,
         'editable': directives.flag,
         'include': directives.unchanged_required,
+        'output-style': directives.unchanged,
         'style': directives.unchanged,
         'then': directives.class_option,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
@@ -201,6 +202,7 @@ class Exec(CodeBlock):
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
         if v := self.options.get('after'): node['after'] = v
+        if v := self.options.get('output-style'): node['output-style'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
@@ -238,6 +240,7 @@ def visit_ExecBlock(self, node):
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_data_attrs(self,
             after=' '.join(after) if after else None,
+            output_style=node.get('output-style'),
             then=' '.join(then) if then else None,
             when=node.get('when'))
         if attrs:

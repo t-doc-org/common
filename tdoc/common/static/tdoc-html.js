@@ -37,6 +37,7 @@ class HtmlExecutor extends Executor {
 </iframe>\
 </div>`);
         const iframe = output.querySelector('iframe');
+        this.setOutputStyle(iframe);
         const blocks = [];
         for (const [code, node] of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');

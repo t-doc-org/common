@@ -109,6 +109,7 @@ class PythonExecutor extends Executor {
                     .addEventListener('click', () => { output.remove(); });
             }
             this.out = div.querySelector('pre');
+            this.setOutputStyle(this.out);
         }
         const i = data.lastIndexOf(form_feed);
         if (i >= 0) {
