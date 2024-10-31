@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {addEditor, findEditor} from './tdoc-editor.js';
+import {addEditor, findEditor} from './editor.js';
 
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 const loaded = new Promise(resolve => {

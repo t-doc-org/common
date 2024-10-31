@@ -1,15 +1,15 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {XWorker} from './polyscript/index.js';
-import {Executor, element, focusIfVisible, text} from './tdoc-exec.js';
+import {XWorker} from '../polyscript/index.js';
+import {Executor, element, focusIfVisible, text} from './exec.js';
 
 const files = {};
-files[import.meta.resolve('./tdoc-python.zip')] = '/lib/tdoc.zip';
+files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
 
-const worker = XWorker(import.meta.resolve('./tdoc-python.py'), {
+const worker = XWorker(import.meta.resolve('./exec-python.py'), {
     type: 'pyodide',
-    version: import.meta.resolve('./pyodide/pyodide.mjs'),
+    version: import.meta.resolve('../pyodide/pyodide.mjs'),
     // https://docs.pyscript.net/latest/user-guide/configuration/
     config: {files},
 });

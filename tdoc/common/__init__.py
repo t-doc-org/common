@@ -112,17 +112,17 @@ def on_html_page_context(app, page, template, context, doctree):
     if license_url: context['license_url'] = license_url
 
     # Set up early fixes.
-    app.add_js_file('tdoc-early.js', priority=0,
+    app.add_js_file('tdoc/early.js', priority=0,
                     scope=context['pathto']('', resource=True))
 
     # Add language-specific .js files for {exec}.
     if doctree:
         for lang in sorted(Exec.find_nodes(doctree)):
-            app.add_js_file(f'tdoc-{lang}.js', type='module')
+            app.add_js_file(f'tdoc/exec-{lang}.js', type='module')
 
 
 def add_reload_js(app, page, template, context, doctree):
-    app.add_js_file('tdoc-reload.js', type='module')
+    app.add_js_file('tdoc/reload.js', type='module')
 
 
 def write_static_files(app, builder):
@@ -137,9 +137,9 @@ def write_static_files(app, builder):
     # write it to _static.
     client = _common / 'python'
     rel = lambda p: p.relative_to(client)
-    static = builder.outdir / '_static'
+    static = builder.outdir / '_static' / 'tdoc'
     osutil.ensuredir(static)
-    with zipfile.ZipFile(static / 'tdoc-python.zip', mode='x') as f:
+    with zipfile.ZipFile(static / 'exec-python.zip', mode='x') as f:
         f.mkdir('tdoc')
         for root, dirs, files in client.walk():
             dirs.sort()

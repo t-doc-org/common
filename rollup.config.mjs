@@ -15,11 +15,11 @@ const __dirname = import.meta.dirname || path.dirname(__filename)
 //       because of the worker module and .wasm.
 
 export default {
-    input: "./tdoc/common/scripts/tdoc-editor.js",
+    input: "./tdoc/common/scripts/editor.js",
     output: {
         chunkFileNames: '[name].js',
         compact: true,
-        dir: './tdoc/common/static.gen/',
+        dir: './tdoc/common/static.gen/tdoc/',
         entryFileNames: '[name].js',
         format: 'es',
         generatedCode: {

@@ -1,8 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {default as sqlite3_init} from './sqlite/sqlite3-worker1-promiser.mjs';
-import {Executor, UserError, element, text} from './tdoc-exec.js';
+import {default as sqlite3_init} from '../sqlite/sqlite3-worker1-promiser.mjs';
+import {Executor, UserError, element, text} from './exec.js';
 
 let promiser;
 

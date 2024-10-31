@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {Executor, element} from './tdoc-exec.js';
+import {Executor, element} from './exec.js';
 
 class HtmlExecutor extends Executor {
     static lang = 'html';
