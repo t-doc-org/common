@@ -8,7 +8,7 @@ from polyscript import xworker
 
 sys.path.append('/lib/tdoc.zip')
 
-import tdoc  # noqa
+import tdoc.core  # noqa
 
 xworker.sync.ready(f"{platform.python_implementation()}"
                    f" {'.'.join(platform.python_version_tuple())}"

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import html
-import tdoc
+from . import core
 
 
 def esc(v, quote=True):
@@ -137,7 +137,7 @@ class _Element:
 
     @property
     def id(self):
-        if self._id is None: self._id = tdoc.new_id()
+        if self._id is None: self._id = core.new_id()
         return self._id
 
     @id.setter

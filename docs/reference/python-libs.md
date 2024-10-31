@@ -3,11 +3,11 @@
 
 # Python libraries
 
-## `tdoc`
+## `tdoc.core`
 
-````{py:module} tdoc
+````{py:module} tdoc.core
 This module
-([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/__init__.py))
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/core.py))
 provides basic functionality for `{exec} python` blocks. It doesn't need to be
 imported explicitly: all its public symbols are available in the global scope of
 `{exec} python` blocks.

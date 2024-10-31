@@ -155,7 +155,7 @@ be used, due to its blocking nature.
 
 ### Line of text
 
-See {py:func}`~tdoc.input_line`.
+See {py:func}`~tdoc.core.input_line`.
 
 ```{exec} python
 :when: load
@@ -166,7 +166,7 @@ print(f"Hello, {name}!")
 
 ### Multi-line text
 
-See {py:func}`~tdoc.input_text`.
+See {py:func}`~tdoc.core.input_text`.
 
 ```{exec} python
 :when: load
@@ -178,7 +178,7 @@ print(f"\x0cThe text was:\n-------------\n{text}")
 
 ### Buttons
 
-See {py:func}`~tdoc.input_buttons`.
+See {py:func}`~tdoc.core.input_buttons`.
 
 ```{exec} python
 :when: load
@@ -190,7 +190,7 @@ print(f"You picked: {colors[index]}")
 
 ### Pause
 
-See {py:func}`~tdoc.pause`.
+See {py:func}`~tdoc.core.pause`.
 
 ```{exec} python
 :when: load
