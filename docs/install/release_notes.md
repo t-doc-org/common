@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-16)=
+## 0.16
+
+- Added support for `{exec} html`.
+- Added support for styling editors and output blocks with `{exec} :style:` and
+  `{exec} :output-style:`.
+- Added the `{metadata}` directive.
+- The rendered HTML output is now fully self-contained.
+
 (release-0-15)=
 ## 0.15
 
@@ -50,7 +59,9 @@
 
 ```{admonition} Warning
 :class: warning
-**This release breaks `<iframe>` tags in documents.** On Chrome, setting the `credentialless` attribute on the `<iframe>` tags fixes the issue, but Firefox and Safari don't support it (yet).
+**This release breaks `<iframe>` tags in documents.** On Chrome, setting the
+`credentialless` attribute on the `<iframe>` tags fixes the issue, but Firefox
+and Safari don't support it (yet).
 ```
 
 (release-0-9)=
