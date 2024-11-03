@@ -137,9 +137,12 @@ def cmd_version(cfg):
 
 def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
     argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
-            '--jobs=auto', '--fail-on-warning']
+            '--fail-on-warning']
     argv += [f'--tag={tag}' for tag in tags]
-    if cfg.debug: argv += ['--show-traceback']
+    if cfg.debug:
+        argv += ['--show-traceback']
+    else:
+        argv += ['--jobs=auto']
     argv += cfg.sphinx_opts
     return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
                           stderr=cfg.stderr, **kwargs)
