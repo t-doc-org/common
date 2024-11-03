@@ -7,7 +7,6 @@ This documentation describes how to install and use t-doc.
 
 ```{toctree}
 :maxdepth: 1
-
 install/index
 edit
 development

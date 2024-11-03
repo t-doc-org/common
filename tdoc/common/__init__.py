@@ -3,13 +3,14 @@
 
 import pathlib
 import re
+import yaml
 import zipfile
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx import config
 from sphinx.directives.code import CodeBlock
-from sphinx.util import fileutil, logging, osutil
+from sphinx.util import docutils, fileutil, logging, osutil
 
 __project__ = 't-doc-common'
 __version__ = '0.16.dev1'
@@ -37,8 +38,9 @@ def setup(app):
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
 
     app.add_html_theme('t-doc', str(_common))
+
+    app.add_node(ExecNode, html=(visit_ExecNode, depart_ExecNode))
     app.add_directive('exec', Exec)
-    app.add_node(ExecBlock, html=(visit_ExecBlock, depart_ExecBlock))
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
@@ -47,6 +49,11 @@ def setup(app):
     if build_tag(app):
         app.connect('html-page-context', add_reload_js)
     app.connect('write-started', write_static_files)
+
+    app.add_node(MetadataNode)
+    app.add_directive('metadata', Metadata)
+    app.connect('doctree-read', extract_metadata)
+    app.connect('html-page-context', add_head_elements)
 
     return {
         'version': __version__,
@@ -104,6 +111,10 @@ def on_builder_inited(app):
     app.config.html_static_path.append(str(_common / 'static'))
     app.config.html_static_path.append(str(_common / 'static.gen'))
 
+    # Add a default static path.
+    if '_static' not in app.config.html_static_path:
+        app.config.html_static_path.append('_static')
+
 
 def on_html_page_context(app, page, template, context, doctree):
     license = app.config.license
@@ -134,7 +145,7 @@ def write_static_files(app, builder):
                              builder.outdir, force=True)
 
     # Package all files under tdoc/common/python into a .zip, below tdoc/, and
-    # write it to _static.
+    # write it to _static/tdoc.
     client = _common / 'python'
     rel = lambda p: p.relative_to(client)
     static = builder.outdir / '_static' / 'tdoc'
@@ -154,7 +165,7 @@ def write_static_files(app, builder):
                            data, compress_type=ct, compresslevel=9)
 
 
-class ExecBlock(nodes.literal_block): pass
+class ExecNode(nodes.literal_block): pass
 
 
 class Exec(CodeBlock):
@@ -173,7 +184,7 @@ class Exec(CodeBlock):
     @staticmethod
     def find_nodes(doctree):
         nodes = {}
-        for node in doctree.findall(ExecBlock):
+        for node in doctree.findall(ExecNode):
             nodes.setdefault(node['language'], []).append(node)
         return nodes
 
@@ -198,7 +209,7 @@ class Exec(CodeBlock):
     def _update_node(self, node):
         if (lang := node['language']) not in self.languages:
             raise Exception(f"{{exec}}: Unsupported language: {lang}")
-        node.__class__ = ExecBlock
+        node.__class__ = ExecNode
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
         if v := self.options.get('after'): node['after'] = v
@@ -231,7 +242,7 @@ div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
 pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
 
 
-def visit_ExecBlock(self, node):
+def visit_ExecNode(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
@@ -250,5 +261,49 @@ def visit_ExecBlock(self, node):
         raise
 
 
-def depart_ExecBlock(self, node):
+def depart_ExecNode(self, node):
     return self.depart_literal_block(node)
+
+
+class MetadataNode(nodes.Element): pass
+
+
+class Metadata(docutils.SphinxDirective):
+    has_content = True
+
+    @report_exceptions
+    def run(self):
+        return [
+            MetadataNode(attrs=yaml.safe_load(
+                ''.join(f'{line}\n' for line in self.content))),
+        ]
+
+
+def extract_metadata(app, doctree):
+    md = app.env.metadata[app.env.docname]
+    nodes = list(doctree.findall(MetadataNode))
+    for i, node in enumerate(nodes):
+        if i == 0:
+            md.update(node['attrs'])
+        else:
+            _log.warning(
+                f"{app.env.docname}: More than one {{metadata}} directive")
+        node.parent.remove(node)
+
+
+def add_head_elements(app, page, template, context, doctree):
+    md = app.env.metadata[page]
+    add_head_files(app.add_css_file, md.get('styles', []))
+    add_head_files(app.add_js_file, md.get('scripts', []))
+
+
+def add_head_files(add, entries):
+    for entry in entries:
+        if isinstance(entry, str):
+            add(entry, priority=900)
+        else:
+            kwargs = dict(entry)
+            path = kwargs.pop('src', None)
+            for k, v in kwargs.items():
+                if v is None: kwargs[k] = ''
+            add(path, priority=900, **kwargs)

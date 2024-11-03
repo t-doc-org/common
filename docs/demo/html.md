@@ -1,15 +1,21 @@
-<!-- Copyright 2024 Remy Blank <remy@c-space.org> -->
-<!-- SPDX-License-Identifier: MIT -->
+% Copyright 2024 Remy Blank <remy@c-space.org>
+% SPDX-License-Identifier: MIT
 
 # HTML, CSS, JavaScript
 
-The `{exec} html` block allows displaying a complete HTML document as an
-`<iframe>`.
+```{metadata}
+styles:
+  - demo-html-styles.css
+scripts:
+  - src: demo-html-script.js
+    type: module
+```
 
-## Full document
+## Inline document
 
-The `<iframe>` defaults to a 16/9 aspect ratio, but its size can be adjusted
-with `:output-style:`.
+The {rst:dir}`{exec} html <{exec}>` directive allows displaying a complete HTML
+document as an `<iframe>`. The `<iframe>` defaults to a 16/9 aspect ratio, but
+its size can be adjusted with {rst:dir}`:output-style: <{exec}:output-style>`.
 
 ```{exec} html
 :when: load
@@ -34,11 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </html>
 ```
 
-## Partial document
+### Partial content
 
 Browsers are smart enough to render `<iframe>` tags with partial content
-correctly. So an `{exec} html` block can contain an HTML snippet only, and
-optionally styles (with a `<style>` element):
+correctly. So an {rst:dir}`{exec} html <{exec}>` block can contain an HTML
+snippet only, and optionally styles (with a `<style>` element):
 
 ```{exec} html
 :when: load
@@ -63,3 +69,12 @@ document.querySelector('button')
 </script>
 ```
 
+## Web application
+
+Markdown already allows adding arbitrary HTML. Page-specific stylesheets and
+scripts can be added with the `styles` and `scripts` entries of an
+{rst:dir}`{metadata}` directive.
+
+<div class="tdoc-web-app">
+  Please click <button>here</button>
+</div>

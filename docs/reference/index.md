@@ -5,7 +5,7 @@
 
 ```{toctree}
 :maxdepth: 1
-
+directives
 exec
 python-libs
 ```

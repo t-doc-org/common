@@ -1,0 +1,11 @@
+/* Copyright 2024 Remy Blank <remy@c-space.org> */
+/* SPDX-License-Identifier: MIT */
+
+.tdoc-web-app {
+    margin: 1em 0;
+    font-size: 1.5rem;
+    text-align: center;
+}
+.tdoc-web-app button {
+    color: var(--sd-color-danger);
+}

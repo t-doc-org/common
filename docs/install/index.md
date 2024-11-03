@@ -6,7 +6,6 @@
 ```{toctree}
 :maxdepth: 1
 :hidden:
-
 release_notes
 ```
 
@@ -113,7 +112,7 @@ t-doc requires the following software to be installed:
 ## Upgrade
 
 - Check the changes introduced in the new version in the
-  [release notes](release_notes.md).
+  [release notes](release_notes).
 
 - Upgrade the `t-doc-common` package and any out-of-date dependencies.
 

@@ -1,7 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {Executor, element} from './exec.js';
+import {element} from './core.js';
+import {Executor} from './exec.js';
 
 class HtmlExecutor extends Executor {
     static lang = 'html';

@@ -1,7 +1,7 @@
 <!-- Copyright 2024 Remy Blank <remy@c-space.org> -->
 <!-- SPDX-License-Identifier: MIT -->
 
-# Code excution
+# Code execution
 
 The `{exec}` directive allows executing code directly in the browser.
 

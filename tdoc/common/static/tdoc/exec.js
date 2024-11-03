@@ -1,42 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+import {domLoaded, text, element} from './core.js'
 import {addEditor, findEditor} from './editor.js';
-
-// Resolves when the DOM content has loaded and deferred scripts have executed.
-const loaded = new Promise(resolve => {
-    if (document.readyState !== 'loading') {
-        resolve();
-    } else {
-        document.addEventListener('DOMContentLoaded', resolve);
-    }
-});
-
-// Create a text node.
-export function text(value) {
-    return document.createTextNode(value);
-}
-
-// Create an element node.
-export function element(html) {
-    const t = document.createElement('template');
-    t.innerHTML = html.trim();
-    return t.content.firstChild;
-}
-
-// Return true iff the given element is within the root viewport.
-export function isVisible(el) {
-    const rect = el.getBoundingClientRect();
-    return rect.top >= 0 && rect.left >= 0 &&
-           rect.bottom <= document.documentElement.clientHeight &&
-           rect.right <= document.documentElement.clientWidth;
-}
-
-// Focus an element if it is visible and no other element has the focus.
-export function focusIfVisible(el) {
-    const active = document.activeElement;
-    if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
-}
 
 // An error that is caused by the user, and that doesn't need to be logged.
 export class UserError extends Error {
@@ -96,7 +62,7 @@ export class Executor {
     // Apply an {exec} block handler class.
     static async apply(cls) {
         cls.ready = cls.init();  // Initialize concurrently
-        await loaded;
+        await domLoaded;
         for (const node of document.querySelectorAll(
                 `div.tdoc-exec.highlight-${cls.lang}`)) {
             fixLineNos(node);
@@ -280,11 +246,4 @@ export class Executor {
         const style = this.node.dataset.tdocOutputStyle;
         if (style) el.setAttribute('style', style);
     }
-}
-
-// Prevent doctools.js from capturing editor key events, in case keyboard
-// shortcuts are enabled.
-await loaded;
-if (typeof BLACKLISTED_KEY_CONTROL_ELEMENTS !== 'undefined') {
-    BLACKLISTED_KEY_CONTROL_ELEMENTS.add('DIV');
 }

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {default as sqlite3_init} from '../sqlite/sqlite3-worker1-promiser.mjs';
-import {Executor, UserError, element, text} from './exec.js';
+import {element, text} from './core.js';
+import {Executor, UserError} from './exec.js';
 
 let promiser;
 

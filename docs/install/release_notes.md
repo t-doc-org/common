@@ -6,16 +6,16 @@
 (release-0-15)=
 ## 0.15
 
- - Added a mechanism to render arbitrary HTML from `{exec} python` blocks.
- - Added a Python module to create SVG images.
- - Added automatic focusing of `{exec} python` text input elements.
- - Fixed the positioning of the "Remove" button on scrollable tables.
+- Added a mechanism to render arbitrary HTML from `{exec} python` blocks.
+- Added a Python module to create SVG images.
+- Added automatic focusing of `{exec} python` text input elements.
+- Fixed the positioning of the "Remove" button on scrollable tables.
 
 (release-0-14)=
 ## 0.14
 
- - Added a button to remove `{exec}` output.
- - Fixed `{exec} :linenos:`.
+- Added a button to remove `{exec}` output.
+- Fixed `{exec} :linenos:`.
 
 (release-0-13)=
 ## 0.13

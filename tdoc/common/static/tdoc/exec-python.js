@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {XWorker} from '../polyscript/index.js';
-import {Executor, element, focusIfVisible, text} from './exec.js';
+import {element, focusIfVisible, text} from './core.js';
+import {Executor} from './exec.js';
 
 const files = {};
 files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';

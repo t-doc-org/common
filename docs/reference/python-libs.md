@@ -8,9 +8,9 @@
 ````{py:module} tdoc.core
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/core.py))
-provides basic functionality for `{exec} python` blocks. It doesn't need to be
-imported explicitly: all its public symbols are available in the global scope of
-`{exec} python` blocks.
+provides basic functionality for {rst:dir}`{exec} python <{exec}>` blocks. It
+doesn't need to be imported explicitly: all its public symbols are available in
+the global scope of  {rst:dir}`{exec} python <{exec}>` blocks.
 ````
 
 ```{py:function} new_id() -> str
@@ -66,8 +66,9 @@ allows creating [SVG](https://developer.mozilla.org/en-US/docs/Web/SVG) images
 using simple drawing primitives and rendering them in an output block.
 
 To create an SVG image, instantiate the {py:class}`Image` class,
-[add elements](#tdoc.svg.Container) to it, then display it with `render()`.
-Animations can be implemented by repeatedly rendering images.
+[add elements](#tdoc.svg.Container) to it, then display it with
+{py:func}`~tdoc.core.render`. Animations can be implemented by repeatedly
+rendering images.
 
 ```{exec} python
 :when: load
