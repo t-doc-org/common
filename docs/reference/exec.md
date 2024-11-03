@@ -1,5 +1,5 @@
-<!-- Copyright 2024 Remy Blank <remy@c-space.org> -->
-<!-- SPDX-License-Identifier: MIT -->
+% Copyright 2024 Remy Blank <remy@c-space.org>
+% SPDX-License-Identifier: MIT
 
 # Code execution
 
