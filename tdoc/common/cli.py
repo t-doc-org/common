@@ -233,7 +233,7 @@ class ServerBase(server.ThreadingHTTPServer):
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
                     p = base / file
-                    if self.cfg.ignore.fullmatch(str(p)) is not None: continue
+                    if self.cfg.ignore.search(str(p)) is not None: continue
                     try:
                         st = p.stat()
                         if stat.S_ISREG(st.st_mode):
@@ -241,7 +241,7 @@ class ServerBase(server.ThreadingHTTPServer):
                     except Exception as e:
                         on_error(e)
                 dirs[:] = [d for d in dirs
-                           if self.cfg.ignore.fullmatch(str(base / d)) is None]
+                           if self.cfg.ignore.search(str(base / d)) is None]
         return mtime
 
     def build_dir(self, mtime):
