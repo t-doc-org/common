@@ -7,7 +7,9 @@ from http import server
 import itertools
 from importlib import metadata
 import json
+import os
 import pathlib
+import re
 import shutil
 import socket
 import stat
@@ -76,6 +78,10 @@ def main(argv, stdin, stdout, stderr):
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
     arg('--help', action='help', help="Show this help message and exit.")
+    arg('--ignore', metavar='REGEXP', dest='ignore',
+        default=f'(^|{re.escape(os.sep)})__pycache__$',
+        help="A regexp matching files and directories to ignore from watching "
+             "(default: %(default)s).")
     arg('--interval', metavar='DURATION', dest='interval', default=1,
         type=float,
         help="The interval in seconds at which to check for source changes "
@@ -96,6 +102,7 @@ def main(argv, stdin, stdout, stderr):
     cfg.ansi = util.ansi if cfg.color else util.no_ansi
     cfg.build = pathlib.Path(cfg.build).absolute()
     cfg.source = pathlib.Path(cfg.source).absolute()
+    if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
     return cfg.handler(cfg)
 
 
@@ -223,15 +230,18 @@ class ServerBase(server.ThreadingHTTPServer):
             self.cfg.stderr.write(f"Scan: {e}\n")
         mtime = self.min_mtime
         for path in itertools.chain([self.cfg.source], self.cfg.watch):
-            # TODO: Exclude files in __pycache__
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
+                    p = base / file
+                    if self.cfg.ignore.fullmatch(str(p)) is not None: continue
                     try:
-                        st = (base / file).stat()
+                        st = p.stat()
                         if stat.S_ISREG(st.st_mode):
                             mtime = max(mtime, st.st_mtime_ns)
                     except Exception as e:
                         on_error(e)
+                dirs[:] = [d for d in dirs
+                           if self.cfg.ignore.fullmatch(str(base / d)) is None]
         return mtime
 
     def build_dir(self, mtime):
