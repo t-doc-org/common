@@ -37,11 +37,9 @@ def main(argv, stdin, stdout, stderr):
     arg = parser.add_argument_group("Options").add_argument
     arg('--build', metavar='PATH', dest='build', default='_build',
         help="The path to the build directory (default: %(default)s).")
-    arg('--color', action='store_true', dest='color',
-        default=util.want_colors(stdout),
-        help="Use colors in output (default: %(default)s).")
-    arg('--no-color', action='store_false', dest='color',
-        help="Don't use colors in output (default: %(default)s).")
+    arg('--color', dest='color', choices=['auto', 'false', 'true'],
+        default='auto',
+        help="Control the use of colors in output (default: %(default)s).")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
     arg('--help', action='help', help="Show this help message and exit.")
@@ -99,7 +97,9 @@ def main(argv, stdin, stdout, stderr):
 
     cfg = parser.parse_args(argv[1:])
     cfg.stdin, cfg.stdout, cfg.stderr = stdin, stdout, stderr
-    cfg.ansi = util.ansi if cfg.color else util.no_ansi
+    cfg.ansi = (util.ansi if cfg.color == 'true' or
+                             (cfg.color == 'auto' and util.want_colors(stdout))
+                          else util.no_ansi)
     cfg.build = pathlib.Path(cfg.build).absolute()
     cfg.source = pathlib.Path(cfg.source).absolute()
     if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
