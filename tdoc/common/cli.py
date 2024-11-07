@@ -20,7 +20,6 @@ from urllib import parse
 from .. import common
 from . import util
 
-# TODO: Use current time for build tag, and mtime only for detecting change
 # TODO: Implement incremental builds, by copying previous build output
 
 
@@ -155,6 +154,7 @@ class ServerBase(server.ThreadingHTTPServer):
         self.directory = self.build_dir(0) / 'html'
         self.upgrade_msg = None
         self.stop = False
+        self.min_mtime = time.time_ns()
         self.build_mtime = None
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
@@ -221,7 +221,7 @@ class ServerBase(server.ThreadingHTTPServer):
     def latest_mtime(self):
         def on_error(e):
             self.cfg.stderr.write(f"Scan: {e}\n")
-        mtime = 0
+        mtime = self.min_mtime
         for path in itertools.chain([self.cfg.source], self.cfg.watch):
             # TODO: Exclude files in __pycache__
             for base, dirs, files in path.walk(on_error=on_error):

@@ -72,7 +72,7 @@ document.querySelector('button')
 ## Web application
 
 Markdown already allows adding arbitrary HTML. Page-specific stylesheets and
-scripts can be added with the `styles` and `scripts` entries of an
+scripts can be added with the `styles` and `scripts` entries of a
 {rst:dir}`{metadata}` directive.
 
 <div class="tdoc-web-app">
