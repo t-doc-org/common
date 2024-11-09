@@ -140,8 +140,8 @@ class PythonExecutor extends Executor {
                 const input = div.appendChild(element(`\
 <input class="input" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"></input>`));
-                const btn = div.appendChild(element(
-                    `<button title="Send input (Enter)">Send</button>`));
+                const btn = div.appendChild(element(`\
+<button class="tdoc-send" title="Send input (Enter)">Send</button>`));
                 btn.addEventListener('click', () => { resolve(input.value); });
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.altKey && !e.ctrlKey &&
@@ -161,8 +161,8 @@ class PythonExecutor extends Executor {
  oninput="this.parentNode.dataset.text = this.value"></textarea>\
 </div>`))
                     .querySelector('textarea');
-                const btn = div.appendChild(element(
-                    `<button title="Send input (Shift+Enter)">Send</button>`));
+                const btn = div.appendChild(element(`\
+<button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
                 btn.addEventListener('click', () => { resolve(input.value); });
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
@@ -178,7 +178,8 @@ class PythonExecutor extends Executor {
                 div.appendChild(element(`<div class="input"></div>`));
             case 'buttons': {
                 for (const [index, label] of args[0].entries()) {
-                    const btn = div.appendChild(element(`<button></button>`));
+                    const btn = div.appendChild(element(
+                        `<button class="tdoc-button"></button>`));
                     const icon = /^@icon\{([^}]+)\}$/.exec(label);
                     if (icon) {
                         btn.classList.add(`fa-${icon[1]}`);

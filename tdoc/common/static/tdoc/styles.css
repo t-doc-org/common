@@ -51,16 +51,20 @@ div.highlight pre > .linenos::before {
 }
 
 /* Buttons */
-[class*=tdoc-] button {
+button[class^=tdoc-],
+button[class*=" tdoc-"] {
     border: 1px solid var(--pst-color-border);
     border-radius: 0.25rem;
     background-color: var(--pst-color-surface);
     transition: background-color 0.3s;
 }
-[class*=tdoc-] button:hover {
+button[class^=tdoc-]:hover,
+button[class*=" tdoc-"]:hover {
     background-color: var(--pst-color-border);
 }
-[class*=tdoc-] button[class^=fa-] {
+button[class^=tdoc-][class*=" fa-"],
+button[class*=" tdoc-"][class^=fa-],
+button[class*=" tdoc-"][class*=" fa-"] {
     width: 1.8rem;
     height: 1.8rem;
     font: var(--fa-font-solid);
@@ -203,7 +207,8 @@ html[data-theme=dark] div.cm-editor {
 }
 
 /* Execution controls */
-div.tdoc-exec[class*=highlight-] {
+div.tdoc-exec[class^=highlight-],
+div.tdoc-exec[class*=" highlight-"] {
     flex-direction: row;
     column-gap: 0.3rem;
 }

@@ -119,7 +119,8 @@ export class Executor {
     // Create a "Run" control.
     runControl() {
         const ctrl = element(`\
-<button class="fa-play" title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
+<button class="fa-play tdoc-run"\
+ title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
 </button>`);
         ctrl.addEventListener('click', async () => { await this.doRun(); });
         return ctrl;
@@ -128,7 +129,7 @@ export class Executor {
     // Create a "Stop" control.
     stopControl() {
         const ctrl = element(
-            `<button class="fa-stop" title="Stop"></button>`);
+            `<button class="fa-stop tdoc-stop" title="Stop"></button>`);
         ctrl.addEventListener('click', async () => { await this.doStop(); });
         return ctrl;
     }
@@ -136,7 +137,8 @@ export class Executor {
     // Create a "Reset" control.
     resetControl() {
         const ctrl = element(`
-<button class="fa-rotate-left" title="Reset editor content"></button>`);
+<button class="fa-rotate-left tdoc-reset"\
+ title="Reset editor content"></button>`);
         ctrl.addEventListener('click', () => {
             const [editor, _] = findEditor(this.node), state = editor.state;
             editor.dispatch(state.update({changes: {
