@@ -32,6 +32,7 @@ extensions = [
     # 'sphinx_proof',
     'sphinx_togglebutton',
     'tdoc.common',
+    'tdoc.common.solution',
 ]
 
 suppress_warnings = [

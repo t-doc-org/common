@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import json
 import pathlib
 import re
 import yaml
@@ -8,17 +9,19 @@ import zipfile
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
-from sphinx import config
-from sphinx.directives.code import CodeBlock
+from sphinx import config, locale
+from sphinx.directives import code
 from sphinx.util import docutils, fileutil, logging, osutil
 
 __project__ = 't-doc-common'
 __version__ = '0.17.dev1'
 
+_log = logging.getLogger(__name__)
+_messages = 'tdoc'
+_ = locale.get_translation(_messages)
+
 _common = pathlib.Path(__file__).absolute().parent
 _root = _common.parent.parent
-
-_log = logging.getLogger(__name__)
 
 _license_urls = {
     'CC0-1.0': 'https://creativecommons.org/publicdomain/zero/1.0/',
@@ -30,7 +33,10 @@ _license_urls = {
     'MIT': 'https://opensource.org/license/mit',
 }
 
+
 def setup(app):
+    app.add_event('tdoc-html-page-config')
+
     app.add_config_value('license', '', 'html')
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
@@ -38,8 +44,9 @@ def setup(app):
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
 
     app.add_html_theme('t-doc', str(_common))
+    app.add_message_catalog(_messages, str(_common / 'locale'))
 
-    app.add_node(ExecNode, html=(visit_ExecNode, depart_ExecNode))
+    app.add_node(exec, html=(visit_exec, depart_exec))
     app.add_directive('exec', Exec)
 
     app.connect('config-inited', on_config_inited)
@@ -50,7 +57,7 @@ def setup(app):
         app.connect('html-page-context', add_reload_js)
     app.connect('write-started', write_static_files)
 
-    app.add_node(MetadataNode)
+    app.add_node(metadata)
     app.add_directive('metadata', Metadata)
     app.connect('doctree-read', extract_metadata)
     app.connect('html-page-context', add_head_elements)
@@ -122,9 +129,14 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Set up early fixes.
-    app.add_js_file('tdoc/early.js', priority=0,
+    # Set up early and core JavaScript.
+    config = {'htmlData': {}}
+    app.emit('tdoc-html-page-config', page, config)
+    config = json.dumps(config, separators=(',', ':'))
+    app.add_js_file(None, priority=0, body=f'const tdocConfig = {config};')
+    app.add_js_file('tdoc/early.js', priority=1,
                     scope=context['pathto']('', resource=True))
+    app.add_js_file('tdoc/core.js', type='module', id='tdoc-core-js')
 
     # Add language-specific .js files for {exec}.
     if doctree:
@@ -165,13 +177,13 @@ def write_static_files(app, builder):
                            data, compress_type=ct, compresslevel=9)
 
 
-class ExecNode(nodes.literal_block): pass
+class exec(nodes.literal_block): pass
 
 
-class Exec(CodeBlock):
+class Exec(code.CodeBlock):
     languages = {'html', 'python', 'sql'}
 
-    option_spec = CodeBlock.option_spec | {
+    option_spec = code.CodeBlock.option_spec | {
         'after': directives.class_option,
         'editable': directives.flag,
         'include': directives.unchanged_required,
@@ -184,7 +196,7 @@ class Exec(CodeBlock):
     @staticmethod
     def find_nodes(doctree):
         nodes = {}
-        for node in doctree.findall(ExecNode):
+        for node in doctree.findall(exec):
             nodes.setdefault(node['language'], []).append(node)
         return nodes
 
@@ -209,7 +221,7 @@ class Exec(CodeBlock):
     def _update_node(self, node):
         if (lang := node['language']) not in self.languages:
             raise Exception(f"{{exec}}: Unsupported language: {lang}")
-        node.__class__ = ExecNode
+        node.__class__ = exec
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec']
         if v := self.options.get('after'): node['after'] = v
@@ -242,7 +254,7 @@ div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
 pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
 
 
-def visit_ExecNode(self, node):
+def visit_exec(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
@@ -261,11 +273,11 @@ def visit_ExecNode(self, node):
         raise
 
 
-def depart_ExecNode(self, node):
+def depart_exec(self, node):
     return self.depart_literal_block(node)
 
 
-class MetadataNode(nodes.Element): pass
+class metadata(nodes.Element): pass
 
 
 class Metadata(docutils.SphinxDirective):
@@ -273,18 +285,16 @@ class Metadata(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        return [
-            MetadataNode(attrs=yaml.safe_load(
-                ''.join(f'{line}\n' for line in self.content))),
-        ]
+        return [metadata(attrs=yaml.safe_load(
+                    ''.join(f'{line}\n' for line in self.content)))]
 
 
 def extract_metadata(app, doctree):
     md = app.env.metadata[app.env.docname]
-    nodes = list(doctree.findall(MetadataNode))
+    nodes = list(doctree.findall(metadata))
     for i, node in enumerate(nodes):
         if i == 0:
-            md.update(node['attrs'])
+            if (attrs := node['attrs']) is not None: md.update(attrs)
         else:
             _log.warning(
                 f"{app.env.docname}: More than one {{metadata}} directive")

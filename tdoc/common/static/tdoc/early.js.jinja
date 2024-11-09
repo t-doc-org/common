@@ -15,6 +15,9 @@
         };
     }
 
+    // Set data-* attributes on the <html> tag.
+    Object.assign(document.documentElement.dataset, tdocConfig.htmlData);
+
     // Disable all global keydown event listeners, as they can interfere with
     // per-element listeners. In particular, this disables the search shortcut
     // handler installed by pydata-sphinx-theme.js.

@@ -45,6 +45,34 @@ interpreted.
   ```
 ````
 
+## Solution
+
+````{rst:directive} .. {solution}:: [title]
+This directive adds an admonition of type `solution`. The title defaults to
+"Solution", and the body is collapsed by default. The solutions on a page can be
+shown or hidden by clicking the "Toggle solutions" button in the navbar.
+
+By default, solutions are shown when loading the page. The default can be
+changed by setting `hide-solutions: true` in the
+[document metadata](#document-metadata).
+
+{.rubric}
+Options
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the admonition. The default is
+`note dropdown`.
+```
+```{rst:directive:option} name: name
+:type: ID
+A reference target for the admonition.
+```
+```{rst:directive:option} show
+When set, the admonition is always shown, even if solutions are hidden via the
+toggle button.
+```
+````
+
 ## Code execution
 
 See "[Code execution](exec)`.

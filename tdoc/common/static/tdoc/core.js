@@ -43,3 +43,13 @@ domLoaded.then(() => {
         BLACKLISTED_KEY_CONTROL_ELEMENTS.add('DIV');
     }
 });
+
+// Handle solution toggling.
+globalThis.tdocToggleSolutions = () => {
+    const ds = document.documentElement.dataset;
+    if (ds.tdocSolutions === 'hide') {
+        delete ds.tdocSolutions;
+    } else {
+        ds.tdocSolutions = 'hide';
+    }
+};

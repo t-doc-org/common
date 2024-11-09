@@ -5,6 +5,7 @@
 
 ```{toctree}
 :maxdepth: 1
+directives
 python
 sql
 html

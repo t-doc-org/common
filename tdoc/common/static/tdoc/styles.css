@@ -26,6 +26,18 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Solutions */
+html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
+    display: none;
+}
+button.btn-toggle-solutions::before {
+    font: var(--fa-font-solid);
+    content: '\f070';
+}
+html[data-tdoc-solutions=hide] button.btn-toggle-solutions::before {
+    content: '\f06e';
+}
+
 /* Code blocks */
 div.highlight pre {
     padding: 0.5rem;
@@ -229,6 +241,25 @@ div.tdoc-exec div.tdoc-exec-controls {
    if it's empty, as it causes the scrollbar to always appear. */
 .bd-sidebar-primary div#rtd-footer-container:empty {
     display: none;
+}
+
+/* Remove the underline on hover on navbar buttons. */
+.pst-navbar-icon.pst-navbar-icon:hover::before {
+    border-bottom: none;
+}
+
+/* Fix the vertical alignment of navbar icons. */
+.article-header-buttons {
+    align-items: stretch;
+}
+.article-header-buttons > div.dropdown > button {
+    height: 100%;
+}
+.article-header-buttons button.pst-navbar-icon {
+    height: inherit;
+}
+.article-header-buttons .svg-inline--fa {
+    vertical-align: middle;
 }
 
 /* Prevent the wrapper background set by pygments from being visible if the
