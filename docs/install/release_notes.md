@@ -9,7 +9,7 @@
 - Added support for `{exec} html`.
 - Added support for styling editors and output blocks with `{exec} :style:` and
   `{exec} :output-style:`.
-- Added the `{metadata}` directive.
+- Added the `metadata` directive.
 - The rendered HTML output is now fully self-contained.
 
 (release-0-15)=
@@ -79,7 +79,7 @@ and Safari don't support it (yet).
 (release-0-7)=
 ## 0.7
 
-- Fine-tuned the `{exec}` control buttons.
+- Fine-tuned the `exec` control buttons.
 
 (release-0-6)=
 ## 0.6
@@ -89,7 +89,7 @@ and Safari don't support it (yet).
 (release-0-5)=
 ## 0.5
 
-- Added on-click execution of `{exec}` blocks.
+- Added on-click execution of `exec` blocks.
 - Added support for dependencies with `{exec} :after:`.
 - Added proper rendering of SQL errors in `{exec} sql`.
 - Fixed the handling of `NULL` values in `{exec} sql`.

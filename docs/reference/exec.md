@@ -29,18 +29,19 @@ insert into countries values
 ## Directive
 
 ````{rst:directive} .. exec:: language (html | python | sql)
-This directive is a [`{code-block}`](https://mystmd.org/guide/code#code-blocks)
+This directive is a [`code-block`](https://mystmd.org/guide/code#code-blocks)
 that allows executing the code directly in the browser. It supports most of the
-options of `{code-block}`, and a few more described below.
+options of `code-block`, and a few more described below.
 
 {.rubric}
 Options
 ```{rst:directive:option} after: name [name...]
 :type: IDs
-Execute one or more `{exec}` blocks before this block, in the same environment.
+Execute one or more {rst:dir}`exec` blocks before this block, in the same
+environment.
 ```
 ```{rst:directive:option} editable
-Make the `{exec}` block editable.
+Make the {rst:dir}`exec` block editable.
 ```
 ```{rst:directive:option} include: path [path...]
 :type: relative paths
@@ -56,7 +57,8 @@ CSS styles to apply to the code block and editor, e.g. `max-height: 20rem`.
 ```
 ```{rst:directive:option} then: name [name...]
 :type: IDs
-Execute one or more `{exec}` blocks after this block, in the same environment.
+Execute one or more {rst:dir}`exec` blocks after this block, in the same
+environment.
 ```
 ```{rst:directive:option} when: value
 :type: click | load | never
@@ -67,17 +69,19 @@ default), when the page loads (`load`) or not at all (`never`).
 
 ## Trigger
 
-By default, `{exec}` blocks are executed on click (`:when: click`), with
-controls displayed next to the block.
+By default, {rst:dir}`exec` blocks are executed on click
+({rst:dir}`:when: click <exec:when>`), with controls displayed next to the
+  block.
 
 ```{exec} sql
 :after: sql-countries
 select * from countries where country_code = 'LI';
 ```
 
-They can also be executed immediately on load (`:when: load`) or not at all
-(`:when: never`, useful for definitions that are referenced by other blocks).
-The controls displayed depend on the type of block.
+They can also be executed immediately on load
+({rst:dir}`:when: load <exec:when>`) or not at all
+({rst:dir}`:when: never <exec:when>`), useful for definitions that are
+referenced by other blocks). The controls displayed depend on the type of block.
 
 ```{exec} sql
 :after: sql-countries
@@ -87,7 +91,8 @@ select * from countries where country_code = 'LI';
 
 ## Editable blocks
 
-Blocks can be made editable with the `:editable:` option.
+Blocks can be made editable with the {rst:dir}`:editable: <exec:editable>`
+option.
 
 ```{exec} sql
 :after: sql-countries
@@ -99,14 +104,16 @@ select * from countries
 
 ## Sequencing
 
-The `:after:` option allows referencing one or more `{exec}` blocks on the same
-page to be executed before the block, in the same environment. The referenced
-blocks can themselves have `:after:` options, forming a dependency graph.
+The {rst:dir}`:after: <exec:after>` option allows referencing one or more
+{rst:dir}`exec` blocks on the same page to be executed before the block, in the
+same environment. The referenced blocks can themselves have
+{rst:dir}`:after: <exec:after>` options, forming a dependency graph.
 
-Similarly, the `:then:` option allows referencing one or more `{exec}` blocks
-to be executed after the block. Unlike `:after:`, only the blocks referenced by
-the `:then:` option of the block itself are executed; the `:then:` options of
-referenced blocks are ignored.
+Similarly, the {rst:dir}`:then: <exec:then>` option allows referencing one or
+more {rst:dir}`exec` blocks to be executed after the block. Unlike
+{rst:dir}`:after: <exec:after>`, only the blocks referenced by the
+{rst:dir}`:then: <exec:then>` option of the block itself are executed; the
+{rst:dir}`:then: <exec:then>` options of referenced blocks are ignored.
 
 If a block appears more than once in the graph, only the first occurrence is
 executed.
@@ -136,8 +143,9 @@ insert into people values ('Joe', 'Bar'), ('Jack', 'Sparrow');
 
 ## Include file content
 
-The `:include:` option allows including the content of one or more external
-files. The content of the files is prepended to the block's content.
+The {rst:dir}`:include: <exec:include>` option allows including the content of
+one or more external files. The content of the files is prepended to the block's
+content.
 
 ```{exec} sql
 :include: people.sql

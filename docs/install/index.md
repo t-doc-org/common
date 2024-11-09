@@ -14,7 +14,7 @@ release_notes
 t-doc requires the following software to be installed:
 
 - [Python](https://www.python.org/) 3.12 or later
-- [Graphviz](https://graphviz.org/), for `{graphviz}` directives
+- [Graphviz](https://graphviz.org/), for `graphviz` directives
 - [Mercurial](https://www.mercurial-scm.org/), for managing source files
 
 ### Windows
