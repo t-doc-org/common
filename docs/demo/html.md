@@ -13,9 +13,9 @@ scripts:
 
 ## Inline document
 
-The {rst:dir}`{exec} html <{exec}>` directive allows displaying a complete HTML
+The {rst:dir}`{exec} html <exec>` directive allows displaying a complete HTML
 document as an `<iframe>`. The `<iframe>` defaults to a 16/9 aspect ratio, but
-its size can be adjusted with {rst:dir}`:output-style: <{exec}:output-style>`.
+its size can be adjusted with {rst:dir}`:output-style: <exec:output-style>`.
 
 ```{exec} html
 :when: load
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 ### Partial content
 
 Browsers are smart enough to render `<iframe>` tags with partial content
-correctly. So an {rst:dir}`{exec} html <{exec}>` block can contain an HTML
+correctly. So an {rst:dir}`{exec} html <exec>` block can contain an HTML
 snippet only, and optionally styles (with a `<style>` element):
 
 ```{exec} html
@@ -73,7 +73,7 @@ document.querySelector('button')
 
 Markdown already allows adding arbitrary HTML. Page-specific stylesheets and
 scripts can be added with the `styles` and `scripts` entries of a
-{rst:dir}`{metadata}` directive.
+{rst:dir}`metadata` directive.
 
 <div class="tdoc-web-app">
   Please click <button>here</button>

@@ -5,7 +5,7 @@
 
 ## Document metadata
 
-This section configures page metadata with a {rst:dir}`{metadata}` directive to
+This section configures page metadata with a {rst:dir}`metadata` directive to
 hide solutions by default.
 
 ```{metadata}
@@ -14,7 +14,7 @@ hide-solutions: true
 
 ## Solution
 
-This section has several {rst:dir}`{solution}` blocks, and the page is
+This section has several {rst:dir}`solution` blocks, and the page is
 configured to hide solutions by default. Click the "Toggle solutions" button in
 the navbar to show or hide them.
 

@@ -5,7 +5,7 @@
 
 ## Document metadata
 
-````{rst:directive} .. {metadata}::
+````{rst:directive} .. metadata::
 This directive allows adding document metadata to a page. The content of the
 directive is a [YAML](https://yaml.org/) document which is converted to a Python
 {py:class}`dict` and merged into the document metadata.
@@ -47,7 +47,7 @@ interpreted.
 
 ## Solution
 
-````{rst:directive} .. {solution}:: [title]
+````{rst:directive} .. solution:: [title]
 This directive adds an admonition of type `solution`. The title defaults to
 "Solution", and the body is collapsed by default. The solutions on a page can be
 shown or hidden by clicking the "Toggle solutions" button in the navbar.
@@ -75,4 +75,4 @@ toggle button.
 
 ## Code execution
 
-See "[Code execution](exec)`.
+See "[Code execution](exec.md)".

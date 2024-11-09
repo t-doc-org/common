@@ -8,9 +8,9 @@
 ````{py:module} tdoc.core
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/core.py))
-provides basic functionality for {rst:dir}`{exec} python <{exec}>` blocks. It
+provides basic functionality for {rst:dir}`{exec} python <exec>` blocks. It
 doesn't need to be imported explicitly: all its public symbols are available in
-the global scope of  {rst:dir}`{exec} python <{exec}>` blocks.
+the global scope of  {rst:dir}`{exec} python <exec>` blocks.
 ````
 
 ```{py:function} new_id() -> str

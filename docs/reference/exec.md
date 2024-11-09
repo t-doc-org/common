@@ -3,7 +3,7 @@
 
 # Code execution
 
-The `{exec}` directive allows executing code directly in the browser.
+The {rst:dir}`exec` directive allows executing code directly in the browser.
 
 ```{exec} sql
 :name: sql-countries
@@ -28,7 +28,7 @@ insert into countries values
 
 ## Directive
 
-````{rst:directive} .. {exec}:: language (html | python | sql)
+````{rst:directive} .. exec:: language (html | python | sql)
 This directive is a [`{code-block}`](https://mystmd.org/guide/code#code-blocks)
 that allows executing the code directly in the browser. It supports most of the
 options of `{code-block}`, and a few more described below.
