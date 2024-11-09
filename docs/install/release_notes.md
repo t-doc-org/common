@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-17)=
+## 0.17
+
+- Added the `solution` directive and the "Toggle solutions" navbar button.
+- Fixed the flickering on page load due to `sphinx_togglebutton`.
+- Added an option to exclude files from watching in the dev server.
+
 (release-0-16)=
 ## 0.16
 

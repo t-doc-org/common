@@ -14,7 +14,7 @@ from sphinx.directives import code
 from sphinx.util import docutils, fileutil, logging, osutil
 
 __project__ = 't-doc-common'
-__version__ = '0.17.dev1'
+__version__ = '0.17'
 
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
