@@ -108,9 +108,12 @@ def on_config_inited(app, config):
         opts.setdefault('use_source_button', True)
 
     # Set the global HTML context.
-    config['html_context']['tdoc_enable_sab'] = app.config.tdoc_enable_sab
+    context = config.html_context
+    context['tdoc_enable_sab'] = app.config.tdoc_enable_sab
     tag = build_tag(app)
-    config['html_context']['tdoc_build'] = tag if tag is not None else ''
+    context['tdoc_build'] = tag if tag is not None else ''
+    context['tdoc_togglebutton_selector'] = getattr(
+        config, 'togglebutton_selector', '._:not(._)')
 
 
 def on_builder_inited(app):

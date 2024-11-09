@@ -303,3 +303,26 @@ div.math, span.math {
 div.math mjx-container {
     padding-top: 0.2rem;
 }
+
+/* Avoid flickering on page load due to sphinx_togglebutton. Since this is
+   purely cosmetic, we allow the use of nested selectors, as it's a major
+   simplification. */
+{{ tdoc_togglebutton_selector }} {
+    &:not(.toggle):not(.toggle-shown) {
+        padding-bottom: 0;
+    }
+    &:not(.toggle):not(.toggle-shown) .admonition-title {
+        margin-botton: 0;
+    }
+    &:not(.toggle):not(.toggle-shown) .admonition-title ~ * {
+        height: 0;
+        margin: 0;
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+/* Remove "Click to show" text on collapsed admonitions. */
+button.toggle-button.toggle-button.toggle-button-hidden::before {
+    content: none;
+}
