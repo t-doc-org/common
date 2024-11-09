@@ -38,6 +38,11 @@ html[data-tdoc-solutions=hide] button.btn-toggle-solutions::before {
     content: '\f06e';
 }
 
+/* Inline code */
+a > code {
+    color: inherit;
+}
+
 /* Code blocks */
 div.highlight pre {
     padding: 0.5rem;
@@ -269,7 +274,7 @@ div.tdoc-exec div.tdoc-exec-controls {
 
 /* Prevent the wrapper background set by pygments from being visible if the
    wrapper is larger than its content (visible in dark mode). */
-.highlight.highlight.highlight {
+div.highlight.highlight.highlight {
     background: none;
 }
 
