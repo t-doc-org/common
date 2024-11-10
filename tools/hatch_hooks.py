@@ -31,7 +31,7 @@ class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
         # Write an empty LICENSES file to avoid that hatchling complains. It
         # will be generated below.
-        (self.top / 'LICENSES.deps.txt').write_bytes(b'')
+        (self.top / LICENSES).write_bytes(b'')
 
 
 class BuildHook(BuildHookInterface, HookMixin):

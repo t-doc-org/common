@@ -10,7 +10,10 @@ urls.Documentation = "https://t-doc.org/common/"
 urls.Homepage = "https://t-doc.org/"
 readme = "README.md"
 license = "MIT"
-license-files = {paths = ["LICENSE.txt", "LICENSES.deps.txt"]}
+# BUG(hatchling): PEP 639 says it should be a list, but hatchling wants a table
+# <https://github.com/pypa/hatch/issues/1715>. The files are recognized
+# automatically, so for now we don't specify them explicitly.
+# license-files = ["LICENSE.txt", "LICENSES.deps.txt"]
 keywords = []
 classifiers = [
     "Development Status :: 3 - Alpha",
