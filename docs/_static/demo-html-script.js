@@ -3,7 +3,8 @@
 
 import {domLoaded} from './tdoc/core.js';
 
-await domLoaded;
-const app = document.querySelector('.tdoc-web-app');
-app.querySelector('button')
-    .addEventListener('click', () => alert('Click!'));
+domLoaded.then(() => {
+    const app = document.querySelector('.tdoc-web-app');
+    app.querySelector('button')
+        .addEventListener('click', () => alert('Click!'));
+});

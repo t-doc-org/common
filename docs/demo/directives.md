@@ -32,6 +32,11 @@ This solution has a custom title.
 ```
 
 ```{solution}
+:expand:
+This solution is expanded by default.
+```
+
+```{solution}
 :class: warning
 This solution has a different color, and no drop-down.
 ```

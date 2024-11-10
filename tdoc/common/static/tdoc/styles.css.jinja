@@ -26,6 +26,40 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Admonitions */
+.admonition.dropdown .admonition-title {
+    cursor: pointer;
+}
+.admonition.dropdown .admonition-title:hover {
+    box-shadow: inset 0 0 0px 20px rgb(0 0 0 / 1%);
+}
+.admonition.dropdown .admonition-title:active {
+    box-shadow: inset 0 0 0px 20px rgb(0 0 0 / 3%);
+}
+.admonition.dropdown .admonition-title button {
+    position: absolute;
+    right: 0.6rem;
+    outline: none;
+    border: none;
+    padding: 0;
+    background: none;
+}
+.admonition.dropdown .admonition-title ~ * {
+    transition: opacity 0.3s;
+}
+.admonition.dropdown:not(.expand) {
+    padding-bottom: 0;
+}
+.admonition.dropdown:not(.expand) .admonition-title {
+    margin-bottom: 0;
+}
+.admonition.dropdown:not(.expand) .admonition-title ~ * {
+    margin: 0;
+    height: 0;
+    visibility: hidden;
+    opacity: 0;
+}
+
 /* Solutions */
 html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
     display: none;
@@ -307,27 +341,4 @@ div.math, span.math {
 }
 div.math mjx-container {
     padding-top: 0.2rem;
-}
-
-/* Avoid flickering on page load due to sphinx_togglebutton. Since this is
-   purely cosmetic, we allow the use of nested selectors, as it's a major
-   simplification. */
-{{ tdoc_togglebutton_selector }} {
-    &:not(.toggle):not(.toggle-shown) {
-        padding-bottom: 0;
-    }
-    &:not(.toggle):not(.toggle-shown) .admonition-title {
-        margin-botton: 0;
-    }
-    &:not(.toggle):not(.toggle-shown) .admonition-title ~ * {
-        height: 0;
-        margin: 0;
-        opacity: 0;
-        visibility: hidden;
-    }
-}
-
-/* Remove "Click to show" text on collapsed admonitions. */
-button.toggle-button.toggle-button.toggle-button-hidden::before {
-    content: none;
 }

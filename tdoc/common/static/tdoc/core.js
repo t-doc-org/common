@@ -44,6 +44,21 @@ domLoaded.then(() => {
     }
 });
 
+// Handle admonition expansion.
+domLoaded.then(() => {
+    for (const el of document.querySelectorAll('.admonition.dropdown')) {
+        const title = el.querySelector('.admonition-title')
+        title.addEventListener('click', () => {
+            el.classList.toggle('expand');
+        });
+        const btn = title.appendChild(element('<button></button>'));
+        btn.addEventListener('click', (e) => {
+            el.classList.toggle('expand');
+            e.stopPropagation();
+        });
+    }
+});
+
 // Handle solution toggling.
 globalThis.tdocToggleSolutions = () => {
     const ds = document.documentElement.dataset;

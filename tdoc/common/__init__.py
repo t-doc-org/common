@@ -14,7 +14,7 @@ from sphinx.directives import code
 from sphinx.util import docutils, fileutil, logging, osutil
 
 __project__ = 't-doc-common'
-__version__ = '0.17'
+__version__ = '0.18.dev1'
 
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
@@ -112,8 +112,6 @@ def on_config_inited(app, config):
     context['tdoc_enable_sab'] = app.config.tdoc_enable_sab
     tag = build_tag(app)
     context['tdoc_build'] = tag if tag is not None else ''
-    context['tdoc_togglebutton_selector'] = getattr(
-        config, 'togglebutton_selector', '._:not(._)')
 
 
 def on_builder_inited(app):

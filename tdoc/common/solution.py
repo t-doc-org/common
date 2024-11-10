@@ -38,6 +38,7 @@ class Solution(admonitions.BaseAdmonition):
     node_class = solution
     optional_arguments = 1
     option_spec = admonitions.BaseAdmonition.option_spec | {
+        'expand': directives.flag,
         'show': directives.flag,
     }
 
@@ -54,6 +55,7 @@ class Solution(admonitions.BaseAdmonition):
             cls = node['classes']
             if not cls: cls += ['note', 'dropdown']
             cls += ['solution']
+            if 'expand' in self.options: cls += ['expand']
             if 'show' in self.options: cls += ['always-show']
         return res
 

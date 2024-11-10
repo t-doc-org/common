@@ -30,7 +30,6 @@ extensions = [
     # TODO: sphinx_proof forces "numfig = True", and prevents build
     #       parallelization.
     # 'sphinx_proof',
-    'sphinx_togglebutton',
     'tdoc.common',
     'tdoc.common.solution',
 ]
