@@ -22,16 +22,16 @@ the navbar to show or hide them.
 This solution follows the per-page setting.
 ```
 
+```{solution} *Complete* solution
+This solution has a custom title.
+```
+
 ```{solution} Solution (show)
 :show:
 This solution is always visible.
 ```
 
-```{solution} *Complete* solution
-This solution has a custom title.
-```
-
-```{solution}
+```{solution} Solution (expand)
 :expand:
 This solution is expanded by default.
 ```
