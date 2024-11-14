@@ -31,6 +31,7 @@ extensions = [
     #       parallelization.
     # 'sphinx_proof',
     'tdoc.common',
+    'tdoc.common.iframe',
     'tdoc.common.solution',
 ]
 

@@ -12,7 +12,7 @@ hide solutions by default.
 hide-solutions: true
 ```
 
-## Solution
+## Solutions
 
 This section has several {rst:dir}`solution` blocks, and the page is
 configured to hide solutions by default. Click the "Toggle solutions" button in
@@ -39,4 +39,18 @@ This solution is expanded by default.
 ```{solution}
 :class: warning
 This solution has a different color, and no drop-down.
+```
+
+## IFrames
+
+The [YouTube](https://youtube.com/) video below is embedded with the
+{rst:dir}`youtube` directive.
+
+```{youtube} aVwxzDHniEw
+```
+
+The [GeoGebra](https://geogebra.org/) sheet below is embedded with the
+{rst:dir}`iframe` directive.
+
+```{iframe} https://www.geogebra.org/classic/esdhdhzd
 ```

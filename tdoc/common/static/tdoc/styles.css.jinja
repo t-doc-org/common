@@ -60,6 +60,14 @@ div.sidebar, aside.sidebar {
     opacity: 0;
 }
 
+/* Iframes */
+iframe.tdoc {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16/9;
+    margin: 1rem auto;
+}
+
 /* Solutions */
 html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
     display: none;
@@ -112,7 +120,7 @@ button[class*=" tdoc-"][class*=" fa-"] {
 /* Exec outputs */
 div.tdoc-exec-output {
     position: relative;
-    margin: 1em 0;
+    margin: 1rem 0;
 }
 div.tdoc-exec-output button.tdoc-remove {
     position: absolute;
@@ -325,7 +333,7 @@ code.literal.literal.literal {
 }
 
 /* Reduce the bottom margin of directive definition list options. */
-dl[class]:not(.option-list,.field-list,.footnote,.glossary,.simple):not(._) {
+dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary, .simple):not(._) {
     margin-bottom: 1rem;
 }
 

@@ -76,6 +76,60 @@ toggle button.
 ```
 ````
 
+## IFrames
+
+````{rst:directive} .. youtube:: id
+This directive adds an
+[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
+element loading a YouTube video. The argument is the ID of the video, e.g.
+`aVwxzDHniEw`. All the options of {rst:dir}`iframe` are supported.
+````
+
+`````{rst:directive} .. iframe:: url
+This directive adds an
+[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
+element loading the given URL.
+
+{.rubric}
+Options
+````{rst:directive:option} allow: directive; [directive; ...]
+The
+[permission policy](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#allow)
+for the `<iframe>`
+([supported directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy#directives)).
+The default is:
+
+```
+autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
+  screen-wake-lock; web-share
+```
+````
+
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the `<iframe>`.
+```
+```{rst:directive:option} credentialful
+Indicate that the `<iframe>` should **not** be loaded in
+[credentialless](https://developer.mozilla.org/en-US/docs/Web/Security/IFrame_credentialless) mode. The default is credentialless mode.
+```
+```{rst:directive:option} referrerpolicy: value
+Indicate the referrer to send when fetching the `<iframe>` source
+([supported values](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#referrerpolicy)).
+```
+```{rst:directive:option} sandbox: token [token ...]
+Control the restrictions applied to the content embedded in the `<iframe>`
+([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
+```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the `<iframe>`, e.g. `width: 80%`.
+```
+```{rst:directive:option} title: text
+A concise description of the content of the `<iframe>`, typically used by
+assistive technologies.
+```
+`````
+
 ## Code execution
 
 See "[Code execution](exec.md)".
