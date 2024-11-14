@@ -13,6 +13,7 @@ from sphinx.util import logging, osutil
 from . import __version__, format_attrs, format_data_attrs, report_exceptions
 
 _log = logging.getLogger(__name__)
+_base = pathlib.Path(__file__).absolute().parent
 
 
 def setup(app):
@@ -139,7 +140,7 @@ def write_static_files(app, builder):
 
     # Package all files under tdoc/common/python into a .zip, below tdoc/, and
     # write it to _static/tdoc.
-    client = pathlib.Path(__file__).absolute().parent / 'python'
+    client = _base / 'python'
     rel = lambda p: p.relative_to(client)
     static = builder.outdir / '_static' / 'tdoc'
     osutil.ensuredir(static)
