@@ -32,6 +32,7 @@ extensions = [
     # 'sphinx_proof',
     'tdoc.common',
     'tdoc.common.iframe',
+    'tdoc.common.metadata',
     'tdoc.common.solution',
 ]
 
