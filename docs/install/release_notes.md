@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-18)=
+## 0.18
+
+- Added the `youtube` and `iframe` directives.
+- Removed the dependency on `sphinx_togglebutton`.
+
 (release-0-17)=
 ## 0.17
 
