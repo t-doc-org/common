@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-19)=
+## 0.19 *(2024-11-17)*
+
+- Fixed the un-collapsing of admonitions through click events.
+- Fixed the full-screen mode of `{exec} html`.
+
 (release-0-18)=
 ## 0.18 *(2024-11-14)*
 
