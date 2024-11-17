@@ -4,20 +4,20 @@
 # Release notes
 
 (release-0-18)=
-## 0.18
+## 0.18 *(2024-11-14)*
 
 - Added the `youtube` and `iframe` directives.
 - Removed the dependency on `sphinx_togglebutton`.
 
 (release-0-17)=
-## 0.17
+## 0.17 *(2024-11-09)*
 
 - Added the `solution` directive and the "Toggle solutions" navbar button.
 - Fixed the flickering on page load due to `sphinx_togglebutton`.
 - Added an option to exclude files from watching in the dev server.
 
 (release-0-16)=
-## 0.16
+## 0.16 *(2024-11-03)*
 
 - Added support for `{exec} html`.
 - Added support for styling editors and output blocks with `{exec} :style:` and
@@ -26,7 +26,7 @@
 - The rendered HTML output is now fully self-contained.
 
 (release-0-15)=
-## 0.15
+## 0.15 *(2024-10-19)*
 
 - Added a mechanism to render arbitrary HTML from `{exec} python` blocks.
 - Added a Python module to create SVG images.
@@ -34,23 +34,23 @@
 - Fixed the positioning of the "Remove" button on scrollable tables.
 
 (release-0-14)=
-## 0.14
+## 0.14 *(2024-10-03)*
 
 - Added a button to remove `{exec}` output.
 - Fixed `{exec} :linenos:`.
 
 (release-0-13)=
-## 0.13
+## 0.13 *(2024-09-29)*
 
 - Added support for executing blocks after a block with `{exec} :then:`.
 
 (release-0-12)=
-## 0.12
+## 0.12 *(2024-09-28)*
 
 - Added user input functionality for `{exec} python` blocks.
 
 (release-0-11)=
-## 0.11
+## 0.11 *(2024-09-27)*
 
 - `{exec} python` now works when offline.
 - Fixed an issue that prevented entering the character `/` in editors.
@@ -62,7 +62,7 @@
     worker can be installed.
 
 (release-0-10)=
-## 0.10
+## 0.10 *(2024-09-21)*
 
 - Added initial support for `{exec} python`.
   - Currently, Python code execution only works when online.
@@ -78,29 +78,29 @@ and Safari don't support it (yet).
 ```
 
 (release-0-9)=
-## 0.9
+## 0.9 *(2024-09-12)*
 
 - Added automatic page reloading on successful builds in the dev server.
 - Fixed encoding issues with `{exec} :include:`.
 
 (release-0-8)=
-## 0.8
+## 0.8 *(2024-09-12)*
 
 - Allowed multiple references in `{exec} :after:`.
 - Added support for including external files with `{exec} :include:`.
 
 (release-0-7)=
-## 0.7
+## 0.7 *(2024-09-07)*
 
 - Fine-tuned the `exec` control buttons.
 
 (release-0-6)=
-## 0.6
+## 0.6 *(2024-09-07)*
 
 - Added support for editable blocks with `{exec} :editable:`.
 
 (release-0-5)=
-## 0.5
+## 0.5 *(2024-08-31)*
 
 - Added on-click execution of `exec` blocks.
 - Added support for dependencies with `{exec} :after:`.
@@ -108,17 +108,17 @@ and Safari don't support it (yet).
 - Fixed the handling of `NULL` values in `{exec} sql`.
 
 (release-0-4)=
-## 0.4
+## 0.4 *(2024-08-22)*
 
 - Added checking for updates in the dev server.
 - Added install, use and development documentation.
 
 (release-0-3)=
-## 0.3
+## 0.3 *(2024-08-19)*
 
 - Added automatic rebuilding on source file changes in the dev server.
 
 (release-0-2)=
-## 0.2
+## 0.2 *(2024-08-17)*
 
 - First public release.
