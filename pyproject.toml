@@ -34,8 +34,6 @@ dependencies = [
     "sphinx-book-theme>=1.1.3",
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.0",
-    "sphinx-exercise>=0.4.1",
-    "sphinx-proof>=0.1.3",
 ]
 dynamic = ["version"]
 
