@@ -150,7 +150,9 @@ class PythonExecutor extends Executor {
                         btn.click();
                     }
                 });
-                focusIfVisible(input);
+                // Set the focus with a delay, as the "play" button is sometimes
+                // still active if the input is requested immediately on start.
+                setTimeout(() => { focusIfVisible(input); });
                 break;
             }
             case 'text': {
@@ -171,7 +173,9 @@ class PythonExecutor extends Executor {
                         btn.click();
                     }
                 });
-                focusIfVisible(input);
+                // Set the focus with a delay, as the "play" button is sometimes
+                // still active if the input is requested immediately on start.
+                setTimeout(() => { focusIfVisible(input); });
                 break;
             }
             case 'buttons-right':
