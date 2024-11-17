@@ -114,14 +114,14 @@ def on_html_page_context(app, page, template, context, doctree):
     license_url = app.config.license_url
     if license_url: context['license_url'] = license_url
 
-    # Set up early and core JavaScript.
+    # Set up early and on-load JavaScript.
     config = {'htmlData': {}}
     app.emit('tdoc-html-page-config', page, config)
     config = json.dumps(config, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdocConfig = {config};')
     app.add_js_file('tdoc/early.js', priority=1,
                     scope=context['pathto']('', resource=True))
-    app.add_js_file('tdoc/core.js', type='module', id='tdoc-core-js')
+    app.add_js_file('tdoc/load.js', type='module')
 
 
 def add_reload_js(app, page, template, context, doctree):

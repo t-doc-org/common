@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, text, element} from './core.js'
+import {domLoaded, text, element} from './core.js';
 import {addEditor, findEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
