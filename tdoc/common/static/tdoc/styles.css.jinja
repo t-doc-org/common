@@ -209,13 +209,15 @@ div.tdoc-exec-output > iframe {
     aspect-ratio: 16/9;
     background: white;
 }
+html.tdoc-fullscreen {
+    overflow: hidden;
+}
 div.tdoc-exec-output.tdoc-fullscreen {
-    position: absolute;
-    display: block;
+    position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     z-index: 2000;
     margin: 0;
     border: none;
@@ -227,7 +229,6 @@ div.tdoc-exec-output.tdoc-fullscreen > .tdoc-navbar .tdoc-maximize {
     display: none;
 }
 div.tdoc-exec-output.tdoc-fullscreen > iframe {
-    /* TODO: Fix fullscreen when page is taller than screen */
     height: 100% !important;  /* Override element style */
     aspect-ratio: auto;
 }

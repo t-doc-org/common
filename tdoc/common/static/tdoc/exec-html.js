@@ -54,10 +54,12 @@ class HtmlExecutor extends Executor {
             });
         output.querySelector('.tdoc-maximize')
             .addEventListener('click', () => {
+                document.documentElement.classList.add('tdoc-fullscreen');
                 output.classList.add('tdoc-fullscreen');
             });
         output.querySelector('.tdoc-restore')
             .addEventListener('click', () => {
+                document.documentElement.classList.remove('tdoc-fullscreen');
                 output.classList.remove('tdoc-fullscreen');
             });
         output.querySelector('.tdoc-close')
