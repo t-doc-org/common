@@ -23,13 +23,6 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_copybutton',
     'sphinx_design',
-    # TODO: sphinx_exercise forces "numfig = True", and numbering cannot be
-    #       disabled per type, page or block
-    #       <https://github.com/sphinx-doc/sphinx/issues/10316>.
-    # 'sphinx_exercise',
-    # TODO: sphinx_proof forces "numfig = True", and prevents build
-    #       parallelization.
-    # 'sphinx_proof',
     'tdoc.common',
     'tdoc.common.exec',
     'tdoc.common.iframe',
