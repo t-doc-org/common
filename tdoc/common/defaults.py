@@ -27,6 +27,7 @@ extensions = [
     'tdoc.common.exec',
     'tdoc.common.iframe',
     'tdoc.common.metadata',
+    'tdoc.common.num',
     'tdoc.common.solution',
 ]
 

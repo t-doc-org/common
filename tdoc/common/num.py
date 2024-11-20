@@ -17,6 +17,7 @@ def setup(app):
     app.add_enumerable_node(num, 'num', lambda n: True,
                             html=(visit_num, depart_num))
     app.connect('config-inited', update_numfig_format)
+    app.connect('env-get-updated', number_per_type, priority=999)
     app.connect('doctree-resolved', update_num_nodes)
     return {
         'version': __version__,
@@ -38,7 +39,6 @@ def update_numfig_format(app, config):
         if numfig_format.setdefault(k, k == 'section') is True:
             del numfig_format[k]
     numfig_format.setdefault('num', '%s')
-    print(numfig_format)
     for k, v in numfig_format.items():
         if v is False:
             if k == 'section':
@@ -50,7 +50,14 @@ def update_numfig_format(app, config):
 class Num(docutils.ReferenceRole):
     def run(self):
         node = num()
-        node['names'].append(nodes.fully_normalize_name(self.target))
+        name = nodes.make_id(self.target)
+        if '-' not in name:
+            msg = self.inliner.reporter.error(
+                f":num: Invalid target (format: TYPE-NAME): {self.target}",
+                line=self.lineno)
+            prb = self.inliner.problematic(self.rawtext, self.rawtext, msg)
+            return [prb], [msg]
+        node['names'].append(name)
         self.inliner.document.note_explicit_target(node, node)
         node['title'] = self.title if self.has_explicit_title else '%s'
         return [node], []
@@ -59,28 +66,44 @@ class Num(docutils.ReferenceRole):
 class num(nodes.Inline, nodes.TextElement): pass
 
 
+def number_per_type(app, env):
+    # Convert the global numbering to per-type numbering.
+    per_type = {}
+    for doc, fignums in env.toc_fignumbers.items():
+        if (fignums := fignums.get('num')) is None: continue
+        for nid, ns in fignums.items():
+            typ = nid.split('-', 1)[0]
+            *sect, cnt = ns
+            per_type.setdefault(typ, {}).setdefault(tuple(sect), []) \
+                .append((cnt, nid))
+    env.tdoc_nums = nums = {}
+    for typ, sects in per_type.items():
+        for sect, cnt_nids in sects.items():
+            cnt_nids.sort()
+            for i, (_, nid) in enumerate(cnt_nids, 1):
+                nums[nid] = sect + (i,)
+    return []
+
+
 def update_num_nodes(app, doctree, docname):
-    for node, text in find_num(app.env, doctree, docname):
+    for node, text in iter_num(app.env, doctree, docname):
         del node['title']
         node += [text]
 
     # TOCs are extracted on doctree-read, as a transform with priority=880,
-    # while toc_fignumbers are only assigned later, as a post-transform, shortly
-    # before doctree-resolved. So the num nodes in the TOCs must be updated
-    # separately. Replace the node by its text altogether, to avoid duplicate
-    # 'id' attributes.
-    for node, text in find_num(app.env, app.env.tocs[docname], docname):
+    # while toc_fignumbers are only assigned later, in env-get-updated. So the
+    # num nodes in the TOCs must be updated separately. Replace the node by its
+    # text altogether, to avoid duplicate 'id' attributes.
+    for node, text in iter_num(app.env, app.env.tocs[docname], docname):
         node.parent.replace(node, text)
 
 
-def find_num(env, doctree, docname):
-    fignumbers = env.toc_fignumbers.get(docname, {}).get('num')
+def iter_num(env, doctree, docname):
+    fail = not env.config.numfig
     for node in doctree.findall(num):
-        if fignumbers is None:
-            raise errors.ConfigError(":num: node found, but numfig is disabled")
-        numbers = fignumbers[node['ids'][0]]
-        num_str = '.'.join(map(str, numbers))
-        yield node, nodes.Text(node['title'] % num_str)
+        if fail: raise errors.ConfigError(":num: numfig is disabled")
+        n = env.tdoc_nums[node['ids'][0]]
+        yield node, nodes.Text(node['title'] % '.'.join(map(str, n)))
 
 
 def visit_num(self, node):
