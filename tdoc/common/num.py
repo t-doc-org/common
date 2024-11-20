@@ -5,7 +5,7 @@ import pathlib
 
 from docutils import nodes
 from sphinx import errors
-from sphinx.util import docutils, logging
+from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
 from . import __version__
 
@@ -51,14 +51,12 @@ class Num(docutils.ReferenceRole):
     def run(self):
         node = num()
         name = nodes.make_id(self.target)
-        if '-' not in name:
-            msg = self.inliner.reporter.error(
-                f":num: Invalid target (format: TYPE-NAME): {self.target}",
-                line=self.lineno)
-            prb = self.inliner.problematic(self.rawtext, self.rawtext, msg)
-            return [prb], [msg]
-        node['names'].append(name)
-        self.inliner.document.note_explicit_target(node, node)
+        if '-' in name:
+            node['names'].append(name)
+            self.inliner.document.note_explicit_target(node, node)
+        else:
+            node['ids'].append(sphinx_nodes.make_id(
+                self.env, self.inliner.document, name))
         node['title'] = self.title if self.has_explicit_title else '%s'
         return [node], []
 
@@ -75,20 +73,23 @@ def number_per_type(app, env):
             typ = nid.split('-', 1)[0]
             *sect, cnt = ns
             per_type.setdefault(typ, {}).setdefault(tuple(sect), []) \
-                .append((cnt, nid))
+                .append((cnt, doc, nid))
     env.tdoc_nums = nums = {}
     for typ, sects in per_type.items():
         for sect, cnt_nids in sects.items():
             cnt_nids.sort()
-            for i, (_, nid) in enumerate(cnt_nids, 1):
-                nums[nid] = sect + (i,)
+            for i, (_, doc, nid) in enumerate(cnt_nids, 1):
+                nums[doc, nid] = sect + (i,)
     return []
 
 
 def update_num_nodes(app, doctree, docname):
     for node, text in iter_num(app.env, doctree, docname):
         del node['title']
-        node += [text]
+        if node['names']:
+            node += [text]
+        else:  # Not an explicit target; replace node with its text
+            node.parent.replace(node, text)
 
     # TOCs are extracted on doctree-read, as a transform with priority=880,
     # while toc_fignumbers are only assigned later, in env-get-updated. So the
@@ -102,7 +103,7 @@ def iter_num(env, doctree, docname):
     fail = not env.config.numfig
     for node in doctree.findall(num):
         if fail: raise errors.ConfigError(":num: numfig is disabled")
-        n = env.tdoc_nums[node['ids'][0]]
+        n = env.tdoc_nums[docname, node['ids'][0]]
         yield node, nodes.Text(node['title'] % '.'.join(map(str, n)))
 
 

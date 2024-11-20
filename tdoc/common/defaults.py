@@ -6,9 +6,10 @@ author = ''
 language = 'fr'
 smartquotes = False
 primary_domain = None
+numfig = True
+highlight_language = 'text'
 nitpicky = True
 exclude_patterns = ['_build', '.DS_Store', 'Thumbs.db']
-highlight_language = 'text'
 
 extensions = [
     'myst_parser',

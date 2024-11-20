@@ -2,13 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 import sys
-import time
 
 from tdoc import common
 from tdoc.common.defaults import *
 
 project = "t-doc"
-copyright = f"{time.strftime('%Y')} Remy Blank"
+copyright = "%Y Remy Blank"
 license = 'MIT'
 language = 'en'
 
