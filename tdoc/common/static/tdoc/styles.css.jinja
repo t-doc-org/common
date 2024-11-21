@@ -26,6 +26,11 @@ div.sidebar, aside.sidebar {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
+/* Make quotation attributions a bit more compact. */
+blockquote div > p:has(+ p.attribution) {
+    margin-bottom: 0;
+}
+
 /* Admonitions */
 .admonition.dropdown .admonition-title {
     cursor: pointer;

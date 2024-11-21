@@ -1,7 +1,7 @@
 % Copyright 2024 Remy Blank <remy@c-space.org>
 % SPDX-License-Identifier: MIT
 
-# Directives
+# Elements
 
 ## Document metadata
 
@@ -132,4 +132,28 @@ assistive technologies.
 
 ## Code execution
 
-See "[Code execution](exec.md)".
+See "[](exec.md)".
+
+## Numbering
+
+````{rst:role} num
+This role performs automatic numbering, optionally creating reference targets.
+The role content is either a label (e.g. `` {num}`label` ``) or an explicit
+title and a label (e.g. `` {num}`Exercise %s<label>` ``). In the latter case,
+the title must contain the string `%s`, which gets substituted with the number.
+
+The label is composed of a counter identifier and an optional target name,
+separated by `:`. Distinct identifiers are numbered separately, and the counters
+persist across pages. Instances with a target (e.g. `` {num}`ex:target` ``) can
+be referenced with the {rst:role}`numref` role (e.g. `` {numref}`ex:target` ``).
+
+```{code-block} md
+## Exercise {num}`ex:intro`
+
+As an introduction to ...
+
+## Exercise {num}`ex`
+
+After completing {numref}`exercise %s<ex:intro>`, ...
+```
+````

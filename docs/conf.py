@@ -27,4 +27,5 @@ intersphinx_mapping = {
         f'https://docs.python.org/{sys.version_info[0]}.{sys.version_info[1]}',
         None,
     ),
+    'sphinx': ('https://www.sphinx-doc.org/en/master', None),
 }
