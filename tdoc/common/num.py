@@ -5,6 +5,7 @@ import pathlib
 
 from docutils import nodes
 from sphinx import errors
+from sphinx.environment import collectors
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
 from . import __version__
@@ -19,7 +20,9 @@ def setup(app):
     app.add_enumerable_node(num, 'num', lambda n: '<num_title>',
                             html=(visit_num, depart_num))
     app.connect('config-inited', update_numfig_format)
-    app.connect('env-get-updated', number_per_type, priority=999)
+    app.connect('builder-inited', init_env)
+    app.add_env_collector(NumCollector)
+    app.connect('env-get-updated', number_per_namespace, priority=999)
     app.connect('doctree-resolved', update_num_nodes)
     return {
         'version': __version__,
@@ -49,34 +52,53 @@ def update_numfig_format(app, config):
             numfig_format[k] = NoNum()
 
 
+def init_env(app):
+    app.env.tdoc_nums = {}
+
+
 class Num(docutils.ReferenceRole):
     def run(self):
         node = num()
-        name = nodes.make_id(self.target)
-        if '-' in name:
-            node['names'].append(name)
+        node['target'] = self.target
+        node['title'] = self.title if self.has_explicit_title else '%s'
+        if ':' in self.target:
+            node['names'].append(self.target)
             self.inliner.document.note_explicit_target(node, node)
         else:
             node['ids'].append(sphinx_nodes.make_id(
-                self.env, self.inliner.document, name))
-        node['title'] = self.title if self.has_explicit_title else '%s'
+                self.env, self.inliner.document, self.target))
         return [node], []
 
 
 class num(nodes.Inline, nodes.TextElement): pass
 
 
-def number_per_type(app, env):
-    # Convert the global numbering to per-type numbering.
-    per_type = {}
+class NumCollector(collectors.EnvironmentCollector):
+    def clear_doc(self, app, env, docname):
+        env.tdoc_nums.pop(docname, None)
+
+    def merge_other(self, app, env, docnames, other):
+        for docname in docnames:
+            env.tdoc_nums[docname] = other.tdoc_nums[docname]
+
+    def process_doc(self, app, doctree):
+        nums = app.env.tdoc_nums[app.env.docname] = {}
+        for node in doctree.findall(num):
+            nums[node['ids'][0]] = node['target']
+
+
+def number_per_namespace(app, env):
+    # Convert the global numbering to per-namespace numbering.
+    per_ns = {}
     for doc, fignums in env.toc_fignumbers.items():
         if (fignums := fignums.get('num')) is None: continue
-        for nid, ns in fignums.items():
-            typ = nid.split('-', 1)[0]
-            *sect, cnt = ns
-            per_type.setdefault(typ, {}).setdefault(tuple(sect), []) \
+        nums = env.tdoc_nums[doc]
+        for nid, n in fignums.items():
+            ns = nums[nid].split(':', 1)[0]
+            *sect, cnt = n
+            per_ns.setdefault(ns, {}).setdefault(tuple(sect), []) \
                 .append((cnt, doc, nid))
-    for typ, sects in per_type.items():
+    for ns, sects in per_ns.items():
         for sect, cnt_nids in sects.items():
             cnt_nids.sort()
             for i, (_, doc, nid) in enumerate(cnt_nids, 1):
