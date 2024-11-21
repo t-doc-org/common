@@ -11,10 +11,12 @@ from . import __version__
 
 _log = logging.getLogger(__name__)
 
+# TODO: {lnum} or {pnum} for page-local numbering (or {gnum} for global)
+
 
 def setup(app):
     app.add_role('num', Num())
-    app.add_enumerable_node(num, 'num', lambda n: True,
+    app.add_enumerable_node(num, 'num', lambda n: '<num_title>',
                             html=(visit_num, depart_num))
     app.connect('config-inited', update_numfig_format)
     app.connect('env-get-updated', number_per_type, priority=999)
@@ -74,12 +76,11 @@ def number_per_type(app, env):
             *sect, cnt = ns
             per_type.setdefault(typ, {}).setdefault(tuple(sect), []) \
                 .append((cnt, doc, nid))
-    env.tdoc_nums = nums = {}
     for typ, sects in per_type.items():
         for sect, cnt_nids in sects.items():
             cnt_nids.sort()
             for i, (_, doc, nid) in enumerate(cnt_nids, 1):
-                nums[doc, nid] = sect + (i,)
+                env.toc_fignumbers[doc]['num'][nid] = [*sect, i]
     return []
 
 
@@ -103,7 +104,7 @@ def iter_num(env, doctree, docname):
     fail = not env.config.numfig
     for node in doctree.findall(num):
         if fail: raise errors.ConfigError(":num: numfig is disabled")
-        n = env.tdoc_nums[docname, node['ids'][0]]
+        n = env.toc_fignumbers[docname]['num'][node['ids'][0]]
         yield node, nodes.Text(node['title'] % '.'.join(map(str, n)))
 
 
