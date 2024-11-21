@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-20)=
+## 0.20 *(2024-11-21)*
+
+- Added the `num` role for generic numbering.
+
 (release-0-19)=
 ## 0.19 *(2024-11-17)*
 
