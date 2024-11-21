@@ -12,8 +12,6 @@ from . import __version__
 
 _log = logging.getLogger(__name__)
 
-# TODO: {lnum} or {pnum} for page-local numbering (or {gnum} for global)
-
 
 def setup(app):
     app.add_role('num', Num())

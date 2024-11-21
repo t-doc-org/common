@@ -58,7 +58,8 @@ The [GeoGebra](https://geogebra.org/) sheet below is embedded with the
 ## Numbering
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that
-reference each other, and separately numbered quotes.
+reference each other with the {rst:role}`numref` role, and separately numbered
+unreferenced quotes.
 
 ### Exercise {num}`ex:first`
 
