@@ -26,11 +26,11 @@ extensions = [
     'sphinx_design',
     'tdoc.common',
     'tdoc.common.ext.defaults',
-    'tdoc.common.exec',
-    'tdoc.common.iframe',
-    'tdoc.common.metadata',
-    'tdoc.common.num',
-    'tdoc.common.solution',
+    'tdoc.common.ext.exec',
+    'tdoc.common.ext.iframe',
+    'tdoc.common.ext.metadata',
+    'tdoc.common.ext.num',
+    'tdoc.common.ext.solution',
 ]
 
 suppress_warnings = [

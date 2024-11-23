@@ -6,7 +6,7 @@ from docutils.parsers.rst import directives
 from docutils.parsers.rst.directives import admonitions
 from sphinx.util import logging
 
-from . import _, __version__
+from .. import _, __version__
 
 _log = logging.getLogger(__name__)
 
