@@ -8,7 +8,7 @@ from sphinx import config, locale
 from sphinx.util import fileutil, logging
 
 __project__ = 't-doc-common'
-__version__ = '0.21.dev1'
+__version__ = '0.21'
 
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
