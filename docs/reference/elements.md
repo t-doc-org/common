@@ -45,6 +45,48 @@ interpreted.
   ```
 ````
 
+## Default directive options
+
+`````{rst:directive} .. defaults:: directive
+This directive sets default options for a directive type for the current
+document, starting from the current location. All directives of the given type
+that follow the {rst:dir}`defaults` block take their default option values from
+that block. Options that are specified in the directive itself override the
+default.
+
+A document can contain multiple {rst:dir}`defaults` blocks for the same
+directive type. Each occurrence replaces the previous one, i.e. they don't
+combine.
+
+````{code-block}
+```{exec} python
+# Use the directive's default options
+```
+
+```{defaults} exec
+:when: load
+:class: hidden
+```
+
+```{exec} python
+# Use ':when: load' and ':class: hidden'
+```
+
+```{exec} python
+:when: click
+# Use ':when: click' and ':class: hidden'
+```
+
+```{defaults} exec
+:when: never
+```
+
+```{exec} python
+# Use ':when: never' and no :class:
+```
+````
+`````
+
 ## Solution
 
 ````{rst:directive} .. solution:: [title]

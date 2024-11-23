@@ -37,6 +37,11 @@ insert into countries values
   ('Lichtenstein', 'LI', '+423', 'Vaduz', 39327, null);
 ```
 
+```{defaults} exec
+:after: sql-countries
+:when: load
+```
+
 ## Queries
 
 The results of the **first** `select` statement in each
@@ -45,8 +50,6 @@ and {rst:dir}`:then: <exec:then>` [sequence](../reference/exec.md#sequencing)
 are displayed as tables.
 
 ```{exec} sql
-:after: sql-countries
-:when: load
 :editable:
 select * from countries;
 ```
@@ -54,8 +57,6 @@ select * from countries;
 The SQL code can be hidden by adding `:class: hidden`.
 
 ```{exec} sql
-:after: sql-countries
-:when: load
 :class: hidden
 select * from countries where country_code = 'CH';
 ```
@@ -63,8 +64,6 @@ select * from countries where country_code = 'CH';
 ### Empty results
 
 ```{exec} sql
-:after: sql-countries
-:when: load
 select * from countries where false;
 ```
 
@@ -95,6 +94,7 @@ create table wide (
 ```
 ```{exec} sql
 :after: sql-wide
+:when: click
 select * from wide;
 ```
 
@@ -111,6 +111,7 @@ insert into tall values (0), (1), (2), (3), (4), (5), (6), (7);
 ```
 ```{exec} sql
 :after: sql-tall
+:when: click
 :output-style: max-height: 10rem
 select t1.value, t2.value from tall as t1, tall as t2;
 ```
@@ -118,8 +119,6 @@ select t1.value, t2.value from tall as t1, tall as t2;
 ## Mutations
 
 ```{exec} sql
-:after: sql-countries
-:when: load
 :editable:
 update countries set food = 'baguette' where country_code = 'FR';
 select * from countries where country_code = 'FR';
@@ -128,6 +127,5 @@ select * from countries where country_code = 'FR';
 ## SQL errors
 
 ```{exec} sql
-:when: load
 select * from unknown_table;
 ```
