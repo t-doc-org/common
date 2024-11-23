@@ -29,9 +29,9 @@ insert into countries values
 ## Directive
 
 ````{rst:directive} .. exec:: language (html | python | sql)
-This directive is a [`code-block`](https://mystmd.org/guide/code#code-blocks)
-that allows executing the code directly in the browser. It supports most of the
-options of `code-block`, and a few more described below.
+This directive is a {rst:dir}`code-block` that allows executing the code
+directly in the browser. It supports most of the options of
+{rst:dir}`code-block`, and a few more described below.
 
 {.rubric}
 Options
