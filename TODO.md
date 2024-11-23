@@ -1,8 +1,5 @@
 # Ideas
 
-- TODO: Remove the "Click to show" in dropdowns. This should be possible just
-  with CSS.
-
 - TODO: Render as pdf with solutions (open dropdowns).
 
 - TODO: Make the `name` attribute in graphviz work. This requires a fix in
@@ -18,3 +15,5 @@
 
 - TODO: If an `{exec}` block is too wide, make it show a horizontal scrollbar
   instead of bleeding into the margin.
+
+- TODO: Make `{ref}` against a `{num}` show its expanded content.

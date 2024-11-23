@@ -145,6 +145,9 @@ div.tdoc-exec-output.tdoc-sectioned {
     border-radius: 0.25rem;
     overflow: hidden;
 }
+div.tdoc-exec-output.tdoc-sectioned:empty {
+    display: none;
+}
 div.tdoc-exec-output.tdoc-sectioned > :not(:last-child) {
     border-bottom: 1px solid var(--pst-color-border);
 }

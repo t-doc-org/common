@@ -100,6 +100,19 @@ class PythonExecutor extends Executor {
     }
 
     onWrite(stream, data) {
+        const i = data.lastIndexOf(form_feed);
+        if (i >= 0) {
+            data = data.subarray(i + 1);
+            if (this.out) {
+                if (data.length > 0) {
+                    this.out.replaceChildren();
+                } else {
+                    this.out.parentNode.remove();
+                    delete this.out;
+                }
+            }
+        }
+        if (data.length === 0) return;
         if (!this.out) {
             const div = this.render(
                 '\uffff_0', `<div class="highlight"><pre></pre></div>`);
@@ -111,11 +124,6 @@ class PythonExecutor extends Executor {
             }
             this.out = div.querySelector('pre');
             this.setOutputStyle(this.out);
-        }
-        const i = data.lastIndexOf(form_feed);
-        if (i >= 0) {
-            this.out.replaceChildren();
-            data = data.subarray(i + 1);
         }
         let node = text(utf8.decode(data));
         if (stream === 2) {
