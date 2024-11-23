@@ -1,8 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import pathlib
-
 from docutils import nodes
 from sphinx import errors
 from sphinx.environment import collectors

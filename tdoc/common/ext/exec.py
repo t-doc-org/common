@@ -13,7 +13,7 @@ from sphinx.util import logging, osutil
 from .. import __version__, format_attrs, format_data_attrs, report_exceptions
 
 _log = logging.getLogger(__name__)
-_base = pathlib.Path(__file__).absolute().parent
+_base = pathlib.Path(__file__).absolute().parent.parent
 
 
 def setup(app):
