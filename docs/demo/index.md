@@ -10,4 +10,5 @@ python
 sql
 html
 embedding
+crypto
 ```

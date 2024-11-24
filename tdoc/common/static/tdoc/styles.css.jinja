@@ -93,6 +93,9 @@ a > code {
 }
 
 /* Code blocks */
+div.literal-block-wrapper div.code-block-caption {
+    padding: 0.3rem;
+}
 div.highlight pre {
     padding: 0.5rem;
 }
@@ -122,6 +125,37 @@ button[class*=" tdoc-"][class*=" fa-"] {
     width: 1.8rem;
     height: 1.8rem;
     font: var(--fa-font-solid);
+}
+
+/* Inputs */
+input[class^=tdoc-],
+input[class*=" tdoc-"] {
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline: 2px;
+}
+
+/* Auto-sizing text area */
+.tdoc-autosize {
+    display: grid;
+}
+.tdoc-autosize > textarea {
+    resize: none;
+    overflow: hidden;
+}
+.tdoc-autosize::after {
+    content: attr(data-text) " ";
+    white-space: pre-wrap;
+    visibility: hidden;
+}
+.tdoc-autosize > textarea,
+.tdoc-autosize::after {
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline: 2px;
+    font: inherit;
+    grid-area: 1 / 1 / 2 / 2;
+    word-break: break-word;
 }
 
 /* Exec outputs */
@@ -179,29 +213,10 @@ div.tdoc-exec-output div.tdoc-input .prompt {
 div.tdoc-exec-output div.tdoc-input .input {
     width: 100%;
 }
-div.tdoc-exec-output div.tdoc-input input,
-div.tdoc-exec-output div.tdoc-input .autosize > textarea,
-div.tdoc-exec-output div.tdoc-input .autosize::after {
+div.tdoc-exec-output div.tdoc-input input {
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline: 2px;
-}
-div.tdoc-exec-output div.tdoc-input .autosize {
-    display: grid;
-}
-div.tdoc-exec-output div.tdoc-input .autosize::after {
-    content: attr(data-text) " ";
-    white-space: pre-wrap;
-    visibility: hidden;
-}
-div.tdoc-exec-output div.tdoc-input .autosize > textarea {
-    resize: none;
-    overflow: hidden;
-}
-div.tdoc-exec-output div.tdoc-input .autosize > textarea,
-div.tdoc-exec-output div.tdoc-input .autosize::after {
-    font: inherit;
-    grid-area: 1 / 1 / 2 / 2;
 }
 div.tdoc-exec-output > .tdoc-navbar {
     padding: 0.3rem;

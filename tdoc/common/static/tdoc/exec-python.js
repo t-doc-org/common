@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {XWorker} from '../polyscript/index.js';
-import {element, focusIfVisible, text} from './core.js';
+import {dec, element, focusIfVisible, text} from './core.js';
 import {Executor} from './exec.js';
 
 const files = {};
@@ -34,7 +34,6 @@ worker.sync.render = (run_id, ...args) => {
     if (exec) return exec.onRender(...args);
 };
 
-const utf8 = new TextDecoder();
 const form_feed = 0x0c;
 
 class PythonExecutor extends Executor {
@@ -125,7 +124,7 @@ class PythonExecutor extends Executor {
             this.out = div.querySelector('pre');
             this.setOutputStyle(this.out);
         }
-        let node = text(utf8.decode(data));
+        let node = text(dec.decode(data));
         if (stream === 2) {
             const el = element(`<span class="err"></span>`);
             el.appendChild(node);
@@ -165,7 +164,7 @@ class PythonExecutor extends Executor {
             }
             case 'text': {
                 const input = div.appendChild(element(`\
-<div class="input autosize">\
+<div class="input tdoc-autosize">\
 <textarea rows="1" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"\
  oninput="this.parentNode.dataset.text = this.value"></textarea>\
