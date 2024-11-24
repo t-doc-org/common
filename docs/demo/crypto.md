@@ -82,6 +82,7 @@ async function decryptInput(key, iv64, data64) {
 }
 
 const pwd = document.querySelector('.tdoc-password');
+pwd.value = await toBase64(random(15));
 const salt = document.querySelector('.tdoc-salt');
 salt.value = await toBase64(random(9));
 
