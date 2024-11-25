@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-22)=
+## 0.22 *(2024-11-26)*
+
+- Added some basic cryptographic helpers for secret management.
+
 (release-0-21)=
 ## 0.21 *(2024-11-23)*
 
