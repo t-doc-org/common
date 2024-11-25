@@ -61,6 +61,6 @@ export async function fromBase64(data) {
         const res = await fetch(`data:application/octet-stream;base64,${data}`);
         return new Uint8Array(await res.arrayBuffer());
     } catch (e) {
-        throw Error("Invalid base64 input");
+        throw new Error("Invalid base64 input");
     }
 }

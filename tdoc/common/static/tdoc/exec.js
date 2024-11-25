@@ -166,10 +166,10 @@ export class Executor {
     }
 
     // Run the code in the {exec} block.
-    async run(run_id) { throw Error("not implemented"); }
+    async run(run_id) { throw new Error("not implemented"); }
 
     // Stop the running code.
-    async stop(run_id) { throw Error("not implemented"); }
+    async stop(run_id) { throw new Error("not implemented"); }
 
     // Run the code in the {exec} block.
     async doRun() {

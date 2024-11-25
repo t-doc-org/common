@@ -38,8 +38,8 @@
 </style>
 
 <script type="module">
-import {dec, domLoaded, enc, fromBase64, text, toBase64} from '../_static/tdoc/core.js';
-import {decrypt, deriveKey, encrypt, random} from '../_static/tdoc/crypto.js';
+import {domLoaded, text, toBase64} from '../_static/tdoc/core.js';
+import {decryptSecret, deriveKey, encryptSecret, random} from '../_static/tdoc/crypto.js';
 
 let keyCache = {};
 
@@ -55,25 +55,18 @@ const encIv = document.querySelector('#encrypt .iv pre');
 const encOutput = document.querySelector('#encrypt .output pre');
 
 async function encryptInput(key, plain) {
-    const {data, iv} = await encrypt(key, enc.encode(plain));
-    const iv64 = await toBase64(iv);
-    encIv.replaceChildren(text(iv64));
-    const data64 = await toBase64(data);
-    encOutput.replaceChildren(text(data64));
-    return {iv64, data64};
+    const msg = await encryptSecret(key, plain);
+    encIv.replaceChildren(text(msg.iv));
+    encOutput.replaceChildren(text(msg.data));
+    return msg;
 }
 
 const decOutput = document.querySelector('#decrypt .output pre');
 
-async function decryptInput(key, iv64, data64) {
+async function decryptInput(key, iv, data) {
     try {
-        const data = await decrypt(key, await fromBase64(iv64),
-                                   await fromBase64(data64));
-        if (data.byteLength > 0) {
-            decOutput.replaceChildren(text(dec.decode(data)));
-        } else {
-            decOutput.replaceChildren(text(" "));
-        }
+        const plain = await decryptSecret(key, {iv, data});
+        decOutput.replaceChildren(text(plain !== '' ? plain : " "));
         decOutput.classList.remove('error');
     } catch (e) {
         decOutput.replaceChildren(text(`Decryption failed: ${e.toString()}`));
@@ -105,10 +98,10 @@ async function run() {
             const key = await getKey(pwdValue, saltValue);
             if (enc) {
                 encPending = false;
-                const {iv64, data64} = await encryptInput(key, encInputValue);
-                decIvValue = decIv.value = iv64;
+                const {iv, data} = await encryptInput(key, encInputValue);
+                decIvValue = decIv.value = iv;
                 decInputValue = decInput.value =
-                    decInput.parentNode.dataset.text = data64;
+                    decInput.parentNode.dataset.text = data;
             }
             if (enc || dec) {
                 decPending = false;
