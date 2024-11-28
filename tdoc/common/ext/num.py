@@ -6,7 +6,7 @@ from sphinx import errors
 from sphinx.environment import collectors
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
-from .. import __version__
+from . import __version__
 
 _log = logging.getLogger(__name__)
 

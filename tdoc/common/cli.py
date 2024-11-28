@@ -19,8 +19,7 @@ import threading
 import time
 from urllib import parse
 
-from .. import common
-from . import util
+from . import __project__, __version__, util
 
 # TODO: Implement incremental builds, by copying previous build output
 
@@ -138,7 +137,7 @@ def cmd_serve(cfg):
 
 
 def cmd_version(cfg):
-    cfg.stdout.write(f"{common.__project__}-{common.__version__}\n")
+    cfg.stdout.write(f"{__project__}-{__version__}\n")
 
 
 def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
@@ -276,14 +275,14 @@ class ServerBase(server.ThreadingHTTPServer):
 
     def check_upgrade(self):
         try:
-            project = common.__project__
-            upgrades, editable = pip_check_upgrades(self.cfg, project)
-            if project not in upgrades: return
+            upgrades, editable = pip_check_upgrades(self.cfg, __project__)
+            if __project__ not in upgrades: return
             msg = self.cfg.ansi(
                 "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                 "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
                 "See <@{LBLUE}https://t-doc.org/common/%s#upgrade@{NORM}>\n"
-                % (project, metadata.version(project), upgrades[project],
+                % (__project__, metadata.version(__project__),
+                    upgrades[__project__],
                    'development' if editable else 'install'))
             with self.lock:
                 self.upgrade_msg = msg

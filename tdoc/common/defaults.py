@@ -24,7 +24,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_copybutton',
     'sphinx_design',
-    'tdoc.common',
+    'tdoc.common.ext',
     'tdoc.common.ext.defaults',
     'tdoc.common.ext.exec',
     'tdoc.common.ext.iframe',
