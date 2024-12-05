@@ -64,3 +64,8 @@ export async function fromBase64(data) {
         throw new Error("Invalid base64 input");
     }
 }
+
+// Return a promise that resolves after the given number of milliseconds.
+export function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}

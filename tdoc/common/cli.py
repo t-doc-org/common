@@ -23,7 +23,7 @@ import time
 from urllib import parse
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, util
+from . import __project__, __version__, store, util, wsgi
 
 # TODO: Implement incremental builds, by copying previous build output
 
@@ -34,8 +34,8 @@ def main(argv, stdin, stdout, stderr):
     parser = util.get_arg_parser(stderr)(
         prog=pathlib.Path(argv[0]).name, add_help=False,
         description="Manage a t-doc book.")
-    subparsers = parser.add_subparsers(title='Subcommands', dest='subcommand')
-    subparsers.required = True
+    root = parser.add_subparsers(title='Subcommands', dest='subcommand')
+    root.required = True
 
     arg = parser.add_argument_group("Options").add_argument
     arg('--build', metavar='PATH', dest='build', default='_build',
@@ -54,28 +54,25 @@ def main(argv, stdin, stdout, stderr):
     arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
         default=[], help="Additional options to pass to sphinx-build.")
 
-    p = subparsers.add_parser('build', add_help=False,
-                              help="Build a book.")
+    p = root.add_parser('build', add_help=False, help="Build a book.")
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument_group("Options").add_argument
     arg('--help', action='help', help="Show this help message and exit.")
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
 
-    p = subparsers.add_parser('clean', add_help=False,
-                              help="Clean the build products of a book.")
+    p = root.add_parser('clean', add_help=False,
+                        help="Clean the build products of a book.")
     p.set_defaults(handler=cmd_clean)
     arg = p.add_argument_group("Options").add_argument
     arg('--help', action='help', help="Show this help message and exit.")
 
-    p = subparsers.add_parser('serve', add_help=False,
-                              help="Serve a book locally.")
+    p = root.add_parser('serve', add_help=False, help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument_group("Options").add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
-    arg('--delay', metavar='DURATION', dest='delay', default=1,
-        type=float,
+    arg('--delay', metavar='DURATION', dest='delay', default=1, type=float,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
     arg('--help', action='help', help="Show this help message and exit.")
@@ -91,11 +88,24 @@ def main(argv, stdin, stdout, stderr):
         help="The port to bind the server to (default: %(default)s).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
+    arg('--store', metavar='PATH', dest='store', default='',
+        help="The path to the store database.")
     arg('--watch', metavar='PATH', action='append', dest='watch', default=[],
         help="Additional directories to watch for changes.")
 
-    p = subparsers.add_parser('version', add_help=False,
-                              help="Display version information.")
+    p = root.add_parser('store', help="Store-related commands.")
+    store = p.add_subparsers()
+    store.required = True
+
+    p = store.add_parser('create', add_help=False,
+                         help="Create the store database.")
+    p.set_defaults(handler=cmd_store_create)
+    arg = p.add_argument_group("Options").add_argument
+    arg('--store', metavar='PATH', dest='store', default='tmp/store.sqlite',
+        help="The path to the store database.")
+
+    p = root.add_parser('version', add_help=False,
+                        help="Display version information.")
     p.set_defaults(handler=cmd_version)
 
     cfg = parser.parse_args(argv[1:])
@@ -146,6 +156,10 @@ def cmd_serve(cfg):
         os.execv(sys.argv[0], sys.argv)
 
 
+def cmd_store_create(cfg):
+    store.Store(cfg.store).create()
+
+
 def cmd_version(cfg):
     cfg.stdout.write(f"{__project__}-{__version__}\n")
 
@@ -182,17 +196,6 @@ class RequestHandler(simple_server.WSGIRequestHandler):
             (format % args).translate(self._control_char_table)))
 
 
-def status_str(status):
-    return f'{status} {status.phrase}'
-
-
-def error(respond, status):
-    respond(status_str(status), [
-        ('Content-Type', 'text/plain;charset=utf-8'),
-    ])
-    return [status.description.encode('utf-8')]
-
-
 def try_stat(path):
     try:
         return path.stat()
@@ -216,6 +219,12 @@ class Application:
         self.checker = threading.Thread(target=self.check_upgrade, daemon=True)
         self.checker.start()
         self.apps = {'*build': self.handle_build}
+        if cfg.store:
+            st = store.Store(cfg.store)
+            if not st.path.exists():
+                st.path.parent.mkdir(parents=True, exist_ok=True)
+                st.create(open_acl=True)
+            self.apps['*store'] = st
 
     def __enter__(self): return self
 
@@ -340,30 +349,30 @@ class Application:
         env['wsgi.multithread'] = True
         if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
                                                      HTTPMethod.GET):
-            return error(respond, HTTPStatus.NOT_IMPLEMENTED)
+            return wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
         path = self.file_path(env['PATH_INFO'])
         if (st := try_stat(path)) is None:
-            return error(respond, HTTPStatus.NOT_FOUND)
+            return wsgi.error(respond, HTTPStatus.NOT_FOUND)
 
         if stat.S_ISDIR(st.st_mode):
             parts = parse.urlsplit(env['PATH_INFO'])
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
-                respond(status_str(HTTPStatus.MOVED_PERMANENTLY), [
+                respond(wsgi.http_status(HTTPStatus.MOVED_PERMANENTLY), [
                     ('Location', location),
                     ('Content-Length', '0'),
                 ])
                 return []
             path = path / 'index.html'
             if (st := try_stat(path)) is None:
-                return error(respond, HTTPStatus.NOT_FOUND)
+                return wsgi.error(respond, HTTPStatus.NOT_FOUND)
 
         if not stat.S_ISREG(st.st_mode):
-            return error(respond, HTTPStatus.NOT_FOUND)
+            return wsgi.error(respond, HTTPStatus.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0]
         if not mime_type: mime_type = 'application/octet-stream'
-        respond(status_str(HTTPStatus.OK), [
+        respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
         ])
@@ -387,7 +396,7 @@ class Application:
     def handle_build(self, env, respond):
         if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
                                                      HTTPMethod.GET):
-            yield from error(respond, HTTPStatus.NOT_IMPLEMENTED)
+            yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
         t = None
         for k, v in parse.parse_qsl(env.get('QUERY_STRING', '')):
             if k == 't':
@@ -398,8 +407,8 @@ class Application:
         # content length is needed upfront, we return a fixed size, and
         # terminate the request if the padding exceeds the available space.
         size = 600
-        respond(status_str(HTTPStatus.OK), [
-            ('Content-Type', 'text/plain;charset=utf-8'),
+        respond(wsgi.http_status(HTTPStatus.OK), [
+            ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', str(size)),
         ])
         if method == HTTPMethod.HEAD: return

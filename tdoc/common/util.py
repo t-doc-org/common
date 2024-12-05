@@ -14,7 +14,7 @@ try:
         import colorama
         colorama.just_fix_windows_console()
 except ImportError:
-    _colors = false
+    _colors = False
 
 
 def want_colors(stdout):
