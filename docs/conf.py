@@ -22,6 +22,11 @@ tdoc_enable_sab = 'no'
 # tdoc_enable_sab = 'cross-origin-isolation'
 # tdoc_enable_sab = 'sabayon'
 
+tdoc = {
+    'store_url': 'https://api.t-doc.org/store'
+                 if 'tdoc-dev' not in tags else None,
+}
+
 intersphinx_mapping = {
     'python': (
         f'https://docs.python.org/{sys.version_info[0]}.{sys.version_info[1]}',

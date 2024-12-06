@@ -76,5 +76,5 @@ scripts can be added with the `styles` and `scripts` entries of a
 {rst:dir}`metadata` directive.
 
 <div class="tdoc-web-app">
-  Please click <button>here</button>
+  Please click <button>here</button> (count: <span>0</span>)
 </div>
