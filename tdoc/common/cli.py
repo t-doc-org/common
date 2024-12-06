@@ -298,7 +298,7 @@ class Application:
         with self.lock: self.building = True
         try:
             res = sphinx_build(self.cfg, 'html', build=build,
-                               tags=[build_tag(mtime)])
+                               tags=['tdoc-dev', build_tag(mtime)])
             if res.returncode == 0: return build
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")

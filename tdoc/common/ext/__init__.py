@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import copy
 import json
 import pathlib
 
@@ -57,6 +58,7 @@ def setup(app):
     app.add_config_value('license', '', 'html')
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
+    app.add_config_value('tdoc', {}, 'html')
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
 
@@ -66,7 +68,7 @@ def setup(app):
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
     app.connect('html-page-context', on_html_page_context)
-    if build_tag(app):
+    if build_tag(app) is not None:
         app.connect('html-page-context', add_reload_js)
     app.connect('write-started', write_static_files)
 
@@ -82,6 +84,12 @@ def on_config_inited(app, config):
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
     config.templates_path.append(str(_base / 'templates'))
 
+    # Set defaults in the t-doc config.
+    tdoc = config.tdoc
+    tdoc.setdefault('html_data', {})
+    tdoc['enable_sab'] = config.tdoc_enable_sab
+    if (build := build_tag(app)) is not None: tdoc['build'] = build
+
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
     opts.setdefault('use_sidenotes', True)
@@ -89,12 +97,6 @@ def on_config_inited(app, config):
     if opts.get('repository_url'):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)
-
-    # Set the global HTML context.
-    context = config.html_context
-    context['tdoc_enable_sab'] = app.config.tdoc_enable_sab
-    tag = build_tag(app)
-    context['tdoc_build'] = tag if tag is not None else ''
 
 
 def on_builder_inited(app):
@@ -114,10 +116,10 @@ def on_html_page_context(app, page, template, context, doctree):
     if license_url: context['license_url'] = license_url
 
     # Set up early and on-load JavaScript.
-    config = {'htmlData': {}}
-    app.emit('tdoc-html-page-config', page, config)
-    config = json.dumps(config, separators=(',', ':'))
-    app.add_js_file(None, priority=0, body=f'const tdocConfig = {config};')
+    tdoc = copy.deepcopy(app.config.tdoc)
+    app.emit('tdoc-html-page-config', page, tdoc)
+    tdoc = json.dumps(tdoc, separators=(',', ':'))
+    app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1,
                     scope=context['pathto']('', resource=True))
     app.add_js_file('tdoc/load.js', type='module')

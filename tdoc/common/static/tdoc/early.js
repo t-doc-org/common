@@ -16,7 +16,7 @@
     }
 
     // Set data-* attributes on the <html> tag.
-    Object.assign(document.documentElement.dataset, tdocConfig.htmlData);
+    Object.assign(document.documentElement.dataset, tdoc.html_data);
 
     // Disable all global keydown event listeners, as they can interfere with
     // per-element listeners. In particular, this disables the search shortcut
@@ -29,7 +29,7 @@
 
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;
-    const enableSAB = '{{ tdoc_enable_sab }}';
+    const enableSAB = tdoc['enable_sab'];
     const script = document.currentScript;
     const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, script.src)
         .toString();

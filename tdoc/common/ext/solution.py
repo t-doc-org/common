@@ -62,7 +62,7 @@ class Solution(admonitions.BaseAdmonition):
 
 def set_html_page_config(app, page, config):
     hide = app.env.metadata[page].get('hide-solutions', False)
-    if hide is not False: config['htmlData']['tdocSolutions'] = 'hide'
+    if hide is not False: config['html_data']['tdocSolutions'] = 'hide'
 
 
 def add_header_button(app, page, template, context, doctree):
