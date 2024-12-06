@@ -36,8 +36,7 @@ export async function decrypt(key, iv, data) {
 export async function pageKey(name, salt) {
     const params = new URLSearchParams(document.location.search);
     const value = params.get(name);
-    if (value === null) throw new Error(`Missing page key: ${name}`);
-    return await deriveKey(value, salt);
+    return value !== null ? await deriveKey(value, salt) : null;
 }
 
 // Encrypt a string secret.
@@ -48,6 +47,7 @@ export async function encryptSecret(key, secret) {
 
 // Decrypt a string secret.
 export async function decryptSecret(key, msg) {
+    if (!key) return null;
     return dec.decode(await decrypt(key, await fromBase64(msg.iv),
                                     await fromBase64(msg.data)));
 }

@@ -7,9 +7,12 @@ import json
 import pathlib
 import sqlite3
 import threading
+import time
 from wsgiref import util
 
 from . import wsgi
+
+# TODO: Handle OPTIONS method, maybe as a separate WSGI middleware
 
 
 class ThreadLocal(threading.local):
@@ -113,8 +116,8 @@ class Store:
                 return wsgi.error(respond, HTTPStatus.BAD_REQUEST)
             db.execute("""
                 insert into log (time, location, session, data)
-                    values (cast(unixepoch('subsec') * 1000 as integer), ?, ?,
-                            json(?));
-            """, (req['location'], req.get('session'),
+                    values (?, ?, ?, json(?));
+            """, (int(req.get('time', time.time_ns() // 1000000)),
+                  req['location'], req.get('session'),
                   json.dumps(req['data'], separators=(',', ':'))))
         return wsgi.respond_json(respond, {})

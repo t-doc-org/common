@@ -65,6 +65,30 @@ export async function fromBase64(data) {
     }
 }
 
+// Perform a fetch on a JSON API.
+export async function fetchJson(url, opts) {
+    const resp = await fetch(url, {
+        method: 'POST',
+        cache: 'no-cache',
+        referrer: '',
+        ...opts,
+        headers: {
+            'Content-Type': 'application/json',
+            ...opts.headers || {},
+        },
+        ...opts.body ? {body: JSON.stringify(opts.body)} : {},
+    });
+    if (resp.status !== 200) {
+        throw Error(`Request failed: ${resp.status} ${resp.statusText}`);
+    }
+    return await resp.json();
+}
+
+// Return an Authorization header with the given bearer token.
+export function bearerAuthorization(token) {
+    return token ? {'Authorization': `Bearer ${token}`} : {};
+}
+
 // Return a promise that resolves after the given number of milliseconds.
 export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
