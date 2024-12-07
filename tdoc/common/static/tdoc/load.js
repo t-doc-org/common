@@ -11,13 +11,14 @@ domLoaded.then(() => {
     }
 });
 
-// Handle admonition expansion.
+// Handle admonition expansion. The button is needed to enable keyboard focus.
 domLoaded.then(() => {
     for (const el of document.querySelectorAll('.admonition.dropdown')) {
         const title = el.querySelector('.admonition-title')
         title.addEventListener('click', () => {
             el.classList.toggle('expand');
         });
+        // Enable keyboard navigation.
         const btn = title.appendChild(element('<button></button>'));
         btn.addEventListener('click', (e) => {
             el.classList.toggle('expand');

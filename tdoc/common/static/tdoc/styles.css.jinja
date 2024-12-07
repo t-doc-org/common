@@ -43,7 +43,7 @@ blockquote div > p:has(+ p.attribution) {
 }
 .admonition.dropdown .admonition-title button {
     position: absolute;
-    right: 0.6rem;
+    right: 0;
     outline: none;
     border: none;
     padding: 0;
@@ -59,12 +59,14 @@ blockquote div > p:has(+ p.attribution) {
     margin-bottom: 0;
 }
 .admonition.dropdown:not(.expand) .admonition-title ~ * {
+    display: block;
     margin: 0;
     border: none;
+    padding: 0;
     height: 0;
     visibility: hidden;
-    opacity: 0;
     overflow: hidden;
+    opacity: 0;
 }
 
 /* Iframes */
