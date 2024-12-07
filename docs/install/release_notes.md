@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-23)=
+## 0.23 *(2024-12-07)*
+
+- Converted the dev server to WSGI.
+- Added support for a backend store to the dev server.
+- Fixed more cosmetic issues with collapsed admonitions.
+
 (release-0-22)=
 ## 0.22 *(2024-11-26)*
 
