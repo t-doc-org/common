@@ -13,8 +13,8 @@ const token = await decryptSecret(key, {
 const storeUrl = tdoc.store_url || `${location.origin}/*store`;
 const session = await toBase64(await random(18));
 
-async function log(data) {
-    return await fetchJson(`${storeUrl}/log`, {
+function log(data) {
+    return fetchJson(`${storeUrl}/log`, {
         headers: bearerAuthorization(token),
         body: {'time': Date.now(), 'location': location.href,
                'session': session, 'data': data},
