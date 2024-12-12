@@ -332,6 +332,16 @@ div.tdoc-exec div.tdoc-exec-controls {
     display: none;
 }
 
+/* Make the modal created by pydata_sphinx_theme when opening the left sidebar
+   full-height, and remove the ugly dialog border. */
+.bd-sidebar-primary[open] {
+    position: fixed;
+    height: 100vh;
+    border-top: none;
+    border-left: none;
+    border-bottom: none;
+}
+
 /* Remove the underline on hover on navbar buttons. */
 .pst-navbar-icon.pst-navbar-icon:hover::before {
     border-bottom: none;
