@@ -16,14 +16,20 @@ license = "MIT"
 # license-files = ["LICENSE.txt", "LICENSES.deps.txt"]
 keywords = []
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Framework :: Sphinx :: Extension",
+    "Framework :: Sphinx :: Theme",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: JavaScript",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: SQL",
+    "Topic :: Documentation :: Sphinx",
+    "Topic :: Education",
+    "Topic :: Internet :: Site Management",
 ]
 requires-python = ">=3.12"
 dependencies = [

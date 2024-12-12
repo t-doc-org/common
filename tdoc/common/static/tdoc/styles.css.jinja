@@ -1,10 +1,18 @@
 /* Copyright 2024 Remy Blank <remy@c-space.org> */
 /* SPDX-License-Identifier: MIT */
 
-:not(#_).hidden {
+.hidden:not(#¶) {
     display: none;
 }
-:not(#_).line-height-normal .highlight pre {
+section.hidden-heading:not(#¶) > h1:first-child,
+section.hidden-heading:not(#¶) > h2:first-child,
+section.hidden-heading:not(#¶) > h3:first-child,
+section.hidden-heading:not(#¶) > h4:first-child,
+section.hidden-heading:not(#¶) > h5:first-child,
+section.hidden-heading:not(#¶) > h6:first-child {
+    display: none;
+}
+.line-height-normal:not(#¶) .highlight pre {
     line-height: normal;
 }
 
