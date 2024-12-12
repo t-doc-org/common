@@ -4,6 +4,7 @@
 # t-doc - Common
 
 [![Publish](https://github.com/t-doc-org/common/actions/workflows/publish.yml/badge.svg)](https://github.com/t-doc-org/common/actions/workflows/publish.yml)
+[![Package](https://github.com/t-doc-org/common/actions/workflows/package.yml/badge.svg)](https://github.com/t-doc-org/common/actions/workflows/package.yml)
 
 This package contains the common functionality for documents based on t-doc.
 
