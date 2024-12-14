@@ -101,3 +101,25 @@ export function docPath(path) {
     if (path.endsWith('/')) path += 'index';
     return path;
 }
+
+// Rate-limit function calls. Scheduled functions must be droppable, i.e. all
+// calls in a sequence except the last one can be dropped.
+export class RateLimited {
+    constructor(interval) { this.interval = interval; }
+
+    // Schedule a function. It will be called after "interval" at the latest.
+    // Scheduling a new function while the previous one hasn't been run yet
+    // replaces the previous one.
+    schedule(fn) {
+        const active = this.fn;
+        this.fn = fn;
+        if (!active) setTimeout(() => this.flush(), this.interval);
+    }
+
+    // Call the current scheduled function immediately.
+    flush() {
+        const fn = this.fn;
+        delete this.fn;
+        if (fn) fn();
+    }
+}

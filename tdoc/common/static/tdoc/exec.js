@@ -1,10 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {docPath, domLoaded, text, element} from './core.js';
-import {addEditor, findEditor} from './editor.js';
-
-// TODO: Listen for localStorage updates and update editors
+import {docPath, domLoaded, element, RateLimited, text} from './core.js';
+import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
 export class UserError extends Error {
@@ -57,6 +55,9 @@ function fixLineNos(node) {
     }
 }
 
+const storeUpdate = cmstate.Annotation.define();
+const editorPrefix = `tdoc:editor:${docPath()}:`;
+
 // A base class for {exec} block handlers.
 export class Executor {
     static next_run_id = 0;
@@ -69,6 +70,7 @@ export class Executor {
                 `div.tdoc-exec.highlight-${cls.lang}`)) {
             fixLineNos(node);
             const handler = new cls(node);
+            node.tdocExec = handler;
             if (handler.editable) handler.addEditor();
             const controls = element(`<div class="tdoc-exec-controls"></div>`);
             handler.addControls(controls);
@@ -88,15 +90,12 @@ export class Executor {
     // Return the text content of the editor associated with a node if an editor
     // was added, or the content of the <pre> tag.
     static text(node) {
-        const [editor, _] = findEditor(node);
-        return editor ? editor.state.doc.toString() : this.preText(node);
+        const view = findEditor(node);
+        return view ? view.state.doc.toString() : this.preText(node);
     }
 
     constructor(node) {
         this.node = node;
-        if (this.editable && node.dataset.tdocEditor !== '') {
-            this.editorId = `${docPath()}:${node.dataset.tdocEditor}`;
-        }
         this.when = node.dataset.tdocWhen;
         this.origText = Executor.preText(this.node).trim();
     }
@@ -105,37 +104,70 @@ export class Executor {
     get editable() { return this.node.dataset.tdocEditor !== undefined; }
 
     // The name of the local storage key for the editor content.
-    get editorKey() { return `tdoc:editor:${this.editorId}`; }
+    get editorKey() {
+        const editor = this.node.dataset.tdocEditor;
+        return editor ? editorPrefix + editor : undefined;
+    }
 
     // Add an editor to the {exec} block.
     addEditor() {
-        let text = this.origText;
-        if (this.editorId) {
-            const st = localStorage.getItem(this.editorKey);
-            if (st !== null) text = st;
+        const extensions = [];
+        if (this.when !== 'never') {
+            extensions.push(cmview.keymap.of([
+                {key: "Shift-Enter", run: () => this.doRun() || true },
+            ]));
         }
-        const [_, node] = addEditor(this.node.querySelector('div.highlight'), {
+        let doc = this.origText;
+        const key = this.editorKey;
+        if (key) {
+            const st = localStorage.getItem(key);
+            if (st !== null) doc = st;
+            this.storeEditor = new RateLimited(5000);
+            const exec = this;
+            extensions.push(
+                cmview.ViewPlugin.fromClass(class {
+                    update(update) { return exec.onEditorUpdate(update); }
+                }),
+                cmview.EditorView.domEventObservers({
+                    'blur': () => this.storeEditor.flush(),
+                }),
+            );
+        }
+        const view = newEditor({
+            extensions, doc,
             language: this.constructor.lang,
-            keymap: this.when !== 'never' ?
-                [{key: "Shift-Enter", run: () => this.doRun() || true }] : [],
-            onUpdate: this.editorId ?
-                update => this.onEditorUpdate(update) : undefined,
-            text,
+            parent: this.node.querySelector('div.highlight'),
         });
-        node.setAttribute('style',
-                          this.node.querySelector('pre').getAttribute('style'));
+        view.dom.setAttribute(
+            'style', this.node.querySelector('pre').getAttribute('style'));
     }
 
     // Called on every editor update.
     onEditorUpdate(update) {
-        if (update.docChanged) {
-            const doc = update.state.doc.toString();
-            if (doc !== this.origText) {
-                localStorage.setItem(this.editorKey, doc);
+        if (!update.docChanged) return;
+        for (const tr of update.transactions) {
+            if (tr.annotation(storeUpdate)) return;
+        }
+        const doc = update.state.doc;
+        this.storeEditor.schedule(() => {
+            const txt = doc.toString();
+            if (txt !== this.origText) {
+                localStorage.setItem(this.editorKey, txt);
             } else {
                 localStorage.removeItem(this.editorKey);
             }
-        }
+        });
+    }
+
+    // Replace the text of the editor, attaching the given annotations to the
+    // transaction.
+    setEditorText(text, annotations) {
+        const view = findEditor(this.node)
+        if (!view) return;
+        view.dispatch(view.state.update({
+            changes: {from: 0, to: view.state.doc.length, insert: text},
+            annotations,
+        }));
     }
 
     // Add controls to the {exec} block.
@@ -168,13 +200,7 @@ export class Executor {
         const ctrl = element(`
 <button class="fa-rotate-left tdoc-reset"\
  title="Reset editor content"></button>`);
-        ctrl.addEventListener('click', () => {
-            const [editor, _] = findEditor(this.node), state = editor.state;
-            editor.dispatch(state.update({changes: {
-                from: 0, to: state.doc.length,
-                insert: this.origText,
-            }}));
-        });
+        ctrl.addEventListener('click', () => this.setEditorText(this.origText));
         return ctrl;
     }
 
@@ -278,3 +304,23 @@ export class Executor {
         if (style) el.setAttribute('style', style);
     }
 }
+
+// Ensure that the text of editors is stored before navigating away.
+addEventListener('beforeunload', () => {
+    for (const node of document.querySelectorAll(
+            'div.tdoc-exec[data-tdoc-editor]')) {
+        const storer = node.tdocExec.storeEditor;
+        if (storer) storer.flush();
+    }
+});
+
+// Update the text of editors when their stored content changes.
+addEventListener('storage', e => {
+    if (e.storageArea !== localStorage) return;
+    if (!e.key.startsWith(editorPrefix)) return;
+    const name = e.key.slice(editorPrefix.length);
+    const node = document.querySelector(
+        `div.tdoc-exec[data-tdoc-editor="${CSS.escape(name)}"]`);
+    if (!node) return;
+    node.tdocExec.setEditorText(e.newValue, [storeUpdate.of(true)]);
+});
