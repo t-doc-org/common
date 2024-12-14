@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-24)=
+## 0.24 *(2024-12-14)*
+
+- Enabled saving the content of editors to browser local storage and restoring
+  it on reload.
+- Renamed `{exec} :editable:` to {rst:dir}`{exec} :editor: <exec:editor>`.
+- Added links to the documentation of major dependencies.
+
 (release-0-23)=
 ## 0.23 *(2024-12-07)*
 
