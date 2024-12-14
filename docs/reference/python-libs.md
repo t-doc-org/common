@@ -72,7 +72,7 @@ rendering images.
 
 ```{exec} python
 :when: load
-:editable:
+:editor:
 from tdoc import svg
 
 # Create the image.

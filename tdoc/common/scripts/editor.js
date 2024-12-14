@@ -45,7 +45,7 @@ obs.observe(document.documentElement,
 
 // Return the editor extensions for the given config.
 function extensions(config) {
-    return [
+    const exts = [
         theme.of(currentTheme()),
         autocomplete.autocompletion(),
         autocomplete.closeBrackets(),
@@ -66,7 +66,7 @@ function extensions(config) {
         view.highlightActiveLineGutter(),
         view.highlightSpecialChars(),
         view.keymap.of([
-            ...(config.onRun ? [{key: "Shift-Enter", run: config.onRun}] : []),
+            ...config.keymap || [],
             ...autocomplete.closeBracketsKeymap,
             ...autocomplete.completionKeymap,
             ...commands.defaultKeymap,
@@ -81,6 +81,12 @@ function extensions(config) {
         view.EditorView.lineWrapping,
         (languages[config.language] || (() => []))(),
     ];
+    if (config.onUpdate) {
+        exts.push(view.ViewPlugin.fromClass(class {
+            update(...args) { return config.onUpdate(...args); }
+        }));
+    }
+    return exts;
 }
 
 // Add an editor to the given element.

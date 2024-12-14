@@ -132,8 +132,7 @@ and Safari don't support it (yet).
 (release-0-6)=
 ## 0.6 *(2024-09-07)*
 
-- Added support for editable blocks with
-  {rst:dir}`{exec} :editable: <exec:editable>`.
+- Added support for editable blocks with `{exec} :editable:`.
 
 (release-0-5)=
 ## 0.5 *(2024-08-31)*

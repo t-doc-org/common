@@ -93,3 +93,11 @@ export function bearerAuthorization(token) {
 export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Canonicalize a document path, or the current document if missing.
+export function docPath(path) {
+    if (path === undefined) path = document.location.pathname;
+    if (path.endsWith('.html')) path = path.slice(0, -5);
+    if (path.endsWith('/')) path += 'index';
+    return path;
+}

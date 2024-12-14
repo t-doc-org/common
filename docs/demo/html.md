@@ -19,7 +19,7 @@ its size can be adjusted with {rst:dir}`:output-style: <exec:output-style>`.
 
 ```{exec} html
 :when: load
-:editable:
+:editor:
 :style: height: 14rem
 <!DOCTYPE html>
 <html lang="en">
@@ -48,7 +48,7 @@ snippet only, and optionally styles (with a `<style>` element):
 
 ```{exec} html
 :when: load
-:editable:
+:editor:
 :output-style: height: 7rem
 <style>
 h1 { margin: 0; font-size: 5rem; }
@@ -60,7 +60,7 @@ Or scripts (with a `<script>` element):
 
 ```{exec} html
 :when: load
-:editable:
+:editor:
 :output-style: height: 3rem
 Please click <button>here</button>
 <script>

@@ -1,8 +1,10 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, text, element} from './core.js';
+import {docPath, domLoaded, text, element} from './core.js';
 import {addEditor, findEditor} from './editor.js';
+
+// TODO: Listen for localStorage updates and update editors
 
 // An error that is caused by the user, and that doesn't need to be logged.
 export class UserError extends Error {
@@ -92,21 +94,48 @@ export class Executor {
 
     constructor(node) {
         this.node = node;
-        this.editable = node.classList.contains('tdoc-editable');
+        if (this.editable && node.dataset.tdocEditor !== '') {
+            this.editorId = `${docPath()}:${node.dataset.tdocEditor}`;
+        }
         this.when = node.dataset.tdocWhen;
         this.origText = Executor.preText(this.node).trim();
     }
 
+    // True iff the {exec} block has an editor.
+    get editable() { return this.node.dataset.tdocEditor !== undefined; }
+
+    // The name of the local storage key for the editor content.
+    get editorKey() { return `tdoc:editor:${this.editorId}`; }
+
     // Add an editor to the {exec} block.
     addEditor() {
+        let text = this.origText;
+        if (this.editorId) {
+            const st = localStorage.getItem(this.editorKey);
+            if (st !== null) text = st;
+        }
         const [_, node] = addEditor(this.node.querySelector('div.highlight'), {
             language: this.constructor.lang,
-            text: this.origText,
-            onRun: this.when !== 'never' ? async () => { await this.doRun(); }
-                                         : undefined,
+            keymap: this.when !== 'never' ?
+                [{key: "Shift-Enter", run: () => this.doRun() || true }] : [],
+            onUpdate: this.editorId ?
+                update => this.onEditorUpdate(update) : undefined,
+            text,
         });
         node.setAttribute('style',
                           this.node.querySelector('pre').getAttribute('style'));
+    }
+
+    // Called on every editor update.
+    onEditorUpdate(update) {
+        if (update.docChanged) {
+            const doc = update.state.doc.toString();
+            if (doc !== this.origText) {
+                localStorage.setItem(this.editorKey, doc);
+            } else {
+                localStorage.removeItem(this.editorKey);
+            }
+        }
     }
 
     // Add controls to the {exec} block.

@@ -50,7 +50,7 @@ and {rst:dir}`:then: <exec:then>` [sequence](../reference/exec.md#sequencing)
 are displayed as tables.
 
 ```{exec} sql
-:editable:
+:editor:
 select * from countries;
 ```
 
@@ -119,7 +119,7 @@ select t1.value, t2.value from tall as t1, tall as t2;
 ## Mutations
 
 ```{exec} sql
-:editable:
+:editor:
 update countries set food = 'baguette' where country_code = 'FR';
 select * from countries where country_code = 'FR';
 ```

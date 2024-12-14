@@ -19,7 +19,7 @@ _base = pathlib.Path(__file__).absolute().parent.parent
 def setup(app):
     app.add_node(exec, html=(visit_exec, depart_exec))
     app.add_directive('exec', Exec)
-    app.connect('doctree-resolved', check_references)
+    app.connect('doctree-resolved', check_integrity)
     app.connect('html-page-context', add_js)
     app.connect('write-started', write_static_files)
     return {
@@ -41,6 +41,7 @@ def visit_exec(self, node):
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_data_attrs(self,
             after=' '.join(after) if after else None,
+            editor=node.get('editor'),
             output_style=node.get('output-style'),
             then=' '.join(then) if then else None,
             when=node.get('when'))
@@ -61,6 +62,7 @@ class Exec(code.CodeBlock):
     option_spec = code.CodeBlock.option_spec | {
         'after': directives.class_option,
         'editable': directives.flag,
+        'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
         'style': directives.unchanged,
@@ -104,10 +106,23 @@ class Exec(code.CodeBlock):
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
-        if 'editable' in self.options: node['classes'] += ['tdoc-editable']
+        if (v := self.options.get('editor')) is not None:
+            node['editor'] = v
+        elif self.options.get('editable'):
+            node['editor'] = ''
 
 
-def check_references(app, doctree, docname):
+def check_integrity(app, doctree, docname):
+    # Check for duplicate editor names.
+    editors = set()
+    for node in doctree.findall(exec):
+        if not (editor := node.get('editor')): continue
+        if editor in editors:
+            doctree.reporter.error(
+                f"{{exec}}: Duplicate :editor: name: {editor}")
+        editors.add(editor)
+
+    # Check "after" and "then" references.
     for lang, nodes in Exec.find_nodes(doctree).items():
         names = set()
         for node in nodes:

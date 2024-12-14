@@ -34,7 +34,7 @@ def factorial(n):
 
 ```{defaults} exec
 :when: load
-:editable:
+:editor:
 ```
 
 ## Program output

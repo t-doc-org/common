@@ -40,8 +40,9 @@ Options
 Execute one or more {rst:dir}`exec` blocks before this block, in the same
 environment.
 ```
-```{rst:directive:option} editable
-Make the {rst:dir}`exec` block editable.
+```{rst:directive:option} editor: [name]
+Display the {rst:dir}`exec` block in an editor. If `name` is provided, the
+content of the editor is saved in browser local storage and restored on reload.
 ```
 ```{rst:directive:option} include: path [path...]
 :type: relative paths
@@ -89,17 +90,24 @@ referenced by other blocks). The controls displayed depend on the type of block.
 select * from countries where country_code = 'LI';
 ```
 
-## Editable blocks
+## Editor
 
-Blocks can be made editable with the {rst:dir}`:editable: <exec:editable>`
-option.
+Blocks can be made editable with the {rst:dir}`:editor: <exec:editor>` option.
 
 ```{exec} sql
 :after: sql-countries
-:editable:
+:editor:
 select * from countries
   where population > 10000000
   order by country_code;
+```
+
+The option takes an optional editor name. If provided, the content of the editor
+is saved in browser local storage, and restored on page reload.
+
+```{exec} sql
+:after: sql-countries
+:editor: countries-editor.sql
 ```
 
 ## Sequencing
@@ -135,7 +143,7 @@ select * from people;
 ```{exec} sql
 :after: sql-people
 :then: sql-people-select
-:editable:
+:editor:
 -- :after: sql-people
 -- :then: sql-people-select
 insert into people values ('Joe', 'Bar'), ('Jack', 'Sparrow');
