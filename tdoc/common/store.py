@@ -12,8 +12,6 @@ from wsgiref import util
 
 from . import wsgi
 
-# TODO: Handle OPTIONS method, maybe as a separate WSGI middleware
-
 
 class ThreadLocal(threading.local):
     def __init__(self, **kwargs):
