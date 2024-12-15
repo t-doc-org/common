@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-25)=
+## 0.25 *(2024-12-15)*
+
+- Made editor IDs globally unique, to allow moving across documents.
+- Made the "Toggle solutions" button conditional on the presence of solutions.
+
 (release-0-24)=
 ## 0.24 *(2024-12-14)*
 
