@@ -37,7 +37,6 @@ class Exec(code.CodeBlock):
 
     option_spec = code.CodeBlock.option_spec | {
         'after': directives.class_option,
-        'editable': directives.flag,
         'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
@@ -84,8 +83,6 @@ class Exec(code.CodeBlock):
         node['when'] = self.options.get('when', 'click')
         if (v := self.options.get('editor')) is not None:
             node['editor'] = v
-        elif 'editable' in self.options:
-            node['editor'] = ''
 
 
 class exec(nodes.literal_block): pass
