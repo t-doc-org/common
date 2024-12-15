@@ -12,8 +12,8 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_node(solution, html=(visit_solution, depart_solution))
     app.add_directive('solution', Solution)
+    app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_header_button, priority=501)
     return {
@@ -24,14 +24,6 @@ def setup(app):
 
 
 class solution(nodes.Admonition, nodes.Element): pass
-
-
-def visit_solution(self, node):
-    return self.visit_admonition(node)
-
-
-def depart_solution(self, node):
-    return self.depart_admonition(node)
 
 
 class Solution(admonitions.BaseAdmonition):
@@ -66,9 +58,18 @@ def set_html_page_config(app, page, config):
 
 
 def add_header_button(app, page, template, context, doctree):
+    if doctree is None or not any(doctree.findall(solution)): return
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdocToggleSolutions()',
         'tooltip': _("Toggle solutions"),
         'label': 'toggle-solutions',
     })
+
+
+def visit_solution(self, node):
+    return self.visit_admonition(node)
+
+
+def depart_solution(self, node):
+    return self.depart_admonition(node)
