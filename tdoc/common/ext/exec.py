@@ -18,45 +18,18 @@ _base = pathlib.Path(__file__).absolute().parent.parent
 
 
 def setup(app):
-    app.add_node(exec, html=(visit_exec, depart_exec))
     app.add_directive('exec', Exec)
+    app.add_node(exec, html=(visit_exec, depart_exec))
     app.connect('builder-inited', ExecCollector.init)
     app.add_env_collector(ExecCollector)
     app.connect('doctree-resolved', check_references)
-    app.connect('html-page-context', add_js)
     app.connect('write-started', write_static_files)
+    app.connect('html-page-context', add_js)
     return {
         'version': __version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
-
-
-class exec(nodes.literal_block): pass
-
-
-def visit_exec(self, node):
-    try:
-        return self.visit_literal_block(node)
-    except nodes.SkipNode:
-        after = node.get('after')
-        then = node.get('then')
-        def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
-        attrs = format_data_attrs(self,
-            after=' '.join(after) if after else None,
-            editor=node.get('editor'),
-            output_style=node.get('output-style'),
-            then=' '.join(then) if then else None,
-            when=node.get('when'))
-        if attrs:
-            self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
-        if attrs := format_attrs(self, style=node.get('style')):
-            self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], 1)
-        raise
-
-
-def depart_exec(self, node):
-    return self.depart_literal_block(node)
 
 
 class Exec(code.CodeBlock):
@@ -115,6 +88,9 @@ class Exec(code.CodeBlock):
             node['editor'] = ''
 
 
+class exec(nodes.literal_block): pass
+
+
 class ExecCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
@@ -164,10 +140,6 @@ def check_refs(node, names, typ, doctree):
                 base_node=node)
 
 
-div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
-pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
-
-
 def add_js(app, page, template, context, doctree):
     if doctree:
         for lang in sorted(Exec.find_nodes(doctree)):
@@ -196,3 +168,31 @@ def write_static_files(app, builder):
                 ct = zipfile.ZIP_DEFLATED if data else zipfile.ZIP_STORED
                 f.writestr(zipfile.ZipInfo(f'tdoc/{rel(path)}'),
                            data, compress_type=ct, compresslevel=9)
+
+
+div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
+pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
+
+
+def visit_exec(self, node):
+    try:
+        return self.visit_literal_block(node)
+    except nodes.SkipNode:
+        after = node.get('after')
+        then = node.get('then')
+        def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
+        attrs = format_data_attrs(self,
+            after=' '.join(after) if after else None,
+            editor=node.get('editor'),
+            output_style=node.get('output-style'),
+            then=' '.join(then) if then else None,
+            when=node.get('when'))
+        if attrs:
+            self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
+        if attrs := format_attrs(self, style=node.get('style')):
+            self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], 1)
+        raise
+
+
+def depart_exec(self, node):
+    return self.depart_literal_block(node)

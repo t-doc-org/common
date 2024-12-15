@@ -16,7 +16,7 @@ def setup(app):
     app.add_enumerable_node(num, 'num', lambda n: '<num_title>',
                             html=(visit_num, depart_num))
     app.connect('config-inited', update_numfig_format)
-    app.connect('builder-inited', init_env)
+    app.connect('builder-inited', NumCollector.init)
     app.add_env_collector(NumCollector)
     app.connect('env-get-updated', number_per_namespace, priority=999)
     app.connect('doctree-resolved', update_num_nodes)
@@ -48,10 +48,6 @@ def update_numfig_format(app, config):
             numfig_format[k] = NoNum()
 
 
-def init_env(app):
-    app.env.tdoc_nums = {}
-
-
 class Num(docutils.ReferenceRole):
     def run(self):
         node = num()
@@ -70,6 +66,10 @@ class num(nodes.Inline, nodes.TextElement): pass
 
 
 class NumCollector(collectors.EnvironmentCollector):
+    @staticmethod
+    def init(app):
+        app.env.tdoc_nums = {}
+
     def clear_doc(self, app, env, docname):
         env.tdoc_nums.pop(docname, None)
 
