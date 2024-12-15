@@ -106,7 +106,7 @@ class ExecCollector(collectors.EnvironmentCollector):
         for eid, (dn, loc) in other.tdoc_editors.items():
             if dn not in docnames: continue
             if eid not in editors:
-                editors[k] = v
+                editors[eid] = (dn, loc)
             else:
                 _log.error(f"{{exec}}: Duplicate :editor: ID: {eid}",
                            location=loc)
@@ -155,7 +155,9 @@ def write_static_files(app, builder):
     rel = lambda p: p.relative_to(client)
     static = builder.outdir / '_static' / 'tdoc'
     osutil.ensuredir(static)
-    with zipfile.ZipFile(static / 'exec-python.zip', mode='x') as f:
+    path = static / 'exec-python.zip'
+    path.unlink(missing_ok=True)
+    with zipfile.ZipFile(path, mode='x') as f:
         f.mkdir('tdoc')
         for root, dirs, files in client.walk():
             dirs.sort()

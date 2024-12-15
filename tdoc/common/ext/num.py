@@ -68,7 +68,7 @@ class num(nodes.Inline, nodes.TextElement): pass
 class NumCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
-        app.env.tdoc_nums = {}
+        app.env.tdoc_nums = {}  # docname => id => target
 
     def clear_doc(self, app, env, docname):
         env.tdoc_nums.pop(docname, None)
