@@ -5,6 +5,9 @@
 export const enc = new TextEncoder();
 export const dec = new TextDecoder();
 
+// The URL of the root of the book.
+export const rootUrl = new URL('../..', import.meta.url);
+
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 export const domLoaded = new Promise(resolve => {
     if (document.readyState !== 'loading') {

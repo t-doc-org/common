@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {docPath, domLoaded, element, RateLimited, text} from './core.js';
+import {domLoaded, element, RateLimited, rootUrl, text} from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -56,7 +56,7 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
-const editorPrefix = `tdoc:editor:${docPath()}:`;
+const editorPrefix = `tdoc:editor:${rootUrl.pathname}:`;
 
 // A base class for {exec} block handlers.
 export class Executor {

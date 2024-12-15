@@ -40,9 +40,11 @@ Options
 Execute one or more {rst:dir}`exec` blocks before this block, in the same
 environment.
 ```
-```{rst:directive:option} editor: [name]
-Display the {rst:dir}`exec` block in an editor. If `name` is provided, the
+```{rst:directive:option} editor: [ID]
+Display the {rst:dir}`exec` block in an editor. If `ID` is provided, the
 content of the editor is saved in browser local storage and restored on reload.
+`ID` must be unique across all documents, e.g. a
+[UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
 ```
 ```{rst:directive:option} include: path [path...]
 :type: relative paths
@@ -102,12 +104,12 @@ select * from countries
   order by country_code;
 ```
 
-The option takes an optional editor name. If provided, the content of the editor
+The option takes an optional editor ID. If provided, the content of the editor
 is saved in browser local storage, and restored on page reload.
 
 ```{exec} sql
 :after: sql-countries
-:editor: countries-editor.sql
+:editor: a38c47e0-22fe-4d7a-8c0b-4d38e7d55ee1
 ```
 
 ## Sequencing
