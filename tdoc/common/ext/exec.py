@@ -84,7 +84,7 @@ class Exec(code.CodeBlock):
         node['when'] = self.options.get('when', 'click')
         if (v := self.options.get('editor')) is not None:
             node['editor'] = v
-        elif self.options.get('editable'):
+        elif 'editable' in self.options:
             node['editor'] = ''
 
 
