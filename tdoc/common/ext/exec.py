@@ -11,7 +11,8 @@ from sphinx.directives import code
 from sphinx.environment import collectors
 from sphinx.util import logging, osutil
 
-from . import __version__, format_attrs, format_data_attrs, report_exceptions
+from . import __version__, format_attrs, format_data_attrs, names_option, \
+    report_exceptions
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).absolute().parent.parent
@@ -36,12 +37,12 @@ class Exec(code.CodeBlock):
     languages = {'html', 'python', 'sql'}
 
     option_spec = code.CodeBlock.option_spec | {
-        'after': directives.class_option,
+        'after': names_option,
         'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
         'style': directives.unchanged,
-        'then': directives.class_option,
+        'then': names_option,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 
@@ -81,8 +82,7 @@ class Exec(code.CodeBlock):
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
-        if (v := self.options.get('editor')) is not None:
-            node['editor'] = v
+        if (v := self.options.get('editor')) is not None: node['editor'] = v
 
 
 class exec(nodes.literal_block): pass
@@ -125,11 +125,11 @@ def check_references(app, doctree, docname):
         for node in nodes:
             names.update(node['names'])
         for node in nodes:
-            check_refs(node, names, 'after', doctree)
-            check_refs(node, names, 'then', doctree)
+            check_refs(node, names, lang, 'after', doctree)
+            check_refs(node, names, lang, 'then', doctree)
 
 
-def check_refs(node, names, typ, doctree):
+def check_refs(node, names, lang, typ, doctree):
     for ref in node.get(typ, ()):
         if ref not in names:
             doctree.reporter.error(
@@ -177,14 +177,15 @@ def visit_exec(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
-        after = node.get('after')
-        then = node.get('then')
+        nameids = node.document.nameids
+        after = [nameids[n] for n in node.get('after', ())]
+        then = [nameids[n] for n in node.get('then', ())]
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_data_attrs(self,
-            after=' '.join(after) if after else None,
+            after=' '.join(after),
             editor=node.get('editor'),
             output_style=node.get('output-style'),
-            then=' '.join(then) if then else None,
+            then=' '.join(then),
             when=node.get('when'))
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)

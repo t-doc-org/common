@@ -18,7 +18,7 @@ A database can be defined as a named {rst:dir}`{exec} sql <exec>` block, to be
 referenced in the {rst:dir}`:after: <exec:after>` option of other blocks.
 
 ```{exec} sql
-:name: sql-countries
+:name: sql_countries
 :when: never
 create table countries (
   country text not null,
@@ -38,7 +38,7 @@ insert into countries values
 ```
 
 ```{defaults} exec
-:after: sql-countries
+:after: sql_countries
 :when: load
 ```
 

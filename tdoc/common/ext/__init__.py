@@ -5,6 +5,7 @@ import copy
 import json
 import pathlib
 
+from docutils import nodes
 from sphinx import config, locale
 from sphinx.util import fileutil, logging
 
@@ -25,6 +26,11 @@ _license_urls = {
     'CC-BY-ND-4.0': 'https://creativecommons.org/licenses/by-nd/4.0/',
     'MIT': 'https://opensource.org/license/mit',
 }
+
+
+def names_option(arg):
+    if arg is None: raise ValueError('no argument provided')
+    return [nodes.fully_normalize_name(n) for n in arg.split()]
 
 
 def report_exceptions(fn):

@@ -20,7 +20,7 @@ function* walkNodes(node, seen) {
     for (const id of after ? after.split(/\s+/) : []) {
         const n = nodeById(id);
         if (!n) {
-            console.error(":after: node not found: ${id}");
+            console.error(`:after: node not found: ${id}`);
             continue;
         }
         yield* walkNodes(n, seen);
@@ -31,7 +31,7 @@ function* walkNodes(node, seen) {
     for (const id of then_ ? then_.split(/\s+/) : []) {
         const n = nodeById(id);
         if (!n) {
-            console.error(":then: node not found: ${id}");
+            console.error(`:then: node not found: ${id}`);
             continue;
         }
         yield* walkNodes(n, seen);
