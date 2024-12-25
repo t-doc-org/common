@@ -41,6 +41,34 @@ This solution is expanded by default.
 This solution has a different color, and no drop-down.
 ```
 
+## Quizzes
+
+The helpers in the
+[`quizz.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quizz.js)
+module enable the creation of quizzes as dynamic page elements.
+
+<script>
+async function question(text, want) {
+    const node = document.currentScript;
+    const quizz = await tdoc.import('tdoc/quizz.js');
+    quizz.question(node, text, resp => resp === want);
+}
+</script>
+
+1.  <script>
+    const value = Math.floor(256 * Math.random());
+    question(`Convert 0b${value.toString(2).padStart(8, '0')} to decimal.`,
+             value.toString());
+    </script>
+2.  <script>
+    question(`\
+    What is the answer to the ultimate question of life, the universe, and \
+    everything? Explain your reasoning in full detail, provide references, and \
+    indicate plausible alternatives.`, '42');
+    </script>
+3.  The input field of quizz questions without a prompt uses the whole line.
+    <script>question(undefined, "I see");</script>
+
 ## IFrames
 
 The [YouTube](https://youtube.com/) video below is embedded with the

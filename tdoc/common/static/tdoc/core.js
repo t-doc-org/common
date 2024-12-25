@@ -22,11 +22,18 @@ export function text(value) {
     return document.createTextNode(value);
 }
 
+// Create an DocumentFragment node.
+export function html(html) {
+    const el = document.createElement('template');
+    el.innerHTML = html;
+    return el.content;
+}
+
 // Create an element node.
 export function element(html) {
-    const t = document.createElement('template');
-    t.innerHTML = html.trim();
-    return t.content.firstChild;
+    const el = document.createElement('template');
+    el.innerHTML = html.trim();
+    return el.content.firstChild;
 }
 
 // Return true iff the given element is within the root viewport.
@@ -37,10 +44,91 @@ export function isVisible(el) {
            rect.right <= document.documentElement.clientWidth;
 }
 
+// Return a <span> containing inline math. The element must be typeset after
+// being added to the DOM.
+export function inlineMath(value) {
+    const el = element('<span class="math notranslate nohighlight"></span>');
+    const [start, end] = MathJax.tex?.inlineMath ?? ['\\(', '\\)'];
+    el.appendChild(text(`${start}${value}${end}`));
+    return el;
+}
+
+// Return a <div> containing display math. The element must be typeset after
+// being added to the DOM.
+export function displayMath(value) {
+    // The formatting of the content corresponds to what spinx.ext.mathjax does.
+    const parts = [];
+    for (const p of value.split('\n\n')) {
+        if (p.trim()) parts.push(p);
+    }
+    const out = [];
+    if (parts.length > 1) out.push(' \\begin{align}\\begin{aligned}');
+    for (const [i, p] of parts.entries()) {
+        const nl = p.includes('\\\\');
+        if (nl) out.push('\\begin{split}');
+        out.push(p);
+        if (nl) out.push('\\end{split}');
+        if (i < parts.length - 1) out.push('\\\\');
+    }
+    if (parts.length > 1) out.push('\\end{aligned}\\end{align} ');
+    const el = element('<div class="math notranslate nohighlight"></div>');
+    const [start, end] = MathJax.tex?.displayMath ?? ['\\[', '\\]'];
+    el.appendChild(text(`${start}${out.join('')}${end}`));
+    return el;
+}
+
+let typeset = globalThis.MathJax?.startup?.promise;
+if (!typeset && globalThis.MathJax) {
+    if (!MathJax.startup) MathJax.startup = {};
+    typeset = new Promise(resolve => {
+        MathJax.startup.pageReady = () => {
+            return MathJax.startup.defaultPageReady().then(resolve);
+        }
+    });
+}
+
+// Typeset the math contained in one or more elements.
+export function typesetMath(...args) {
+    typeset = typeset.then(() =>  MathJax.typesetPromise(args))
+        .catch(e => console.error(`Math typesetting failed: ${e}`));
+    return typeset;
+}
+
 // Focus an element if it is visible and no other element has the focus.
 export function focusIfVisible(el) {
     const active = document.activeElement;
     if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
+}
+
+const cMinus = '-'.charCodeAt(0), cPlus = '+'.charCodeAt(0);
+const c0 = '0'.charCodeAt(0), cA = 'A'.charCodeAt(0);
+
+// Convert a string to an integer. Returns undefined if the string is not a
+// valid integer.
+export function strToInt(s, radix = 10) {
+    if (!(2 <= radix && radix <= 36)) return;
+    s = s.toUpperCase();
+    let i = 0, sign = 1, res = 0;
+    while (i < s.length) {
+        const c = s.charCodeAt(i++);
+        if (i === 1) {
+            if (c === cPlus) {
+                continue;
+            } else if (c === cMinus) {
+                sign = -1;
+                continue;
+            }
+        }
+        let d = 36;
+        if (c0 <= c && c < c0 + 10) {
+            d = c - c0;
+        } else if (cA <= c && c < cA + 26) {
+            d = 10 + c - cA;
+        }
+        if (d >= radix) return;
+        res = res * radix + d;
+    }
+    return sign * res;
 }
 
 // Convert binary data to base64.

@@ -146,7 +146,7 @@ class PythonExecutor extends Executor {
             case 'line': {
                 const input = div.appendChild(element(`\
 <input class="input" autocapitalize="off" autocomplete="off"\
- autocorrect="off" spellcheck="false"></input>`));
+ autocorrect="off" spellcheck="false">`));
                 const btn = div.appendChild(element(`\
 <button class="tdoc-send" title="Send input (Enter)">Send</button>`));
                 btn.addEventListener('click', () => { resolve(input.value); });

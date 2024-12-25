@@ -59,6 +59,7 @@ def build_tag(app):
 
 
 def setup(app):
+    app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
 
     app.add_config_value('license', '', 'html')

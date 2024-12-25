@@ -130,8 +130,8 @@ button[class*=" tdoc-"] {
     background-color: var(--pst-color-surface);
     transition: background-color 0.3s;
 }
-button[class^=tdoc-]:hover,
-button[class*=" tdoc-"]:hover {
+button[class^=tdoc-]:hover:not([disabled]),
+button[class*=" tdoc-"]:hover:not([disabled]) {
     background-color: var(--pst-color-border);
 }
 button[class^=tdoc-][class*=" fa-"],
@@ -148,6 +148,54 @@ input[class*=" tdoc-"] {
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline: 2px;
+}
+
+/* Quizz questions */
+div.tdoc-quizz {
+    display: flex;
+    align-items: baseline;
+    margin: 0.3rem 0;
+    column-gap: 0.3rem;
+}
+div.tdoc-quizz > .prompt {
+    flex: 1 1 auto;
+    white-space: pre-wrap;
+    padding-right: 0.4rem;
+}
+div.tdoc-quizz > .prompt:empty {
+    display: none;
+}
+div.tdoc-quizz > .input {
+    flex: 0 0 40%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    column-gap: 0.3rem;
+}
+div.tdoc-quizz > .prompt:empty + .input {
+    flex: 0 0 100%;
+}
+div.tdoc-quizz > .input > input {
+    width: 100%;
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline-start: 2px;
+    padding-inline-end: 2rem;
+}
+div.tdoc-quizz > .input::before,
+div.tdoc-quizz > .input::before {
+    position: absolute;
+    right: 2.4rem;
+    font: var(--fa-font-solid);
+    font-size: 1.5rem;
+}
+div.tdoc-quizz > .input.bad::before {
+    content: '\f00d';
+    color: red;
+}
+div.tdoc-quizz > .input.good::before {
+    content: '\f00c';
+    color: green;
 }
 
 /* Auto-sizing text area */
@@ -214,7 +262,6 @@ div.tdoc-exec-output pre span.err {
 div.tdoc-exec-output div.tdoc-input {
     display: flex;
     flex-direction: row;
-    align-content: stretch;
     align-items: baseline;
     margin: 0;
     padding: 0.3rem;

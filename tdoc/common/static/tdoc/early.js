@@ -15,6 +15,14 @@
         };
     }
 
+    const script = document.currentScript;
+    const staticUrl = new URL('..', script.src).toString();
+
+    // Import a module specified relative to the _static directory.
+    tdoc.import = async (module, options) => {
+        return await import(new URL(module, staticUrl), options);
+    }
+
     // Set data-* attributes on the <html> tag.
     Object.assign(document.documentElement.dataset, tdoc.html_data);
 
@@ -30,8 +38,7 @@
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;
     const enableSAB = tdoc['enable_sab'];
-    const script = document.currentScript;
-    const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, script.src)
+    const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, staticUrl)
         .toString();
     if (enableSAB === 'no') {
         return (async () => {
