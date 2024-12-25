@@ -3,6 +3,22 @@
 
 import {element, focusIfVisible, text} from './core.js';
 
+function find(node, next) {
+    let nodes = node.closest('ol, ul')?.querySelectorAll?.('.tdoc-quizz') ?? [];
+    const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
+                        Node.DOCUMENT_POSITION_PRECEDING;
+    let found;
+    for (const el of nodes) {
+        if (node.compareDocumentPosition(el) & mask) {
+            if (next) return el;
+            found = el;
+        } else if (!next) {
+            break;
+        }
+    }
+    return found;
+}
+
 // Add a quizz question with a reply input field after the given node. Return
 // the quizz question container element.
 export function question(node, prompt, check) {
@@ -21,15 +37,25 @@ export function question(node, prompt, check) {
     const btn = div.querySelector('button');
     function checkResp(resp) {
         input.parentNode.classList.remove('good', 'bad');
-        input.parentNode.classList.add(check(resp) ? 'good' : 'bad');
+        const good = check(resp);
+        input.parentNode.classList.add(good ? 'good' : 'bad');
+        return good;
     }
     input.addEventListener('input', () => {
         input.parentNode.classList.remove('good', 'bad');
     });
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.key === 'Enter') {
             e.preventDefault();
-            btn.click();
+            if (!checkResp(input.value)) return;
+            find(div, true)?.querySelector?.('input')?.focus?.()
+        } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+            e.preventDefault();
+            find(div, false)?.querySelector?.('input')?.focus?.()
+        } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+            e.preventDefault();
+            find(div, true)?.querySelector?.('input')?.focus?.()
         }
     });
     btn.addEventListener('click', () => { checkResp(input.value); });
