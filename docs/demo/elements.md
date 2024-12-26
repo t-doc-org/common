@@ -48,10 +48,10 @@ The helpers in the
 module enable the creation of quizzes as dynamic page elements.
 
 <script>
-async function question(text, want) {
+async function question(prompt, want) {
   const node = document.currentScript;
   const quizz = await tdoc.import('tdoc/quizz.js');
-  quizz.question(node, text, resp => {
+  quizz.question(node, prompt, resp => {
     if (resp === want) return true;
     if (resp === 'hint') {
       return `The solution is probably "${want}". Maybe. I'm not sure.`;

@@ -19,9 +19,7 @@
     const staticUrl = new URL('..', script.src).toString();
 
     // Import a module specified relative to the _static directory.
-    tdoc.import = async (module, options) => {
-        return await import(new URL(module, staticUrl), options);
-    }
+    tdoc.import = async module => await import(new URL(module, staticUrl));
 
     // Set data-* attributes on the <html> tag.
     Object.assign(document.documentElement.dataset, tdoc.html_data);
