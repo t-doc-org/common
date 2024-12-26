@@ -40,13 +40,14 @@ export function question(node, prompt, check) {
     function checkResp(resp) {
         input.parentNode.classList.remove('good', 'bad');
         hint.classList.add('hide');
-        const good = check(resp);
-        input.parentNode.classList.add(good === true ? 'good' : 'bad');
-        if (typeof good === 'string') {
-            hint.replaceChildren(text(good));
+        let res = check(resp);
+        input.parentNode.classList.add(res === true ? 'good' : 'bad');
+        if (typeof res === 'string' && res !== '') res = text(res);
+        if (res instanceof Node) {
+            hint.replaceChildren(res);
             hint.classList.remove('hide');
         }
-        return good;
+        return res === true;
     }
     input.addEventListener('input', () => {
         input.parentNode.classList.remove('good', 'bad');
@@ -56,7 +57,7 @@ export function question(node, prompt, check) {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (checkResp(input.value) !== true) return;
+            if (!checkResp(input.value)) return;
             find(div, true)?.querySelector?.('input')?.focus?.()
         } else if (e.key === 'ArrowUp' && !e.shiftKey) {
             e.preventDefault();

@@ -50,20 +50,21 @@ module enable the creation of quizzes as dynamic page elements.
 <script>
 async function question(prompt, want) {
   const node = document.currentScript;
+  const core = await tdoc.import('tdoc/core.js');
   const quizz = await tdoc.import('tdoc/quizz.js');
-  quizz.question(node, prompt, resp => {
+  await core.typesetMath(quizz.question(node, prompt, resp => {
     if (resp === want) return true;
-    if (resp === 'hint') {
-      return `The solution is probably "${want}". Maybe. I'm not sure.`;
-    }
-  });
+    return core.html(
+      `The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`);
+  }));
 }
 </script>
 
 1.  <script>
     const value = Math.floor(256 * Math.random());
-    question(`Convert 0b${value.toString(2).padStart(8, '0')} to decimal.`,
-             value.toString());
+    question(
+      `Convert \\(${value.toString(2).padStart(8, '0')}_2\\) to decimal.`,
+      value.toString());
     </script>
 2.  <script>
     question(`\
@@ -72,7 +73,7 @@ async function question(prompt, want) {
     indicate plausible alternatives.`, '42');
     </script>
 3.  The input field of quizz questions without a prompt uses the whole line.
-    <script>question(undefined, "I see");</script>
+    <script>question(undefined, "cool");</script>
 
 ## IFrames
 
