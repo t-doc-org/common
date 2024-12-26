@@ -28,6 +28,7 @@ export function question(node, prompt, check) {
 <div class="input">\
 <input autocapitalize="off" autocomplete="off" autocorrect="off"\
  spellcheck="false"><button class="tdoc-check fa-check"></button></div>\
+<div class="hint hide"></div>\
 </div>`);
     if (prompt) {
         if (typeof prompt === 'string') prompt = text(prompt);
@@ -35,20 +36,27 @@ export function question(node, prompt, check) {
     }
     const input = div.querySelector('input');
     const btn = div.querySelector('button');
+    const hint = div.querySelector('.hint');
     function checkResp(resp) {
         input.parentNode.classList.remove('good', 'bad');
+        hint.classList.add('hide');
         const good = check(resp);
-        input.parentNode.classList.add(good ? 'good' : 'bad');
+        input.parentNode.classList.add(good === true ? 'good' : 'bad');
+        if (typeof good === 'string') {
+            hint.replaceChildren(text(good));
+            hint.classList.remove('hide');
+        }
         return good;
     }
     input.addEventListener('input', () => {
         input.parentNode.classList.remove('good', 'bad');
+        hint.classList.add('hide');
     });
     input.addEventListener('keydown', (e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (!checkResp(input.value)) return;
+            if (checkResp(input.value) !== true) return;
             find(div, true)?.querySelector?.('input')?.focus?.()
         } else if (e.key === 'ArrowUp' && !e.shiftKey) {
             e.preventDefault();
@@ -58,7 +66,11 @@ export function question(node, prompt, check) {
             find(div, true)?.querySelector?.('input')?.focus?.()
         }
     });
-    btn.addEventListener('click', () => { checkResp(input.value); });
+    input.addEventListener('blur', () => hint.classList.add('hide'));
+    btn.addEventListener('click', () => checkResp(input.value));
+    btn.addEventListener('blur', (e) => {
+        if (e.relatedTarget !== input) hint.classList.add('hide');
+    });
     node.after(div);
     focusIfVisible(input);
     return div;

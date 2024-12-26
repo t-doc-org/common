@@ -156,6 +156,7 @@ div.tdoc-quizz {
     align-items: baseline;
     margin: 0.3rem 0;
     column-gap: 0.3rem;
+    position: relative;
 }
 div.tdoc-quizz > .prompt {
     flex: 1 1 auto;
@@ -191,11 +192,29 @@ div.tdoc-quizz > .input::before {
 }
 div.tdoc-quizz > .input.bad::before {
     content: '\f00d';
-    color: red;
+    color: var(--pst-color-danger);
 }
 div.tdoc-quizz > .input.good::before {
     content: '\f00c';
-    color: green;
+    color: var(--pst-color-success);
+}
+div.tdoc-quizz > .hint {
+    position: absolute;
+    bottom: calc(100% + 0.8rem);
+    right: 0;
+    max-width: 60%;
+    padding: 0.25rem 0.5rem;
+    border-left: 0.2rem solid var(--pst-color-success);
+    border-radius: 0.25rem;
+    background-color: var(--pst-color-success-bg);
+    box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),
+                0 0 0.0625rem var(--pst-color-shadow);
+    z-index: 100;
+    transition: 0.3s visibility, 0.3s opacity;
+}
+div.tdoc-quizz > .hint.hide {
+    visibility: hidden;
+    opacity: 0;
 }
 
 /* Auto-sizing text area */
