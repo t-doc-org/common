@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-26)=
+## 0.26 *(2024-12-27)*
+
+- Added quizz functionality.
+- Fixed issues with non-ID characters in {rst:dir}`{exec} :after: <exec:after>`
+  and {rst:dir}`{exec} :then: <exec:then>`.
+
 (release-0-25)=
 ## 0.25 *(2024-12-15)*
 

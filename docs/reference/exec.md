@@ -36,7 +36,6 @@ directly in the browser. It supports most of the options of
 {.rubric}
 Options
 ```{rst:directive:option} after: name [name...]
-:type: IDs
 Execute one or more {rst:dir}`exec` blocks before this block, in the same
 environment.
 ```
@@ -59,7 +58,6 @@ language-specific.
 CSS styles to apply to the code block and editor, e.g. `max-height: 20rem`.
 ```
 ```{rst:directive:option} then: name [name...]
-:type: IDs
 Execute one or more {rst:dir}`exec` blocks after this block, in the same
 environment.
 ```
