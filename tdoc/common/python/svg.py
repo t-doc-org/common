@@ -267,9 +267,9 @@ class Rect(Shape):
 class Text(Shape):
     __slots__ = Shape._slots + ('x', 'y', 'text')
 
-    def __init__(self, x, y, text, *, stroke='transparent', **kwargs):
+    def __init__(self, x, y, text, **kwargs):
         self.x, self.y, self.text = x, y, text
-        super().__init__(stroke=stroke, **kwargs)
+        super().__init__(**kwargs)
 
     def __iter__(self):
         yield f'<text x="{esc(self.x)}" y="{esc(self.y)}"'

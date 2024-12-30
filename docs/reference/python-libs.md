@@ -190,7 +190,7 @@ container.
 :arg width,height: The size of the rectangle.
 :arg rx,ry: The horizontal and vertical corner radii of the rectangle.
 ```
-```{py:method} text(x, y, text, *, stroke='transparent', **kwargs) -> Text
+```{py:method} text(x, y, text, **kwargs) -> Text
 Add a
 [`<text>`](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text) to the
 container.
@@ -279,7 +279,7 @@ element.
 :arg rx,ry: The horizontal and vertical corner radii of the rectangle.
 ````
 
-````{py:class} Text(x, y, text, *, stroke='transparent', **kwargs)
+````{py:class} Text(x, y, text, **kwargs)
 Represents a
 [`<text>`](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text)
 element.

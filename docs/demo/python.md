@@ -110,7 +110,7 @@ g.polygon((0, 0), (30, 0), (40, 20), klass='bold')
 g.polyline((0, 0), (30, 0), (40, 20), fill='transparent',
            transform=svg.translate(x=50, y=10))
 img.rect(0, 0, 400, 100, fill='transparent')
-img.text(50, 90, "Some text", fill='green')
+img.text(50, 90, "Some text", stroke='transparent', fill='green')
 paint_heart(img.group(transform=svg.translate(360, 30).rotate(20).scale(0.5)))
 render(img)
 ```
