@@ -73,7 +73,6 @@ def setup(app):
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
-    app.connect('builder-inited', on_builder_inited)
     app.connect('html-page-context', on_html_page_context)
     if build_tag(app) is not None:
         app.connect('html-page-context', add_reload_js)
@@ -91,6 +90,12 @@ def on_config_inited(app, config):
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
     config.templates_path.append(str(_base / 'templates'))
 
+    # Add our own static paths, and a default one.
+    app.config.html_static_path.append(str(_base / 'static'))
+    app.config.html_static_path.append(str(_base / 'static.gen'))
+    if '_static' not in app.config.html_static_path:
+        app.config.html_static_path.append('_static')
+
     # Set defaults in the t-doc config.
     tdoc = config.tdoc
     tdoc.setdefault('html_data', {})
@@ -104,16 +109,6 @@ def on_config_inited(app, config):
     if opts.get('repository_url'):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)
-
-
-def on_builder_inited(app):
-    # Add our own static paths.
-    app.config.html_static_path.append(str(_base / 'static'))
-    app.config.html_static_path.append(str(_base / 'static.gen'))
-
-    # Add a default static path.
-    if '_static' not in app.config.html_static_path:
-        app.config.html_static_path.append('_static')
 
 
 def on_html_page_context(app, page, template, context, doctree):

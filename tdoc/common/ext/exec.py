@@ -9,7 +9,7 @@ from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx.directives import code
 from sphinx.environment import collectors
-from sphinx.util import logging, osutil
+from sphinx.util import display, logging, osutil
 
 from . import __version__, format_attrs, format_data_attrs, names_option, \
     report_exceptions
@@ -24,8 +24,10 @@ def setup(app):
     app.connect('builder-inited', ExecCollector.init)
     app.add_env_collector(ExecCollector)
     app.connect('doctree-resolved', check_references)
-    app.connect('write-started', write_static_files)
     app.connect('html-page-context', add_js)
+    app.add_config_value('tdoc_python_modules', [], 'html')
+    app.connect('config-inited', set_python_modules)
+    app.connect('write-started', write_static_files)
     return {
         'version': __version__,
         'parallel_read_safe': True,
@@ -143,30 +145,42 @@ def add_js(app, page, template, context, doctree):
             app.add_js_file(f'tdoc/exec-{lang}.js', type='module')
 
 
+def set_python_modules(app, config):
+    config.tdoc_python_modules.insert(0, str(_base / 'python'))
+    if '_python' not in config.tdoc_python_modules:
+        config.tdoc_python_modules.append('_python')
+
+
 def write_static_files(app, builder):
     if builder.format != 'html': return
 
-    # Package all files under tdoc/common/python into a .zip, below tdoc/, and
-    # write it to _static/tdoc.
-    client = _base / 'python'
-    rel = lambda p: p.relative_to(client)
-    static = builder.outdir / '_static' / 'tdoc'
-    osutil.ensuredir(static)
-    path = static / 'exec-python.zip'
-    path.unlink(missing_ok=True)
-    with zipfile.ZipFile(path, mode='x') as f:
-        f.mkdir('tdoc')
-        for root, dirs, files in client.walk():
-            dirs.sort()
-            for dn in dirs:
-                f.mkdir(f'tdoc/{rel(root / dn)}')
-            files.sort()
-            for fn in files:
-                path = root / fn
-                data = path.read_bytes()
-                ct = zipfile.ZIP_DEFLATED if data else zipfile.ZIP_STORED
-                f.writestr(zipfile.ZipInfo(f'tdoc/{rel(path)}'),
-                           data, compress_type=ct, compresslevel=9)
+    # Package python modules into a .zip and write it to _static/tdoc.
+    with display.progress_message("packaging Python modules..."):
+        static = builder.outdir / '_static' / 'tdoc'
+        osutil.ensuredir(static)
+        zpath = static / 'exec-python.zip'
+        zpath.unlink(missing_ok=True)
+        with zipfile.ZipFile(zpath, mode='x') as f:
+            for mpath in app.config.tdoc_python_modules:
+                add_modules(f, app.confdir / mpath)
+
+
+def add_modules(f, mpath):
+    if not mpath.exists(): return
+    rel = lambda p: p.relative_to(mpath)
+    def on_error(e): raise e
+    for root, dirs, files in mpath.walk(on_error=on_error):
+        try: dirs.remove('__pycache__')
+        except ValueError: pass
+        dirs.sort()
+        for dn in dirs: f.mkdir(str(rel(root / dn)))
+        files.sort()
+        for fn in files:
+            path = root / fn
+            data = path.read_bytes()
+            ct = zipfile.ZIP_DEFLATED if data else zipfile.ZIP_STORED
+            f.writestr(zipfile.ZipInfo(str(rel(path))), data, compress_type=ct,
+                       compresslevel=9)
 
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
