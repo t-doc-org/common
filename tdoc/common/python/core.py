@@ -4,6 +4,7 @@
 import ast
 import asyncio
 import contextvars
+import inspect
 import io
 import sys
 import traceback
@@ -31,6 +32,12 @@ def export(fn):
     """Export a function to JavaScript."""
     setattr(xworker.sync, fn.__name__, fn)
     return fn
+
+
+def linenos(obj):
+    """Return the start and past-the-end lines of an object."""
+    lines, start = inspect.getsourcelines(obj)
+    return start, start + len(lines)
 
 
 class OutStream(io.RawIOBase):
@@ -104,17 +111,21 @@ async def run(run_id, blocks):
         for code, name in blocks:
             code = compile(code, name or '<unnamed>', 'exec',
                            flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-            if (coro := eval(code, e)) is not None:
-                await coro
+            if (coro := eval(code, e)) is not None: await coro
     except BaseException as e:
         te = traceback.TracebackException.from_exception(e, compact=True)
-        for line in te.format():
-            # This is a bit primitive, but more sophisticated traceback
-            # manipulations have undesirable side-effects.
-            if line.startswith('  File "<exec>", line '): continue
-            print(line, file=sys.stderr, end='')
+        # Filter this function out of the stack trace
+        for i, fs in enumerate(te.stack):
+            if (fs.filename == __file__ and run_start <= fs.lineno < run_end
+                    and fs.name == 'run'):
+                del te.stack[i]
+                break
+        te.print()
     finally:
         del tasks[run_id]
+
+
+run_start, run_end = linenos(run)
 
 
 @export
