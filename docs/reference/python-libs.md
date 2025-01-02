@@ -57,6 +57,26 @@ Present a button, and wait for the user to click it.
 [Font Awesome](https://fontawesome.com/icons/categories) is used.
 ```
 
+````{py:function} redirect(stdout=None, stderr=None)
+Return a context manager that temporarily replaces {py:data}`sys.stdout` and /
+or {py:data}`sys.stderr` with the given stream(s). This function must be used
+instead of direct assignment or {py:func}`contextlib.redirect_stdout` /
+{py:func}`contextlib.redirect_stderr` to avoid redirecting the output of all
+code blocks on the same page.
+
+:arg stdout: The new value to set as {py:data}`sys.stdout`.
+:arg stderr: The new value to set as {py:data}`sys.stderr`.
+
+```{exec} python
+:when: load
+import io
+out = io.StringIO()
+with redirect(stdout=out):
+    print("Hello, world!")
+print(f"Captured output: {out.getvalue().rstrip()}")
+```
+````
+
 ## `tdoc.svg`
 
 ````{py:module} tdoc.svg

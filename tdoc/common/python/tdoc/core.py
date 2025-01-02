@@ -3,6 +3,7 @@
 
 import ast
 import asyncio
+import contextlib
 import contextvars
 import inspect
 import io
@@ -40,6 +41,26 @@ def linenos(obj):
     return start, start + len(lines)
 
 
+class ContextProxy:
+    """A proxy object that forwards attributes accesses to a context value."""
+    __slots__ = ('_ContextProxy__var',)
+
+    def __init__(self, var):
+        super().__setattr__('_ContextProxy__var', var)
+
+    def __getattr__(self, name):
+        return getattr(self.__var.get(), name)
+
+    def __setattr__(self, name, value):
+        return setattr(self.__var.get(), name, value)
+
+    def __delattr__(self, name):
+        return delattr(self.__var.get(), name)
+
+    def __dir__(self):
+        return self.__var.get().__dir__()
+
+
 class OutStream(io.RawIOBase):
     """An output stream that forwards writes to JavaScript."""
     def __init__(self, stream):
@@ -53,10 +74,29 @@ class OutStream(io.RawIOBase):
         return size
 
 
-sys.stdout = io.TextIOWrapper(io.BufferedWriter(OutStream(1)),
-                              line_buffering=True)
-sys.stderr = io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
-                              line_buffering=True)
+stdout_var = contextvars.ContextVar(
+    'stdout',
+    default=io.TextIOWrapper(io.BufferedWriter(OutStream(1)),
+                             line_buffering=True))
+stderr_var = contextvars.ContextVar(
+    'stderr',
+    default=io.TextIOWrapper(io.BufferedWriter(OutStream(2)),
+                             line_buffering=True))
+sys.stdout = ContextProxy(stdout_var)
+sys.stderr = ContextProxy(stderr_var)
+
+
+@public
+@contextlib.contextmanager
+def redirect(stdout=None, stderr=None):
+    stdout_token, stderr_token = None, None
+    if stdout is not None: stdout_token = stdout_var.set(stdout)
+    if stderr is not None: stderr_token = stderr_var.set(stderr)
+    try:
+        yield
+    finally:
+        if stdout_token is not None: stdout_var.reset(stdout_token)
+        if stderr_token is not None: stderr_var.reset(stderr_token)
 
 
 _next_id = 0
