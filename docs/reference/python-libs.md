@@ -3,6 +3,11 @@
 
 # Python libraries
 
+The modules described below are packaged into a library and made available to
+Python code executed through the {rst:dir}`{exec} python <exec>` directive.
+Additionally, all files in the directory `_python` (next to `conf.py`) are also
+included recursively in the library.
+
 ## `tdoc.core`
 
 ````{py:module} tdoc.core
