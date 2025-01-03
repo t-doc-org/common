@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-27)=
+## 0.27 *(2025-01-03)*
+
+- Added packaging of Python modules in the `_python` directory.
+- Added {py:func}`tdoc.core.redirect` to redirect `stdout` / `stderr`.
+- Fixed the overflow of wide non-editable {rst:dir}`exec` blocks.
+
 (release-0-26)=
 ## 0.26 *(2024-12-27)*
 
@@ -148,7 +155,7 @@ and Safari don't support it (yet).
 (release-0-7)=
 ## 0.7 *(2024-09-07)*
 
-- Fine-tuned the `exec` control buttons.
+- Fine-tuned the {rst:dir}`exec` control buttons.
 
 (release-0-6)=
 ## 0.6 *(2024-09-07)*
