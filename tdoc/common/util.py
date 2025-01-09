@@ -20,6 +20,8 @@ try:
 except ImportError:
     _colors = False
 
+# This module is imported by tdocv.py, so non-stdlib dependencies should be kept
+# to a minimum.
 
 def want_colors(stdout):
     if not _colors: return False
@@ -118,12 +120,13 @@ def check_upgrade(base, venv, builder):
         return
     if new == cur: return
     out = builder.stderr
-    out.write(ansi("@{LYELLOW}A t-doc upgrade is available:@{NORM} "
-                   "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
-                   "@{LWHITE}Would you like to upgrade?@{NORM} ")
+    color = ansi if want_colors(out) else no_ansi
+    out.write(color("@{LYELLOW}A t-doc upgrade is available:@{NORM} "
+                    "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
+                    "@{LWHITE}Would you like to upgrade?@{NORM} ")
               % (pkg, cur, new))
     if input().lower() in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-        out.write(ansi("\n@{LMAGENTA}Upgrading...@{NORM}\n"))
+        out.write(color("\n@{LMAGENTA}Upgrading...@{NORM}\n"))
         tmp = venv.with_name(venv.name + '-old')
         restore = False
         try:
