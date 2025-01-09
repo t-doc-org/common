@@ -48,9 +48,6 @@ def main(argv, stdin, stdout, stderr):
     arg('--help', action='help', help="Show this help message and exit.")
     arg('--source', metavar='PATH', dest='source', default='docs',
         help="The path to the source files (default: %(default)s).")
-    arg('--sphinx-build', metavar='PATH', dest='sphinx_build',
-        default='sphinx-build',
-        help="The path to the sphinx-build binary (default: %(default)s.")
     arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
         default=[], help="Additional options to pass to sphinx-build.")
 
@@ -165,8 +162,8 @@ def cmd_version(cfg):
 
 
 def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
-    argv = [cfg.sphinx_build, '-M', target, cfg.source, build,
-            '--fail-on-warning', '--jobs=auto']
+    argv = [sys.executable, '-m', 'sphinx', 'build', '-M', target,
+            cfg.source, build, '--fail-on-warning', '--jobs=auto']
     argv += [f'--tag={tag}' for tag in tags]
     if cfg.debug: argv += ['--show-traceback']
     argv += cfg.sphinx_opts
