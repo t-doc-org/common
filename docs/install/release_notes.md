@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-28)=
+## 0.28 *(2025-01-09)*
+
+- Fixed an issue with missing `_static` directories.
+
 (release-0-27)=
 ## 0.27 *(2025-01-03)*
 
