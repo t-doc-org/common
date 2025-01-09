@@ -162,7 +162,7 @@ def cmd_version(cfg):
 
 
 def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
-    argv = [sys.executable, '-m', 'sphinx', 'build', '-M', target,
+    argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
             cfg.source, build, '--fail-on-warning', '--jobs=auto']
     argv += [f'--tag={tag}' for tag in tags]
     if cfg.debug: argv += ['--show-traceback']
@@ -318,14 +318,17 @@ class Application:
         try:
             upgrades, editable = pip_check_upgrades(self.cfg, __project__)
             if editable or __project__ not in upgrades: return
-            cur_version = metadata.version(__project__)
-            new_version = upgrades[__project__]
-            util.write_upgrade_marker(cur_version, new_version)
+            cur = metadata.version(__project__)
+            new = upgrades[__project__]
+            if sys.prefix != sys.base_prefix:  # Running in a venv
+                marker = pathlib.Path(sys.prefix) / 'tdoc.upgrade'
+                with contextlib.suppress(Exception):
+                    marker.write_text(f'{cur} {new}')
             msg = (self.cfg.ansi(
                 "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                 "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
                 "@{BOLD}Restart the server to upgrade.@{NORM}\n")
-                % (__project__, cur_version, new_version))
+                % (__project__, cur, new))
             with self.lock:
                 self.upgrade_msg = msg
                 if not self.building: self.cfg.stdout.write(msg)
@@ -428,7 +431,7 @@ class Namespace(dict):
 
 
 def pip(cfg, *args, json_output=False):
-    p = subprocess.run((sys.executable, '-m', 'pip') + args,
+    p = subprocess.run((sys.executable, '-P', '-m', 'pip') + args,
         stdin=subprocess.DEVNULL, capture_output=True, text=True)
     if p.returncode != 0: raise Exception(p.stderr)
     if not json_output: return p.stdout

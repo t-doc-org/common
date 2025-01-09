@@ -5,35 +5,13 @@
 import contextlib
 import pathlib
 import subprocess
+import shutil
 import sys
 import sysconfig
 import venv
 
-
-class EnvBuilder(venv.EnvBuilder):
-    def __init__(self, out):
-        super().__init__(with_pip=True)
-        self.out = out
-
-    def post_setup(self, ctx):
-        super().post_setup(ctx)
-        self.pip(ctx, 'install', 't-doc-common')
-
-    def pip(self, ctx, *args):
-        subprocess.run((ctx.env_exec_cmd, '-m', 'pip') + args, check=True,
-                       stdin=subprocess.DEVNULL, stdout=self.out,
-                       stderr=self.out)
-
-
-def get_sysinfo(vdir, py_version):
-    vars = {
-        'base': vdir, 'platbase': vdir,
-        'installed_base': vdir, 'intsalled_platbase': vdir,
-        'py_version_short': py_version,
-    }
-    return (sysconfig.get_path('purelib', scheme='venv', vars=vars),
-            sysconfig.get_path('scripts', scheme='venv', vars=vars),
-            sysconfig.get_config_vars().get('EXE', ''))
+package = 't-doc-common'
+upgrade_marker = 'tdoc.upgrade'
 
 
 def main(argv, stdin, stdout, stderr):
@@ -47,25 +25,69 @@ def main(argv, stdin, stdout, stderr):
         builder.create(vdir)
         stderr.write("\n")
 
-    # Import from modules installed in the venv.
-    lib, bin, ext = get_sysinfo(vdir, '*.*')
-    for path in base.glob(str(pathlib.Path(lib).relative_to(base))):
-        try:
-            old = sys.path[:]
-            sys.path.insert(0, str(path))
-            from tdoc.common import util
-            break
-        except ImportError:
-            sys.path = old
-    else:
-        raise Exception("Failed to import tdoc.common.util")
-
-    # Upgrade if available and requested by the user.
-    util.check_upgrade(base, vdir, builder)
+    # Upgrade if available and if requested by the user.
+    check_upgrade(base, vdir, builder)
 
     # Run the command.
+    bin, ext = get_sysinfo(vdir)
     subprocess.run([pathlib.Path(bin) / f'tdoc{ext}'] + argv[1:], check=True,
                    cwd=base)
+
+
+class EnvBuilder(venv.EnvBuilder):
+    def __init__(self, out):
+        super().__init__(with_pip=True)
+        self.out = out
+
+    def post_setup(self, ctx):
+        super().post_setup(ctx)
+        self.pip(ctx, 'install', package)
+
+    def pip(self, ctx, *args):
+        subprocess.run((ctx.env_exec_cmd, '-P', '-m', 'pip') + args, check=True,
+                       stdin=subprocess.DEVNULL, stdout=self.out,
+                       stderr=self.out)
+
+
+def get_sysinfo(vdir):
+    vars = {'base': vdir, 'platbase': vdir,
+            'installed_base': vdir, 'intsalled_platbase': vdir}
+    return (sysconfig.get_path('scripts', scheme='venv', vars=vars),
+            sysconfig.get_config_vars().get('EXE', ''))
+
+
+def check_upgrade(base, vdir, builder):
+    try:
+        cur, new = (vdir / upgrade_marker).read_text().strip().split(' ')[:2]
+    except Exception:
+        return
+    if new == cur: return
+    out = builder.out
+    out.write("A t-doc upgrade is available: %s %s => %s\n"
+              "Would you like to upgrade (y/n)? " % (package, cur, new))
+    if input().lower() in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+        out.write("\nUpgrading...\n")
+        tmp = vdir.with_name(vdir.name + '-old')
+        restore = False
+        try:
+            vdir.rename(tmp)
+            restore = True
+            builder.create(vdir)
+            rmtree(tmp, base, out)
+        except BaseException as e:
+            if restore:
+                rmtree(vdir, base, out)
+                tmp.rename(vdir)
+            if not isinstance(e, Exception): raise
+    out.write("\n")
+
+
+def rmtree(path, base, err):
+    if path.relative_to(base) == pathlib.Path():
+        raise Exception(f"Not removing {path}")
+    def on_error(fn, path, e):
+        err.write(f"Removal: {fn}: {path}: {e}\n")
+    shutil.rmtree(path, onexc=on_error)
 
 
 if __name__ == '__main__':
