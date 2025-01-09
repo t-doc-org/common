@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-29)=
+## 0.29 *(2025-01-09)*
+
+- Added a wrapper script for the `tdoc` command to auto-install and upgrade
+  `t-doc-common`.
+
 (release-0-28)=
 ## 0.28 *(2025-01-09)*
 
