@@ -90,11 +90,12 @@ def on_config_inited(app, config):
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
     config.templates_path.append(str(_base / 'templates'))
 
-    # Add our own static paths, and a default one.
-    app.config.html_static_path.append(str(_base / 'static'))
-    app.config.html_static_path.append(str(_base / 'static.gen'))
-    if '_static' not in app.config.html_static_path:
-        app.config.html_static_path.append('_static')
+    # Add our own static paths, and a default one if it exists.
+    config.html_static_path.append(str(_base / 'static'))
+    config.html_static_path.append(str(_base / 'static.gen'))
+    if '_static' not in config.html_static_path \
+            and (app.confdir / '_static').exists():
+        config.html_static_path.append('_static')
 
     # Set defaults in the t-doc config.
     tdoc = config.tdoc

@@ -147,7 +147,8 @@ def add_js(app, page, template, context, doctree):
 
 def set_python_modules(app, config):
     config.tdoc_python_modules.insert(0, str(_base / 'python'))
-    if '_python' not in config.tdoc_python_modules:
+    if '_python' not in config.tdoc_python_modules \
+            and (app.confdir / '_python').exists():
         config.tdoc_python_modules.append('_python')
 
 
