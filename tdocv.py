@@ -9,8 +9,6 @@ import sys
 import sysconfig
 import venv
 
-# TODO: Support running a specific version, or as editable
-
 
 class EnvBuilder(venv.EnvBuilder):
     def __init__(self, out):
