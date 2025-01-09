@@ -2,11 +2,15 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import contextlib
 import functools
 import os
+import pathlib
 import re
+import shutil
 import sys
 
+from . import __project__
 
 _colors = True
 try:
@@ -86,3 +90,50 @@ def main(fn):
             stderr.write(f'{e}\n')
             sys.exit(1)
     return wrapper
+
+
+def rmtree(path, base, err):
+    if path.relative_to(base) == pathlib.Path():
+        raise Exception(f"Not removing {path}")
+    def on_error(fn, path, e):
+        err.write(f"Removal: {fn}: {path}: {e}\n")
+    shutil.rmtree(path, onexc=on_error)
+
+
+_upgrade_marker = 'tdoc.upgrade'
+
+
+def write_upgrade_marker(cur_version, new_version):
+    if sys.prefix == sys.base_prefix: return  # Not running in a venv
+    marker = pathlib.Path(sys.prefix) / _upgrade_marker
+    with contextlib.suppress(Exception):
+        marker.write_text(f'{__project__} {cur_version} {new_version}')
+
+
+def check_upgrade(base, venv, builder):
+    try:
+        marker = venv / _upgrade_marker
+        pkg, cur, new = marker.read_text().strip().split(' ')[:3]
+    except Exception:
+        return
+    if new == cur: return
+    out = builder.stderr
+    out.write(ansi("@{LYELLOW}A t-doc upgrade is available:@{NORM} "
+                   "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
+                   "@{LWHITE}Would you like to upgrade?@{NORM} ")
+              % (pkg, cur, new))
+    if input().lower() in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+        out.write(ansi("\n@{LMAGENTA}Upgrading...@{NORM}\n"))
+        tmp = venv.with_name(venv.name + '-old')
+        restore = False
+        try:
+            venv.rename(tmp)
+            restore = True
+            builder.create(venv)
+            rmtree(tmp, base, out)
+        except BaseException as e:
+            if restore:
+                rmtree(venv, base, out)
+                tmp.rename(venv)
+            if not isinstance(e, Exception): raise
+    out.write("\n")

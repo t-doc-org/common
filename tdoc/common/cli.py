@@ -320,14 +320,15 @@ class Application:
     def check_upgrade(self):
         try:
             upgrades, editable = pip_check_upgrades(self.cfg, __project__)
-            if __project__ not in upgrades: return
-            msg = self.cfg.ansi(
+            if editable or __project__ not in upgrades: return
+            cur_version = metadata.version(__project__)
+            new_version = upgrades[__project__]
+            util.write_upgrade_marker(cur_version, new_version)
+            msg = (self.cfg.ansi(
                 "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                 "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
-                "See <@{LBLUE}https://t-doc.org/common/%s#upgrade@{NORM}>\n"
-                % (__project__, metadata.version(__project__),
-                    upgrades[__project__],
-                   'development' if editable else 'install'))
+                "@{BOLD}Restart the server to upgrade.@{NORM}\n")
+                % (__project__, cur_version, new_version))
             with self.lock:
                 self.upgrade_msg = msg
                 if not self.building: self.cfg.stdout.write(msg)
