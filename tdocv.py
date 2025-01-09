@@ -6,9 +6,10 @@ import contextlib
 import pathlib
 import subprocess
 import sys
+import sysconfig
 import venv
 
-# TODO: Support running a specific version
+# TODO: Support running a specific version, or as editable
 
 
 class EnvBuilder(venv.EnvBuilder):
@@ -20,14 +21,25 @@ class EnvBuilder(venv.EnvBuilder):
         super().post_setup(ctx)
         self.pip(ctx, 'install', 't-doc-common')
 
-    def pip(self, ctx, *args, json_output=False):
+    def pip(self, ctx, *args):
         subprocess.run((ctx.env_exec_cmd, '-m', 'pip') + args, check=True,
                        stdin=subprocess.DEVNULL, stdout=self.stderr,
                        stderr=self.stderr)
 
 
+def get_sysinfo(vdir, py_version):
+    vars = {
+        'base': vdir, 'platbase': vdir,
+        'installed_base': vdir, 'intsalled_platbase': vdir,
+        'py_version_short': py_version,
+    }
+    return (sysconfig.get_path('purelib', scheme='venv', vars=vars),
+            sysconfig.get_path('scripts', scheme='venv', vars=vars),
+            sysconfig.get_config_vars().get('EXE', ''))
+
+
 def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).parent.resolve()
+    base = pathlib.Path(argv[0]).resolve().parent
     vdir = base / '_venv'
 
     # Create the venv if it doesn't exist.
@@ -38,11 +50,15 @@ def main(argv, stdin, stdout, stderr):
         stderr.write("\n")
 
     # Import from modules installed in the venv.
-    for lib in (vdir / 'lib').glob('python*.*'):
-        sys.path.append(lib / 'site-packages')
-        with contextlib.suppress(ImportError):
+    lib, bin, ext = get_sysinfo(vdir, '*.*')
+    for path in base.glob(str(pathlib.Path(lib).relative_to(base))):
+        try:
+            old = sys.path[:]
+            sys.path.append(path)
             from tdoc.common import util
             break
+        except ImportError:
+            sys.path = old
     else:
         raise Exception("Failed to import tdoc.common.util")
 
@@ -50,7 +66,8 @@ def main(argv, stdin, stdout, stderr):
     util.check_upgrade(base, vdir, builder)
 
     # Run the command.
-    subprocess.run([vdir / 'bin' / 'tdoc'] + argv[1:], check=True, cwd=base)
+    subprocess.run([pathlib.Path(bin) / f'tdoc{ext}'] + argv[1:], check=True,
+                   cwd=base)
 
 
 if __name__ == '__main__':
