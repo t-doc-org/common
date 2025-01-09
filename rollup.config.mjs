@@ -11,9 +11,6 @@ import license from 'rollup-plugin-license';
 const __filename = import.meta.filename || url.fileURLToPath(import.meta.url)
 const __dirname = import.meta.dirname || path.dirname(__filename)
 
-// TODO: Package @sqlite.org/sqlite-wasm. Or maybe it must be an external
-//       because of the worker module and .wasm.
-
 export default {
     input: "./tdoc/common/scripts/editor.js",
     output: {

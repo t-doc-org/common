@@ -13,7 +13,4 @@
 - TODO: Allow generating graphs with matplotlib
   <https://matplotlib.org/sampledoc/extensions.html>.
 
-- TODO: If an `{exec}` block is too wide, make it show a horizontal scrollbar
-  instead of bleeding into the margin.
-
 - TODO: Make `{ref}` against a `{num}` show its expanded content.
