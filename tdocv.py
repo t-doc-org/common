@@ -13,9 +13,9 @@ import venv
 
 
 class EnvBuilder(venv.EnvBuilder):
-    def __init__(self, stderr):
+    def __init__(self, out):
         super().__init__(with_pip=True)
-        self.stderr = stderr
+        self.out = out
 
     def post_setup(self, ctx):
         super().post_setup(ctx)
@@ -23,8 +23,8 @@ class EnvBuilder(venv.EnvBuilder):
 
     def pip(self, ctx, *args):
         subprocess.run((ctx.env_exec_cmd, '-m', 'pip') + args, check=True,
-                       stdin=subprocess.DEVNULL, stdout=self.stderr,
-                       stderr=self.stderr)
+                       stdin=subprocess.DEVNULL, stdout=self.out,
+                       stderr=self.out)
 
 
 def get_sysinfo(vdir, py_version):
@@ -54,7 +54,7 @@ def main(argv, stdin, stdout, stderr):
     for path in base.glob(str(pathlib.Path(lib).relative_to(base))):
         try:
             old = sys.path[:]
-            sys.path.append(path)
+            sys.path.insert(0, str(path))
             from tdoc.common import util
             break
         except ImportError:

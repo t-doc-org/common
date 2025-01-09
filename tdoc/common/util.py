@@ -119,7 +119,7 @@ def check_upgrade(base, venv, builder):
     except Exception:
         return
     if new == cur: return
-    out = builder.stderr
+    out = builder.out
     color = ansi if want_colors(out) else no_ansi
     out.write(color("@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                     "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
