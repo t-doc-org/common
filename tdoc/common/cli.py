@@ -316,14 +316,14 @@ class Application:
 
     def check_upgrade(self):
         try:
-            upgrades, editable = pip_check_upgrades(self.cfg, __project__)
-            if editable or __project__ not in upgrades: return
+            upgrades = pip_check_upgrades(self.cfg, __project__)
+            if __project__ not in upgrades: return
             cur = metadata.version(__project__)
             new = upgrades[__project__]
             if sys.prefix != sys.base_prefix:  # Running in a venv
                 marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
                 with contextlib.suppress(Exception):
-                    marker.write_text(f'{__project__}=={new}\n')
+                    marker.write_text(f'{cur} {new}')
             msg = (self.cfg.ansi(
                 "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                 "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
@@ -439,14 +439,12 @@ def pip(cfg, *args, json_output=False):
 
 
 def pip_check_upgrades(cfg, package):
+    pkgs = pip(cfg, 'list', '--editable', '--format=json', json_output=True)
+    if any(pkg.name == package for pkg in pkgs): return {}
     data = pip(cfg, 'install', '--dry-run', '--upgrade',
                '--upgrade-strategy=only-if-needed', '--only-binary=:all:',
                '--report=-', '--quiet', package, json_output=True)
-    upgrades = {pkg.metadata.name: pkg.metadata.version for pkg in data.install}
-    if package not in upgrades: return {}, False
-    pkgs = pip(cfg, 'list', '--editable', '--format=json', json_output=True)
-    editable = any(pkg.name == package for pkg in pkgs)
-    return upgrades, editable
+    return {pkg.metadata.name: pkg.metadata.version for pkg in data.install}
 
 
 if __name__ == '__main__':

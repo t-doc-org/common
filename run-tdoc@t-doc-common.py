@@ -4,6 +4,8 @@
 
 import contextlib
 import contextvars
+import itertools
+import os
 import pathlib
 import re
 import subprocess
@@ -13,14 +15,10 @@ import sysconfig
 import time
 import venv
 
-# TODO: Don't make upgrade.txt a requirements file, just metadata
-# TODO: Garbage-collect based on the time of last use (touch requirements.txt)
-# TODO: Identify existing venv through requirements
-# TODO: Allow forcing requirements (file? env var?)
 # TODO: Allow forcing the creation of a new venv
 
-keep_envs = 2
-keep_envs_days = 3
+idle_days = 3
+keep_live_envs = 2
 
 executable_re = re.compile(r'^run-([^@]+)@(.+)\.py$')
 
@@ -30,6 +28,8 @@ def main(argv, stdin, stdout, stderr):
     executable = pathlib.Path(argv[0]).name
     if (m := executable_re.fullmatch(executable)) is not None:
         command, requirements = m.group(1, 2)
+        if reqs := os.environ.get('RUN_REQUIREMENTS'):
+            requirements = reqs
     elif len(argv) >= 3:
         command, requirements = argv[1:3]
         argv = argv[:1] + argv[3:]
@@ -43,37 +43,35 @@ def main(argv, stdin, stdout, stderr):
 
     # Find the most recent venv. Create one if none exists.
     envs = builder.find()
-    if not any(e.valid for e in envs):
+    if not (es := envs.setdefault(requirements, [])):
         stderr.write("Creating venv...\n")
         env = builder.new()
-        env.create(f'{requirements}\n')
-        envs.insert(0, env)
+        env.create(requirements)
+        es.insert(0, env)
         stderr.write("\n")
-    for env in envs:
-        if env.valid: break
+    else:
+        env = es[0]
 
     # Garbage-collect old venvs.
-    limit = time.time_ns() - keep_envs_days * 24 * 3600 * 1_000_000_000
-    count = 0
-    for e in envs:
-        if e.valid:
-            count += 1
-            if count <= keep_envs: continue
-        if e.time >= limit: continue
-        e.remove()
+    limit = time.time_ns() - idle_days * 24 * 3600 * 1_000_000_000
+    for reqs, es in envs.items():
+        keep = keep_live_envs if is_live(reqs) else 0
+        for e in itertools.islice(es, keep):
+            if e.last_used < limit: e.remove()
 
     # Upgrade if available and if requested by the user.
-    if (reqs := env.check_upgrade()) is not None:
+    if env.want_upgrade():
         stderr.write("Upgrading...\n")
         new = builder.new()
         try:
-            new.create(reqs)
+            new.create(requirements)
             env = new
         except Exception:
             stderr.write("\nUpgrade failed. Continuing with current version.\n")
         stderr.write("\n")
 
     # Run the command.
+    env.touch()
     bin, ext = env.sysinfo
     return subprocess.run([pathlib.Path(bin) / f'{command}{ext}'] + argv[1:],
                           cwd=base).returncode
@@ -90,6 +88,12 @@ class lazy:
         return res
 
 
+live_re = re.compile(r'(?i)^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$')
+
+def is_live(requirements):
+    return live_re.fullmatch(requirements or '') is not None
+
+
 class Env:
     prefix = 'venv'
     requirements_txt = 'requirements.txt'
@@ -101,15 +105,19 @@ class Env:
         self.path, self.builder = path, builder
 
     @lazy
-    def time(self):
-        return int(self.path.stem.rsplit('-', 1)[-1], 16)
+    def last_used(self):
+        try:
+            return (self.path / self.requirements_txt).stat(
+                follow_symlinks=False).st_mtime_ns
+        except OSError:
+            return 0
 
     @lazy
-    def valid(self):
-        with contextlib.suppress(IOError):
-            (self.path / self.requirements_txt).read_text()
-            return True
-        return False
+    def requirements(self):
+        try:
+            return (self.path / self.requirements_txt).read_text()
+        except OSError:
+            return None
 
     @lazy
     def sysinfo(self):
@@ -118,21 +126,22 @@ class Env:
         return (sysconfig.get_path('scripts', scheme='venv', vars=vars),
                 sysconfig.get_config_vars().get('EXE', ''))
 
-    def check_upgrade(self):
+    def want_upgrade(self):
+        if not is_live(self.requirements): return False
         try:
-            reqs = (self.path / self.upgrade_txt).read_text()
+            upgrade = (self.path / self.upgrade_txt).read_text()
+            cur, new = upgrade.split(' ', 1)[:2]
         except Exception:
-            return
+            return False
         self.builder.out.write(f"""\
-A t-doc upgrade is available:
-{''.join(f'  {line}\n' for line in reqs.splitlines())}\
+A t-doc upgrade is available: {self.requirements} {cur} => {new}
 Would you like to upgrade (y/n)? """)
         resp = input().lower()
         self.builder.out.write("\n")
-        if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return reqs
+        return resp in ('y', 'yes', 'o', 'oui', 'j', 'ja')
 
     def create(self, reqs):
-        self.reqs = reqs
+        self.requirements = reqs
         self.builder.root.mkdir(exist_ok=True)
         token = self.env.set(self)
         try:
@@ -143,14 +152,19 @@ Would you like to upgrade (y/n)? """)
         finally:
             self.env.reset(token)
 
+    def touch(self):
+        with contextlib.suppress(OSError):
+            os.utime(self.path / self.requirements_txt, follow_symlinks=False)
+            with contextlib.suppress(AttributeError): del self.last_used
+
     @contextlib.contextmanager
     @staticmethod
-    def requirements():
+    def create_requirements():
         self = Env.env.get()
-        reqs = self.path / f'{self.requirements_txt}.tmp'
-        reqs.write_text(self.reqs)
-        yield reqs
-        reqs.rename(self.path / self.requirements_txt)
+        rpath = self.path / f'{self.requirements_txt}.tmp'
+        rpath.write_text(self.requirements)
+        yield rpath
+        rpath.rename(self.path / self.requirements_txt)
 
     def remove(self):
         try:
@@ -172,8 +186,12 @@ class EnvBuilder(venv.EnvBuilder):
         self.out = out
 
     def find(self):
-        envs = [Env(path, self) for path in self.root.glob(f'{Env.prefix}-*')]
-        envs.sort(key=lambda e: e.time, reverse=True)
+        envs = {}
+        for path in self.root.glob(f'{Env.prefix}-*'):
+            env = Env(path, self)
+            envs.setdefault(env.requirements, []).append(env)
+        for reqs, es in envs.items():
+            es.sort(key=lambda e: e.last_used, reverse=True)
         return envs
 
     def new(self):
@@ -181,9 +199,9 @@ class EnvBuilder(venv.EnvBuilder):
 
     def post_setup(self, ctx):
         super().post_setup(ctx)
-        with Env.requirements() as reqs:
+        with Env.create_requirements() as rpath:
             self.pip(ctx, 'install', '--only-binary=:all:',
-                     '--requirement', reqs)
+                     '--requirement', rpath)
 
     def pip(self, ctx, *args):
         subprocess.run((ctx.env_exec_cmd, '-P', '-m', 'pip',
