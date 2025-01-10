@@ -15,10 +15,8 @@ import sysconfig
 import time
 import venv
 
-# TODO: Allow forcing the creation of a new venv
-
 idle_days = 3
-keep_live_envs = 2
+keep_live_envs = 3
 
 executable_re = re.compile(r'^run-([^@]+)@(.+)\.py$')
 
@@ -43,7 +41,8 @@ def main(argv, stdin, stdout, stderr):
 
     # Find the most recent venv with the right requirements, or create one.
     envs = builder.find()
-    if not (es := envs.setdefault(requirements, [])):
+    es = envs.setdefault(requirements, [])
+    if not es or os.environ.get('RUN_REINSTALL'):
         stderr.write("Creating venv...\n")
         env = builder.new()
         env.create(requirements)
@@ -55,7 +54,7 @@ def main(argv, stdin, stdout, stderr):
     limit = time.time_ns() - idle_days * 24 * 3600 * 1_000_000_000
     for reqs, es in envs.items():
         keep = keep_live_envs if is_live(reqs) else 0
-        for e in itertools.islice(es, keep):
+        for e in itertools.islice(es, keep, None):
             if e is not env and e.last_used < limit: e.remove()
 
     # Check for upgrades, and upgrade if requested.
