@@ -1,2 +1,2 @@
 @echo off
-tdocv.py serve
+run-tdoc@t-doc-common.py serve

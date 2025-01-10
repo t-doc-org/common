@@ -5,6 +5,7 @@
 import contextlib
 import contextvars
 import pathlib
+import re
 import subprocess
 import shutil
 import sys
@@ -12,16 +13,31 @@ import sysconfig
 import time
 import venv
 
-# TODO: Use a naming convention to determine (package, cmd)
+# TODO: Don't make upgrade.txt a requirements file, just metadata
+# TODO: Garbage-collect based on the time of last use (touch requirements.txt)
+# TODO: Identify existing venv through requirements
 # TODO: Allow forcing requirements (file? env var?)
+# TODO: Allow forcing the creation of a new venv
 
-package = 't-doc-common'
-command = 'tdoc'
 keep_envs = 2
 keep_envs_days = 3
 
+executable_re = re.compile(r'^run-([^@]+)@(.+)\.py$')
+
 
 def main(argv, stdin, stdout, stderr):
+    # Determine the command to run and the requirements for running it.
+    executable = pathlib.Path(argv[0]).name
+    if (m := executable_re.fullmatch(executable)) is not None:
+        command, requirements = m.group(1, 2)
+    elif len(argv) >= 3:
+        command, requirements = argv[1:3]
+        argv = argv[:1] + argv[3:]
+    else:
+        stderr.write("Not enough arguments\n\n"
+                     f"Usage: {executable} COMMAND REQUIREMENTS [ARG ...]\n")
+        return 1
+
     base = pathlib.Path.cwd()
     builder = EnvBuilder(base, stderr)
 
@@ -30,7 +46,7 @@ def main(argv, stdin, stdout, stderr):
     if not any(e.valid for e in envs):
         stderr.write("Creating venv...\n")
         env = builder.new()
-        env.create()
+        env.create(f'{requirements}\n')
         envs.insert(0, env)
         stderr.write("\n")
     for env in envs:
@@ -115,8 +131,7 @@ Would you like to upgrade (y/n)? """)
         self.builder.out.write("\n")
         if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return reqs
 
-    def create(self, reqs=None):
-        if reqs is None: reqs = f'{package}\n'
+    def create(self, reqs):
         self.reqs = reqs
         self.builder.root.mkdir(exist_ok=True)
         token = self.env.set(self)
