@@ -3,7 +3,7 @@ __pycache__
 
 /LICENSES.deps.txt
 /_build/
-/_venv*/
+/_venv/
 /dist/
 /node_modules/
 /tdoc/common/static.gen/

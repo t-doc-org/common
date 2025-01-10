@@ -321,9 +321,9 @@ class Application:
             cur = metadata.version(__project__)
             new = upgrades[__project__]
             if sys.prefix != sys.base_prefix:  # Running in a venv
-                marker = pathlib.Path(sys.prefix) / 'tdoc.upgrade'
+                marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
                 with contextlib.suppress(Exception):
-                    marker.write_text(f'{cur} {new}')
+                    marker.write_text(f'{__project__}=={new}\n')
             msg = (self.cfg.ansi(
                 "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
                 "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
