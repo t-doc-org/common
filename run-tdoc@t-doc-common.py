@@ -41,13 +41,12 @@ def main(argv, stdin, stdout, stderr):
     base = pathlib.Path.cwd()
     builder = EnvBuilder(base, stderr)
 
-    # Find the most recent venv. Create one if none exists.
+    # Find the most recent venv with the right requirements, or create one.
     envs = builder.find()
     if not (es := envs.setdefault(requirements, [])):
         stderr.write("Creating venv...\n")
         env = builder.new()
         env.create(requirements)
-        es.insert(0, env)
         stderr.write("\n")
     else:
         env = es[0]
@@ -57,9 +56,9 @@ def main(argv, stdin, stdout, stderr):
     for reqs, es in envs.items():
         keep = keep_live_envs if is_live(reqs) else 0
         for e in itertools.islice(es, keep):
-            if e.last_used < limit: e.remove()
+            if e is not env and e.last_used < limit: e.remove()
 
-    # Upgrade if available and if requested by the user.
+    # Check for upgrades, and upgrade if requested.
     if env.want_upgrade():
         stderr.write("Upgrading...\n")
         new = builder.new()
