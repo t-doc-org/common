@@ -105,8 +105,7 @@ class Env:
     @lazy
     def last_used(self):
         try:
-            return (self.path / self.requirements_txt).stat(
-                follow_symlinks=False).st_mtime_ns
+            return (self.path / self.requirements_txt).stat().st_mtime_ns
         except OSError:
             return 0
 
@@ -152,7 +151,7 @@ Would you like to upgrade (y/n)? """)
 
     def touch(self):
         with contextlib.suppress(OSError):
-            os.utime(self.path / self.requirements_txt, follow_symlinks=False)
+            os.utime(self.path / self.requirements_txt)
             with contextlib.suppress(AttributeError): del self.last_used
 
     @contextlib.contextmanager
