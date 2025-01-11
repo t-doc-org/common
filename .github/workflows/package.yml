@@ -76,7 +76,7 @@ jobs:
         run: |
           gh release create '${{ github.ref_name }}' \
               --repo='${{ github.repository }}' \
-              --notes="[Release notes](https://t-doc.org/common/install/release_notes#release-$(echo '${{ github.ref_name }}' | sed -re 's/\./-/g'))"
+              --notes="[Release notes](https://t-doc.org/common/release_notes.html#release-$(echo '${{ github.ref_name }}' | sed -re 's/\./-/g'))"
       - name: Upload packages and signatures
         env:
           GITHUB_TOKEN: ${{ github.token }}
