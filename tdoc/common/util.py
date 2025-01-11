@@ -80,10 +80,10 @@ def main(fn):
             sys.exit(fn(argv, stdin, stdout, stderr))
         except SystemExit:
             raise
+        except KeyboardInterrupt:
+            sys.exit(1)
         except BaseException as e:
-            stderr.write('\n')
-            if '--debug' in argv:
-                raise
-            stderr.write(f'{e}\n')
+            if '--debug' in argv: raise
+            stderr.write(f'\n{e}\n')
             sys.exit(1)
     return wrapper

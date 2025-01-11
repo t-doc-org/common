@@ -234,9 +234,10 @@ if __name__ == '__main__':
         sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
     except SystemExit:
         raise
+    except KeyboardInterrupt:
+        sys.exit(1)
     except BaseException as e:
         if '--debug' in sys.argv: raise
-        if not isinstance(e, KeyboardInterrupt):
-            sys.stderr.write(f'\n{e}\n')
-            maybe_wait_on_exit(sys.stderr)
+        sys.stderr.write(f'\n{e}\n')
+        maybe_wait_on_exit(sys.stderr)
         sys.exit(1)

@@ -25,7 +25,6 @@ from wsgiref import simple_server, util as wsgiutil
 
 from . import __project__, __version__, store, util, wsgi
 
-# TODO: Remove all previous builds after a successful build
 # TODO: Implement incremental builds, by copying previous build output
 
 
@@ -111,8 +110,8 @@ def main(argv, stdin, stdout, stderr):
     cfg.ansi = (util.ansi if cfg.color == 'true' or
                              (cfg.color == 'auto' and util.want_colors(stdout))
                           else util.no_ansi)
-    cfg.build = pathlib.Path(cfg.build).absolute()
-    cfg.source = pathlib.Path(cfg.source).absolute()
+    cfg.build = pathlib.Path(cfg.build).resolve()
+    cfg.source = pathlib.Path(cfg.source).resolve()
     if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
     return cfg.handler(cfg)
 
@@ -129,7 +128,7 @@ def cmd_clean(cfg):
 
 def cmd_serve(cfg):
     for i, p in enumerate(cfg.watch):
-        cfg.watch[i] = pathlib.Path(p).absolute()
+        cfg.watch[i] = pathlib.Path(p).resolve()
 
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
@@ -228,6 +227,7 @@ class Application:
         self.builder.join()
 
     def watch_and_build(self):
+        self.remove_all()
         interval = self.cfg.interval * 1_000_000_000
         delay = self.cfg.delay * 1_000_000_000
         prev, prev_mtime, build_mtime = 0, 0, None
@@ -259,12 +259,13 @@ class Application:
                     self.directory = build / 'html'
                     self.lock.notify_all()
                 self.print_serving()
-                if build_mtime is not None: self.remove_build_dir(build_mtime)
+                if build_mtime is not None:
+                    self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                self.remove_build_dir(mtime)
+                self.remove(self.build_dir(mtime))
             prev = time.time_ns()
-        if build_mtime is not None: self.remove_build_dir(build_mtime)
+        if build_mtime is not None: self.remove(self.build_dir(build_mtime))
 
     def latest_mtime(self):
         def on_error(e):
@@ -300,12 +301,15 @@ class Application:
         finally:
             with self.lock: self.building = False
 
-    def remove_build_dir(self, mtime):
-        build = self.build_dir(mtime)
+    def remove(self, build):
         build.relative_to(self.cfg.build)  # Ensure we're below the build dir
         def on_error(fn, path, e):
             self.cfg.stderr.write(f"Removal: {fn}: {path}: {e}\n")
         shutil.rmtree(build, onexc=on_error)
+
+    def remove_all(self):
+        for build in self.cfg.build.glob('serve-[0-9]*'):
+            self.remove(build)
 
     def print_serving(self):
         host, port = self.addr[:2]
