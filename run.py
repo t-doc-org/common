@@ -162,7 +162,7 @@ class EnvBuilder(venv.EnvBuilder):
         self.root = base / self.venv_root
         self.version = version
         self.out = out
-        self.requirements = f'-e {base}' if version == 'dev' \
+        self.requirements = f'-e {base.as_uri()}' if version == 'dev' \
                             else f'{package}=={version}' if version else package
 
     def find(self):
