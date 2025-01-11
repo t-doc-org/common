@@ -25,6 +25,7 @@ from wsgiref import simple_server, util as wsgiutil
 
 from . import __project__, __version__, store, util, wsgi
 
+# TODO: Remove all previous builds after a successful build
 # TODO: Implement incremental builds, by copying previous build output
 
 

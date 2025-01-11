@@ -132,7 +132,7 @@ class Env:
             return False
         self.builder.out.write(f"""\
 A t-doc upgrade is available: {self.requirements} {cur} => {new}
-Would you like to upgrade (y/n)? """)
+Would you like to apply the upgrade (y/n)? """)
         resp = input().lower()
         self.builder.out.write("\n")
         return resp in ('y', 'yes', 'o', 'oui', 'j', 'ja')

@@ -18,13 +18,7 @@ creating and editing documents.
   cd common
   ```
 
-- Enable git subrepositories.
-
-  ```{code-block} shell-session
-  echo -e '[subrepos]\ngit:allowed = true\n' >> .hg/hgrc
-  ```
-
-- Checkout the subrepositories and activate the `main` bookmark.
+- Checkout and activate the `main` bookmark.
 
   ```{code-block} shell-session
   hg checkout main

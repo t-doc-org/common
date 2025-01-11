@@ -21,17 +21,18 @@ are located below the `docs` directory.
 :class: line-height-normal
 ├── .github
 │   └── workflows
-│       └── publish.yml       A workflow to publish the repository
+│       └── publish.yml         A workflow to publish the repository
 ├── docs
-│   ├── conf.py               The Sphinx configuration
-│   ├── index.md              The main index page
-│   └── ...                   The source documents
+│   ├── conf.py                 The Sphinx configuration
+│   ├── index.md                The main index page
+│   └── ...                     The source documents
 ├── .gitignore
 ├── .hgignore
 ├── LICENSE.txt
 ├── README.md
-├── serve.bat                 A script to run the local server on Windows
-└── serve.desktop             A desktop entry to run the local server on Linux
+├── run-tdoc@t-doc-common.py    An auto-installing wrapper for the tdoc command
+├── serve.bat                   A script to run the local server on Windows
+└── serve.desktop               A desktop entry to run the local server on Linux
 ```
 
 ## Edit documents
@@ -42,28 +43,32 @@ are located below the `docs` directory.
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
-  Double-click the file `serve.bat` in the repository directory.
+  Double-click the file `serve.bat` in the repository root.
+
+  Alternatively, open a terminal, change to the repository root, and run:
+  ```{code-block} shell-session
+  run-tdoc@t-doc-common.py serve
+  ```
   ````
   ````{tab-item} macOS
   :sync: macos
-  Open a terminal, change to the repository directory, and run:
+  Open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  tdoc serve
+  ./run-tdoc@t-doc-common.py serve
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
-  Double-click the file `serve.desktop` in the repository directory.
+  Double-click the file `serve.desktop` in the repository root.
 
-  Alternatively, open a terminal, change to the repository directory, and run:
+  Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  tdoc serve
+  ./run-tdoc@t-doc-common.py serve
   ```
   ````
   `````
 
-  The server renders the source files into HTML, and serves the result over
-  HTTP.
+  The server renders the source files into HTML, and serves the site over HTTP.
 
   ```{code-block} text
   Running Sphinx v8.0.2
@@ -83,7 +88,7 @@ are located below the `docs` directory.
   any plain text editor.
   - The local server watches the source files and **automatically rebulids the
   HTML** when a file changes.
-  - If a build is successful, the browser **automatically reloads** all open
+  - When the build is successful, the browser **automatically reloads** all open
     pages.
   - If a build fails, the errors can be viewed in the terminal.
 

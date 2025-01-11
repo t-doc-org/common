@@ -82,66 +82,57 @@ t-doc requires the following software to be installed:
 ## Install
 
 - Install the [required packages](#requirements).
-
-- Install the `t-doc-common` package.
-
-  `````{tab-set}
-  :sync-group: platform
-  ````{tab-item} Windows
-  :sync: windows
-  ```{code-block} shell-session
-  python -m pip install t-doc-common
-  ```
-  ````
-  ````{tab-item} macOS
-  :sync: macos
-  ```{code-block} shell-session
-  python -m pip install --user t-doc-common
-  ```
-  You may have to add `$HOME/.local/bin` to your `PATH`.
-  ````
-  ````{tab-item} Linux
-  :sync: linux
-  ```{code-block} shell-session
-  python -m pip install --user t-doc-common
-  ```
-  You may have to add `$HOME/.local/bin` to your `PATH`.
-  ````
-  `````
+- The `t-doc-common` package will be installed automatically when
+  [starting the local server](../edit.md#edit-documents).
 
 ## Upgrade
 
-- Check the changes introduced in the new version in the
-  [release notes](release_notes).
+The [local server](../edit.md#edit-documents) indicates when an upgrade is
+available.
 
-- Upgrade the `t-doc-common` package and any out-of-date dependencies.
+- Check the changes introduced in the new version in the
+  [release notes](release_notes.md).
+- Restart the local server. When prompted, accept the upgrade.
+
+## Troubleshooting
+
+### Force a clean install
+
+If the local server refuses to start, it may be due to a broken install. To
+force a clean install of the `t-doc-common` package and its dependencies, remove
+the `_venv` directory at the root of the document repository.
+
+### Install a specific version
+
+If the latest version of the `t-doc-common` package is broken, a previous
+version of the package can be used until a fix is released.
+
+- Find the version of the `t-doc-common` package to install in the
+  [release notes](release_notes.md) (the example below uses version `0.28`).
+- Open a terminal at the root of the document repository.
+- Set the `RUN_REQUIREMENTS` environment variable to the desired version
+  specification, then run the desired command through the
+  `run-tdoc@t-doc-common.py` script.
 
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  python -m pip install --upgrade t-doc-common
-  ```
-  If you get the following error, then a
-  [local server](../edit.md#edit-documents) is running. Stop it with
-  {kbd}`Ctrl+C` or by closing its terminal window, then try again.
-  ```
-  ERROR: Could not install packages due to an OSError: [WinError 32] The process
-  cannot access the file because it is being used by another process:
-  'c:\\users\\...\\scripts\\tdoc.exe'
+  set RUN_REQUIREMENTS=t-doc-common==0.28
+  run-tdoc@t-doc-common.py serve
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  python -m pip install --user --upgrade t-doc-common
+  RUN_REQUIREMENTS=t-doc-common==0.28 ./run-tdoc@t-doc-common.py serve
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  python -m pip install --user --upgrade t-doc-common
+  RUN_REQUIREMENTS=t-doc-common==0.28 ./run-tdoc@t-doc-common.py serve
   ```
   ````
   `````
