@@ -142,13 +142,9 @@
 - Made the automatic page reloading more reactive.
 - Made pages cross-origin isolated even if the server doesn't set the
   appropriate headers.
-
-```{admonition} Warning
-:class: warning
-**This release breaks `<iframe>` tags in documents.** On Chrome, setting the
-`credentialless` attribute on the `<iframe>` tags fixes the issue, but Firefox
-and Safari don't support it (yet).
-```
+- **This release breaks `<iframe>` tags in documents.** On Chrome, setting the
+  `credentialless` attribute on the `<iframe>` tags fixes the issue, but Firefox
+  and Safari don't support it (yet).
 
 (release-0-9)=
 ## 0.9 *(2024-09-12)*

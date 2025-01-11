@@ -325,11 +325,12 @@ class Application:
                 marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
                 with contextlib.suppress(Exception):
                     marker.write_text(f'{cur} {new}')
-            msg = (self.cfg.ansi(
-                "@{LYELLOW}A t-doc upgrade is available:@{NORM} "
-                "%s @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}\n"
-                "@{BOLD}Restart the server to upgrade.@{NORM}\n")
-                % (__project__, cur, new))
+            msg = self.cfg.ansi("""\
+@{LYELLOW}A t-doc upgrade is available:@{NORM} %s\
+ @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}
+Release notes: <https://t-doc.org/common/release_notes.html#release-%s>
+@{BOLD}Restart the server to upgrade.@{NORM}
+""") % (__project__, cur, new, new.replace('.', '-'))
             with self.lock:
                 self.upgrade_msg = msg
                 if not self.building: self.cfg.stdout.write(msg)

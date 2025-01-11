@@ -4,10 +4,8 @@
 
 import contextlib
 import contextvars
-import itertools
 import os
 import pathlib
-import re
 import subprocess
 import shutil
 import sys
@@ -15,63 +13,68 @@ import sysconfig
 import time
 import venv
 
-idle_days = 3
-keep_live_envs = 3
+# Set this variable to temporarily install a specific version.
+VERSION = ''
 
-executable_re = re.compile(r'^run-([^@]+)@(.+)\.py$')
+package = 't-doc-common'
+command = 'tdoc'
+default_args = ['serve']
 
 
 def main(argv, stdin, stdout, stderr):
-    # Determine the command to run and the requirements for running it.
-    executable = pathlib.Path(argv[0]).name
-    if (m := executable_re.fullmatch(executable)) is not None:
-        command, requirements = m.group(1, 2)
-        if reqs := os.environ.get('RUN_REQUIREMENTS'):
-            requirements = reqs
-    elif len(argv) >= 3:
-        command, requirements = argv[1:3]
-        argv = argv[:1] + argv[3:]
-    else:
-        stderr.write("Not enough arguments\n\n"
-                     f"Usage: {executable} COMMAND REQUIREMENTS [ARG ...]\n")
-        return 1
+    base = pathlib.Path(argv[0]).resolve().parent
+    version = os.environ.get('TDOC_VERSION', VERSION)
+    requirements = f'{package}=={version}' if version else package
 
-    base = pathlib.Path.cwd()
+    # Find the most recent matching venv, or create one if there is none.
     builder = EnvBuilder(base, stderr)
-
-    # Find the most recent venv with the right requirements, or create one.
     envs = builder.find()
-    es = envs.setdefault(requirements, [])
-    if not es or os.environ.get('RUN_REINSTALL'):
-        stderr.write("Creating venv...\n")
+    matching = [e for e in envs if e.requirements == requirements]
+    if not matching:
+        stderr.write("Installing...\n")
         env = builder.new()
         env.create(requirements)
         stderr.write("\n")
     else:
-        env = es[0]
+        env = matching[0]
 
-    # Garbage-collect old venvs.
-    limit = time.time_ns() - idle_days * 24 * 3600 * 1_000_000_000
-    for reqs, es in envs.items():
-        keep = keep_live_envs if is_live(reqs) else 0
-        for e in itertools.islice(es, keep, None):
-            if e is not env and e.last_used < limit: e.remove()
+    # Remove old venvs.
+    for e in envs:
+        if e is not env: e.remove()
 
     # Check for upgrades, and upgrade if requested.
-    if env.want_upgrade():
-        stderr.write("Upgrading...\n")
-        new = builder.new()
-        try:
-            new.create(requirements)
-            env = new
-        except Exception:
-            stderr.write("\nUpgrade failed. Continuing with current version.\n")
-        stderr.write("\n")
+    cur, new = env.upgrade
+    if new is not None:
+        stderr.write(f"""\
+A t-doc upgrade is available: {package} {cur} => {new}
+Release notes: <https://t-doc.org/common/release_notes.html\
+#release-{new.replace('.', '-')}>
+""")
+        if VERSION:
+            stderr.write("Unset VERSION in run.py and restart the server to "
+                         "upgrade.\n\n")
+        elif version:
+            stderr.write("Unset TDOC_VERSION and restart the server to "
+                         "upgrade.\n\n")
+        else:
+            stderr.write("Would you like to apply the upgrade (y/n)? ")
+            resp = input().lower()
+            stderr.write("\n")
+            if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+                stderr.write("Upgrading...\n")
+                new_env = builder.new()
+                try:
+                    new_env.create(requirements)
+                    env = new_env
+                except Exception:
+                    stderr.write("\nThe upgrade failed. Continuing with the "
+                                 "current version.\n")
+                stderr.write("\n")
 
     # Run the command.
-    env.touch()
     bin, ext = env.sysinfo
-    return subprocess.run([pathlib.Path(bin) / f'{command}{ext}'] + argv[1:],
+    args = argv[1:] if len(argv) > 1 else default_args
+    return subprocess.run([pathlib.Path(bin) / f'{command}{ext}'] + args,
                           cwd=base).returncode
 
 
@@ -86,12 +89,6 @@ class lazy:
         return res
 
 
-live_re = re.compile(r'(?i)^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$')
-
-def is_live(requirements):
-    return live_re.fullmatch(requirements or '') is not None
-
-
 class Env:
     prefix = 'venv'
     requirements_txt = 'requirements.txt'
@@ -103,13 +100,6 @@ class Env:
         self.path, self.builder = path, builder
 
     @lazy
-    def last_used(self):
-        try:
-            return (self.path / self.requirements_txt).stat().st_mtime_ns
-        except OSError:
-            return 0
-
-    @lazy
     def requirements(self):
         try:
             return (self.path / self.requirements_txt).read_text()
@@ -117,25 +107,19 @@ class Env:
             return None
 
     @lazy
+    def upgrade(self):
+        try:
+            upgrade = (self.path / self.upgrade_txt).read_text()
+            return upgrade.split(' ', 1)[:2]
+        except Exception:
+            return None, None
+
+    @lazy
     def sysinfo(self):
         vars = {'base': self.path, 'platbase': self.path,
                 'installed_base': self.path, 'intsalled_platbase': self.path}
         return (sysconfig.get_path('scripts', scheme='venv', vars=vars),
                 sysconfig.get_config_vars().get('EXE', ''))
-
-    def want_upgrade(self):
-        if not is_live(self.requirements): return False
-        try:
-            upgrade = (self.path / self.upgrade_txt).read_text()
-            cur, new = upgrade.split(' ', 1)[:2]
-        except Exception:
-            return False
-        self.builder.out.write(f"""\
-A t-doc upgrade is available: {self.requirements} {cur} => {new}
-Would you like to apply the upgrade (y/n)? """)
-        resp = input().lower()
-        self.builder.out.write("\n")
-        return resp in ('y', 'yes', 'o', 'oui', 'j', 'ja')
 
     def create(self, reqs):
         self.requirements = reqs
@@ -148,11 +132,6 @@ Would you like to apply the upgrade (y/n)? """)
             raise
         finally:
             self.env.reset(token)
-
-    def touch(self):
-        with contextlib.suppress(OSError):
-            os.utime(self.path / self.requirements_txt)
-            with contextlib.suppress(AttributeError): del self.last_used
 
     @contextlib.contextmanager
     @staticmethod
@@ -183,12 +162,8 @@ class EnvBuilder(venv.EnvBuilder):
         self.out = out
 
     def find(self):
-        envs = {}
-        for path in self.root.glob(f'{Env.prefix}-*'):
-            env = Env(path, self)
-            envs.setdefault(env.requirements, []).append(env)
-        for reqs, es in envs.items():
-            es.sort(key=lambda e: e.last_used, reverse=True)
+        envs = [Env(path, self) for path in self.root.glob(f'{Env.prefix}-*')]
+        envs.sort(key=lambda e: e.path, reverse=True)
         return envs
 
     def new(self):
