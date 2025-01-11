@@ -82,7 +82,7 @@ t-doc requires the following software to be installed:
 ## Install
 
 - Install the [required packages](#requirements).
-- The `t-doc-common` package will be installed automatically when
+- Everything else will be installed automatically when
   [starting the local server](edit.md#edit-documents).
 
 ## Upgrade
@@ -107,32 +107,21 @@ the `_venv` directory at the root of the document repository.
 If the latest version of the `t-doc-common` package is broken, a previous
 version of the package can be used until a fix is released.
 
-- Find the version of the `t-doc-common` package to install in the
-  [release notes](release_notes.md) (the example below uses version `0.28`).
-- Open a terminal at the root of the document repository.
-- Set the `RUN_REQUIREMENTS` environment variable to the desired version
-  specification, then run the desired command through the
-  `run-tdoc@t-doc-common.py` script.
+- Check the [release notes](release_notes.md) and find the version of the
+  `t-doc-common` package to install.
 
-  `````{tab-set}
-  :sync-group: platform
-  ````{tab-item} Windows
-  :sync: windows
-  ```{code-block} shell-session
-  set RUN_REQUIREMENTS=t-doc-common==0.28
-  run-tdoc@t-doc-common.py serve
+- Open the `run.py` script in a text editor and set the version in the `VERSION`
+  variable.
+
+  ```{code-block} python
+  VERSION = '0.28'
   ```
-  ````
-  ````{tab-item} macOS
-  :sync: macos
-  ```{code-block} shell-session
-  RUN_REQUIREMENTS=t-doc-common==0.28 ./run-tdoc@t-doc-common.py serve
+
+- Start the local server. This will install and run the selected version.
+
+- To return to the latest version (and re-enable upgrades), restore the
+  `VERSION` variable to an empty string.
+
+  ```{code-block} python
+  VERSION = ''
   ```
-  ````
-  ````{tab-item} Linux
-  :sync: linux
-  ```{code-block} shell-session
-  RUN_REQUIREMENTS=t-doc-common==0.28 ./run-tdoc@t-doc-common.py serve
-  ```
-  ````
-  `````

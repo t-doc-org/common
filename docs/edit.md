@@ -21,18 +21,17 @@ are located below the `docs` directory.
 :class: line-height-normal
 ├── .github
 │   └── workflows
-│       └── publish.yml         A workflow to publish the repository
+│       └── publish.yml       A workflow to publish the repository
 ├── docs
-│   ├── conf.py                 The Sphinx configuration
-│   ├── index.md                The main index page
-│   └── ...                     The source documents
+│   ├── conf.py               The Sphinx configuration
+│   ├── index.md              The main index page
+│   └── ...                   The source documents
 ├── .gitignore
 ├── .hgignore
 ├── LICENSE.txt
 ├── README.md
-├── run-tdoc@t-doc-common.py    An auto-installing wrapper for the tdoc command
-├── serve.bat                   A script to run the local server on Windows
-└── serve.desktop               A desktop entry to run the local server on Linux
+├── run.desktop               A desktop entry to run the local server on Linux
+└── run.py                    An auto-installing wrapper for the tdoc command
 ```
 
 ## Edit documents
@@ -43,27 +42,27 @@ are located below the `docs` directory.
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
-  Double-click the file `serve.bat` in the repository root.
+  Double-click the file `run.py` in the repository root.
 
   Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  run-tdoc@t-doc-common.py serve
+  run.py serve
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   Open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  ./run-tdoc@t-doc-common.py serve
+  ./run.py serve
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
-  Double-click the file `serve.desktop` in the repository root.
+  Double-click the file `run.desktop` in the repository root.
 
   Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  ./run-tdoc@t-doc-common.py serve
+  ./run.py serve
   ```
   ````
   `````
@@ -81,7 +80,7 @@ are located below the `docs` directory.
   Serving at <http://[::1]:8000/>
   ```
 
-- **Navigate** to [http://localhost:8000/](http://localhost:8000/) to view the
+- **Navigate** to [`http://localhost:8000/`](http://localhost:8000/) to view the
   generated pages.
 
 - **Create and edit documents** in the `docs` directory. This can be done with
@@ -99,9 +98,9 @@ are located below the `docs` directory.
 
 ## Deploy documents
 
-To deploy the repository to `tdoc.org`, make sure that all changes have been
-committed (and that new files have been added with Mercurial), then push the
-changes to the server.
+To deploy the repository to [`tdoc.org`](https://t-doc.org), make sure that all
+changes have been committed (and that new files have been added with Mercurial),
+then push the changes to the server.
 
 ```{code-block} shell-session
 hg push
