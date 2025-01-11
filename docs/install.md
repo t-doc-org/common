@@ -83,11 +83,11 @@ t-doc requires the following software to be installed:
 
 - Install the [required packages](#requirements).
 - The `t-doc-common` package will be installed automatically when
-  [starting the local server](../edit.md#edit-documents).
+  [starting the local server](edit.md#edit-documents).
 
 ## Upgrade
 
-The [local server](../edit.md#edit-documents) indicates when an upgrade is
+The [local server](edit.md#edit-documents) indicates when an upgrade is
 available.
 
 - Check the changes introduced in the new version in the

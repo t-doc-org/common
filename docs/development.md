@@ -8,8 +8,7 @@ creating and editing documents.
 
 ## Install
 
-- Install the [required packages](install/index.md#requirements) for your
-  system.
+- Install the [required packages](install.md#requirements) for your system.
 
 - Clone the `t-doc/common` repository (substitute `USER` with your username).
 

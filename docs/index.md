@@ -48,7 +48,7 @@ building awesome software and making it available for free!
 
 ```{toctree}
 :maxdepth: 1
-install/index
+install
 edit
 development
 reference/index
