@@ -57,6 +57,7 @@ Release notes: <https://t-doc.org/common/release_notes.html\
                          "upgrade.\n\n")
         else:
             stderr.write("Would you like to apply the upgrade (y/n)? ")
+            stderr.flush()
             resp = input().lower()
             stderr.write("\n")
             if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
@@ -226,6 +227,7 @@ def maybe_wait_on_exit(stderr):
             kernel32.CloseHandle(h)
     if count > 0: return
     stderr.write("\nPress ENTER to exit.")
+    stderr.flush()
     input()
 
 
