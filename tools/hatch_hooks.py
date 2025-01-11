@@ -37,7 +37,9 @@ class MetadataHook(MetadataHookInterface, HookMixin):
 class BuildHook(BuildHookInterface, HookMixin):
     def initialize(self, version, build_data):
         self.app.display_info("Installing node packages")
-        self.run(['npm', 'install'])
+        npm = shutil.which('npm')
+        if npm is None: raise Exception("The 'npm' command cannot be found")
+        self.run([npm, 'install'])
         self.app.display_info("Removing generated files")
         shutil.rmtree(self.static_gen, ignore_errors=True)
         (self.top / LICENSES).unlink(missing_ok=True)
@@ -60,7 +62,7 @@ class BuildHook(BuildHookInterface, HookMixin):
                 'sqlite3-worker1-promiser.mjs',
                 'sqlite3.wasm',
             ])
-        self.run(['npm', 'run', 'build'])
+        self.run([npm, 'run', 'build'])
 
     def copy_node(self, src, dst):
         shutil.copy2(self.node_modules / src, self.static_gen / dst)
