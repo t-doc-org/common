@@ -6,6 +6,7 @@ import contextlib
 import contextvars
 import os
 import pathlib
+import re
 import subprocess
 import shutil
 import sys
@@ -182,6 +183,45 @@ class EnvBuilder(venv.EnvBuilder):
                        stderr=self.out)
 
 
+MAX_WPATH = 32768
+PROCESS_QUERY_INFORMATION = 0x0400
+PROCESS_VM_READ = 0x0010
+
+own_process_re = re.compile(r'(?i).*\\(?:py|python[0-9.]*)\.exe$')
+
+
+def maybe_wait_on_exit(stderr):
+    if sys.platform != 'win32': return
+    import ctypes.wintypes
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    DWORD = ctypes.wintypes.DWORD
+
+    # Check if there are any other console processes besides our own
+    # (python.exe and potentially py.exe).
+    pids = (DWORD * 2)()
+    count = kernel32.GetConsoleProcessList(pids, len(pids))
+    if count > 2: return
+
+    # There is at least one process besides python.exe. Check if it's py.exe or
+    # the shell.
+    psapi = ctypes.WinDLL('psapi', use_last_error=True)
+    path = ctypes.create_unicode_buffer(MAX_WPATH)
+    for pid in pids:
+        h = kernel32.OpenProcess(
+            DWORD(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ),
+            False, pid)
+        if h == 0: continue
+        try:
+            size = psapi.GetModuleFileNameExW(h, None, path, MAX_WPATH)
+            if size == 0: continue
+            if own_process_re.match(path[:size]) is not None: count -= 1
+        finally:
+            kernel32.CloseHandle(h)
+    if count > 0: return
+    stderr.write("\nPress ENTER to exit.")
+    input()
+
+
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
@@ -191,4 +231,5 @@ if __name__ == '__main__':
         if '--debug' in sys.argv: raise
         if not isinstance(e, KeyboardInterrupt):
             sys.stderr.write(f'\n{e}\n')
+            maybe_wait_on_exit(sys.stderr)
         sys.exit(1)
