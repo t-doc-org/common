@@ -24,17 +24,15 @@ default_args = ['serve']
 
 def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).resolve().parent
-    version = os.environ.get('TDOC_VERSION', VERSION)
-    requirements = f'{package}=={version}' if version else package
 
-    # Find the most recent matching venv, or create one if there is none.
-    builder = EnvBuilder(base, stderr)
-    envs = builder.find()
-    matching = [e for e in envs if e.requirements == requirements]
+    # Find a matching venv, or create one if there is none.
+    version = os.environ.get('TDOC_VERSION', VERSION)
+    builder = EnvBuilder(base, version, stderr)
+    envs, matching = builder.find()
     if not matching:
         stderr.write("Installing...\n")
         env = builder.new()
-        env.create(requirements)
+        env.create()
         stderr.write("\n")
     else:
         env = matching[0]
@@ -65,7 +63,7 @@ Release notes: <https://t-doc.org/common/release_notes.html\
                 stderr.write("Upgrading...\n")
                 new_env = builder.new()
                 try:
-                    new_env.create(requirements)
+                    new_env.create()
                     env = new_env
                 except Exception:
                     stderr.write("\nThe upgrade failed. Continuing with the "
@@ -75,8 +73,7 @@ Release notes: <https://t-doc.org/common/release_notes.html\
     # Run the command.
     bin, ext = env.sysinfo
     args = argv[1:] if len(argv) > 1 else default_args
-    return subprocess.run([pathlib.Path(bin) / f'{command}{ext}'] + args,
-                          cwd=base).returncode
+    return subprocess.run([bin / f'{command}{ext}'] + args).returncode
 
 
 class lazy:
@@ -91,7 +88,6 @@ class lazy:
 
 
 class Env:
-    prefix = 'venv'
     requirements_txt = 'requirements.txt'
     upgrade_txt = 'upgrade.txt'
 
@@ -119,11 +115,12 @@ class Env:
     def sysinfo(self):
         vars = {'base': self.path, 'platbase': self.path,
                 'installed_base': self.path, 'intsalled_platbase': self.path}
-        return (sysconfig.get_path('scripts', scheme='venv', vars=vars),
+        return (pathlib.Path(sysconfig.get_path('scripts', scheme='venv',
+                                                vars=vars)),
                 sysconfig.get_config_vars().get('EXE', ''))
 
-    def create(self, reqs):
-        self.requirements = reqs
+    def create(self):
+        self.requirements = self.builder.requirements
         self.builder.root.mkdir(exist_ok=True)
         token = self.env.set(self)
         try:
@@ -156,19 +153,29 @@ class Env:
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
+    venv_dev = 'dev'
+    venv_prefix = 'venv'
 
-    def __init__(self, base, out):
+    def __init__(self, base, version, out):
         super().__init__(with_pip=True)
         self.root = base / self.venv_root
+        self.version = version
         self.out = out
+        self.requirements = f'-e {base}' if version == 'dev' \
+                            else f'{package}=={version}' if version else package
 
     def find(self):
-        envs = [Env(path, self) for path in self.root.glob(f'{Env.prefix}-*')]
+        pat = self.venv_dev if self.version == 'dev' \
+              else f'{self.venv_prefix}-*'
+        envs = [Env(path, self) for path in self.root.glob(pat)]
         envs.sort(key=lambda e: e.path, reverse=True)
-        return envs
+        matching = [e for e in envs if e.requirements == self.requirements]
+        return envs, matching
 
     def new(self):
-        return Env(self.root / f'{Env.prefix}-{time.time_ns():024x}', self)
+        name = 'dev' if self.version == 'dev' \
+               else f'{self.venv_prefix}-{time.time_ns():024x}'
+        return Env(self.root / name, self)
 
     def post_setup(self, ctx):
         super().post_setup(ctx)

@@ -23,29 +23,29 @@ creating and editing documents.
   hg checkout main
   ```
 
-- Install the `t-doc-common` package from editable sources.
+- Run the local server with `TDOC_VERSION=dev`. This installs the `t-doc-common`
+  package as editable into the virtual environment `_venv/dev`.
 
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  python -m pip install --editable .
+  set TDOC_VERSION=dev
+  run.py --debug serve
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  python -m pip install --user --editable .
+  TDOC_VERSION=dev ./run.py --debug serve
   ```
-  You may have to add `$HOME/.local/bin` to your `PATH`.
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  python -m pip install --user --editable .
+  TDOC_VERSION=dev ./run.py --debug serve
   ```
-  You may have to add `$HOME/.local/bin` to your `PATH`.
   ````
   `````
 
@@ -54,7 +54,6 @@ creating and editing documents.
 - Pull missing changesets from the `t-doc/common` repository.
 
   ```{code-block} shell-session
-  cd common
   hg pull
   ```
 
@@ -64,26 +63,31 @@ creating and editing documents.
   hg update --check
   ```
 
-- Upgrade the `t-doc-common` package metadata and any out-of-date dependencies.
+- If any dependencies need to be upgraded, delete the `_venv/dev` directory. It
+  will be re-created when the local server is run the next time with
+  `TDOC_VERSION=dev`.
+
+- Alternatively, the `t-doc-common` package metadata and any out-of-date
+  dependencies can be updated in-place.
 
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  python -m pip install --upgrade --editable .
+  _venv\dev\Scripts\pip.exe install --upgrade --editable .
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  python -m pip install --user --upgrade --editable .
+  _venv/dev/bin/pip install --user --upgrade --editable .
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  python -m pip install --user --upgrade --editable .
+  _venv/dev/bin/pip install --user --upgrade --editable .
   ```
   ````
   `````
