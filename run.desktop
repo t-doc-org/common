@@ -1,11 +1,11 @@
 #!/usr/bin/env xdg-open
 [Desktop Entry]
-Name=tdoc serve
+Name=Local t-doc server
 Type=Application
 GenericName=Start a local t-doc server
 Comment=
 Icon=document-preview
-Exec=cd "$(dirname "%k")" && ./run-tdoc@t-doc-common.py serve
+Exec="$(dirname "%k")/run.py"
 Path=
 Terminal=true
 StartupNotify=false
