@@ -67,6 +67,19 @@ t-doc requires the following software to be installed:
   winget install --id Microsoft.WindowsTerminal
   ```
 
+#### Upgrades
+
+Available upgrades for these packages can be displayed and installed with
+`winget upgrade`.
+
+```{code-block} shell-session
+winget upgrade
+winget upgrade --id Python.Python.3.12
+winget upgrade --id Graphviz.Graphviz
+winget upgrade --id TortoiseHg.TortoiseHg
+winget upgrade --id Microsoft.WindowsTerminal
+```
+
 ### macOS
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
