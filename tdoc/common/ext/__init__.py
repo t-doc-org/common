@@ -113,6 +113,7 @@ def on_config_inited(app, config):
 
 
 def on_html_page_context(app, page, template, context, doctree):
+    context['tdoc_version'] = __version__
     license = app.config.license
     if license: context['license'] = license
     license_url = app.config.license_url
