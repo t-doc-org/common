@@ -3,6 +3,11 @@
 
 # Release notes
 
+(release-0-31)=
+## 0.31 *(2025-01-12)*
+
+- Added the t-doc version in the content footer.
+
 (release-0-30)=
 ## 0.30 *(2025-01-12)*
 
