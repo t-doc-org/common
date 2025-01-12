@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-30)=
+## 0.30 *(2025-01-12)*
+
+- Finalized the auto-install and upgrade functionality.
+- On Windows, made the `run.py` script pause on termination due to an exception,
+  so that the console window doesn't close immediately.
+- Enabled development in an isolated virtual environment.
+
 (release-0-29)=
 ## 0.29 *(2025-01-09)*
 
