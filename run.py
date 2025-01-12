@@ -46,7 +46,7 @@ def main(argv, stdin, stdout, stderr):
     if new is not None:
         stderr.write(f"""\
 A t-doc upgrade is available: {package} {cur} => {new}
-Release notes: <https://t-doc.org/common/release_notes.html\
+Release notes: <https://t-doc.org/common/release-notes.html\
 #release-{new.replace('.', '-')}>
 """)
         if VERSION:

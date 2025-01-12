@@ -332,7 +332,7 @@ class Application:
             msg = self.cfg.ansi("""\
 @{LYELLOW}A t-doc upgrade is available:@{NORM} %s\
  @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}
-Release notes: <https://t-doc.org/common/release_notes.html#release-%s>
+Release notes: <https://t-doc.org/common/release-notes.html#release-%s>
 @{BOLD}Restart the server to upgrade.@{NORM}
 """) % (__project__, cur, new, new.replace('.', '-'))
             with self.lock:

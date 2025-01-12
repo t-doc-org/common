@@ -6,7 +6,7 @@
 ```{toctree}
 :maxdepth: 1
 :hidden:
-release_notes
+release-notes
 ```
 
 ## Requirements
@@ -91,7 +91,7 @@ The [local server](edit.md#edit-documents) indicates when an upgrade is
 available.
 
 - Check the changes introduced in the new version in the
-  [release notes](release_notes.md).
+  [release notes](release-notes.md).
 - Restart the local server. When prompted, accept the upgrade.
 
 ## Troubleshooting
@@ -107,7 +107,7 @@ the `_venv` directory at the root of the document repository.
 If the latest version of the `t-doc-common` package is broken, a previous
 version of the package can be used until a fix is released.
 
-- Check the [release notes](release_notes.md) and find the version of the
+- Check the [release notes](release-notes.md) and find the version of the
   `t-doc-common` package to install.
 
 - Open the `run.py` script in a text editor and set the version in the `VERSION`
