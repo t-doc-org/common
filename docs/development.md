@@ -10,6 +10,34 @@ creating and editing documents.
 
 - Install the [required packages](install.md#requirements) for your system.
 
+- Install [Node.js](https://nodejs.org), include the `npm` package manager and
+  make sure it's on the system `PATH`.
+
+- Install [build](https://pypi.org/project/build/) and
+  [hatchling](https://pypi.org/project/hatchling/).
+
+  `````{tab-set}
+  :sync-group: platform
+  ````{tab-item} Windows
+  :sync: windows
+  ```{code-block} shell-session
+  python -m pip install build hatchling
+  ```
+  ````
+  ````{tab-item} macOS
+  :sync: macos
+  ```{code-block} shell-session
+  python -m pip install --user build hatchling
+  ```
+  ````
+  ````{tab-item} Linux
+  :sync: linux
+  ```{code-block} shell-session
+  python -m pip install --user build hatchling
+  ```
+  ````
+  `````
+
 - Clone the `t-doc/common` repository (substitute `USER` with your username).
 
   ```{code-block} shell-session
@@ -63,9 +91,15 @@ creating and editing documents.
   hg update --check
   ```
 
-- If any dependencies need to be upgraded, delete the `_venv/dev` directory. It
-  will be re-created when the local server is run the next time with
-  `TDOC_VERSION=dev`.
+- Update the generated files.
+
+  ```{code-block} shell-session
+  python -m build --no-isolation --wheel
+  ```
+
+- If any Python dependencies need to be upgraded, delete the `_venv/dev`
+  directory. It will be re-created when the local server is run the next time
+  with `TDOC_VERSION=dev`.
 
 - Alternatively, the `t-doc-common` package metadata and any out-of-date
   dependencies can be updated in-place.
