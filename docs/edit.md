@@ -42,7 +42,8 @@ are located below the `docs` directory.
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
-  Double-click the file `run.py` in the repository root.
+  Double-click the file `run.py` in the repository root. Make sure that `.py`
+  files are associated with Python by default.
 
   Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
@@ -70,7 +71,7 @@ are located below the `docs` directory.
   The server renders the source files into HTML, and serves the site over HTTP.
 
   ```{code-block} text
-  Running Sphinx v8.0.2
+  Running Sphinx
   loading translations [fr]... done
   making output directory... done
   (...)

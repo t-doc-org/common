@@ -56,7 +56,7 @@ Release notes: <https://t-doc.org/common/release_notes.html\
             stderr.write("Unset TDOC_VERSION and restart the server to "
                          "upgrade.\n\n")
         else:
-            stderr.write("Would you like to apply the upgrade (y/n)? ")
+            stderr.write("Would you like to install the upgrade (y/n)? ")
             stderr.flush()
             resp = input().lower()
             stderr.write("\n")
