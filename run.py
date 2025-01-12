@@ -121,7 +121,6 @@ class Env:
                 sysconfig.get_config_vars().get('EXE', ''))
 
     def create(self):
-        self.requirements = self.builder.requirements
         self.builder.root.mkdir(exist_ok=True)
         token = self.env.set(self)
         try:
@@ -131,15 +130,6 @@ class Env:
             raise
         finally:
             self.env.reset(token)
-
-    @contextlib.contextmanager
-    @staticmethod
-    def create_requirements():
-        self = Env.env.get()
-        rpath = self.path / f'{self.requirements_txt}.tmp'
-        rpath.write_text(self.requirements)
-        yield rpath
-        rpath.rename(self.path / self.requirements_txt)
 
     def remove(self):
         try:
@@ -180,9 +170,11 @@ class EnvBuilder(venv.EnvBuilder):
 
     def post_setup(self, ctx):
         super().post_setup(ctx)
-        with Env.create_requirements() as rpath:
-            self.pip(ctx, 'install', '--only-binary=:all:',
-                     '--requirement', rpath)
+        env = Env.env.get()
+        rpath = env.path / f'{env.requirements_txt}.tmp'
+        rpath.write_text(self.requirements)
+        self.pip(ctx, 'install', '--only-binary=:all:', '--requirement', rpath)
+        rpath.rename(env.path / env.requirements_txt)
 
     def pip(self, ctx, *args):
         subprocess.run((ctx.env_exec_cmd, '-P', '-m', 'pip',
