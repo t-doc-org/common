@@ -76,6 +76,7 @@ def setup(app):
     app.connect('html-page-context', on_html_page_context)
     if build_tag(app) is not None:
         app.connect('html-page-context', add_reload_js)
+        app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('write-started', write_static_files)
 
     return {
@@ -131,6 +132,16 @@ def on_html_page_context(app, page, template, context, doctree):
 
 def add_reload_js(app, page, template, context, doctree):
     app.add_js_file('tdoc/reload.js', type='module')
+
+
+def add_terminate_button(app, page, template, context, doctree):
+    if doctree is None: return
+    context["header_buttons"].append({
+        'type': 'javascript',
+        'javascript': 'tdocTerminate()',
+        'tooltip': _("Terminate the local server"),
+        'label': 'terminate',
+    })
 
 
 def write_static_files(app, builder):

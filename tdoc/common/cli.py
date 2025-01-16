@@ -72,6 +72,8 @@ def main(argv, stdin, stdout, stderr):
     arg('--delay', metavar='DURATION', dest='delay', default=1, type=float,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
+    arg('--exit-on-failure', action='store_true', dest='exit_on_failure',
+        help="Exit on build failure.")
     arg('--help', action='help', help="Show this help message and exit.")
     arg('--ignore', metavar='REGEXP', dest='ignore',
         default=f'(^|{re.escape(os.sep)})__pycache__$',
@@ -151,6 +153,7 @@ def cmd_serve(cfg):
         cfg.stdout.flush()
         cfg.stderr.flush()
         os.execv(sys.argv[0], sys.argv)
+    return app.returncode
 
 
 def cmd_store_create(cfg):
@@ -206,13 +209,17 @@ class Application:
         self.upgrade_msg = None
         self.stop = False
         self.min_mtime = time.time_ns()
+        self.returncode = 0
         self.build_mtime = None
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
         self.checker = threading.Thread(target=self.check_upgrade, daemon=True)
         self.checker.start()
-        self.apps = {'*build': self.handle_build}
+        self.apps = {
+            '*build': self.handle_build,
+            '*terminate': self.handle_terminate,
+        }
         if cfg.store:
             st = store.Store(cfg.store)
             if not st.path.exists():
@@ -300,6 +307,9 @@ class Application:
             self.cfg.stderr.write(f"Build: {e}\n")
         finally:
             with self.lock: self.building = False
+        if self.cfg.exit_on_failure:
+            self.returncode = 1
+            self.server.shutdown()
 
     def remove(self, build):
         build.relative_to(self.cfg.build)  # Ensure we're below the build dir
@@ -316,6 +326,7 @@ class Application:
         if ':' in host: host = f'[{host}]'
         self.cfg.stdout.write(self.cfg.ansi("Serving at <@{LBLUE}%s@{NORM}>\n")
                               % f"http://{host}:{port}/")
+        self.cfg.stdout.flush()
         with self.lock: msg = self.upgrade_msg
         if msg: self.cfg.stdout.write(msg)
 
@@ -401,15 +412,11 @@ Release notes: <https://t-doc.org/common/release-notes.html#release-%s>
         if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
                                                      HTTPMethod.GET):
             yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
-        t = None
-        for k, v in parse.parse_qsl(env.get('QUERY_STRING', '')):
-            if k == 't':
-                t = v
-                break
-        # We send padding back at regular intervals, which allows detecting when
-        # the client closes the connection (we get a BrokenPipeError). Since the
-        # content length is needed upfront, we return a fixed size, and
-        # terminate the request if the padding exceeds the available space.
+        t = parse.parse_qs(env.get('QUERY_STRING', '')).get('t', [None])[0]
+        # Send padding back at regular intervals to allow detecting when the
+        # client closes the connection (causes a BrokenPipeError). Since the
+        # content length is needed upfront, a fixed size is returned, and
+        # the request is terminated if the padding exceeds the available space.
         size = 600
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', 'text/plain; charset=utf-8'),
@@ -425,6 +432,20 @@ Release notes: <https://t-doc.org/common/release-notes.html#release-%s>
         tag = build_tag(mtime).encode('utf-8')
         if len(tag) > size: tag = b''  # Not enough remaining capacity
         yield b' ' * (size - len(tag)) + tag
+
+    def handle_terminate(self, env, respond):
+        if env['REQUEST_METHOD'] != HTTPMethod.POST:
+            yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
+        r = parse.parse_qs(env.get('QUERY_STRING', '')).get('r', ['0'])[0]
+        respond(wsgi.http_status(HTTPStatus.OK), [
+            ('Content-Type', 'text/plain; charset=utf-8'),
+            ('Content-Length', '0'),
+        ])
+        try:
+            self.returncode = int(r)
+        except ValueError:
+            self.returncode = 1
+        self.server.shutdown()
 
 
 def build_tag(mtime):

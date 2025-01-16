@@ -27,6 +27,12 @@ domLoaded.then(() => {
     }
 });
 
+// Handle server termination.
+globalThis.tdocTerminate = async (ret) => {
+    await fetch(`${location.origin}/*terminate?r=${ret ?? 0}`,
+                {method: 'POST', cache: 'no-cache', referrer: ''});
+};
+
 // Handle solution toggling.
 globalThis.tdocToggleSolutions = () => {
     const ds = document.documentElement.dataset;

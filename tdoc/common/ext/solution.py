@@ -15,7 +15,7 @@ def setup(app):
     app.add_directive('solution', Solution)
     app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('tdoc-html-page-config', set_html_page_config)
-    app.connect('html-page-context', add_header_button, priority=501)
+    app.connect('html-page-context', add_header_button, priority=500.5)
     return {
         'version': __version__,
         'parallel_read_safe': True,

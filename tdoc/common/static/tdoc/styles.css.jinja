@@ -39,6 +39,15 @@ blockquote div > p:has(+ p.attribution) {
     margin-bottom: 0;
 }
 
+/* Server termination buggons. */
+button.btn-terminate::before {
+    font: var(--fa-font-solid);
+    content: '\f52a';
+}
+button.btn-terminate:hover::before {
+    content: '\f52b';
+}
+
 /* Admonitions */
 .admonition.dropdown .admonition-title {
     cursor: pointer;
