@@ -99,7 +99,7 @@ def run_tests(tests, repo, url, port, wheel, write):
     env['TDOC_VERSION'] = str(wheel)
     p = subprocess.Popen(
         [repo_dir / 'run.py', '--debug', 'serve', '--exit-on-failure',
-         f'--port={port}'],
+         '--exit-on-idle=2', f'--port={port}'],
         cwd=repo_dir, env=env, text=True, bufsize=1, stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
@@ -114,6 +114,7 @@ def run_tests(tests, repo, url, port, wheel, write):
             webbrowser.open(m.group(1))
             out = None
     finally:
+        write(f"{repo}: Local server terminated\n")
         if p.wait() == 0: return
         output = f"\n\n{out.getvalue()}" if out is not None else ""
         raise Error(f"The local server has terminated with an error.{output}")

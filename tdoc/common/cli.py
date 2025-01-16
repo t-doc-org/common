@@ -73,7 +73,11 @@ def main(argv, stdin, stdout, stderr):
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
     arg('--exit-on-failure', action='store_true', dest='exit_on_failure',
-        help="Exit on build failure.")
+        help="Terminate the server on build failure.")
+    arg('--exit-on-idle', metavar='DURATION', dest='exit_on_idle', default=0,
+        type=float,
+        help="The time in seconds after the last connection closes when the "
+             "server terminates (default: %(default)s).")
     arg('--help', action='help', help="Show this help message and exit.")
     arg('--ignore', metavar='REGEXP', dest='ignore',
         default=f'(^|{re.escape(os.sep)})__pycache__$',
@@ -210,6 +214,8 @@ class Application:
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
+        self.conn_count = -1
+        self.idle_start = 0
         self.build_mtime = None
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
@@ -237,12 +243,17 @@ class Application:
         self.remove_all()
         interval = self.cfg.interval * 1_000_000_000
         delay = self.cfg.delay * 1_000_000_000
+        idle = self.cfg.exit_on_idle * 1_000_000_000
         prev, prev_mtime, build_mtime = 0, 0, None
         while True:
             if prev != 0: time.sleep(0.1)
+            now = time.time_ns()
             with self.lock:
                 if self.stop: break
-            now = time.time_ns()
+                if (self.conn_count == 0 and idle > 0
+                        and now > self.idle_start + idle):
+                    self.server.shutdown()
+                    break
             if now < prev + interval: continue
             mtime = self.latest_mtime()
             if mtime <= prev_mtime:
@@ -424,11 +435,17 @@ Release notes: <https://t-doc.org/common/release-notes.html#release-%s>
         ])
         if method == HTTPMethod.HEAD: return
         with self.lock:
-            while ((mtime := self.build_mtime) is None
-                   or t == build_tag(mtime)) and size > 0:
-                if self.lock.wait(timeout=1): continue
-                yield b' '
-                size -= 1
+            if self.conn_count < 0: self.conn_count = 0  # First connection
+            self.conn_count += 1
+            try:
+                while ((mtime := self.build_mtime) is None
+                       or t == build_tag(mtime)) and size > 0:
+                    if self.lock.wait(timeout=1): continue
+                    yield b' '
+                    size -= 1
+            finally:
+                self.conn_count -= 1
+                if self.conn_count == 0: self.idle_start = time.time_ns()
         tag = build_tag(mtime).encode('utf-8')
         if len(tag) > size: tag = b''  # Not enough remaining capacity
         yield b' ' * (size - len(tag)) + tag
