@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 from concurrent import futures
+import io
 import os
 import pathlib
 import re
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import webbrowser
 
 
 repos = {
@@ -56,7 +58,9 @@ def main(argv, stdin, stdout, stderr):
         for repo in repos:
             t = tasks[repo]
             if (e := t.exception()) is None: continue
-            write(f"\n{'=' * 79}\n{repo}: FAIL\n{e}")
+            se = str(e)
+            eol = "" if se.endswith("\n") else "\n"
+            write(f"\n{'=' * 79}\n{repo}: FAIL\n{'=' * 79}\n{se}{eol}")
 
         # Display summary.
         write("\n")
@@ -81,14 +85,38 @@ def build_wheel(tests):
     return wheel
 
 
+serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
+
 def run_tests(tests, repo, url, port, wheel, write):
+    # Clone the document repository.
     repo_dir = tests / repo
     write(f"{repo}: Cloning\n")
     run('git', 'clone', url, repo_dir, '--branch', 'main')
-    write(f"{repo}: Building\n")
+
+    # Run the local server, wait for it to serve or exit.
+    write(f"{repo}: Running local server\n")
     env = os.environ.copy()
     env['TDOC_VERSION'] = str(wheel)
-    run(repo_dir / 'run.py', 'build', 'html', env=env)
+    p = subprocess.Popen(
+        [repo_dir / 'run.py', '--debug', 'serve', '--exit-on-failure',
+         f'--port={port}'],
+        cwd=repo_dir, env=env, text=True, bufsize=1, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        out = io.StringIO()
+        for line in p.stdout:
+            if out is None:
+                write(f"{repo}: {line}")
+                continue
+            out.write(line)
+            if (m := serving_re.match(line)) is None: continue
+            write(f"{repo}: {line}")
+            webbrowser.open(m.group(1))
+            out = None
+    finally:
+        if p.wait() == 0: return
+        output = f"\n\n{out.getvalue()}" if out is not None else ""
+        raise Error(f"The local server has terminated with an error.{output}")
 
 
 class CommandFailed(Error):
@@ -96,7 +124,7 @@ class CommandFailed(Error):
         super().__init__(
             f"Command failed with return code {e.returncode}\n"
             f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
-            f"Output:\n{e.output}")
+            f"\n{e.output}")
 
 
 def run(*args, **kwargs):
