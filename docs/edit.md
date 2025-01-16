@@ -92,8 +92,10 @@ are located below the `docs` directory.
     pages.
   - If a build fails, the errors can be viewed in the terminal.
 
-- **Stop the local server** with {kbd}`Ctrl+C` in the terminal, or by closing
-  the terminal window.
+- **Stop the local server** by clicking the
+  <span style="font: var(--fa-font-solid);">&#xf52a;</span> button in the
+  header, by typing {kbd}`Ctrl+C` in the terminal, or by closing the terminal
+  window.
 
 - Don't forget to **commit changes frequently**.
 
