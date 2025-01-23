@@ -31,8 +31,10 @@ class Metadata(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        return [metadata(attrs=yaml.safe_load(
-                    ''.join(f'{line}\n' for line in self.content)))]
+        node = metadata(attrs=yaml.safe_load(
+                        ''.join(f'{line}\n' for line in self.content)))
+        self.set_source_info(node)
+        return [node]
 
 
 def extract_metadata(app, doctree):
@@ -42,8 +44,8 @@ def extract_metadata(app, doctree):
         if i == 0:
             if (attrs := node['attrs']) is not None: md.update(attrs)
         else:
-            _log.warning(
-                f"{app.env.docname}: More than one {{metadata}} directive")
+            _log.warning("More than one {metadata} directive in the document",
+                         location=node)
         node.parent.remove(node)
 
 

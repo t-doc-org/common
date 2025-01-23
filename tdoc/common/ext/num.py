@@ -51,6 +51,7 @@ def update_numfig_format(app, config):
 class Num(docutils.ReferenceRole):
     def run(self):
         node = num()
+        self.set_source_info(node)
         node['target'] = self.target
         node['title'] = self.title if self.has_explicit_title else '%s'
         if ':' in self.target:
@@ -121,8 +122,13 @@ def update_num_nodes(app, doctree, docname):
 def iter_num(env, doctree, docname):
     fail = not env.config.numfig
     for node in doctree.findall(num):
-        if fail: raise errors.ConfigError(":num: numfig is disabled")
-        n = env.toc_fignumbers[docname]['num'][node['ids'][0]]
+        if fail: raise errors.ConfigError("{num}: numfig is disabled")
+        try:
+            n = env.toc_fignumbers[docname]['num'][node['ids'][0]]
+        except KeyError:
+            _log.warning("The {num} role cannot be used in orphaned documents",
+                         location=node)
+            continue
         yield node, nodes.Text(node['title'] % '.'.join(map(str, n)))
 
 
