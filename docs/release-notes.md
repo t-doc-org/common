@@ -3,11 +3,17 @@
 
 # Release notes
 
+(release-0-33)=
+## 0.33 *(2025-01-25)*
+
+- Fixed the breakage in CLI sub-commands.
+
 (release-0-32)=
 ## 0.32 *(2025-01-25)*
 
 - Made it simpler to run a local server with a store.
 - Added a script to test all document repositories.
+- **This release breaks certain CLI sub-commands.**
 
 (release-0-31)=
 ## 0.31 *(2025-01-12)*
