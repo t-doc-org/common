@@ -120,7 +120,7 @@ def main(argv, stdin, stdout, stderr):
                           else util.no_ansi)
     cfg.build = pathlib.Path(cfg.build).resolve()
     cfg.source = pathlib.Path(cfg.source).resolve()
-    if cfg.store: cfg.store = pathlib.Path(cfg.store).resolve()
+    if getattr(cfg, 'store', ''): cfg.store = pathlib.Path(cfg.store).resolve()
     if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
     return cfg.handler(cfg)
 
