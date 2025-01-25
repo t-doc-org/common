@@ -91,7 +91,7 @@ def main(argv, stdin, stdout, stderr):
         help="The port to bind the server to (default: %(default)s).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
-    arg('--store', metavar='PATH', dest='store', default='',
+    arg('--store', metavar='PATH', dest='store', default='tmp/store.sqlite',
         help="The path to the store database.")
     arg('--watch', metavar='PATH', action='append', dest='watch', default=[],
         help="Additional directories to watch for changes.")
@@ -104,6 +104,8 @@ def main(argv, stdin, stdout, stderr):
                          help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument_group("Options").add_argument
+    arg('--open', action='store_true', dest='open',
+        help="Add an open ACL to the created store.")
     arg('--store', metavar='PATH', dest='store', default='tmp/store.sqlite',
         help="The path to the store database.")
 
@@ -118,6 +120,7 @@ def main(argv, stdin, stdout, stderr):
                           else util.no_ansi)
     cfg.build = pathlib.Path(cfg.build).resolve()
     cfg.source = pathlib.Path(cfg.source).resolve()
+    if cfg.store: cfg.store = pathlib.Path(cfg.store).resolve()
     if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
     return cfg.handler(cfg)
 
@@ -161,7 +164,9 @@ def cmd_serve(cfg):
 
 
 def cmd_store_create(cfg):
-    store.Store(cfg.store).create()
+    st = store.Store(cfg.store)
+    st.path.parent.mkdir(parents=True, exist_ok=True)
+    st.create(open_acl=cfg.open)
 
 
 def cmd_version(cfg):
@@ -226,12 +231,8 @@ class Application:
             '*build': self.handle_build,
             '*terminate': self.handle_terminate,
         }
-        if cfg.store:
-            st = store.Store(cfg.store)
-            if not st.path.exists():
-                st.path.parent.mkdir(parents=True, exist_ok=True)
-                st.create(open_acl=True)
-            self.apps['*store'] = st
+        if cfg.store and cfg.store.exists():
+            self.apps['*store'] = store.Store(cfg.store)
 
     def __enter__(self): return self
 
