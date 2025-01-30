@@ -15,14 +15,6 @@ from hatchling.metadata.plugin.interface import MetadataHookInterface
 LICENSES = 'LICENSES.deps.txt'
 
 
-def load_json(path):
-    try:
-        with path.open() as f:
-            return json.load(f)
-    except OSError:
-        return None
-
-
 class HookMixin:
     @property
     def top(self):
@@ -39,7 +31,8 @@ class HookMixin:
 
 class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
-        packages = load_json(self.top / 'package-lock.json')
+        with (self.top / 'package-lock.json').open() as f:
+            packages = json.load(f)
         with (self.top / LICENSES).open('w') as out:
             out.write(f"""\
 This file lists the dependencies that are partially or fully included in this
@@ -49,7 +42,11 @@ the archives themselves.
             for path in sorted(packages['packages']):
                 if not path: continue
                 root = self.top / path
-                if not (pkg := load_json(root / 'package.json')): continue
+                try:
+                    with (root / 'package.json').open() as f:
+                        pkg = json.load(f)
+                except OSError:
+                    continue
                 out.write(f"\n---\n\nName: {pkg['name']}\n"
                           f"Version: {pkg['version']}\n"
                           f"License: {pkg['license']}\n"
@@ -65,8 +62,12 @@ the archives themselves.
                     if isinstance(author, str):
                         out.write(f"Author: {author}\n")
                     else:
-                        out.write(f"Author: {author['name']}"
-                                  f" <{author['email']}>\n")
+                        out.write(f"Author: {author['name']}")
+                        if email := author.get('email'):
+                            out.write(f" <{email}>")
+                        if url := author.get('url'):
+                            out.write(f" ({url})")
+                        out.write("\n")
                 try:
                     license = (root / 'LICENSE').read_text().strip()
                 except OSError:
