@@ -16,7 +16,7 @@
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@sqlite.org/sqlite-wasm": "^3.48.0-build4",
     "mathjax": "^3.2.2",
-    "polyscript": "^0.15.12",
+    "polyscript": "^0.16.10",
     "pyodide": "^0.26.4",
     "rollup": "^4.32.1",
     "rollup-plugin-license": "^3.5.3",
