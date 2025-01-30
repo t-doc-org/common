@@ -33,13 +33,23 @@
         return doAddEventListener(...args);
     };
 
-    // Enable the "WebAssembly JavaScript Promise Integration" origin trials.
-    // https://developer.chrome.com/origintrials/#/registration/2290098002703941633
-    const meta = document.createElement('meta');
-    meta.httpEquiv = 'origin-trial';
-    meta.content = `\
-Ao6LvHcUOFEV1phI13OFiPm4SiJNS+CbkMZbtiypgmN6RpB63mKB0YnLuLLNdDUCPRtOzT9K8M1VCnX72U5Z1goAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQXNzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0NDY3NTIwMH0=`;
-    document.head.append(meta);
+    // Enable origin trials
+    function registerOriginTrial(token) {
+        const meta = document.createElement('meta');
+        meta.httpEquiv = 'origin-trial';
+        meta.content = token;
+        document.head.append(meta);
+    }
+    // https://developer.chrome.com/origintrials/#/view_trial/1603844417297317889
+    registerOriginTrial(`\
+Ao6LvHcUOFEV1phI13OFiPm4SiJNS+CbkMZbtiypgmN6RpB63mKB0YnLuLLNdDUCPRtOzT9K8M1VCnX\
+72U5Z1goAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQX\
+NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0NDY3NTIwMH0=`);
+    // https://developer.microsoft.com/en-us/microsoft-edge/origin-trials/trials/cea04bbf-b9ff-4ae6-8ea8-454bef2f6e6b
+    registerOriginTrial(`\
+A3yGefyVRes8vnz4JYPA6lAUM2jtb0H7pmnljIna6+dq16pv+UkC2ZxrvRTim2QxdgA1LeU2w4rOPAU\
+M9fnLtQIAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQX\
+NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0MjEzOTg5N30=`);
 
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;

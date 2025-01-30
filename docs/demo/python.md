@@ -268,9 +268,8 @@ It is possible to invoke `async` functions synchronously with
   For local testing, the feature can be enabled with a flag
   (`chrome://flags/#enable-experimental-webassembly-jspi`).
 - **Microsoft Edge:** The serving domain must be registered for the
-  [origin trial](https://microsoftedge.github.io/MSEdgeExplainers/origin-trials/)
-  (the page currently seems to be broken, and all "Register" buttons lead to the
-  wrong trial). For local testing, the feature can be enabled with a flag
+  [origin trial](https://developer.microsoft.com/en-us/microsoft-edge/origin-trials/trials/cea04bbf-b9ff-4ae6-8ea8-454bef2f6e6b). For local testing, the feature
+  can be enabled with a flag
   (`edge://flags/#enable-experimental-webassembly-jspi`).
 - **Firefox:** Firefox doesn't have an
   [origin trial](https://wiki.mozilla.org/Origin_Trials) yet, and is still

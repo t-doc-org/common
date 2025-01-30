@@ -11,6 +11,7 @@ import sys
 import traceback
 
 from polyscript import xworker
+from pyodide.ffi import run_sync
 
 run_id_var = contextvars.ContextVar('run_id', default=None)
 run_id = run_id_var.get
@@ -139,6 +140,12 @@ async def input_buttons(prompt, labels):
 async def pause(prompt=None, label="@icon{forward-step}"):
     """Present a button, and wait for the user to click it."""
     await js_input(run_id(), 'buttons-right', prompt, [label])
+
+
+@public
+def input(prompt=None):
+    """Synchronously request a single line of text from the user."""
+    return run_sync(input_line(prompt))
 
 
 @export

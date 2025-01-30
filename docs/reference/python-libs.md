@@ -32,6 +32,17 @@ with the new one.
 `(width, height)` tuple.
 ```
 
+```{py:function} input(prompt=None) -> str
+Request a single line of text from the user, and wait for them to submit a
+reply.
+
+**Note:** This function relies on an
+[experimental feature](https://github.com/WebAssembly/js-promise-integration)
+that is currently only implemented in Google Chrome and Microsoft Edge. For a
+more portable alternative, use {py:func}`input_line`.
+:arg str prompt: An optional prompt to display before the input field.
+```
+
 ```{py:function} input_line(prompt=None) -> str
 :async:
 Request a single line of text from the user, and wait for them to submit a
