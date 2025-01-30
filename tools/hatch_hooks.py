@@ -1,7 +1,9 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import fnmatch
+import json
 import os
 import pathlib
 import shutil
@@ -11,6 +13,14 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
 LICENSES = 'LICENSES.deps.txt'
+
+
+def load_json(path):
+    try:
+        with path.open() as f:
+            return json.load(f)
+    except OSError:
+        return None
 
 
 class HookMixin:
@@ -29,9 +39,40 @@ class HookMixin:
 
 class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
-        # Write an empty LICENSES file to avoid that hatchling complains. It
-        # will be generated below.
-        (self.top / LICENSES).write_bytes(b'')
+        packages = load_json(self.top / 'package-lock.json')
+        with (self.top / LICENSES).open('w') as out:
+            out.write(f"""\
+This file lists the dependencies that are partially or fully included in this
+package. The licenses of bundled package archives (e.g. *.whl) can be found in
+the archives themselves.
+""")
+            for path in sorted(packages['packages']):
+                if not path: continue
+                root = self.top / path
+                if not (pkg := load_json(root / 'package.json')): continue
+                out.write(f"\n---\n\nName: {pkg['name']}\n"
+                          f"Version: {pkg['version']}\n"
+                          f"License: {pkg['license']}\n"
+                          f"Description: {pkg['description']}\n")
+                if repo := pkg.get('repository'):
+                    if isinstance(repo, str):
+                        out.write(f"Repository: {repo}\n")
+                    elif url := repo.get('url'):
+                        out.write(f"Repository: {url}\n")
+                if url := pkg.get('homepage'):
+                    out.write(f"Homepage: {url}\n")
+                if author := pkg.get('author'):
+                    if isinstance(author, str):
+                        out.write(f"Author: {author}\n")
+                    else:
+                        out.write(f"Author: {author['name']}"
+                                  f" <{author['email']}>\n")
+                try:
+                    license = (root / 'LICENSE').read_text().strip()
+                except OSError:
+                    pass
+                else:
+                    out.write(f"License text:\n===\n\n{license}\n")
 
 
 class BuildHook(BuildHookInterface, HookMixin):
@@ -42,7 +83,6 @@ class BuildHook(BuildHookInterface, HookMixin):
         self.run([npm, 'install'])
         self.app.display_info("Removing generated files")
         shutil.rmtree(self.static_gen, ignore_errors=True)
-        (self.top / LICENSES).unlink(missing_ok=True)
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
         self.copytree_node('mathjax/es5', 'mathjax')

@@ -19,7 +19,6 @@
     "polyscript": "^0.16.10",
     "pyodide": "^0.26.4",
     "rollup": "^4.32.1",
-    "rollup-plugin-license": "^3.5.3",
     "sabayon": "^0.5.2"
   },
   "name": "t-doc-common",

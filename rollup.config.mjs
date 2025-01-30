@@ -3,8 +3,7 @@
 
 import * as path from 'node:path';
 import * as url from 'node:url';
-import resolve from '@rollup/plugin-node-resolve';
-import license from 'rollup-plugin-license';
+import nodeResolve from '@rollup/plugin-node-resolve';
 
 // import.meta.(dir|file)name require Node.js 20.11 or 21.2, but the
 // ubuntu-latest image on GitHub only has 18.20.4.
@@ -27,12 +26,6 @@ export default {
         manualChunks: {},
     },
     plugins: [
-        resolve(),
-        license({
-            thirdParty: {
-                output: path.join(__dirname, 'LICENSES.deps.txt'),
-                includePrivate: true,
-            },
-        }),
+        nodeResolve(),
     ],
 };
