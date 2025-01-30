@@ -255,3 +255,48 @@ while True:
   i += 1
   await asyncio.sleep(0.2)
 ```
+
+### Call `async` functions synchronously
+
+It is possible to invoke `async` functions synchronously with
+`pyodide.ffi.run_sync()`. This requires the experimental
+[WebAssembly JavaScript promise integration API](https://github.com/WebAssembly/js-promise-integration)
+(JSPI), which isn't widely supported yet.
+
+- **Google Chrome:** The serving domain must be registered for the
+  [origin trial](https://developer.chrome.com/origintrials/#/register_trial/1603844417297317889).
+  For local testing, the feature can be enabled with a flag
+  (`chrome://flags/#enable-experimental-webassembly-jspi`).
+- **Microsoft Edge:** The serving domain must be registered for the
+  [origin trial](https://microsoftedge.github.io/MSEdgeExplainers/origin-trials/)
+  (the page currently seems to be broken, and all "Register" buttons lead to the
+  wrong trial). For local testing, the feature can be enabled with a flag
+  (`edge://flags/#enable-experimental-webassembly-jspi`).
+- **Firefox:** Firefox doesn't have an
+  [origin trial](https://wiki.mozilla.org/Origin_Trials) yet, and is still
+  working on the [implementation](https://bugzilla.mozilla.org/show_bug.cgi?id=1897981).
+  For local testing, the feature can be enabled with a config
+  (`javascript.options.wasm_js_promise_integration`), but it doesn't work with
+  Pyodide yet.
+- **Safari:** Safari doesn't currently support JSPI.
+
+```{exec} python
+from pyodide import ffi
+
+def input(prompt):
+  return ffi.run_sync(input_line(prompt))
+
+name = input("Name:")
+print(f"Hello, {name}!")
+```
+
+## Filesystem
+
+```{exec} python
+import pathlib
+
+for base, dirs, files in pathlib.Path('/').walk(on_error=lambda e: None):
+  if base == pathlib.Path('/proc/self'): dirs.remove('fd')
+  for e in sorted(dirs + files):
+    print(str(base / e))
+```

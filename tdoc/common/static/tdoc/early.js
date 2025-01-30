@@ -33,6 +33,14 @@
         return doAddEventListener(...args);
     };
 
+    // Enable the "WebAssembly JavaScript Promise Integration" origin trials.
+    // https://developer.chrome.com/origintrials/#/registration/2290098002703941633
+    const meta = document.createElement('meta');
+    meta.httpEquiv = 'origin-trial';
+    meta.content = `\
+Ao6LvHcUOFEV1phI13OFiPm4SiJNS+CbkMZbtiypgmN6RpB63mKB0YnLuLLNdDUCPRtOzT9K8M1VCnX72U5Z1goAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQXNzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0NDY3NTIwMH0=`;
+    document.head.append(meta);
+
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;
     const enableSAB = tdoc['enable_sab'];
