@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: Package
-on: push
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
