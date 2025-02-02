@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-34)=
+## 0.34 *(2025-02-02)*
+
+- Enabled loading packages for [`{exec} python`](/demo/python.md) blocks.
+  - Bundled the `micropip`, `packaging` and `sqlite3` packages.
+- Enabled calling `async` functions synchronously on Chrome-based browsers.
+- Added {py:func}`tdoc.core.input`.
+
 (release-0-33)=
 ## 0.33 *(2025-01-25)*
 
@@ -94,7 +102,7 @@
 ## 0.19 *(2024-11-17)*
 
 - Fixed the un-collapsing of admonitions through click events.
-- Fixed the full-screen mode of [`{exec} html`](/demo/html).
+- Fixed the full-screen mode of [`{exec} html`](/demo/html.md).
 
 (release-0-18)=
 ## 0.18 *(2024-11-14)*
@@ -113,7 +121,7 @@
 (release-0-16)=
 ## 0.16 *(2024-11-03)*
 
-- Added support for [`{exec} html`](/demo/html).
+- Added support for [`{exec} html`](/demo/html.md).
 - Added support for styling editors and output blocks with
   {rst:dir}`{exec} :style: <exec:style>` and
   {rst:dir}`{exec} :output-style: <exec:output-style>`.
@@ -124,9 +132,9 @@
 ## 0.15 *(2024-10-19)*
 
 - Added a mechanism to render arbitrary HTML from
-  [`{exec} python`](/demo/python) blocks.
+  [`{exec} python`](/demo/python.md) blocks.
 - Added a Python module to create SVG images.
-- Added automatic focusing of [`{exec} python`](/demo/python) text input
+- Added automatic focusing of [`{exec} python`](/demo/python.md) text input
   elements.
 - Fixed the positioning of the "Remove" button on scrollable tables.
 
@@ -145,12 +153,12 @@
 (release-0-12)=
 ## 0.12 *(2024-09-28)*
 
-- Added user input functionality for [`{exec} python`](/demo/python) blocks.
+- Added user input functionality for [`{exec} python`](/demo/python.md) blocks.
 
 (release-0-11)=
 ## 0.11 *(2024-09-27)*
 
-- [`{exec} python`](/demo/python) now works when offline.
+- [`{exec} python`](/demo/python.md) now works when offline.
 - Fixed an issue that prevented entering the character `/` in editors.
 - Disabled the search shortcut, as it can interfere with editors.
 - Made the workaround for missing `SharedArrayBuffer` configurable.
@@ -162,7 +170,7 @@
 (release-0-10)=
 ## 0.10 *(2024-09-21)*
 
-- Added initial support for [`{exec} python`](/demo/python).
+- Added initial support for [`{exec} python`](/demo/python.md).
   - Currently, Python code execution only works when online.
 - Made the automatic page reloading more reactive.
 - Made pages cross-origin isolated even if the server doesn't set the
@@ -199,8 +207,8 @@
 
 - Added on-click execution of {rst:dir}`exec` blocks.
 - Added support for dependencies with {rst:dir}`{exec} :after: <exec:after>`.
-- Added proper rendering of SQL errors in [`{exec} sql`](/demo/sql).
-- Fixed the handling of `NULL` values in [`{exec} sql`](/demo/sql).
+- Added proper rendering of SQL errors in [`{exec} sql`](/demo/sql.md).
+- Fixed the handling of `NULL` values in [`{exec} sql`](/demo/sql.md).
 
 (release-0-4)=
 ## 0.4 *(2024-08-22)*
