@@ -38,8 +38,9 @@ reply.
 
 **Note:** This function relies on an
 [experimental feature](https://github.com/WebAssembly/js-promise-integration)
-that is currently only implemented in Google Chrome and Microsoft Edge. For a
-more portable alternative, use {py:func}`input_line`.
+that is currently only implemented in Google Chrome and Microsoft Edge
+([details](../demo/python.md#call-async-functions-synchronously)). For a more
+portable alternative, use {py:func}`input_line`.
 :arg str prompt: An optional prompt to display before the input field.
 ```
 
