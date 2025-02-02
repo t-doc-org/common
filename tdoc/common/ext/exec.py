@@ -24,6 +24,7 @@ def setup(app):
     app.connect('builder-inited', ExecCollector.init)
     app.add_env_collector(ExecCollector)
     app.connect('doctree-resolved', check_references)
+    app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_js)
     app.add_config_value('tdoc_python_modules', [], 'html')
     app.connect('config-inited', set_python_modules)
@@ -137,6 +138,11 @@ def check_refs(node, names, lang, typ, doctree):
             doctree.reporter.error(
                 f"{{exec}} {lang}: Unknown :{typ}: reference: {ref}",
                 base_node=node)
+
+
+def set_html_page_config(app, page, config):
+    if (cfg := app.env.metadata[page].get('exec')) is not None:
+        config['exec'] = cfg
 
 
 def add_js(app, page, template, context, doctree):

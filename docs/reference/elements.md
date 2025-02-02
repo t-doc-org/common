@@ -14,6 +14,15 @@ In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields), the following top-level keys are
 interpreted.
 
+`exec`
+: A mapping of per-language configuration for client-side code execution.
+
+  ```{code-block} yaml
+  exec:
+    python:
+      packages: [sqlite3]
+  ```
+
 `scripts`
 : A list of scripts to reference from the page header through `<script>`
   elements. The list items can be either strings (the URL of the script) or

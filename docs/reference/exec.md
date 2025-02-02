@@ -81,8 +81,8 @@ select * from countries where country_code = 'LI';
 
 They can also be executed immediately on load
 ({rst:dir}`:when: load <exec:when>`) or not at all
-({rst:dir}`:when: never <exec:when>`), useful for definitions that are
-referenced by other blocks). The controls displayed depend on the type of block.
+({rst:dir}`:when: never <exec:when>`, useful for definitions that are referenced
+by other blocks). The controls displayed depend on the type of block.
 
 ```{exec} sql
 :after: sql-countries
@@ -159,3 +159,45 @@ content.
 :include: people.sql
 select * from people;
 ```
+
+## Languages
+
+### HTML
+
+HTML code execution displays a complete HTML document as an `<iframe>`, with
+limited browsing functionality.
+
+### Python
+
+Python code execution is based on [Pyodide](https://pyodide.org/) and
+[Polyscript](https://pyscript.github.io/polyscript/). All Python blocks on a
+page are executed in a shared, single-threaded interpreter.
+
+Pyodide can be configured via the `exec:python` {rst:dir}`metadata`. This
+enables the following functionality:
+
+- **[Copy files](https://docs.pyscript.net/latest/user-guide/configuration/#files)
+  to the filesystem:** The `files` key is a mapping of URL to target path.
+  Relative URLs are resolved relative to the `_static` directory. Relative
+  target paths are resolved relative to `$HOME` (`/home/pyodide`). If the target
+  path ends with a `/`, the filename part of the URL is used as the target
+  filename.
+- **[Load packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages):**
+  The `packages` key is a list of package references, either package names with
+  optional version constraints (`docutils`, `attrs>=23.2.0`) or URLs referencing
+  wheels.
+
+```{code-block} yaml
+exec:
+  python:
+    files:
+      input.txt:                    # .../_static/input.txt => $HOME/input.txt
+      db/init.sql: /tmp/            # .../_static/db/init.sql => /tmp/init.sql
+      ../index.html: homepage.html  # .../index.html => $HOME/homepage.html
+    packages: [sqlite3]
+```
+
+### SQL
+
+SQL code execution uses a WebAssembly build of [SQLite](https://sqlite.org/).
+Each block execution is performed against a new, empty database.

@@ -3,6 +3,14 @@
 
 # Python
 
+```{metadata}
+exec:
+  python:
+    files:
+      database.sql:
+    packages: [sqlite3]
+```
+
 The {rst:dir}`{exec} python <exec>` directive allows executing Python code
 directly in the browser.
 
@@ -289,13 +297,39 @@ name = input("Name:")
 print(f"Hello, {name}!")
 ```
 
+## Packages
+
+Additional packages can be made available through the `exec:python:packages`
+metadata, which holds a
+[list of packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages)
+to load.
+
+```{exec} python
+import pathlib
+import sqlite3
+
+path = pathlib.Path('database.sqlite')
+exists = path.exists()
+db = sqlite3.connect(path)
+if not exists:
+  print("Creating database")
+  db.executescript(pathlib.Path('database.sql').read_text())
+for k, v in db.execute('select * from kv;'):
+  print(f"key: {k}, value: {v}")
+```
+
 ## Filesystem
+
+The block below lists all the files and directories on the virtual filesystem
+seen by Python code.
 
 ```{exec} python
 import pathlib
 
+paths = []
 for base, dirs, files in pathlib.Path('/').walk(on_error=lambda e: None):
   if base == pathlib.Path('/proc/self'): dirs.remove('fd')
-  for e in sorted(dirs + files):
-    print(str(base / e))
+  paths.extend(str(base / e) for e in dirs + files)
+paths.sort()
+print('\n'.join(paths))
 ```

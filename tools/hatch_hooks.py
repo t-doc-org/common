@@ -3,16 +3,27 @@
 
 import contextlib
 import fnmatch
+import http.client
+import io
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
+from urllib import parse
+import zipfile
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
 LICENSES = 'LICENSES.deps.txt'
+tdoc_rel = 'https://github.com/t-doc-org/t-doc-org.github.io/releases/download'
+pyodide_packages = [
+    r'micropip-\d+(?:\.\d+)+.*\.whl',
+    r'packaging-\d+(?:\.\d+)+.*\.whl',
+    r'sqlite3-\d+(?:\.\d+)+.*\.zip',
+]
 
 
 class HookMixin:
@@ -28,18 +39,21 @@ class HookMixin:
     def static_gen(self):
         return self.top / 'tdoc' / 'common' / 'static.gen'
 
+    @property
+    def package_lock(self):
+        with (self.top / 'package-lock.json').open() as f:
+            return json.load(f)
+
 
 class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
-        with (self.top / 'package-lock.json').open() as f:
-            packages = json.load(f)
         with (self.top / LICENSES).open('w') as out:
             out.write(f"""\
 This file lists the dependencies that are partially or fully included in this
 package. The licenses of bundled package archives (e.g. *.whl) can be found in
 the archives themselves.
 """)
-            for path in sorted(packages['packages']):
+            for path in sorted(self.package_lock['packages']):
                 if not path: continue
                 root = self.top / path
                 try:
@@ -82,8 +96,10 @@ class BuildHook(BuildHookInterface, HookMixin):
         npm = shutil.which('npm')
         if npm is None: raise Exception("The 'npm' command cannot be found")
         self.run([npm, 'install'])
+
         self.app.display_info("Removing generated files")
         shutil.rmtree(self.static_gen, ignore_errors=True)
+
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
         self.copytree_node('mathjax/es5', 'mathjax')
@@ -105,6 +121,24 @@ class BuildHook(BuildHookInterface, HookMixin):
             ])
         self.run([npm, 'run', 'build'])
 
+        self.app.display_info("Fetching Pyodide packages")
+        for name, pkg in self.package_lock['packages'].items():
+            if name == 'node_modules/pyodide':
+                v = pkg['version']
+                break
+        else:
+            raise Exception('pyodide not found in package-lock.json')
+        pat = re.compile('|'.join(pyodide_packages))
+        with HttpFile(f'{tdoc_rel}/pyodide-{v}/pyodide-{v}.zip') as hf, \
+                zipfile.ZipFile(hf, mode='r') as zf:
+            for zi in zf.infolist():
+                if zi.is_dir(): continue
+                name = pathlib.Path(zi.filename).name
+                if pat.fullmatch(name) is None: continue
+                with zf.open(zi) as f:
+                    dst = pathlib.Path(self.static_gen / 'pyodide' / name)
+                    dst.write_bytes(f.read())
+
     def copy_node(self, src, dst):
         shutil.copy2(self.node_modules / src, self.static_gen / dst)
 
@@ -121,3 +155,74 @@ class BuildHook(BuildHookInterface, HookMixin):
                              stderr=subprocess.STDOUT, text=True)
         if res.returncode != 0:
             self.app.abort(f"Command failed:\n{res.stdout}")
+
+
+class HttpFile(io.RawIOBase):
+    def __init__(self, url):
+        self._offset = 0
+        while True:
+            parts = parse.urlsplit(url, allow_fragments=False)
+            self._req = parse.urlunsplit(('', '') + parts[2:])
+            if parts.scheme == 'http':
+                cls = http.client.HTTPConnection
+            elif parts.scheme == 'https':
+                cls = http.client.HTTPSConnection
+            else:
+                raise ValueError(f"Unsupported URL: {url}")
+            conn = cls(parts.netloc)
+            try:
+                conn.request('HEAD', self._req)
+                resp = conn.getresponse()
+                resp.read()
+                if resp.status == http.HTTPStatus.OK:
+                    if resp.headers['Accept-Ranges'] != 'bytes':
+                        raise Exception("Range requests unsupported")
+                    self._size = int(resp.headers['Content-Length'])
+                    self._conn, conn = conn, None
+                    break
+                elif resp.status in (http.HTTPStatus.MOVED_PERMANENTLY,
+                                     http.HTTPStatus.FOUND,
+                                     http.HTTPStatus.TEMPORARY_REDIRECT,
+                                     http.HTTPStatus.PERMANENT_REDIRECT):
+                    url = resp.headers['Location']
+                    continue
+                raise Exception(f"Request failed: {resp.status} {resp.reason}")
+            finally:
+                if conn is not None: conn.close()
+
+    def close(self):
+        self._conn.close()
+
+    def __enter__(self): return self
+    def __exit__(self, typ, value, tb): self.close()
+
+    def read(self, size=-1, /):
+        if size == 0: return b''
+        elif size < 0: size = self._size - self._offset
+        elif self._offset + size > self._size: size = self._size - self._offset
+        self._conn.request('GET', self._req, headers={
+            'Range': f'bytes={self._offset}-{self._offset + size - 1}',
+        })
+        resp = self._conn.getresponse()
+        data = resp.read()
+        if resp.status != http.HTTPStatus.PARTIAL_CONTENT:
+            raise Exception(f"Request failed: {resp.status} {resp.reason}")
+        self._offset += len(data)
+        return data
+
+    def seek(self, offset, whence=os.SEEK_SET, /):
+        off = self._offset
+        if whence == os.SEEK_SET:
+            off = offset
+        elif whence == os.SEEK_CUR:
+            off += offset
+        elif whence == os.SEEK_END:
+            off = self._size + offset
+        else:
+            raise ValueError(f"Invalid whence argument: {whence}")
+        self._offset = 0 if off < 0 else self._size if off > self._size else off
+        return self._offset
+
+    def readable(self): return True
+    def seekable(self): return True
+    def tell(self): return self._offset

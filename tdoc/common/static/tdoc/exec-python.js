@@ -5,14 +5,18 @@ import {XWorker} from '../polyscript/index.js';
 import {dec, element, focusIfVisible, text} from './core.js';
 import {Executor} from './exec.js';
 
-const files = {};
+const base = import.meta.resolve('../');
+const files = {}
+for (const [k, v] of Object.entries(tdoc?.exec?.python?.files ?? {})) {
+    files[(new URL(k, base)).toString()] = v;
+}
 files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
 
 const worker = XWorker(import.meta.resolve('./exec-python.py'), {
     type: 'pyodide',
     version: import.meta.resolve('../pyodide/pyodide.mjs'),
     // https://docs.pyscript.net/latest/user-guide/configuration/
-    config: {files},
+    config: {...tdoc?.exec?.python, files},
 });
 const {promise: ready, resolve: resolve_ready} = Promise.withResolvers();
 worker.sync.ready = (msg) => {
