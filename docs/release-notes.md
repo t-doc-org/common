@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-35)=
+## 0.35 *(2025-02-06)*
+
+- Simplified the generation of color output on the terminal.
+- Refactored internals to enable running single-file scripts within the venv.
+
 (release-0-34)=
 ## 0.34 *(2025-02-02)*
 
