@@ -25,8 +25,7 @@ def want_colors(stdout):
     return True
 
 
-_tag_re = re.compile(r'@\{([A-Z_+]+)\}')
-_ansi_tags = {
+_ansi_seqs = {
     'NORM': '\x1b[0m',
     'BOLD': '\x1b[1m',
 
@@ -48,16 +47,21 @@ _ansi_tags = {
     'LCYAN': '\x1b[96m',
     'LWHITE': '\x1b[97m',
 }
+_nop_seqs = {k: '' for k in _ansi_seqs}
 
 
-def no_ansi(s):
-    return _tag_re.sub('', s)
+class AnsiStream:
+    """Wrapper around an output stream exposing ANSI sequences as attributes."""
+    def __init__(self, stream, color=None):
+        self.__stream = stream
+        if color is None: color = want_colors(stream)
+        self.__tags = _ansi_seqs if color else _nop_seqs
 
-
-def ansi(s):
-    def replace(m):
-        return _ansi_tags.get(m.group(1), m.group(0))
-    return _tag_re.sub(replace, s)
+    def __getattr__(self, name):
+        try:
+            return self.__tags[name]
+        except KeyError:
+            return getattr(self.__stream, name)
 
 
 def get_arg_parser(stderr):

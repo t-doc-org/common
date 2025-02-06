@@ -114,10 +114,10 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_version)
 
     cfg = parser.parse_args(argv[1:])
-    cfg.stdin, cfg.stdout, cfg.stderr = stdin, stdout, stderr
-    cfg.ansi = (util.ansi if cfg.color == 'true' or
-                             (cfg.color == 'auto' and util.want_colors(stdout))
-                          else util.no_ansi)
+    cfg.stdin = stdin
+    color = None if cfg.color == 'auto' else cfg.color == 'true'
+    cfg.stdout = util.AnsiStream(stdout, color)
+    cfg.stderr = util.AnsiStream(stderr, color)
     cfg.build = pathlib.Path(cfg.build).resolve()
     cfg.source = pathlib.Path(cfg.source).resolve()
     if getattr(cfg, 'store', ''): cfg.store = pathlib.Path(cfg.store).resolve()
@@ -336,11 +336,11 @@ class Application:
     def print_serving(self):
         host, port = self.addr[:2]
         if ':' in host: host = f'[{host}]'
-        self.cfg.stdout.write(self.cfg.ansi("Serving at <@{LBLUE}%s@{NORM}>\n")
-                              % f"http://{host}:{port}/")
-        self.cfg.stdout.flush()
+        o = self.cfg.stdout
+        o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
+        o.flush()
         with self.lock: msg = self.upgrade_msg
-        if msg: self.cfg.stdout.write(msg)
+        if msg: o.write(msg)
 
     def check_upgrade(self):
         try:
@@ -352,15 +352,17 @@ class Application:
                 marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
                 with contextlib.suppress(Exception):
                     marker.write_text(f'{cur} {new}')
-            msg = self.cfg.ansi("""\
-@{LYELLOW}A t-doc upgrade is available:@{NORM} %s\
- @{CYAN}%s@{NORM} => @{CYAN}%s@{NORM}
-Release notes: <https://t-doc.org/common/release-notes.html#release-%s>
-@{BOLD}Restart the server to upgrade.@{NORM}
-""") % (__project__, cur, new, new.replace('.', '-'))
+            o = self.cfg.stdout
+            msg = f"""\
+{o.LYELLOW}A t-doc upgrade is available:{o.NORM} {__project__}\
+ {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
+Release notes: <https://t-doc.org/common/release-notes.html\
+#release-{new.replace('.', '-')}>
+{o.BOLD}Restart the server to upgrade.{o.NORM}
+"""
             with self.lock:
                 self.upgrade_msg = msg
-                if not self.building: self.cfg.stdout.write(msg)
+                if not self.building: o.write(msg)
         except Exception:
             if self.cfg.debug: raise
 
