@@ -23,9 +23,9 @@ class Store:
     thread_local = ThreadLocal(db=None)
 
     def __init__(self, path):
-        self.path = pathlib.Path(path).absolute()
+        self.path = pathlib.Path(path).resolve()
 
-    def _connect(self, params, timeout=10, autocommit=False):
+    def connect(self, params, timeout=10, autocommit=False):
         return sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
                                timeout=timeout, autocommit=autocommit,
                                check_same_thread=True)
@@ -33,7 +33,7 @@ class Store:
     @contextlib.contextmanager
     def transaction(self, env):
         if (db := self.thread_local.db) is None:
-            self.thread_local.db = db = self._connect(
+            self.thread_local.db = db = self.connect(
                 'mode=rw', timeout=env.get('tdoc.db_timeout', 10))
         try:
             yield db
@@ -43,7 +43,7 @@ class Store:
             raise
 
     def create(self, open_acl=False):
-        db = self._connect('mode=rwc', autocommit=True)
+        db = self.connect('mode=rwc', autocommit=True)
         try:
             db.execute('pragma journal_mode=WAL')
             db.executescript("""
