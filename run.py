@@ -23,7 +23,7 @@ default_args = ['serve']
 
 
 def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).absolute().parent
+    base = pathlib.Path(argv[0]).parent.resolve()
 
     # Find a matching venv, or create one if there is none.
     version = os.environ.get('TDOC_VERSION', VERSION)

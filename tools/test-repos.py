@@ -27,7 +27,7 @@ class Error(Exception): pass
 
 
 def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).resolve().parent.parent
+    base = pathlib.Path(argv[0]).parent.resolve().parent
     os.chdir(base)
     tests = base / 'tmp' / 'tests'
 

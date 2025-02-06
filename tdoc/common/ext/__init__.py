@@ -15,7 +15,7 @@ _log = logging.getLogger(__name__)
 _messages = 'tdoc'
 _ = locale.get_translation(_messages)
 
-_base = pathlib.Path(__file__).absolute().parent.parent
+_base = pathlib.Path(__file__).parent.resolve().parent
 
 _license_urls = {
     'CC0-1.0': 'https://creativecommons.org/publicdomain/zero/1.0/',

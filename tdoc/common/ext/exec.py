@@ -15,7 +15,7 @@ from . import __version__, format_attrs, format_data_attrs, names_option, \
     report_exceptions
 
 _log = logging.getLogger(__name__)
-_base = pathlib.Path(__file__).absolute().parent.parent
+_base = pathlib.Path(__file__).parent.resolve().parent
 
 
 def setup(app):
