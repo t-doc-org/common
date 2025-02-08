@@ -2,8 +2,8 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import contextlib
 import contextvars
+import json
 import os
 import pathlib
 import re
@@ -11,6 +11,7 @@ import subprocess
 import shutil
 import sys
 import sysconfig
+import threading
 import time
 import venv
 
@@ -26,7 +27,7 @@ def main(argv, stdin, stdout, stderr):
 
     # Find a matching venv, or create one if there is none.
     version = os.environ.get('TDOC_VERSION', VERSION)
-    builder = EnvBuilder(base, version, stderr)
+    builder = EnvBuilder(base, version, stderr, '--debug' in argv)
     envs, matching = builder.find()
     if not matching:
         stderr.write("Installing...\n")
@@ -44,15 +45,15 @@ def main(argv, stdin, stdout, stderr):
     cur, new = env.upgrade
     if new is not None:
         stderr.write(f"""\
-A t-doc upgrade is available: {package} {cur} => {new}
+An upgrade is available: {package} {cur} => {new}
 Release notes: <https://t-doc.org/common/release-notes.html\
 #release-{new.replace('.', '-')}>
 """)
         if VERSION:
-            stderr.write("Unset VERSION in run.py and restart the server to "
+            stderr.write("Unset VERSION in run.py and restart the program to "
                          "upgrade.\n\n")
         elif version:
-            stderr.write("Unset TDOC_VERSION and restart the server to "
+            stderr.write("Unset TDOC_VERSION and restart the program to "
                          "upgrade.\n\n")
         else:
             stderr.write("Would you like to install the upgrade (y/n)? ")
@@ -70,10 +71,12 @@ Release notes: <https://t-doc.org/common/release-notes.html\
                                  "current version.\n")
                 stderr.write("\n")
 
+    # Start the upgrade checker.
+    threading.Thread(target=env.check_upgrade, daemon=True).start()
+
     # Run the command.
     args = argv[1:] if len(argv) > 1 else default_command
-    bin, ext = env.sysinfo
-    args[0] = bin / f'{args[0]}{ext}'
+    args[0] = env.bin_path(args[0])
     return subprocess.run(args).returncode
 
 
@@ -86,6 +89,11 @@ class lazy:
         res = self.fn(instance)
         setattr(instance, self.fn.__name__, res)
         return res
+
+
+class Namespace(dict):
+    def __getattr__(self, name):
+        return self[name]
 
 
 class Env:
@@ -105,20 +113,16 @@ class Env:
             return None
 
     @lazy
-    def upgrade(self):
-        try:
-            upgrade = (self.path / self.upgrade_txt).read_text()
-            return upgrade.split(' ', 1)[:2]
-        except Exception:
-            return None, None
-
-    @lazy
     def sysinfo(self):
         vars = {'base': self.path, 'platbase': self.path,
                 'installed_base': self.path, 'intsalled_platbase': self.path}
         return (pathlib.Path(sysconfig.get_path('scripts', scheme='venv',
                                                 vars=vars)),
                 sysconfig.get_config_vars().get('EXE', ''))
+
+    def bin_path(self, name):
+        scripts, ext = self.sysinfo
+        return scripts / f'{name}{ext}'
 
     def create(self):
         self.builder.root.mkdir(exist_ok=True)
@@ -141,17 +145,55 @@ class Env:
         except Exception as e:
             self.builder.out.write(f"ERROR: {e}")
 
+    def pip(self, *args, json_output=False, **kwargs):
+        p = subprocess.run((self.bin_path('python'), '-P', '-m', 'pip',
+                            '--require-virtualenv') + args,
+                           stdin=subprocess.DEVNULL, **kwargs)
+        if p.returncode != 0: raise Exception(p.stderr)
+        if not json_output: return p.stdout
+        return json.loads(p.stdout, object_pairs_hook=Namespace)
+
+    @lazy
+    def upgrade(self):
+        try:
+            upgrade = (self.path / self.upgrade_txt).read_text()
+            return upgrade.split(' ')[:2]
+        except Exception:
+            return None, None
+
+    def check_upgrade(self):
+        try:
+            pkgs = self.pip('list', '--format=json',
+                            capture_output=True, text=True, json_output=True)
+            for pkg in pkgs:
+                if pkg.name == package:
+                    if pkg.get('editable_project_location') is not None: return
+                    cur = pkg.version
+                    break
+            else:
+                return
+            data = self.pip('install', '--dry-run', '--quiet', '--upgrade',
+                            '--upgrade-strategy=only-if-needed',
+                            '--only-binary=:all:', '--report=-', package,
+                            capture_output=True, text=True, json_output=True)
+            upgrades = {pkg.metadata.name: pkg.metadata.version
+                        for pkg in data.install}
+            if (new := upgrades.get(package)) is None: return
+            (self.path / self.upgrade_txt).write_text(f'{cur} {new}')
+            self.upgrade = cur, new
+        except Exception:
+            if self.builder.debug: raise
+
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
     venv_dev = 'dev'
     venv_prefix = 'venv'
 
-    def __init__(self, base, version, out):
+    def __init__(self, base, version, out, debug):
         super().__init__(with_pip=True)
         self.root = base / self.venv_root
-        self.version = version
-        self.out = out
+        self.version, self.out, self.debug = version, out, debug
         self.requirements = (
             f'-e {base.as_uri()}' if version == 'dev'
             else version if version.startswith(('https:', 'file:'))
@@ -176,14 +218,9 @@ class EnvBuilder(venv.EnvBuilder):
         env = Env.env.get()
         rpath = env.path / f'{env.requirements_txt}.tmp'
         rpath.write_text(self.requirements)
-        self.pip(ctx, 'install', '--only-binary=:all:', '--requirement', rpath)
+        env.pip('install', '--only-binary=:all:', '--requirement', rpath,
+                check=True, stdout=self.out, stderr=self.out)
         rpath.rename(env.path / env.requirements_txt)
-
-    def pip(self, ctx, *args):
-        subprocess.run((ctx.env_exec_cmd, '-P', '-m', 'pip',
-                        '--require-virtualenv') + args,
-                       check=True, stdin=subprocess.DEVNULL, stdout=self.out,
-                       stderr=self.out)
 
 
 MAX_WPATH = 32768

@@ -5,8 +5,6 @@ import argparse
 import contextlib
 from http import HTTPMethod, HTTPStatus
 import itertools
-from importlib import metadata
-import json
 import mimetypes
 import os
 import pathlib
@@ -209,13 +207,16 @@ def try_stat(path):
         return None
 
 
+def build_tag(mtime):
+    return f'tdoc_build_{mtime}'
+
+
 class Application:
     def __init__(self, cfg, addr):
         self.cfg = cfg
         self.addr = addr
         self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
-        self.upgrade_msg = None
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
@@ -225,8 +226,6 @@ class Application:
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
-        self.checker = threading.Thread(target=self.check_upgrade, daemon=True)
-        self.checker.start()
         self.apps = {
             '*build': self.handle_build,
             '*terminate': self.handle_terminate,
@@ -339,32 +338,22 @@ class Application:
         o = self.cfg.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
         o.flush()
-        with self.lock: msg = self.upgrade_msg
-        if msg: o.write(msg)
+        if sys.prefix == sys.base_prefix: return
 
-    def check_upgrade(self):
+        # Running in a venv; check for an upgrade marker.
         try:
-            upgrades = pip_check_upgrades(self.cfg, __project__)
-            if __project__ not in upgrades: return
-            cur = metadata.version(__project__)
-            new = upgrades[__project__]
-            if sys.prefix != sys.base_prefix:  # Running in a venv
-                marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
-                with contextlib.suppress(Exception):
-                    marker.write_text(f'{cur} {new}')
-            o = self.cfg.stdout
-            msg = f"""\
-{o.LYELLOW}A t-doc upgrade is available:{o.NORM} {__project__}\
+            marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
+            cur, new = marker.read_text().split(' ')[:2]
+            if cur == new: return
+            o.write(f"""\
+{o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
  {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
 Release notes: <https://t-doc.org/common/release-notes.html\
 #release-{new.replace('.', '-')}>
 {o.BOLD}Restart the server to upgrade.{o.NORM}
-"""
-            with self.lock:
-                self.upgrade_msg = msg
-                if not self.building: o.write(msg)
+""")
         except Exception:
-            if self.cfg.debug: raise
+            pass
 
     def __call__(self, env, respond):
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
@@ -466,32 +455,6 @@ Release notes: <https://t-doc.org/common/release-notes.html\
         except ValueError:
             self.returncode = 1
         self.server.shutdown()
-
-
-def build_tag(mtime):
-    return f'tdoc_build_{mtime}'
-
-
-class Namespace(dict):
-    def __getattr__(self, name):
-        return self[name]
-
-
-def pip(cfg, *args, json_output=False):
-    p = subprocess.run((sys.executable, '-P', '-m', 'pip') + args,
-        stdin=subprocess.DEVNULL, capture_output=True, text=True)
-    if p.returncode != 0: raise Exception(p.stderr)
-    if not json_output: return p.stdout
-    return json.loads(p.stdout, object_pairs_hook=Namespace)
-
-
-def pip_check_upgrades(cfg, package):
-    pkgs = pip(cfg, 'list', '--editable', '--format=json', json_output=True)
-    if any(pkg.name == package for pkg in pkgs): return {}
-    data = pip(cfg, 'install', '--dry-run', '--upgrade',
-               '--upgrade-strategy=only-if-needed', '--only-binary=:all:',
-               '--report=-', '--quiet', package, json_output=True)
-    return {pkg.metadata.name: pkg.metadata.version for pkg in data.install}
 
 
 if __name__ == '__main__':
