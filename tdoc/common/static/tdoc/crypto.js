@@ -8,7 +8,8 @@ export function random(size) {
     return crypto.getRandomValues(new Uint8Array(size));
 }
 
-// Derive a symmetric encryption and decryption key from a password and a salt.
+// Derive a symmetric AES-GCM encryption and decryption key from a password and
+// a salt.
 export async function deriveKey(password, salt) {
     const pwdKey = await crypto.subtle.importKey(
         'raw', enc.encode(password), 'PBKDF2', false,
@@ -33,10 +34,17 @@ export async function decrypt(key, iv, data) {
 
 // Return the decryption key for the password contained in the given query
 // parameter and the given salt.
-export async function pageKey(name, salt) {
-    const params = new URLSearchParams(document.location.search);
-    const value = params.get(name);
-    return value !== null ? await deriveKey(value, salt) : null;
+export async function pageKey(param, salt) {
+    try {
+        const hash = document.location.hash;
+        for (const p of [...(hash.startsWith('#?') ? [hash.slice(1)] : []),
+                         document.location.search]) {
+            const params = new URLSearchParams(p);
+            const value = params.get(param);
+            if (value !== null) return await deriveKey(value, salt);
+        }
+    } catch (e) {}
+    return null;
 }
 
 // Encrypt a string secret.
@@ -48,6 +56,10 @@ export async function encryptSecret(key, secret) {
 // Decrypt a string secret.
 export async function decryptSecret(key, msg) {
     if (!key) return null;
-    return dec.decode(await decrypt(key, await fromBase64(msg.iv),
-                                    await fromBase64(msg.data)));
+    try {
+        return dec.decode(await decrypt(key, await fromBase64(msg.iv),
+                                        await fromBase64(msg.data)));
+    } catch (e) {
+        return null;
+    }
 }

@@ -16,8 +16,11 @@ const session = await toBase64(await random(18));
 function log(data) {
     return fetchJson(`${storeUrl}/log`, {
         headers: bearerAuthorization(token),
-        body: {'time': Date.now(), 'location': location.href,
-               'session': session, 'data': data},
+        body: {
+            'time': Date.now(),
+            'location': location.origin + location.pathname,
+            'session': session, 'data': data,
+        },
     });
 }
 
