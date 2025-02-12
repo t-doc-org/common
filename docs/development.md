@@ -60,19 +60,19 @@ creating and editing documents.
   :sync: windows
   ```{code-block} shell-session
   set TDOC_VERSION=dev
-  run.py --debug serve
+  run.py tdoc --debug serve
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  TDOC_VERSION=dev ./run.py --debug serve
+  TDOC_VERSION=dev ./run.py tdoc --debug serve
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  TDOC_VERSION=dev ./run.py --debug serve
+  TDOC_VERSION=dev ./run.py tdoc --debug serve
   ```
   ````
   `````

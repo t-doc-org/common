@@ -47,14 +47,14 @@ are located below the `docs` directory.
 
   Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  run.py serve
+  run.py tdoc serve
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   Open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  ./run.py serve
+  ./run.py tdoc serve
   ```
   ````
   ````{tab-item} Linux
@@ -63,7 +63,7 @@ are located below the `docs` directory.
 
   Alternatively, open a terminal, change to the repository root, and run:
   ```{code-block} shell-session
-  ./run.py serve
+  ./run.py tdoc serve
   ```
   ````
   `````
