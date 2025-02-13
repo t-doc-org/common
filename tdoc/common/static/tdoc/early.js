@@ -56,7 +56,7 @@ NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0MjEzOTg5N30=`);
     const enableSAB = tdoc['enable_sab'];
     const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, staticUrl)
         .toString();
-    if (enableSAB === 'no') {
+    if (enableSAB === 'no' && workers) {
         return (async () => {
             const reg = await workers.getRegistration(url);
             if (reg && await reg.unregister()) {
