@@ -69,13 +69,20 @@ class AnsiStream:
 def get_arg_parser(stdin, stdout, stderr):
     """Get an ArgumentParser class operating with the given streams."""
     class Parser(argparse.ArgumentParser):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args,
+                     help_description="Show usage information and exit.",
+                     **kwargs):
             kwargs['add_help'] = False
             kwargs['allow_abbrev'] = False
             super().__init__(*args, **kwargs)
             self.register('type', 'path', _parse_path)
             self.register('type', 'regexp', _parse_regexp)
             self.register('type', 'timestamp', datetime.datetime.fromisoformat)
+            self._positionals.title = "Positional arguments"
+            self._optionals.title = "Options"
+            if help_description:
+                self.add_argument('--help', action='help',
+                                  help=help_description)
 
         def _print_message(self, message, file=None):
             super()._print_message(message, stderr)

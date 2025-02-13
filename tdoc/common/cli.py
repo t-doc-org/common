@@ -31,15 +31,12 @@ def main(argv, stdin, stdout, stderr):
     """Run the command."""
     parser = util.get_arg_parser(stdin, stdout, stderr)(
         prog=pathlib.Path(argv[0]).name, description="Manage a t-doc book.")
-    root = parser.add_subparsers(title='Subcommands', dest='subcommand')
+    root = parser.add_subparsers(title='Sub-commands')
     root.required = True
-    # TODO: Remove Sphinx options after release; update deploy-github-pages.yml
-    add_sphinx_options(parser)
-    add_common_options(parser)
 
     p = root.add_parser('build', help="Build a book.")
     p.set_defaults(handler=cmd_build)
-    arg = p.add_argument_group("Options").add_argument
+    arg = p.add_argument
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
     add_sphinx_options(p)
     add_common_options(p)
@@ -51,7 +48,7 @@ def main(argv, stdin, stdout, stderr):
 
     p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
-    arg = p.add_argument_group("Options").add_argument
+    arg = p.add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
@@ -84,13 +81,12 @@ def main(argv, stdin, stdout, stderr):
     add_common_options(p)
 
     p = root.add_parser('store', help="Store-related commands.")
-    store = p.add_subparsers()
+    store = p.add_subparsers(title="Sub-commands")
     store.required = True
-    add_common_options(p)
 
     p = store.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
-    arg = p.add_argument_group("Options").add_argument
+    arg = p.add_argument
     arg('--open', action='store_true', dest='open',
         help="Add an open ACL to the created store.")
     add_store_option(arg)
@@ -111,8 +107,6 @@ def add_common_options(parser):
         help="Control the use of colors in output (default: %(default)s).")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
-    arg('--help', action='help',
-        help="Show arguments and options for a sub-command and exit.")
 
 
 def add_sphinx_options(parser):
