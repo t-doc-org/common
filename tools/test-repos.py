@@ -93,16 +93,38 @@ def run_tests(tests, repo, url, port, wheel, write):
     write(f"{repo}: Cloning\n")
     run('git', 'clone', url, repo_dir, '--branch', 'main')
 
+    def vrun(*args, wait=True, **kwargs):
+        p = subprocess.Popen(
+            (repo_dir / 'run.py',) + args,
+            cwd=repo_dir, env={**os.environ, 'TDOC_VERSION': str(wheel)},
+            text=True, bufsize=1, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if wait:
+            out, _ = p.communicate()
+            if p.wait() != 0:
+                raise Error(f"Command failed: {shlex.join(args)}\n\n{out}")
+        return p
+
+    # Get version information. This creates the venv.
+    write(f"{repo}: Getting version information\n")
+    vrun('tdoc', 'version', '--debug')
+
+    # Build the HTML.
+    write(f"{repo}: Building HTML\n")
+    vrun('tdoc', 'build', '--debug', 'html')
+
+    # Clean the HTML output.
+    write(f"{repo}: Cleaning HTML output\n")
+    vrun('tdoc', 'clean', '--debug')
+
+    # Create the store.
+    write(f"{repo}: Creating store\n")
+    vrun('tdoc', 'store', 'create', '--debug', '--open')
+
     # Run the local server, wait for it to serve or exit.
     write(f"{repo}: Running local server\n")
-    env = os.environ.copy()
-    env['TDOC_VERSION'] = str(wheel)
-    p = subprocess.Popen(
-        [repo_dir / 'run.py', 'tdoc', 'serve', '--debug', '--exit-on-failure',
-         '--exit-on-idle=2', f'--port={port}'],
-        cwd=repo_dir, env={**os.environ, 'TDOC_VERSION': str(wheel)}, text=True,
-        bufsize=1, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+    p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
+             '--exit-on-idle=2', f'--port={port}', wait=False)
     try:
         out = io.StringIO()
         for line in p.stdout:
