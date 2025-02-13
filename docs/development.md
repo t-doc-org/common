@@ -51,8 +51,10 @@ creating and editing documents.
   hg checkout main
   ```
 
-- Run the local server with `TDOC_VERSION=dev`. This installs the `t-doc-common`
-  package as editable into the virtual environment `_venv/dev`.
+- Run the local server with the environment variable `TDOC_VERSION=dev`. This
+  installs the `t-doc-common` package as editable into the virtual environment
+  `_venv/dev`. You may also want to use the `--debug` option to get full
+  tracebacks.
 
   `````{tab-set}
   :sync-group: platform
@@ -60,19 +62,19 @@ creating and editing documents.
   :sync: windows
   ```{code-block} shell-session
   set TDOC_VERSION=dev
-  run.py tdoc --debug serve
+  run.py tdoc serve --debug
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  TDOC_VERSION=dev ./run.py tdoc --debug serve
+  TDOC_VERSION=dev ./run.py tdoc serve --debug
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  TDOC_VERSION=dev ./run.py tdoc --debug serve
+  TDOC_VERSION=dev ./run.py tdoc serve --debug
   ```
   ````
   `````

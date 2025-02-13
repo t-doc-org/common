@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import datetime
 import functools
 import os
+import pathlib
 import re
 import sys
 
@@ -64,12 +66,44 @@ class AnsiStream:
             return getattr(self.__stream, name)
 
 
-def get_arg_parser(stderr):
-    """Get an ArgumentParser class printing errors to the given stream."""
+def get_arg_parser(stdin, stdout, stderr):
+    """Get an ArgumentParser class operating with the given streams."""
     class Parser(argparse.ArgumentParser):
+        def __init__(self, *args, **kwargs):
+            kwargs['add_help'] = False
+            kwargs['allow_abbrev'] = False
+            super().__init__(*args, **kwargs)
+            self.register('type', 'path', _parse_path)
+            self.register('type', 'regexp', _parse_regexp)
+            self.register('type', 'timestamp', datetime.datetime.fromisoformat)
+
         def _print_message(self, message, file=None):
             super()._print_message(message, stderr)
+
+        def parse_args(self, *args, **kwargs):
+            cfg = super().parse_args(*args, **kwargs)
+            cfg.stdin = stdin
+            color = None if not hasattr(cfg, 'color') or cfg.color == 'auto' \
+                    else cfg.color == 'true'
+            cfg.stdout = AnsiStream(stdout, color)
+            cfg.stderr = AnsiStream(stderr, color)
+            return cfg
+
     return Parser
+
+
+def _parse_path(v):
+    try:
+        return pathlib.Path(v).resolve()
+    except OSError as e:
+        raise TypeError("Invalid path") from e
+
+
+def _parse_regexp(v):
+    try:
+        return re.compile(v)
+    except re.error as e:
+        raise TypeError("Invalid regexp") from e
 
 
 def main(fn):

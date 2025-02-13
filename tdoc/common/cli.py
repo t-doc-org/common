@@ -29,98 +29,106 @@ from . import __project__, __version__, store, util, wsgi
 @util.main
 def main(argv, stdin, stdout, stderr):
     """Run the command."""
-    parser = util.get_arg_parser(stderr)(
-        prog=pathlib.Path(argv[0]).name, add_help=False,
-        description="Manage a t-doc book.")
+    parser = util.get_arg_parser(stdin, stdout, stderr)(
+        prog=pathlib.Path(argv[0]).name, description="Manage a t-doc book.")
     root = parser.add_subparsers(title='Subcommands', dest='subcommand')
     root.required = True
+    # TODO: Remove Sphinx options after release; update deploy-github-pages.yml
+    add_sphinx_options(parser)
+    add_common_options(parser)
 
-    arg = parser.add_argument_group("Options").add_argument
-    arg('--build', metavar='PATH', dest='build', default='_build',
-        help="The path to the build directory (default: %(default)s).")
-    arg('--color', dest='color', choices=['auto', 'false', 'true'],
-        default='auto',
-        help="Control the use of colors in output (default: %(default)s).")
-    arg('--debug', action='store_true', dest='debug',
-        help="Enable debug functionality.")
-    arg('--help', action='help', help="Show this help message and exit.")
-    arg('--source', metavar='PATH', dest='source', default='docs',
-        help="The path to the source files (default: %(default)s).")
-    arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
-        default=[], help="Additional options to pass to sphinx-build.")
-
-    p = root.add_parser('build', add_help=False, help="Build a book.")
+    p = root.add_parser('build', help="Build a book.")
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument_group("Options").add_argument
-    arg('--help', action='help', help="Show this help message and exit.")
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
+    add_sphinx_options(p)
+    add_common_options(p)
 
-    p = root.add_parser('clean', add_help=False,
-                        help="Clean the build products of a book.")
+    p = root.add_parser('clean', help="Clean the build products of a book.")
     p.set_defaults(handler=cmd_clean)
-    arg = p.add_argument_group("Options").add_argument
-    arg('--help', action='help', help="Show this help message and exit.")
+    add_sphinx_options(p)
+    add_common_options(p)
 
-    p = root.add_parser('serve', add_help=False, help="Serve a book locally.")
+    p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument_group("Options").add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
-    arg('--delay', metavar='DURATION', dest='delay', default=1, type=float,
+    arg('--delay', metavar='DURATION', type=float, dest='delay', default=1.0,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
     arg('--exit-on-failure', action='store_true', dest='exit_on_failure',
         help="Terminate the server on build failure.")
-    arg('--exit-on-idle', metavar='DURATION', dest='exit_on_idle', default=0,
-        type=float,
+    arg('--exit-on-idle', metavar='DURATION', type=float, dest='exit_on_idle',
+        default=0.0,
         help="The time in seconds after the last connection closes when the "
              "server terminates (default: %(default)s).")
-    arg('--help', action='help', help="Show this help message and exit.")
-    arg('--ignore', metavar='REGEXP', dest='ignore',
+    arg('--ignore', metavar='REGEXP', type='regexp', dest='ignore',
         default=f'(^|{re.escape(os.sep)})__pycache__$',
         help="A regexp matching files and directories to ignore from watching "
              "(default: %(default)s).")
-    arg('--interval', metavar='DURATION', dest='interval', default=1,
-        type=float,
+    arg('--interval', metavar='DURATION', type=float, dest='interval',
+        default=1.0,
         help="The interval in seconds at which to check for source changes "
              "(default: %(default)s).")
-    arg('--port', metavar='PORT', dest='port', default=8000, type=int,
+    arg('--port', metavar='PORT', type=int, dest='port', default=8000,
         help="The port to bind the server to (default: %(default)s).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
-    arg('--store', metavar='PATH', dest='store', default='tmp/store.sqlite',
-        help="The path to the store database.")
-    arg('--watch', metavar='PATH', action='append', dest='watch', default=[],
+    add_store_option(arg)
+    arg('--watch', metavar='PATH', type='path', action='append', dest='watch',
+        default=[],
         help="Additional directories to watch for changes.")
+    add_sphinx_options(p)
+    add_common_options(p)
 
     p = root.add_parser('store', help="Store-related commands.")
     store = p.add_subparsers()
     store.required = True
+    add_common_options(p)
 
-    p = store.add_parser('create', add_help=False,
-                         help="Create the store database.")
+    p = store.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument_group("Options").add_argument
     arg('--open', action='store_true', dest='open',
         help="Add an open ACL to the created store.")
-    arg('--store', metavar='PATH', dest='store', default='tmp/store.sqlite',
-        help="The path to the store database.")
+    add_store_option(arg)
+    add_common_options(p)
 
-    p = root.add_parser('version', add_help=False,
-                        help="Display version information.")
+    p = root.add_parser('version', help="Display version information.")
     p.set_defaults(handler=cmd_version)
+    add_common_options(p)
 
     cfg = parser.parse_args(argv[1:])
-    cfg.stdin = stdin
-    color = None if cfg.color == 'auto' else cfg.color == 'true'
-    cfg.stdout = util.AnsiStream(stdout, color)
-    cfg.stderr = util.AnsiStream(stderr, color)
-    cfg.build = pathlib.Path(cfg.build).resolve()
-    cfg.source = pathlib.Path(cfg.source).resolve()
-    if getattr(cfg, 'store', ''): cfg.store = pathlib.Path(cfg.store).resolve()
-    if hasattr(cfg, 'ignore'): cfg.ignore = re.compile(cfg.ignore)
     return cfg.handler(cfg)
+
+
+def add_common_options(parser):
+    arg = parser.add_argument_group("Common options").add_argument
+    arg('--color', dest='color', choices=['auto', 'false', 'true'],
+        default='auto',
+        help="Control the use of colors in output (default: %(default)s).")
+    arg('--debug', action='store_true', dest='debug',
+        help="Enable debug functionality.")
+    arg('--help', action='help',
+        help="Show arguments and options for a sub-command and exit.")
+
+
+def add_sphinx_options(parser):
+    arg = parser.add_argument_group("Sphinx options").add_argument
+    arg('--build', metavar='PATH', type='path', dest='build', default='_build',
+        help="The path to the build directory (default: %(default)s).")
+    arg('--source', metavar='PATH', type='path', dest='source', default='docs',
+        help="The path to the source files (default: %(default)s).")
+    arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
+        default=[], help="Additional options to pass to sphinx-build.")
+
+
+def add_store_option(arg):
+    arg('--store', metavar='PATH', type='path', dest='store',
+        default='tmp/store.sqlite',
+        help="The path to the store database (default: %(default)s).")
 
 
 def cmd_build(cfg):
@@ -134,9 +142,6 @@ def cmd_clean(cfg):
 
 
 def cmd_serve(cfg):
-    for i, p in enumerate(cfg.watch):
-        cfg.watch[i] = pathlib.Path(p).resolve()
-
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
