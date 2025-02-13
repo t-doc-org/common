@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-36)=
+## 0.36 *(2025-02-13)*
+
+- Improved command-line option parsing.
+- Moved the check for upgrades to the `run.py` script.
+
 (release-0-35)=
 ## 0.35 *(2025-02-06)*
 
