@@ -98,7 +98,7 @@ def run_tests(tests, repo, url, port, wheel, write):
     env = os.environ.copy()
     env['TDOC_VERSION'] = str(wheel)
     p = subprocess.Popen(
-        [repo_dir / 'run.py', 'tdoc', '--debug', 'serve', '--exit-on-failure',
+        [repo_dir / 'run.py', 'tdoc', 'serve', '--debug', '--exit-on-failure',
          '--exit-on-idle=2', f'--port={port}'],
         cwd=repo_dir, env={**os.environ, 'TDOC_VERSION': str(wheel)}, text=True,
         bufsize=1, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
