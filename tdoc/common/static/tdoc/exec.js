@@ -67,7 +67,7 @@ export class Executor {
         cls.ready = cls.init();  // Initialize concurrently
         await domLoaded;
         for (const node of document.querySelectorAll(
-                `div.tdoc-exec.highlight-${cls.lang}`)) {
+                `div.tdoc-exec-runner-${cls.runner}`)) {
             fixLineNos(node);
             const handler = new cls(node);
             node.tdocExec = handler;
@@ -135,7 +135,7 @@ export class Executor {
         }
         const view = newEditor({
             extensions, doc,
-            language: this.constructor.lang,
+            language: this.constructor.highlight,
             parent: this.node.querySelector('div.highlight'),
         });
         view.dom.setAttribute(
@@ -173,7 +173,7 @@ export class Executor {
     // Add controls to the {exec} block.
     addControls(controls) {
         if (this.editable && this.origText !== '') {
-            controls.appendChild(this.resetControl());
+            controls.appendChild(this.resetEditorControl());
         }
     }
 
@@ -183,7 +183,7 @@ export class Executor {
 <button class="fa-play tdoc-run"\
  title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
 </button>`);
-        ctrl.addEventListener('click', async () => { await this.doRun(); });
+        ctrl.addEventListener('click', () => this.doRun());
         return ctrl;
     }
 
@@ -191,14 +191,14 @@ export class Executor {
     stopControl() {
         const ctrl = element(
             `<button class="fa-stop tdoc-stop" title="Stop"></button>`);
-        ctrl.addEventListener('click', async () => { await this.doStop(); });
+        ctrl.addEventListener('click', () => this.doStop());
         return ctrl;
     }
 
     // Create a "Reset" control.
-    resetControl() {
+    resetEditorControl() {
         const ctrl = element(`
-<button class="fa-rotate-left tdoc-reset"\
+<button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`);
         ctrl.addEventListener('click', () => this.setEditorText(this.origText));
         return ctrl;
@@ -216,7 +216,7 @@ export class Executor {
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkNodes(this.node)) {
-            yield [Executor.text(node), node];
+            yield {code: Executor.text(node), node};
         }
     }
 

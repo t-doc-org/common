@@ -37,7 +37,12 @@ def setup(app):
 
 
 class Exec(code.CodeBlock):
-    languages = {'html', 'python', 'sql'}
+    languages = {
+        'html': 'html',
+        'micropython': 'python',
+        'python': 'python',
+        'sql': 'sql',
+    }
 
     option_spec = code.CodeBlock.option_spec | {
         'after': names_option,
@@ -53,7 +58,7 @@ class Exec(code.CodeBlock):
     def find_nodes(doctree):
         nodes = {}
         for node in doctree.findall(exec):
-            nodes.setdefault(node['language'], []).append(node)
+            nodes.setdefault(node['tdoc-runner'], []).append(node)
         return nodes
 
     @report_exceptions
@@ -75,11 +80,13 @@ class Exec(code.CodeBlock):
         return res
 
     def _update_node(self, node):
-        if (lang := node['language']) not in self.languages:
-            raise Exception(f"{{exec}}: Unsupported language: {lang}")
+        if (hl := self.languages.get(runner := node['language'])) is None:
+            raise Exception(f"{{exec}}: Unsupported runner: {runner}")
+        node['tdoc-runner'] = runner
+        node['language'] = hl
         node.__class__ = exec
         node.tagname = node.__class__.__name__
-        node['classes'] += ['tdoc-exec']
+        node['classes'] += ['tdoc-exec', f'tdoc-exec-runner-{runner}']
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
         if v := self.options.get('style'): node['style'] = v
@@ -123,20 +130,20 @@ class ExecCollector(collectors.EnvironmentCollector):
 
 
 def check_references(app, doctree, docname):
-    for lang, nodes in Exec.find_nodes(doctree).items():
+    for runner, nodes in Exec.find_nodes(doctree).items():
         names = set()
         for node in nodes:
             names.update(node['names'])
         for node in nodes:
-            check_refs(node, names, lang, 'after', doctree)
-            check_refs(node, names, lang, 'then', doctree)
+            check_refs(node, names, runner, 'after', doctree)
+            check_refs(node, names, runner, 'then', doctree)
 
 
-def check_refs(node, names, lang, typ, doctree):
+def check_refs(node, names, runner, typ, doctree):
     for ref in node.get(typ, ()):
         if ref not in names:
             doctree.reporter.error(
-                f"{{exec}} {lang}: Unknown :{typ}: reference: {ref}",
+                f"{{exec}} {runner}: Unknown :{typ}: reference: {ref}",
                 base_node=node)
 
 
@@ -147,8 +154,8 @@ def set_html_page_config(app, page, config):
 
 def add_js(app, page, template, context, doctree):
     if doctree:
-        for lang in sorted(Exec.find_nodes(doctree)):
-            app.add_js_file(f'tdoc/exec-{lang}.js', type='module')
+        for runner in sorted(Exec.find_nodes(doctree)):
+            app.add_js_file(f'tdoc/exec-{runner}.js', type='module')
 
 
 def set_python_modules(app, config):

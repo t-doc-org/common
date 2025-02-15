@@ -5,7 +5,8 @@ import {element} from './core.js';
 import {Executor} from './exec.js';
 
 class HtmlExecutor extends Executor {
-    static lang = 'html';
+    static runner = 'html';
+    static highlight = 'html';
 
     static async init() {}
 
@@ -40,7 +41,7 @@ class HtmlExecutor extends Executor {
         const iframe = output.querySelector('iframe');
         this.setOutputStyle(iframe);
         const blocks = [];
-        for (const [code, node] of this.codeBlocks()) blocks.push(code);
+        for (const {code} of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');
         output.querySelector('.tdoc-back')
             .addEventListener('click', () => { history.back(); });

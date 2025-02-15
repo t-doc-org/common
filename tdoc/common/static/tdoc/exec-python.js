@@ -41,7 +41,8 @@ worker.sync.render = (run_id, ...args) => {
 const form_feed = 0x0c;
 
 class PythonExecutor extends Executor {
-    static lang = 'python';
+    static runner = 'python';
+    static highlight = 'python';
 
     static async init() {
         await ready;
@@ -89,7 +90,7 @@ class PythonExecutor extends Executor {
         try {
             this.replaceOutputs([]);
             const blocks = [];
-            for (const [code, node] of this.codeBlocks()) {
+            for (const {code, node} of this.codeBlocks()) {
                 blocks.push([code, node.id]);
             }
             await worker.sync.run(run_id, blocks);
@@ -133,7 +134,12 @@ class PythonExecutor extends Executor {
             el.appendChild(node);
             node = el;
         }
+        const atBottom = Math.abs(this.out.scrollHeight - this.out.scrollTop
+                                  - this.out.clientHeight) <= 1;
         this.out.appendChild(node);
+        if (atBottom) {
+            this.out.scrollTo(this.out.scrollLeft, this.out.scrollHeight);
+        }
     }
 
     async onInput(type, prompt, ...args) {

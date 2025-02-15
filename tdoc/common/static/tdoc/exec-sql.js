@@ -38,7 +38,8 @@ class Database {
 }
 
 class SqlExecutor extends Executor {
-    static lang = 'sql';
+    static runner = 'sql';
+    static highlight = 'sql';
 
     static async init() {
         promiser = await sqlite3_init({
@@ -74,7 +75,7 @@ class SqlExecutor extends Executor {
             this.replaceOutputs([]);
             db = await Database.open(`file:db-${run_id}?vfs=memdb`);
             let output, tbody;
-            for (const [code, node] of this.codeBlocks()) {
+            for (const {code} of this.codeBlocks()) {
                 await db.exec(code, res => {
                     if (res.columnNames.length === 0) return;
                     if (!output) {

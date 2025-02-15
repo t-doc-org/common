@@ -7,6 +7,7 @@
 :maxdepth: 1
 elements
 python
+micropython
 sql
 html
 embedding
