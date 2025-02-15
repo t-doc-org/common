@@ -182,7 +182,15 @@ export function bearerAuthorization(token) {
 
 // Return a promise that resolves after the given number of milliseconds.
 export function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(res => setTimeout(res, ms));
+}
+
+// Return a promise that gets rejected after the given number of milliseconds.
+export function timeout(ms) {
+    return new Promise(
+        ms !== undefined && ms !== null ?
+        ((res, rej) => setTimeout(() => rej(new Error("Timeout")), ms)) :
+        (() => null));
 }
 
 // Canonicalize a document path, or the current document if missing.

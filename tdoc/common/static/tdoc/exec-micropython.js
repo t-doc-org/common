@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element, enc, text} from './core.js';
+import {element, enc, sleep, text, timeout} from './core.js';
 import {Executor} from './exec.js';
 import {getSerials, requestSerial} from './serial.js';
 
@@ -28,17 +28,9 @@ class MicroPythonExecutor extends Executor {
         if (this.when !== 'never') {
             this.runCtrl = controls.appendChild(this.runControl());
             this.stopCtrl = controls.appendChild(this.stopControl());
-            this.rebootCtrl = controls.appendChild(this.rebootControl());
             this.connectCtrl = controls.appendChild(this.connectControl());
         }
         super.addControls(controls);
-    }
-
-    rebootControl() {
-        const ctrl = element(`\
-<button class="fa-power-off tdoc-reboot" title="Reboot target"></button>`);
-        ctrl.addEventListener('click', () => this.reboot());
-        return ctrl;
     }
 
     connectControl() {
@@ -72,9 +64,10 @@ class MicroPythonExecutor extends Executor {
 
     onReady() {
         this.connected = false;
+        this.stream = 1;
         this.input = this.inputControl(async (data) => {
             await this.claimSerial();
-            await this.send(data + '\x0a\x0d');
+            await this.send(data + '\r\n');
         });
         this.setSerial();
         const serials = getSerials(requestOpts.filters);
@@ -86,7 +79,6 @@ class MicroPythonExecutor extends Executor {
         this.serial = serial;
         this.runCtrl.disabled = !serial;
         this.stopCtrl.disabled = !serial;
-        this.rebootCtrl.disabled = !serial;
         this.input.querySelector('input').disabled = !serial;
         this.input.querySelector('button').disabled = !serial;
     }
@@ -96,6 +88,33 @@ class MicroPythonExecutor extends Executor {
         this.claim = await this.serial.claim(
             {baudRate: 115200}, (...args) => this.onRead(...args),
             (...args) => this.onRelease(...args));
+        // TODO: Disable input
+    }
+
+    get isControl() { return !!this.controlDecoder; }
+
+    enterControl() {
+        if (this.isControl) return;
+        this.controlDecoder = new TextDecoder();
+        this.controlData = '';
+        this.notifyControl();
+    }
+
+    notifyControl() {
+        const notify = this.controlNotify;
+        const {promise, resolve} = Promise.withResolvers();
+        this.controlPromise = promise;
+        this.controlNotify = resolve;
+        if (notify) notify();
+    }
+
+    exitControl() {
+        if (!this.isControl) return;
+        this.stream = 1;
+        this.writeConsole(this.stream, enc.encode(this.controlData), false);
+        delete this.controlDecoder, this.controlData;
+        delete this.controlPromise, this.controlNotify;
+        // TODO: Enable input
     }
 
     async connect() {
@@ -107,7 +126,10 @@ class MicroPythonExecutor extends Executor {
         try {
             this.setSerial(await requestSerial(requestOpts));
             // TODO: Register for disconnection
-        } catch (e) {}
+            this.clearConsole();
+        } catch (e) {
+            // TODO: Display error
+        }
     }
 
     async send(data) {
@@ -115,7 +137,27 @@ class MicroPythonExecutor extends Executor {
     }
 
     onRead(data, done) {
-        this.writeConsole(1, data, done);
+        if (this.isControl) {
+            const s = this.controlDecoder.decode(data, {stream: !done});
+            if (!s) return;
+            this.controlData += s;
+            this.notifyControl();
+            return;
+        }
+        while (this.running) {
+            const i = data.indexOf(0x04);
+            if (i < 0) break;
+            this.writeConsole(this.stream, data.subarray(0, i), true);
+            data = data.subarray(i + 1);
+            ++this.stream;
+            if (this.stream > 2) {
+                this.running = false;
+                this.stream = 1;
+                this.exitRawRepl();
+                break;
+            }
+        }
+        this.writeConsole(this.stream, data, done);
     }
 
     onRelease() {
@@ -123,41 +165,81 @@ class MicroPythonExecutor extends Executor {
     }
 
     async doRun() {
-        await this.claimSerial();
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
         const code = blocks.join('');
-        await this.send('\r\x03');
-        await this.send('\r\x01');
-        await this.send('\x04');
-        await this.send(code);
-        await this.send('\x04');
+        this.clearConsole();
+        await this.claimSerial();
+        await this.exec(code);
     }
 
     async doStop() {
         await this.claimSerial();
-        await this.interruptTarget();
+        await this.interrupt();
     }
 
-    async reboot() {
-        this.clearConsole();
-        await this.claimSerial();
-        await this.rebootTarget();
+    async exec(code) {
+        this.enterControl();
+        await this.rawRepl(true);
+        await this.expect('>');
+        while (code) {
+            const data = code.slice(0, 256);
+            await this.send(data);
+            code = code.slice(256);
+            await sleep(10);
+        }
+        await this.eot();
+        const resp = await this.recv(2, 1000);
+        if (resp !== 'OK') throw new Error(`Failed to execute: ${resp}`);
+        this.running = true;
+        this.exitControl();
     }
 
-    async interruptTarget() {
-        await this.send('\r\x03');
-        await this.send('\r\x02');
+    async rawRepl(reset = false) {
+        await this.interrupt();
+        await this.enterRawRepl();
+        if (reset) {
+            await this.expect('raw REPL; CTRL-B to exit\r\n>', 1000);
+            await this.eot();
+            await this.expect('soft reboot\r\n', 1000);
+        }
+        await this.expect('raw REPL; CTRL-B to exit\r\n', 1000);
     }
 
-    async rebootTarget() {
-        await this.send('\r\x03');
-        await this.send('\r\x02');
-        await this.send('\x04');
+    enterRawRepl() { return this.send('\r\x01'); }
+    exitRawRepl() { return this.send('\r\x02'); }
+    interrupt() { return this.send('\r\x03'); }
+    eot() { return this.send('\x04'); }
+
+    async recv(count, ms) {
+        const cancel = timeout(ms);
+        while (this.controlData.length < count) {
+            await Promise.race([this.controlPromise, cancel]);
+        }
+        const data = this.controlData.slice(0, 2);
+        this.controlData = this.controlData.slice(2);
+        return data;
+    }
+
+    async expect(want, ms) {
+        const cancel = timeout(ms);
+        let pos = 0;
+        for (;;) {
+            const i = this.controlData.indexOf(want, pos);
+            if (i >= 0) {
+                this.controlData = this.controlData.slice(i + want.length);
+                return;
+            }
+            pos = this.controlData.length - want.length + 1;
+            if (pos < 0) pos = 0;
+            await Promise.race([this.controlPromise, cancel]);
+        }
     }
 
     clearConsole() {
-        if (this.out) this.out.replaceChildren();
+        if (!this.out) return;
+        this.out.parentNode.remove();
+        delete this.out;
     }
 
     writeConsole(stream, data, done) {

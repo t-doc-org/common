@@ -9,7 +9,8 @@ This functionality is in development and unstable. Please do not use yet.
 ```
 
 The {rst:dir}`{exec} micropython <exec>` directive allows uploading and
-executing Python code on an embedded system running MicroPython.
+executing Python code on an embedded system running
+[MicroPython](https://micropython.org).
 
 ```{exec} micropython
 :editor:
@@ -19,9 +20,10 @@ import time
 
 led = Pin("LED", Pin.OUT)
 
-while True:
-    led.toggle()
-    time.sleep(0.4)
+for i in range(10):
+  led.toggle()
+  print(i)
+  time.sleep(0.4)
 ```
 
 ## Multiple editors
@@ -29,12 +31,6 @@ while True:
 ```{exec} micropython
 :editor:
 :output-style: max-height: 20rem
-from machine import Pin
-import time
-
-led = Pin("LED", Pin.OUT)
-
-while True:
-    led.toggle()
-    time.sleep(0.2)
+name = input("What's your name? ")
+print(f"Hello, {name}!")
 ```
