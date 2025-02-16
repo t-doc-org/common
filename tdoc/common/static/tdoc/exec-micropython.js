@@ -79,16 +79,15 @@ class MicroPythonExecutor extends Executor {
     }
 
     onReady() {
-        this.connected = false;
         this.input = this.inputControl(data => this.send(data + '\r\n'));
         this.enableInput(false);
         this.setSerial();
-        const serials = getSerials();
-        if (serials.length === 1) this.setSerial(serials[0]);
         onSerial(this, {
             onConnect: s => { if (!this.serial) this.setSerial(s); },
             onDisconnect: s => { if (this.serial === s) this.setSerial(); }
         });
+        const serials = getSerials();
+        if (serials.length === 1) this.setSerial(serials[0]);
     }
 
     enableInput(enable) {
@@ -107,8 +106,13 @@ class MicroPythonExecutor extends Executor {
         if (this.claim) await this.claim.release();
         this.setSerial();
         this.clearConsole();
-        this.setSerial(await requestSerial());
-        // TODO: Handle errors
+        try {
+            this.setSerial(await requestSerial());
+        } catch (e) {
+            if (e.name !== 'NotFoundError') {
+                this.writeConsole('err', `${e.toString()}\n`);
+            }
+        }
     }
 
     async claimSerial() {
@@ -118,9 +122,10 @@ class MicroPythonExecutor extends Executor {
             (...args) => this.onRelease(...args));
     }
 
-    onRelease() {
+    onRelease(reason) {
         delete this.claim;
         this.enableInput(false);
+        if (reason) this.writeConsole('err', `${reason}\n`);
     }
 
     get isControl() { return !!this.controlDecoder; }
@@ -161,7 +166,7 @@ class MicroPythonExecutor extends Executor {
             this.notifyControl();
             return;
         }
-        while (this.running) {
+        while (this.executing) {
             const i = data.indexOf(0x04);
             if (i < 0) break;
             this.writeConsole(this.stream, data.subarray(0, i), true);
@@ -169,7 +174,7 @@ class MicroPythonExecutor extends Executor {
             if (this.stream === '') {
                 this.stream = 'err';
             } else if (this.stream === 'err') {
-                this.running = false;
+                this.executing = false;
                 this.stream = '';
                 this.exitRawRepl();
                 break;
@@ -179,12 +184,16 @@ class MicroPythonExecutor extends Executor {
     }
 
     async doRun() {
-        const blocks = [];
-        for (const {code} of this.codeBlocks()) blocks.push(code);
-        const code = blocks.join('');
-        this.clearConsole();
-        await this.claimSerial();
-        await this.exec(code);
+        try {
+            this.clearConsole();
+            const blocks = [];
+            for (const {code} of this.codeBlocks()) blocks.push(code);
+            const code = blocks.join('');
+            await this.claimSerial();
+            await this.exec(code);
+        } catch (e) {
+            this.writeConsole('err', `${e.toString()}\n`);
+        }
     }
 
     async doStop() {
@@ -194,7 +203,7 @@ class MicroPythonExecutor extends Executor {
     async exec(code) {
         this.enterControl();
         await this.rawRepl(true);
-        await this.expect('>');
+        await this.expect('>', 1000);
         while (code) {
             const data = code.slice(0, 256);
             await this.send(data);
@@ -203,8 +212,8 @@ class MicroPythonExecutor extends Executor {
         }
         await this.eot();
         const resp = await this.recv(2, 1000);
-        if (resp !== 'OK') throw new Error(`Failed to execute: ${resp}`);
-        this.running = true;
+        if (resp !== 'OK') throw new Error(`Failed to execute code: ${resp}`);
+        this.executing = true;
         this.exitControl();
     }
 

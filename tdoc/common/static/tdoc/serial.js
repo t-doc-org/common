@@ -3,6 +3,7 @@
 
 import {enc} from './core.js';
 
+// A claim on a serial port.
 class Claim {
     constructor(serial, onRead, onRelease) {
         this.serial = serial;
@@ -10,8 +11,8 @@ class Claim {
         this.onRelease = onRelease;
     }
 
-    async release() {
-        await this.serial.unclaim(this);
+    async release(reason) {
+        await this.serial.unclaim(this, reason);
     }
 
     async send(data) {
@@ -21,11 +22,13 @@ class Claim {
 
 const emptyData = new Uint8Array();
 
+// A serial port that can be used by multiple clients.
 class Serial {
     constructor(port) {
         this.port = port;
     }
 
+    // Return true iff the port matches the given filter.
     matches(filter) {
         const i = this.port.getInfo();
         const matches = f => !f ||
@@ -43,6 +46,7 @@ class Serial {
         return matches(filter);
     }
 
+    // Claim the port. This snatches it away from the previous claimant.
     async claim(options, onRead, onRelease) {
         await this.unclaim();
         const claim = new Claim(this, onRead, onRelease);
@@ -51,26 +55,31 @@ class Serial {
         return claim;
     }
 
-    async unclaim(claim) {
+    // Release the port.
+    async unclaim(claim, reason) {
         if (!this.claimed || (claim && this.claimed !== claim)) return;
-        this.claimed.onRelease();
+        this.claimed.onRelease(reason);
         delete this.claimed;
         await this.close();
     }
 
+    // Open the port and start streaming received data.
     async open(options) {
         await this.port.open(options);
         this.opened = true;
         this.streamer = this.stream();
     }
 
+    // Close the port.
     async close() {
         this.opened = false;
         if (this.reader) await this.reader.cancel();
         if (this.streamer) await this.streamer;
     }
 
+    // Stream received data.
     async stream() {
+        let reason = "The port was closed";
         try {
             while (this.opened && this.port.readable) {
                 this.reader = this.port.readable.getReader();
@@ -88,9 +97,12 @@ class Serial {
                 }
             }
         } catch (e) {
-            // TODO: Report, maybe through onRelease
-            console.error(e);
+            reason = e.toString();
         } finally {
+            if (this.claimed) {
+                this.claimed.onRelease(reason);
+                delete this.claimed;
+            }
             this.opened = false;
             if (this.writer) {
                 await this.writer.close();
@@ -102,6 +114,7 @@ class Serial {
         }
     }
 
+    // Send data to the port.
     async send(data) {
         if (!this.opened) return;
         if (!this.writer && this.port.writable) {
@@ -111,15 +124,20 @@ class Serial {
     }
 }
 
-export function getSerials(filters) {
+// Get a list of known serial ports matching the given filter.
+export function getSerials(filter) {
     const matching = [];
     for (const s of serials.values()) {
-        if (s.matches(filters)) matching.push(s);
+        if (s.matches(filter)) matching.push(s);
     }
     return matching;
 }
 
+// Request that the user select a serial port.
 export async function requestSerial(options) {
+    if (!navigator.serial) {
+        throw new Error("WebSerial is not supported on this browser");
+    }
     const port = await navigator.serial.requestPort(options);
     let s = serials.get(port);
     if (!s) {
@@ -134,6 +152,7 @@ export async function requestSerial(options) {
     return s;
 }
 
+// Register or unregister handlers for port connection and disconnection.
 export function onSerial(key, hs) {
     if (hs) {
         handlers.set(key, hs);
@@ -144,27 +163,31 @@ export function onSerial(key, hs) {
 
 const serials = new Map();
 const handlers = new Map();
-for (const port of await navigator.serial.getPorts()) {
-    serials.set(port, new Serial(port));
+
+if (navigator.serial) {
+    // Get notified on connection and disconnection.
+    navigator.serial.addEventListener('connect', e => {
+        let s = serials.get(e.target);
+        if (!s) {
+            s = new Serial(e.target);
+            serials.set(e.target, s);
+        }
+        for (const h of handlers.values()) {
+            if (h.onConnect) h.onConnect(s);
+        }
+    });
+    navigator.serial.addEventListener('disconnect', async e => {
+        const s = serials.get(e.target);
+        if (!s) return;
+        await s.unclaim(undefined, "The port was disconnected");
+        for (const h of handlers.values()) {
+            if (h.onDisconnect) h.onDisconnect(s);
+        }
+        serials.delete(e.target);
+    });
+
+    // Create Serial instances for all connected ports.
+    for (const port of await navigator.serial.getPorts()) {
+        serials.set(port, new Serial(port));
+    }
 }
-
-navigator.serial.addEventListener('connect', e => {
-    let s = serials.get(e.target);
-    if (!s) {
-        s = new Serial(e.target);
-        serials.set(e.target, s);
-    }
-    for (const h of handlers.values()) {
-        if (h.onConnect) h.onConnect(s);
-    }
-});
-
-navigator.serial.addEventListener('disconnect', async e => {
-    const s = serials.get(e.target);
-    if (!s) return;
-    await s.unclaim();
-    for (const h of handlers.values()) {
-        if (h.onDisconnect) h.onDisconnect(s);
-    }
-    serials.delete(e.target);
-});
