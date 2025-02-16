@@ -11,10 +11,7 @@ class Claim {
     }
 
     async release() {
-        if (this.serial.claimed !== this) return;
-        this.onRelease();
-        delete this.serial.claimed;
-        await this.serial.disconnect();
+        await this.serial.unclaim(this);
     }
 
     async send(data) {
@@ -26,38 +23,39 @@ const emptyData = new Uint8Array();
 
 class Serial {
     constructor(port) {
-        this.connected = false;
         this.port = port;
     }
 
     async claim(options, onRead, onRelease) {
-        if (this.claimed) {
-            this.claimed.onRelease();
-            delete this.claimed;
-        }
-        await this.disconnect();
+        await this.unclaim();
         const claim = new Claim(this, onRead, onRelease);
-        await this.connect(options);
+        await this.open(options);
         this.claimed = claim;
         return claim;
     }
 
-    async connect(options) {
+    async unclaim(claim) {
+        if (!this.claimed || (claim && this.claimed !== claim)) return;
+        this.claimed.onRelease();
+        delete this.claimed;
+        await this.close();
+    }
+
+    async open(options) {
         await this.port.open(options);
-        this.connected = true;
+        this.opened = true;
         this.streamer = this.stream();
     }
 
-    async disconnect() {
-        this.connected = false;
+    async close() {
+        this.opened = false;
         if (this.reader) await this.reader.cancel();
         if (this.streamer) await this.streamer;
     }
 
     async stream() {
-        console.log("Starting");
         try {
-            while (this.connected && this.port.readable) {
+            while (this.opened && this.port.readable) {
                 this.reader = this.port.readable.getReader();
                 try {
                     for (;;) {
@@ -73,10 +71,10 @@ class Serial {
                 }
             }
         } catch (e) {
+            // TODO: Report, maybe through onRelease
             console.error(e);
         } finally {
-            console.log("Done");
-            this.connected = false;
+            this.opened = false;
             if (this.writer) {
                 await this.writer.close();
                 this.writer.releaseLock();
@@ -88,30 +86,13 @@ class Serial {
     }
 
     async send(data) {
-        if (!this.connected) return;
+        if (!this.opened) return;
         if (!this.writer && this.port.writable) {
             this.writer = this.port.writable.getWriter();
         }
         await this.writer.write(data);
     }
 }
-
-const serials = {};
-for (const port of await navigator.serial.getPorts()) {
-    serials[port] = new Serial(port);
-}
-
-navigator.serial.addEventListener('connect', e => {
-    if (!(e.target in serials)) serials[e.target] = new Serial(e.target);
-});
-
-navigator.serial.addEventListener('disconnect', async (e) => {
-    const s = serials[e.target];
-    if (s) {
-        await s.disconnect();
-        delete serials[e.target];
-    }
-});
 
 function matchesFilter(i, f) {
     return (!f.usbVendorId || (i.usbVendorId === f.usbVendorId)) &&
@@ -121,6 +102,7 @@ function matchesFilter(i, f) {
 }
 
 function matchesFilters(info, filters) {
+    if (!filters || filters.length === 0) return true;
     for (const f of filters) {
         if (matchesFilter(info, f)) return true;
     }
@@ -129,7 +111,7 @@ function matchesFilters(info, filters) {
 
 export function getSerials(filters) {
     const matching = [];
-    for (const s of Object.values(serials)) {
+    for (const s of serials.values()) {
         if (matchesFilters(s.port.getInfo(), filters)) matching.push(s);
     }
     return matching;
@@ -137,7 +119,50 @@ export function getSerials(filters) {
 
 export async function requestSerial(options) {
     const port = await navigator.serial.requestPort(options);
-    const s = serials[port];
-    if (s) return s;
-    return serials[port] = new Serial(port);
+    let s = serials.get(port);
+    if (!s) {
+        s = new Serial(port);
+        serials.set(port, s);
+        if (s.port.connected) {
+            for (const h of handlers.values()) {
+                if (h.onConnect) h.onConnect(s);
+            }
+        }
+    }
+    return s;
 }
+
+export function onSerial(key, hs) {
+    if (hs) {
+        handlers.set(key, hs);
+    } else {
+        handlers.delete(key);
+    }
+}
+
+const serials = new Map();
+const handlers = new Map();
+for (const port of await navigator.serial.getPorts()) {
+    serials.set(port, new Serial(port));
+}
+
+navigator.serial.addEventListener('connect', e => {
+    let s = serials.get(e.target);
+    if (!s) {
+        s = new Serial(e.target);
+        serials.set(e.target, s);
+    }
+    for (const h of handlers.values()) {
+        if (h.onConnect) h.onConnect(s);
+    }
+});
+
+navigator.serial.addEventListener('disconnect', async e => {
+    const s = serials.get(e.target);
+    if (!s) return;
+    await s.unclaim();
+    for (const h of handlers.values()) {
+        if (h.onDisconnect) h.onDisconnect(s);
+    }
+    serials.delete(e.target);
+});

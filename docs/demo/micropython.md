@@ -12,9 +12,36 @@ The {rst:dir}`{exec} micropython <exec>` directive allows uploading and
 executing Python code on an embedded system running
 [MicroPython](https://micropython.org).
 
-```{exec} micropython
+```{defaults} exec
 :editor:
+:style: max-height: 20rem
 :output-style: max-height: 20rem
+```
+
+## Generic
+
+```{exec} micropython
+name = input("What's your name? ")
+print("Hello, %s!" % name)
+```
+
+## BBC micro:bit
+
+```{exec} micropython
+from microbit import *
+import time
+
+display.on()
+for name in dir(Image):
+  if not name[0].isupper() or name.startswith('ALL_'): continue
+  print(name)
+  display.show(getattr(Image, name))
+  time.sleep(0.4)
+```
+
+## Raspberry Pi Pico
+
+```{exec} micropython
 from machine import Pin
 import time
 
@@ -22,15 +49,5 @@ led = Pin("LED", Pin.OUT)
 
 for i in range(10):
   led.toggle()
-  print(i)
   time.sleep(0.4)
-```
-
-## Multiple editors
-
-```{exec} micropython
-:editor:
-:output-style: max-height: 20rem
-name = input("What's your name? ")
-print(f"Hello, {name}!")
 ```

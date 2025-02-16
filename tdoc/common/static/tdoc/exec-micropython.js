@@ -3,13 +3,13 @@
 
 import {element, enc, sleep, text, timeout} from './core.js';
 import {Executor} from './exec.js';
-import {getSerials, requestSerial} from './serial.js';
+import {getSerials, onSerial, requestSerial} from './serial.js';
 
 const form_feed = 0x0c;
 const requestOpts = {
     filters: [
         // Raspberry Pi Pico
-        {usbVendorId: 0x2e8a, usbProductId: 0x0005},
+        // {usbVendorId: 0x2e8a, usbProductId: 0x0005},
     ],
 }
 
@@ -21,7 +21,7 @@ class MicroPythonExecutor extends Executor {
 
     constructor(node) {
         super(node);
-        this.decoders = {};
+        this.decoders = new Map();
     }
 
     addControls(controls) {
@@ -65,22 +65,34 @@ class MicroPythonExecutor extends Executor {
     onReady() {
         this.connected = false;
         this.stream = 1;
-        this.input = this.inputControl(async (data) => {
-            await this.claimSerial();
-            await this.send(data + '\r\n');
-        });
+        this.input = this.inputControl(data => this.send(data + '\r\n'));
+        this.enableInput(false);
         this.setSerial();
         const serials = getSerials(requestOpts.filters);
         if (serials.length === 1) this.setSerial(serials[0]);
-        // TODO: Register for connection events
+        onSerial(this, {
+            onConnect: s => { if (!this.serial) this.setSerial(s); },
+            onDisconnect: s => { if (this.serial === s) this.setSerial(); }
+        });
+    }
+
+    enableInput(enable) {
+        this.stopCtrl.disabled = !enable;
+        this.input.querySelector('input').disabled = !enable;
+        this.input.querySelector('button').disabled = !enable;
     }
 
     setSerial(serial) {
         this.serial = serial;
         this.runCtrl.disabled = !serial;
-        this.stopCtrl.disabled = !serial;
-        this.input.querySelector('input').disabled = !serial;
-        this.input.querySelector('button').disabled = !serial;
+    }
+
+    async connect() {
+        if (this.claim) await this.claim.release();
+        this.setSerial();
+        this.clearConsole();
+        this.setSerial(await requestSerial(requestOpts));
+        // TODO: Handle errors
     }
 
     async claimSerial() {
@@ -88,7 +100,11 @@ class MicroPythonExecutor extends Executor {
         this.claim = await this.serial.claim(
             {baudRate: 115200}, (...args) => this.onRead(...args),
             (...args) => this.onRelease(...args));
-        // TODO: Disable input
+    }
+
+    onRelease() {
+        delete this.claim;
+        this.enableInput(false);
     }
 
     get isControl() { return !!this.controlDecoder; }
@@ -114,22 +130,7 @@ class MicroPythonExecutor extends Executor {
         this.writeConsole(this.stream, enc.encode(this.controlData), false);
         delete this.controlDecoder, this.controlData;
         delete this.controlPromise, this.controlNotify;
-        // TODO: Enable input
-    }
-
-    async connect() {
-        if (this.claim) {
-            await this.claim.release();
-            delete this.claim;
-        }
-        this.setSerial();
-        try {
-            this.setSerial(await requestSerial(requestOpts));
-            // TODO: Register for disconnection
-            this.clearConsole();
-        } catch (e) {
-            // TODO: Display error
-        }
+        this.enableInput(!!this.claim);
     }
 
     async send(data) {
@@ -138,6 +139,7 @@ class MicroPythonExecutor extends Executor {
 
     onRead(data, done) {
         if (this.isControl) {
+            // this.writeConsole(this.stream, data, done); // TODO
             const s = this.controlDecoder.decode(data, {stream: !done});
             if (!s) return;
             this.controlData += s;
@@ -160,10 +162,6 @@ class MicroPythonExecutor extends Executor {
         this.writeConsole(this.stream, data, done);
     }
 
-    onRelease() {
-        delete this.claim;
-    }
-
     async doRun() {
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
@@ -174,7 +172,6 @@ class MicroPythonExecutor extends Executor {
     }
 
     async doStop() {
-        await this.claimSerial();
         await this.interrupt();
     }
 
@@ -240,11 +237,16 @@ class MicroPythonExecutor extends Executor {
         if (!this.out) return;
         this.out.parentNode.remove();
         delete this.out;
+        this.decoders.delete(1);
+        this.decoders.delete(2);
     }
 
     writeConsole(stream, data, done) {
-        let dec = this.decoders[stream];
-        if (!dec) dec = this.decoders[stream] = new TextDecoder();
+        let dec = this.decoders.get(stream);
+        if (!dec) {
+            dec = new TextDecoder();
+            this.decoders.set(stream, dec);
+        }
         const i = data.lastIndexOf(form_feed);
         if (i >= 0) {
             data = data.subarray(i + 1);
