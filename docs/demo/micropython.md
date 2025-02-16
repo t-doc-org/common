@@ -36,7 +36,7 @@ for name in dir(Image):
   if not name[0].isupper() or name.startswith('ALL_'): continue
   print(name)
   display.show(getattr(Image, name))
-  time.sleep(0.4)
+  time.sleep(0.5)
 ```
 
 ## Raspberry Pi Pico

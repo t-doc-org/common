@@ -26,6 +26,23 @@ class Serial {
         this.port = port;
     }
 
+    matches(filter) {
+        const i = this.port.getInfo();
+        const matches = f => !f ||
+            ((!f.usbVendorId || (i.usbVendorId === f.usbVendorId)) &&
+             (!f.usbProductId || (i.usbProductId === f.usbProductId)) &&
+             (!f.bluetoothServiceClassId ||
+               (i.bluetoothServiceClassId === f.bluetoothServiceClassId)));
+        if (filter instanceof Array) {
+            if (filter.length === 0) return true;
+            for (const f of filter) {
+                if (matches(f)) return true;
+            }
+            return false;
+        }
+        return matches(filter);
+    }
+
     async claim(options, onRead, onRelease) {
         await this.unclaim();
         const claim = new Claim(this, onRead, onRelease);
@@ -94,25 +111,10 @@ class Serial {
     }
 }
 
-function matchesFilter(i, f) {
-    return (!f.usbVendorId || (i.usbVendorId === f.usbVendorId)) &&
-           (!f.usbProductId || (i.usbProductId === f.usbProductId)) &&
-           (!f.bluetoothServiceClassId ||
-               (i.bluetoothServiceClassId === f.bluetoothServiceClassId));
-}
-
-function matchesFilters(info, filters) {
-    if (!filters || filters.length === 0) return true;
-    for (const f of filters) {
-        if (matchesFilter(info, f)) return true;
-    }
-    return false;
-}
-
 export function getSerials(filters) {
     const matching = [];
     for (const s of serials.values()) {
-        if (matchesFilters(s.port.getInfo(), filters)) matching.push(s);
+        if (s.matches(filters)) matching.push(s);
     }
     return matching;
 }
