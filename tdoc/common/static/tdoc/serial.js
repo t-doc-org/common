@@ -18,6 +18,10 @@ class Claim {
     async send(data) {
         if (this.serial.claimed === this) await this.serial.send(data);
     }
+
+    async setSignals(options) {
+        if (this.serial.claimed === this) await this.serial.setSignals(options);
+    }
 }
 
 const emptyData = new Uint8Array();
@@ -121,6 +125,12 @@ class Serial {
             this.writer = this.port.writable.getWriter();
         }
         await this.writer.write(data);
+    }
+
+    // Set control signals on the port.
+    async setSignals(options) {
+        if (!this.opened) return;
+        await this.port.setSignals(options);
     }
 }
 

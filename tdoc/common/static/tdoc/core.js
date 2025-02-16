@@ -190,7 +190,7 @@ export function timeout(ms) {
     return new Promise(
         ms !== undefined && ms !== null ?
         ((res, rej) => setTimeout(() => rej(new Error("Timeout")), ms)) :
-        (() => null));
+        (() => undefined));
 }
 
 // Canonicalize a document path, or the current document if missing.

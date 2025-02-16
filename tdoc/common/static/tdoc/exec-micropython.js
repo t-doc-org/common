@@ -120,6 +120,7 @@ class MicroPythonExecutor extends Executor {
         this.claim = await this.serial.claim(
             this.options.open, (...args) => this.onRead(...args),
             (...args) => this.onRelease(...args));
+        if (this.options.signals) this.claim.setSignals(this.options.signals);
     }
 
     onRelease(reason) {
@@ -148,7 +149,7 @@ class MicroPythonExecutor extends Executor {
     exitControl() {
         if (!this.isControl) return;
         this.stream = '';
-        this.writeConsole(this.stream, this.controlData, false);
+        this.writeConsole(this.stream, this.controlData);
         delete this.controlDecoder, this.controlData;
         delete this.controlPromise, this.controlNotify;
         this.enableInput(!!this.claim);
@@ -238,6 +239,7 @@ class MicroPythonExecutor extends Executor {
         while (this.controlData.length < count) {
             await Promise.race([this.controlPromise, cancel]);
         }
+        cancel.catch(e => undefined);  // Prevent logging
         const data = this.controlData.slice(0, 2);
         this.controlData = this.controlData.slice(2);
         return data;
@@ -250,6 +252,7 @@ class MicroPythonExecutor extends Executor {
             const i = this.controlData.indexOf(want, pos);
             if (i >= 0) {
                 this.controlData = this.controlData.slice(i + want.length);
+                cancel.catch(e => undefined);  // Prevent logging
                 return;
             }
             pos = this.controlData.length - want.length + 1;
