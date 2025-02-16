@@ -11,14 +11,14 @@ import {getSerials, onSerial, requestSerial} from './serial.js';
 const form_feed = '\x0c';
 
 const options = [{
-    // Raspberry Pi / MicroPython
-    match: {usbVendorId: 0x2e8a, usbProductId: 0x0005},
-    open: {baudRate: 1000000},
+//     // Raspberry Pi / MicroPython
+//     match: {usbVendorId: 0x2e8a, usbProductId: 0x0005},
+//     open: {baudRate: 1000000},
 // }, {
 //     // ARM Ltd / ARM mbed (BBC micro:bit)
 //     match: {usbVendorId: 0x0d28, usbProductId: 0x0204},
 //     open: {baudRate: 115200},
-}, {
+// }, {
     open: {baudRate: 115200},
 }];
 
@@ -43,8 +43,8 @@ class MicroPythonExecutor extends Executor {
     addControls(controls) {
         if (this.when !== 'never') {
             this.runCtrl = controls.appendChild(this.runControl());
-            this.stopCtrl = controls.appendChild(this.stopControl());
             this.connectCtrl = controls.appendChild(this.connectControl());
+            this.input = this.inputControl(data => this.send(data + '\r\n'));
         }
         super.addControls(controls);
     }
@@ -75,11 +75,11 @@ class MicroPythonExecutor extends Executor {
                 btn.click();
             }
         });
+        div.appendChild(this.stopControl());
         return div;
     }
 
     onReady() {
-        this.input = this.inputControl(data => this.send(data + '\r\n'));
         this.enableInput(false);
         this.setSerial();
         onSerial(this, {
@@ -91,9 +91,10 @@ class MicroPythonExecutor extends Executor {
     }
 
     enableInput(enable) {
-        this.stopCtrl.disabled = !enable;
-        this.input.querySelector('input').disabled = !enable;
-        this.input.querySelector('button').disabled = !enable;
+        if (!this.input) return;
+        for (const el of this.input.querySelectorAll('input, button')) {
+            el.disabled = !enable;
+        }
     }
 
     setSerial(serial) {
