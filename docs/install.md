@@ -54,7 +54,7 @@ t-doc requires the following software to be installed:
     and `LAST` with your first and last name, and `EMAIL` with your email
     address, e.g. `Joe Smith <joe@example.com>`):
 
-    ```ini
+    ```{code-block} ini
     [ui]
     username = FIRST LAST <EMAIL>
     ```

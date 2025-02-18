@@ -3,16 +3,31 @@
 
 # Create & edit documents
 
-## Check out a repository
+## Clone a repository
 
 Documents are grouped into **repositories**, which represent the unit of
-deployment. Each document repository is tracked as a Mercurial repository. A
-repository can be checked out with (substitute `USER` with your username, and
-`REPO` with the name of the repository):
+deployment. Each document repository is tracked as a Mercurial repository.
 
-```{code-block} shell-session
-hg checkout https://USER@c-space.net/rc/hg/t-doc/REPO
-```
+- Clone the repository with (substitute `REPO` with the name of the repository):
+
+  ```{code-block} shell-session
+  hg clone -u main https://c-space.net/rc/hg/t-doc/REPO
+  ```
+
+- Edit the file `.hg/hgrc` in the cloned repository and **add the following
+  lines** (substitute `USER` with your username, `PASSWORD` with your password,
+  `FIRST` and `LAST` with your first and last name, and `EMAIL` with your email
+  address, e.g. `Joe Smith <joe@example.com>`):
+
+  ```{code-block} ini
+  [auth]
+  c-space.prefix = https://c-space.net/
+  c-space.username = USER
+  c-space.password = PASSWORD
+
+  [ui]
+  username = FIRST LAST <EMAIL>
+  ```
 
 The typical structure of a document repository is shown below. The source files
 are located below the `docs` directory.
@@ -110,5 +125,8 @@ hg push
 ```
 
 The changes should be live at `https://t-doc.org/REPO` within a few minutes. If
-the build fails, GitHub will send you an email notification. It contains a link
-to the build log, which should allow figuring out what went wrong.
+the build fails, GitHub should send you an email notification. It contains a
+link to the build log, which should allow figuring out what went wrong.
+
+Make sure that the `main` bookmark is always active and pointing to the
+repository head.
