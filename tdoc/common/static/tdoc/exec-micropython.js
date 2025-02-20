@@ -230,14 +230,12 @@ class MicroPythonExecutor extends Executor {
     }
 
     async doRun() {
-        try {
+        this.inRawRepl(true, async () => {
             this.clearConsole();
             const code = this.getCode();
-            await this.claimSerial();
-            await this.exec(code, true);
-        } catch (e) {
-            this.writeConsole('err', `${e.toString()}\n`);
-        }
+            await this.exec(code);
+            this.executing = true;
+        });
     }
 
     async doStop() {
@@ -245,36 +243,34 @@ class MicroPythonExecutor extends Executor {
     }
 
     async flash() {
-        try {
+        this.inRawRepl(false, async () => {
             this.clearConsole();
-            let data = enc.encode(this.getCode());
-            await this.claimSerial();
-            await this.writeFile('/main.py', data);
-        } catch (e) {
-            this.writeConsole('err', `${e.toString()}\n`);
-        }
+            await this.writeFile('/main.py', enc.encode(this.getCode()));
+            await this.expect('>');
+            this.writeConsole('', `Program flashed successfully.\n`);
+        });
     }
 
     async writeFile(path, data) {
-        const s = pyBytes(data);
-        await this.exec(`with open(${pyStr(path)}, 'wb') as f: f.write(${s})`);
-        return;
-
-        // TODO: Implement chunked writing
-        await this.exec(`f = open(${pyStr(path)}, 'wb'); w = f.write`);
-        const chunkSize = 16;
+        await this.execWait(`f=open(${pyStr(path)},'wb');w=f.write`);
+        const chunkSize = 256;
         while (data.length > 0) {
             const s = pyBytes(data.subarray(0, chunkSize));
-            await this.exec(`w(${s})`);
+            await this.execWait(`w(${s})`);
             data = data.subarray(chunkSize);
         }
-        await this.exec(`f.close()`);
+        await this.execWait(`f.close()`);
     }
 
-    async exec(code, reset = false) {
-        this.enterControl();
-        await this.rawRepl(reset);
-        await this.expect('>', 1000);
+    async execWait(code, ms = 1000) {
+        await this.exec(code);
+        const {out, err} = await this.waitOutput(ms);
+        if (err) throw new Error(err);
+        return out;
+    }
+
+    async exec(code) {
+        await this.expect('>');
         while (code) {
             const data = code.slice(0, 256);
             await this.send(data);
@@ -282,21 +278,34 @@ class MicroPythonExecutor extends Executor {
             await sleep(10);
         }
         await this.eot();
-        const resp = await this.recv(2, 1000);
+        const resp = await this.recv(2);
         if (resp !== 'OK') throw new Error(`Failed to execute code: ${resp}`);
-        this.executing = true;
-        this.exitControl();
     }
 
-    async rawRepl(reset = false) {
-        await this.interrupt();
-        await this.enterRawRepl();
-        if (reset) {
-            await this.expect('raw REPL; CTRL-B to exit\r\n>', 1000);
-            await this.eot();
-            await this.expect('soft reboot\r\n', 1000);
+    async waitOutput(ms) {
+        const out = await this.expect('\x04', ms);
+        const err = await this.expect('\x04', ms);
+        return {out, err}
+    }
+
+    async inRawRepl(reset, fn) {
+        try {
+            await this.claimSerial();
+            this.enterControl();
+            await this.interrupt();
+            await this.enterRawRepl();
+            if (reset) {
+                await this.expect('raw REPL; CTRL-B to exit\r\n>');
+                await this.eot();
+                await this.expect('soft reboot\r\n');
+            }
+            await this.expect('raw REPL; CTRL-B to exit\r\n');
+            await fn();
+        } catch (e) {
+            this.writeConsole('err', `${e.toString()}\n`);
+        } finally {
+            this.exitControl();
         }
-        await this.expect('raw REPL; CTRL-B to exit\r\n', 1000);
     }
 
     enterRawRepl() { return this.send('\r\x01'); }
@@ -304,7 +313,7 @@ class MicroPythonExecutor extends Executor {
     interrupt() { return this.send('\r\x03'); }
     eot() { return this.send('\x04'); }
 
-    async recv(count, ms) {
+    async recv(count, ms = 1000) {
         const cancel = timeout(ms);
         while (this.controlData.length < count) {
             await Promise.race([this.controlPromise, cancel]);
@@ -315,15 +324,16 @@ class MicroPythonExecutor extends Executor {
         return data;
     }
 
-    async expect(want, ms) {
+    async expect(want, ms = 1000) {
         const cancel = timeout(ms);
         let pos = 0;
         for (;;) {
             const i = this.controlData.indexOf(want, pos);
             if (i >= 0) {
+                const data = this.controlData.slice(0, i);
                 this.controlData = this.controlData.slice(i + want.length);
                 cancel.catch(e => undefined);  // Prevent logging
-                return;
+                return data;
             }
             pos = this.controlData.length - want.length + 1;
             if (pos < 0) pos = 0;
