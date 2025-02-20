@@ -120,11 +120,12 @@ class PythonExecutor extends Executor {
         if (!this.out) {
             const div = this.render(
                 '\uffff_0', `<div class="highlight"><pre></pre></div>`);
-            if (this.runCtrl && !this.node.classList.contains('hidden')) {
-                div.appendChild(element(`\
-<button class="fa-xmark tdoc-remove hidden" title="Remove"></button>`))
-                    .addEventListener('click', () => { div.remove(); });
-            }
+            div.appendChild(element(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
+                .addEventListener('click', () => {
+                    div.remove();
+                    delete this.out;
+                });
             this.out = div.querySelector('pre');
             this.setOutputStyle(this.out);
         }
