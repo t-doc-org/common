@@ -16,6 +16,7 @@ import webbrowser
 
 
 repos = {
+    'ai-teaching': 'https://github.com/t-doc-org/ai-teaching',
     'common': 'https://github.com/t-doc-org/common',
     'informatique': 'https://github.com/t-doc-org/informatique',
     'janm': 'https://github.com/t-doc-org/janm',

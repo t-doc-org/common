@@ -29,6 +29,35 @@ function findOptions(serial) {
     }
 }
 
+function pyStr(s) {
+    const parts = [`'`];
+    for (const c of s) {
+        const cp = c.codePointAt(0);
+        parts.push(c == `'` ? `\\'` :
+                   c == `\\` ? `\\\\` :
+                   cp >= 0x20 && cp <= 0x7e ? c :
+                   cp <= 0xff ? `\\x${('0' + cp.toString(16)).slice(-2)}` :
+                   cp <= 0xffff ? `\\u${('0' + cp.toString(16)).slice(-4)}` :
+                   `\\U${('000' + cp.toString(16)).slice(-8)}`);
+
+    }
+    parts.push(`'`);
+    return parts.join('');
+}
+
+function pyBytes(data) {
+    const parts = [`b'`];
+    for (const v of data) {
+        parts.push(v == 0x27 ? `\\'` :
+                   v == 0x5c ? `\\\\` :
+                   v >= 0x20 && v <= 0x7e ? String.fromCharCode(v) :
+                   `\\x${('0' + v.toString(16)).slice(-2)}`);
+
+    }
+    parts.push(`'`);
+    return parts.join('');
+}
+
 class MicroPythonExecutor extends Executor {
     static runner = 'micropython';
     static highlight = 'python';
@@ -44,6 +73,7 @@ class MicroPythonExecutor extends Executor {
         if (this.when !== 'never') {
             this.runCtrl = controls.appendChild(this.runControl());
             this.connectCtrl = controls.appendChild(this.connectControl());
+            this.flashCtrl = controls.appendChild(this.flashControl());
             this.input = this.inputControl(data => this.send(data + '\r\n'));
         }
         super.addControls(controls);
@@ -53,6 +83,13 @@ class MicroPythonExecutor extends Executor {
         const ctrl = element(`\
 <button class="fa-plug tdoc-connect" title="Connect"></button>`);
         ctrl.addEventListener('click', () => this.connect());
+        return ctrl;
+    }
+
+    flashControl() {
+        const ctrl = element(`\
+<button class="fa-bolt tdoc-flash" title="Flash"></button>`);
+        ctrl.addEventListener('click', () => this.flash());
         return ctrl;
     }
 
@@ -101,6 +138,7 @@ class MicroPythonExecutor extends Executor {
         this.serial = serial;
         this.options = findOptions(serial);
         this.runCtrl.disabled = !serial;
+        this.flashCtrl.disabled = !serial;
     }
 
     async connect() {
@@ -185,14 +223,18 @@ class MicroPythonExecutor extends Executor {
         this.writeConsole(this.stream, data, done);
     }
 
+    getCode() {
+        const blocks = [];
+        for (const {code} of this.codeBlocks()) blocks.push(code);
+        return blocks.join('');
+    }
+
     async doRun() {
         try {
             this.clearConsole();
-            const blocks = [];
-            for (const {code} of this.codeBlocks()) blocks.push(code);
-            const code = blocks.join('');
+            const code = this.getCode();
             await this.claimSerial();
-            await this.exec(code);
+            await this.exec(code, true);
         } catch (e) {
             this.writeConsole('err', `${e.toString()}\n`);
         }
@@ -202,9 +244,36 @@ class MicroPythonExecutor extends Executor {
         await this.interrupt();
     }
 
-    async exec(code) {
+    async flash() {
+        try {
+            this.clearConsole();
+            let data = enc.encode(this.getCode());
+            await this.claimSerial();
+            await this.writeFile('/main.py', data);
+        } catch (e) {
+            this.writeConsole('err', `${e.toString()}\n`);
+        }
+    }
+
+    async writeFile(path, data) {
+        const s = pyBytes(data);
+        await this.exec(`with open(${pyStr(path)}, 'wb') as f: f.write(${s})`);
+        return;
+
+        // TODO: Implement chunked writing
+        await this.exec(`f = open(${pyStr(path)}, 'wb'); w = f.write`);
+        const chunkSize = 16;
+        while (data.length > 0) {
+            const s = pyBytes(data.subarray(0, chunkSize));
+            await this.exec(`w(${s})`);
+            data = data.subarray(chunkSize);
+        }
+        await this.exec(`f.close()`);
+    }
+
+    async exec(code, reset = false) {
         this.enterControl();
-        await this.rawRepl(true);
+        await this.rawRepl(reset);
         await this.expect('>', 1000);
         while (code) {
             const data = code.slice(0, 256);
