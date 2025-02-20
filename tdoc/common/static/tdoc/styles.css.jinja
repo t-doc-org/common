@@ -139,6 +139,10 @@ button[class*=" tdoc-"] {
     background-color: var(--pst-color-surface);
     transition: background-color 0.3s;
 }
+button[class^=tdoc-]:not([disabled]),
+button[class*=" tdoc-"]:not([disabled]) {
+    color: var(--pst-color-text-muted);
+}
 button[class^=tdoc-]:hover:not([disabled]),
 button[class*=" tdoc-"]:hover:not([disabled]) {
     background-color: var(--pst-color-border);
@@ -399,6 +403,33 @@ div.tdoc-exec div.tdoc-exec-controls {
     background: repeating-linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 0px 2px,
         var(--pst-color-table-row-zebra-high-bg) 2px 20px);
+}
+
+/* Drop-down menus. */
+.dropdown-menu {
+    --bs-dropdown-link-color: var(--pst-color-text-muted);
+    --bs-dropdown-link-hover-color: var(--pst-color-text-muted);
+    --bs-dropdown-link-active-color: var(--pst-color-text-muted);
+    --bs-dropdown-padding-y: 0.2rem;
+    box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),
+                0 0 0.0625rem var(--pst-color-shadow) !important;
+    border-color: var(--pst-color-border);
+    background-color: var(--pst-color-background);
+    color: var(--pst-color-text-muted);
+}
+.dropdown-menu .dropdown-item {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 0.5rem;
+    cursor: pointer;
+}
+.dropdown-menu .btn__icon-container.tdoc-icon[class^=fa-],
+.dropdown-menu .btn__icon-container.tdoc-icon[class*=" fa-"] {
+    font: var(--fa-font-solid);
+    display: inline-flex;
+    width: 1.7rem;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Content footer */

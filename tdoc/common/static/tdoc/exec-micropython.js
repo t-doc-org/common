@@ -72,25 +72,42 @@ class MicroPythonExecutor extends Executor {
     addControls(controls) {
         if (this.when !== 'never') {
             this.runCtrl = controls.appendChild(this.runControl());
-            this.connectCtrl = controls.appendChild(this.connectControl());
-            this.flashCtrl = controls.appendChild(this.flashControl());
+            controls.appendChild(this.toolsControl());
             this.input = this.inputControl(data => this.send(data + '\r\n'));
         }
         super.addControls(controls);
     }
 
-    connectControl() {
-        const ctrl = element(`\
-<button class="fa-plug tdoc-connect" title="Connect"></button>`);
-        ctrl.addEventListener('click', () => this.connect());
+    toolsControl() {
+        const ctrl = element(`
+<div class="dropstart">\
+<button class="fa-screwdriver-wrench tdoc-tools" title="Tools"\
+ data-bs-toggle="dropdown" data-bs-offset="-7,4"></button>\
+<ul class="dropdown-menu"></ul>\
+</div>`);
+        const ul = ctrl.querySelector('ul');
+        ul.appendChild(this.menuItem('plug', 'Connect', '',
+                                     () => this.connect()));
+        ul.appendChild(this.menuItem(
+            'power-off', 'Hard reset', ' if-connected disabled',
+            () => this.reset()));
+        ul.appendChild(this.menuItem(
+            'file-arrow-up', 'Write to <code>main.py</code>',
+            ' if-connected disabled', () => this.writeMain()));
+        ul.appendChild(this.menuItem(
+            'trash', 'Remove <code>main.py</code>', ' if-connected disabled',
+            () => this.removeMain()));
         return ctrl;
     }
 
-    flashControl() {
-        const ctrl = element(`\
-<button class="fa-bolt tdoc-flash" title="Flash"></button>`);
-        ctrl.addEventListener('click', () => this.flash());
-        return ctrl;
+    menuItem(icon, text, cls, onClick) {
+        const it = element(`\
+<li><a class="dropdown-item${cls}">\
+<span class="btn__icon-container tdoc-icon fa-${icon}"></span>\
+<span class="btn__text-container">${text}</span>\
+</a></li>`);
+        it.querySelector('a').addEventListener('click', onClick);
+        return it;
     }
 
     inputControl(onSend) {
@@ -138,7 +155,10 @@ class MicroPythonExecutor extends Executor {
         this.serial = serial;
         this.options = findOptions(serial);
         this.runCtrl.disabled = !serial;
-        this.flashCtrl.disabled = !serial;
+        for (const el of this.node.querySelectorAll(
+                '.tdoc-exec-controls .dropdown-item.if-connected')) {
+            el.classList.toggle('disabled', !serial);
+        }
     }
 
     async connect() {
@@ -242,12 +262,28 @@ class MicroPythonExecutor extends Executor {
         await this.interrupt();
     }
 
-    async flash() {
+    async reset() {
+        this.inRawRepl(false, async () => {
+            this.clearConsole();
+            await this.exec(`import machine;machine.reset()`);
+        });
+    }
+
+    async writeMain() {
         this.inRawRepl(false, async () => {
             this.clearConsole();
             await this.writeFile('/main.py', enc.encode(this.getCode()));
             await this.expect('>');
-            this.writeConsole('', `Program flashed successfully.\n`);
+            this.writeConsole('', `Program written to main.py\n`);
+        });
+    }
+
+    async removeMain() {
+        this.inRawRepl(false, async () => {
+            this.clearConsole();
+            await this.removeFile('/main.py');
+            await this.expect('>');
+            this.writeConsole('', `File main.py removed\n`);
         });
     }
 
@@ -260,6 +296,16 @@ class MicroPythonExecutor extends Executor {
             data = data.subarray(chunkSize);
         }
         await this.execWait(`f.close()`);
+    }
+
+    async removeFile(path, data) {
+        await this.execWait(`\
+import os
+try: os.remove(${pyStr(path)})
+except OSError as e:
+  import errno
+  if e.errno != errno.ENOENT: raise
+`);
     }
 
     async execWait(code, ms = 1000) {
