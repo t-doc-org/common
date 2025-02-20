@@ -265,14 +265,14 @@ class MicroPythonExecutor extends Executor {
     async reset() {
         this.inRawRepl(false, async () => {
             this.clearConsole();
-            await this.exec(`import machine;machine.reset()`);
+            await this.exec(`import machine; machine.reset()`);
         });
     }
 
     async writeMain() {
         this.inRawRepl(false, async () => {
             this.clearConsole();
-            await this.writeFile('/main.py', enc.encode(this.getCode()));
+            await this.writeFile('main.py', enc.encode(this.getCode()));
             await this.expect('>');
             this.writeConsole('', `Program written to main.py\n`);
         });
@@ -281,14 +281,20 @@ class MicroPythonExecutor extends Executor {
     async removeMain() {
         this.inRawRepl(false, async () => {
             this.clearConsole();
-            await this.removeFile('/main.py');
+            await this.removeFile('main.py');
             await this.expect('>');
             this.writeConsole('', `File main.py removed\n`);
         });
     }
 
     async writeFile(path, data) {
-        await this.execWait(`f=open(${pyStr(path)},'wb');w=f.write`);
+        // Prepend os.sep if it exists. This handles platforms with
+        // non-hierarchical filesystems (e.g. BBC micro:bit) gracefully.
+        await this.execWait(`\
+import os
+f = open(getattr(os, 'sep', '') + ${pyStr(path)}, 'wb')
+w = f.write
+`);
         const chunkSize = 256;
         while (data.length > 0) {
             const s = pyBytes(data.subarray(0, chunkSize));
@@ -301,7 +307,7 @@ class MicroPythonExecutor extends Executor {
     async removeFile(path, data) {
         await this.execWait(`\
 import os
-try: os.remove(${pyStr(path)})
+try: os.remove(getattr(os, 'sep', '') + ${pyStr(path)})
 except OSError as e:
   import errno
   if e.errno != errno.ENOENT: raise
