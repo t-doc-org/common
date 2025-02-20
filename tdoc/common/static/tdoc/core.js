@@ -100,6 +100,13 @@ export function focusIfVisible(el) {
     if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
 }
 
+// Convert a number to a given radix, optionally left-padding with zeroes.
+export function toRadix(value, radix, length) {
+    let s = value.toString(radix);
+    if (length && s.length < length) s = '0'.repeat(length - s.length) + s;
+    return s;
+}
+
 const cMinus = '-'.charCodeAt(0), cPlus = '+'.charCodeAt(0);
 const c0 = '0'.charCodeAt(0), cA = 'A'.charCodeAt(0);
 

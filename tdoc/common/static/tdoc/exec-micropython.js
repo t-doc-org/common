@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element, enc, sleep, text, timeout} from './core.js';
+import {element, enc, sleep, text, timeout, toRadix} from './core.js';
 import {Executor} from './exec.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
 
@@ -36,9 +36,9 @@ function pyStr(s) {
         parts.push(c == `'` ? `\\'` :
                    c == `\\` ? `\\\\` :
                    cp >= 0x20 && cp <= 0x7e ? c :
-                   cp <= 0xff ? `\\x${('0' + cp.toString(16)).slice(-2)}` :
-                   cp <= 0xffff ? `\\u${('0' + cp.toString(16)).slice(-4)}` :
-                   `\\U${('000' + cp.toString(16)).slice(-8)}`);
+                   cp <= 0xff ? `\\x${toRadix(cp, 16, 2)}` :
+                   cp <= 0xffff ? `\\u${toRadix(cp, 16, 4)}` :
+                   `\\U${toRadix(cp, 16, 8)}`);
 
     }
     parts.push(`'`);
@@ -51,7 +51,7 @@ function pyBytes(data) {
         parts.push(v == 0x27 ? `\\'` :
                    v == 0x5c ? `\\\\` :
                    v >= 0x20 && v <= 0x7e ? String.fromCharCode(v) :
-                   `\\x${('0' + v.toString(16)).slice(-2)}`);
+                   `\\x${toRadix(v, 16, 2)}`);
 
     }
     parts.push(`'`);
