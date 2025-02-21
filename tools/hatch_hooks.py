@@ -18,7 +18,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
 LICENSES = 'LICENSES.deps.txt'
-tdoc_rel = 'https://github.com/t-doc-org/t-doc-org.github.io/releases/download'
+pyodide_rel = 'https://github.com/t-doc-org/pyodide-packages/releases/download'
 pyodide_packages = [
     r'micropip-\d+(?:\.\d+)+.*\.whl',
     r'packaging-\d+(?:\.\d+)+.*\.whl',
@@ -129,7 +129,7 @@ class BuildHook(BuildHookInterface, HookMixin):
         else:
             raise Exception('pyodide not found in package-lock.json')
         pat = re.compile('|'.join(pyodide_packages))
-        with HttpFile(f'{tdoc_rel}/pyodide-{v}/pyodide-{v}.zip') as hf, \
+        with HttpFile(f'{pyodide_rel}/{v}/pyodide-{v}.zip') as hf, \
                 zipfile.ZipFile(hf, mode='r') as zf:
             for zi in zf.infolist():
                 if zi.is_dir(): continue
