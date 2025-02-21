@@ -80,43 +80,42 @@ export class MicroPython {
         this._onRelease(reason);
     }
 
-    get isControl() { return !!this.controlDecoder; }
-
-    enterControl() {
-        if (this.isControl) return;
-        this.controlDecoder = new TextDecoder();
-        // TODO: Use a growable ArrayBuffer
-        this.controlData = '';
-        this.notifyControl();
-    }
-
-    notifyControl() {
-        const notify = this.controlNotify;
-        const {promise, resolve} = Promise.withResolvers();
-        this.controlPromise = promise;
-        this.controlNotify = resolve;
-        if (notify) notify();
-    }
-
-    exitControl(prompt) {
-        if (!this.isControl) return;
-        const data = this.controlData;
-        delete this.controlDecoder, this.controlData;
-        delete this.controlPromise, this.controlNotify;
-        this.stream = '';
-        this._onRead(this.stream, data);
-    }
-
     async send(data) {
         if (this.claim) await this.claim.send(enc.encode(data));
     }
 
+    get capturing() { return !!this.capDecoder; }
+
+    startCapture() {
+        if (this.capturing) return;
+        this.capDecoder = new TextDecoder();
+        this.capData = '';
+        this.notifyCapture();
+    }
+
+    notifyCapture() {
+        const notify = this.capNotify;
+        const {promise, resolve} = Promise.withResolvers();
+        this.capAvailable = promise;
+        this.capNotify = resolve;
+        if (notify) notify();
+    }
+
+    stopCapture(prompt) {
+        if (!this.capturing) return;
+        const data = this.capData;
+        delete this.capDecoder, this.capData;
+        delete this.capAvailable, this.capNotify;
+        this.stream = '';
+        this._onRead(this.stream, data);
+    }
+
     onRead(data, done) {
-        if (this.isControl) {
-            const s = this.controlDecoder.decode(data, {stream: !done});
+        if (this.capturing) {
+            const s = this.capDecoder.decode(data, {stream: !done});
             if (!s) return;
-            this.controlData += s;
-            this.notifyControl();
+            this.capData += s;
+            this.notifyCapture();
             return;
         }
         while (this.streaming) {
@@ -139,7 +138,7 @@ export class MicroPython {
     async rawRepl(fn) {
         try {
             await this.claimSerial();
-            this.enterControl();
+            this.startCapture();
             this.streaming = false;
             await this.interrupt();
             await this.enterRawRepl();
@@ -151,7 +150,7 @@ export class MicroPython {
                 await this.exitRawRepl();
                 await this.expect('\r\n>>>');
             }
-            this.exitControl();
+            this.stopCapture();
         }
     }
 
@@ -216,12 +215,12 @@ except OSError as e:
 
     async recv(count, ms = 1000) {
         const cancel = timeout(ms);
-        while (this.controlData.length < count) {
-            await Promise.race([this.controlPromise, cancel]);
+        while (this.capData.length < count) {
+            await Promise.race([this.capAvailable, cancel]);
         }
         cancel.catch(e => undefined);  // Prevent logging
-        const data = this.controlData.slice(0, 2);
-        this.controlData = this.controlData.slice(2);
+        const data = this.capData.slice(0, 2);
+        this.capData = this.capData.slice(2);
         return data;
     }
 
@@ -229,16 +228,16 @@ except OSError as e:
         const cancel = timeout(ms);
         let pos = 0;
         for (;;) {
-            const i = this.controlData.indexOf(want, pos);
+            const i = this.capData.indexOf(want, pos);
             if (i >= 0) {
-                const data = this.controlData.slice(0, i);
-                this.controlData = this.controlData.slice(i + want.length);
+                const data = this.capData.slice(0, i);
+                this.capData = this.capData.slice(i + want.length);
                 cancel.catch(e => undefined);  // Prevent logging
                 return data;
             }
-            pos = this.controlData.length - want.length + 1;
+            pos = this.capData.length - want.length + 1;
             if (pos < 0) pos = 0;
-            await Promise.race([this.controlPromise, cancel]);
+            await Promise.race([this.capAvailable, cancel]);
         }
     }
 }
