@@ -11,8 +11,8 @@ class Claim {
         this.onRelease = onRelease;
     }
 
-    async release(reason) {
-        await this.serial.unclaim(this, reason);
+    release(reason) {
+        return this.serial.unclaim(this, reason);
     }
 
     async send(data) {
@@ -60,11 +60,11 @@ class Serial {
     }
 
     // Release the port.
-    async unclaim(claim, reason) {
+    unclaim(claim, reason) {
         if (!this.claimed || (claim && this.claimed !== claim)) return;
         this.claimed.onRelease(reason);
         delete this.claimed;
-        await this.close();
+        return this.close();
     }
 
     // Open the port and start streaming received data.
