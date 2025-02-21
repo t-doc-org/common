@@ -131,7 +131,17 @@ div.highlight pre > .linenos::before {
     content: attr(data-n);
 }
 
+/* Icons */
+span.tdoc[class^=fa-],
+span.tdoc[class*=" fa-"],
+span[class^=tdoc-][class*=" fa-"],
+span[class*=" tdoc-"][class^=fa-],
+span[class*=" tdoc-"][class*=" fa-"] {
+    font: var(--fa-font-solid);
+}
+
 /* Buttons */
+button.tdoc,
 button[class^=tdoc-],
 button[class*=" tdoc-"] {
     border: 1px solid var(--pst-color-border);
@@ -139,14 +149,18 @@ button[class*=" tdoc-"] {
     background-color: var(--pst-color-surface);
     transition: background-color 0.3s;
 }
+button.tdoc:not([disabled]),
 button[class^=tdoc-]:not([disabled]),
 button[class*=" tdoc-"]:not([disabled]) {
     color: var(--pst-color-text-muted);
 }
+button.tdoc:hover:not([disabled]),
 button[class^=tdoc-]:hover:not([disabled]),
 button[class*=" tdoc-"]:hover:not([disabled]) {
     background-color: var(--pst-color-border);
 }
+button.tdoc[class*=" fa-"],
+button.tdoc[class^=fa-],
 button[class^=tdoc-][class*=" fa-"],
 button[class*=" tdoc-"][class^=fa-],
 button[class*=" tdoc-"][class*=" fa-"] {
@@ -423,8 +437,8 @@ div.tdoc-exec div.tdoc-exec-controls {
     padding-left: 0.5rem;
     cursor: pointer;
 }
-.dropdown-menu .btn__icon-container.tdoc-icon[class^=fa-],
-.dropdown-menu .btn__icon-container.tdoc-icon[class*=" fa-"] {
+.dropdown-menu .btn__icon-container.tdoc[class^=fa-],
+.dropdown-menu .btn__icon-container.tdoc[class*=" fa-"] {
     font: var(--fa-font-solid);
     display: inline-flex;
     width: 1.7rem;

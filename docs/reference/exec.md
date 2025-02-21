@@ -164,23 +164,64 @@ select * from people;
 
 ### HTML
 
-HTML code execution displays a complete HTML document as an `<iframe>`, with
-limited browsing functionality.
+The {rst:dir}`{exec} html <exec>` runner displays a complete HTML document as an
+`<iframe>`, with limited browsing functionality.
 
 ### MicroPython
 
-This runner connects to an embedded system running
-[MicroPython](https://micropython.org). The code is run from RAM and is
-therefore transient. It can also be written to the file `main.py` in flash
-memory, so that it is run at boot-time.
+The {rst:dir}`{exec} micropython <exec>` runner connects to an embedded system
+running [MicroPython](https://micropython.org). The code can either be run from
+RAM (transient, programs disappear on reset) or be written to the file `main.py`
+in flash memory (permanent, runs at boot-time).
+
+```{admonition} Note
+:class: note
+The `micropython` runner only works on devices supporting the
+[WebSerial API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API).
+Currently, this limits the use to
+[Chromium-based browsers](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium)
+(e.g. Chrome, Edge, Brave).
+```
+
+The target device must already be programmed with a MicroPython firmware. The
+procedure depends on the target device type.
+
+- **BBC micro:bit V2:** Download the `.hex` file for the latest
+  [release](https://github.com/microbit-foundation/micropython-microbit-v2/releases).
+  Connect the target and mount its filesystem, then copy the file to it.
+- **Raspberry Pi Pico:** Follow the
+  [documentation](https://www.raspberrypi.com/documentation/microcontrollers/micropython.html#drag-and-drop-micropython)
+  to download the appropriate firmware file and program the device.
+
+To enable connecting to a target device, it must first be **paired with the
+browser**. Connect the target via USB, select
+"<span class="tdoc-icon fa-plug"></span>&nbsp;Connect" in the "Tools" menu
+(<button class="tdoc fa-screwdriver-wrench"></button>), and select the device
+in the list. This needs to be done only once; once a device is paired, it will
+be connected automatically when the page loads, unless multiple paired devices
+are available.
+
+To **run a program from RAM**, click the "Run" button
+(<button class="tdoc fa-play"></button>). Text input can be sent to the target
+via the input field, and the program can be interrupted with the "Stop" button
+(<button class="tdoc fa-stop"></button>). When the program terminates, the
+target returns to the
+[REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop) and
+accepts further commands.
+
+To **write a program permanently to a target's flash memory**, select
+"<span class="tdoc-icon fa-file-arrow-up"></span>&nbsp;Write&nbsp;to&nbsp;<code>main.py</code>"
+in the "Tools" menu. The program can be removed again with
+"<span class="tdoc-icon fa-trash"></span>&nbsp;Remove&nbsp;<code>main.py</code>".
 
 ### Python
 
-Python code execution is based on [Pyodide](https://pyodide.org/) and
+The {rst:dir}`{exec} python <exec>` runner executes code through
+[Pyodide](https://pyodide.org/) and
 [Polyscript](https://pyscript.github.io/polyscript/). All Python blocks on a
 page are executed in a shared, single-threaded interpreter.
 
-Pyodide can be configured via the `exec:python` {rst:dir}`metadata`. This
+Pyodide can be configured via the `exec:python:` {rst:dir}`metadata`. This
 enables the following functionality:
 
 - **[Copy files](https://docs.pyscript.net/latest/user-guide/configuration/#files)
@@ -206,5 +247,6 @@ exec:
 
 ### SQL
 
-SQL code execution uses a WebAssembly build of [SQLite](https://sqlite.org/).
-Each block execution is performed against a new, empty database.
+The {rst:dir}`{exec} sql <exec>` runner uses a WebAssembly build of
+[SQLite](https://sqlite.org/). Each block execution is performed against a new,
+empty database.

@@ -33,7 +33,7 @@ class MicroPythonExecutor extends Executor {
     toolsControl() {
         const ctrl = element(`
 <div class="dropstart">\
-<button class="fa-screwdriver-wrench tdoc-tools" title="Tools"\
+<button class="tdoc fa-screwdriver-wrench" title="Tools"\
  data-bs-toggle="dropdown" data-bs-offset="-7,4"></button>\
 <ul class="dropdown-menu"></ul>\
 </div>`);
@@ -55,7 +55,7 @@ class MicroPythonExecutor extends Executor {
     menuItem(icon, text, cls, onClick) {
         const it = element(`\
 <li><a class="dropdown-item${cls}">\
-<span class="btn__icon-container tdoc-icon fa-${icon}"></span>\
+<span class="btn__icon-container tdoc fa-${icon}"></span>\
 <span class="btn__text-container">${text}</span>\
 </a></li>`);
         it.querySelector('a').addEventListener('click', onClick);

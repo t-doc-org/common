@@ -3,8 +3,8 @@
 
 # SQL
 
-The {rst:dir}`{exec} sql <exec>` directive allows executing SQL directly in the
-browser. Each block is executed in a new, empty database.
+The [`{exec} sql`](../reference/exec.md#sql) directive allows executing SQL
+in the browser. Each block is executed in a new, empty database.
 
 ```{exec} sql
 :when: load
@@ -14,8 +14,9 @@ select concat('SQLite ', sqlite_version()) as Database;
 
 ## Database definition
 
-A database can be defined as a named {rst:dir}`{exec} sql <exec>` block, to be
-referenced in the {rst:dir}`:after: <exec:after>` option of other blocks.
+A database can be defined as a named [`{exec} sql`](../reference/exec.md#sql)
+block, to be referenced in the {rst:dir}`:after: <exec:after>` option of other
+blocks.
 
 ```{exec} sql
 :name: sql_countries
@@ -45,9 +46,9 @@ insert into countries values
 ## Queries
 
 The results of the **first** `select` statement in each
-{rst:dir}`{exec} sql <exec>` block of the {rst:dir}`:after: <exec:after>`
-and {rst:dir}`:then: <exec:then>` [sequence](../reference/exec.md#sequencing)
-are displayed as tables.
+[`{exec} sql`](../reference/exec.md#sql) block of the
+{rst:dir}`:after: <exec:after>` and {rst:dir}`:then: <exec:then>`
+[sequence](../reference/exec.md#sequencing) are displayed as tables.
 
 ```{exec} sql
 :editor:
