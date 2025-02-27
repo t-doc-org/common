@@ -6,8 +6,6 @@ import {Executor} from './exec.js';
 import {MicroPython} from './micropython.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
 
-const form_feed = '\x0c';
-
 class MicroPythonExecutor extends Executor {
     static runner = 'micropython';
     static highlight = 'python';

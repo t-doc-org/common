@@ -265,7 +265,7 @@ export class Executor {
     }
 
     // Append output nodes associated with the {exec} block.
-    appendOutputs(outputs) {
+    appendOutputs(...outputs) {
         let prev = this.node;
         for (;;) {
             const next = prev.nextElementSibling;
@@ -276,7 +276,7 @@ export class Executor {
     }
 
     // Replace the output nodes associated with the {exec} block.
-    replaceOutputs(outputs) {
+    replaceOutputs(...outputs) {
         let prev = this.node, i = 0;
         for (;; ++i) {
             const next = prev.nextElementSibling;
@@ -295,7 +295,7 @@ export class Executor {
     appendErrorOutput() {
         const output = element(`\
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
-        this.appendOutputs([output]);
+        this.appendOutputs(output);
         return output;
     }
 
@@ -304,15 +304,11 @@ export class Executor {
         if (style) el.setAttribute('style', style);
     }
 
-    sectionedOutput() {
-        return new SectionedOutput(this);
-    }
+    sectionedOutput() { return new SectionedOutput(this); }
 }
 
 class SectionedOutput {
-    constructor(exec) {
-        this.exec = exec;
-    }
+    constructor(exec) { this.exec = exec; }
 
     remove() {
         if (this.output) this.output.remove();
@@ -324,7 +320,7 @@ class SectionedOutput {
         if (!this.output?.parentNode) {
             this.output = element(
                 `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
-            this.exec.appendOutputs([this.output]);
+            this.exec.appendOutputs(this.output);
         }
         for (const el of this.output.children) {
             if (el.tdocName > name) {
@@ -340,9 +336,7 @@ class SectionedOutput {
         return new_el;
     }
 
-    consoleOut(name) {
-        return new ConsoleOutput(this, name);
-    }
+    consoleOut(name) { return new ConsoleOut(this, name); }
 
     input(name, prompt) {
         const div = this.render(name, `<div class="tdoc-input"></div>`);
@@ -395,7 +389,7 @@ class SectionedOutput {
 
 const form_feed = '\x0c';
 
-class ConsoleOutput {
+class ConsoleOut {
     constructor(output) {
         this.output = output;
         this.name = name;

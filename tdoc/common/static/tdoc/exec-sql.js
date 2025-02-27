@@ -72,7 +72,7 @@ class SqlExecutor extends Executor {
     async run(run_id) {
         let db;
         try {
-            this.replaceOutputs([]);
+            this.replaceOutputs();
             db = await Database.open(`file:db-${run_id}?vfs=memdb`);
             let output, tbody;
             for (const {code} of this.codeBlocks()) {
@@ -81,7 +81,7 @@ class SqlExecutor extends Executor {
                     if (!output) {
                         output = this.outputTable(res.columnNames);
                         tbody = output.querySelector('tbody');
-                        this.appendOutputs([output]);
+                        this.appendOutputs(output);
                     }
                     if (res.row) {
                         tbody.appendChild(this.resultRow(res.row));

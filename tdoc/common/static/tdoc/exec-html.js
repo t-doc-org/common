@@ -65,7 +65,7 @@ class HtmlExecutor extends Executor {
             });
         output.querySelector('.tdoc-close')
             .addEventListener('click', () => { output.remove(); });
-        this.replaceOutputs([output]);
+        this.replaceOutputs(output);
     }
 
     async stop(run_id) {}

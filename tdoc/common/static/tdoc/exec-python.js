@@ -38,8 +38,6 @@ worker.sync.render = (run_id, ...args) => {
     if (exec) return exec.onRender(...args);
 };
 
-const form_feed = 0x0c;
-
 class PythonExecutor extends Executor {
     static runner = 'python';
     static highlight = 'python';
