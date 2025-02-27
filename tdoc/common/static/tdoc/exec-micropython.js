@@ -64,7 +64,7 @@ class MicroPythonExecutor extends Executor {
     }
 
     inputControl(onSend) {
-        const div = this.output.lineInput('\uffff_1', input => {
+        const {div} = this.output.lineInput('991', null, input => {
             const value = input.value;
             input.value = '';
             onSend(value);
@@ -202,7 +202,7 @@ class MicroPythonExecutor extends Executor {
 
         // Create the output node if necessary.
         if (data.length === 0) return;
-        if (!this.out) this.out = this.output.consoleOut('\uffff_0');
+        if (!this.out?.isConnected) this.out = this.output.consoleOut('990');
         const out = this.out.querySelector('pre');
 
         // Append the text and scroll if at the bottom.

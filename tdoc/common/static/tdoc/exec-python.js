@@ -48,6 +48,11 @@ class PythonExecutor extends Executor {
         await ready;
     }
 
+    constructor(node) {
+        super(node);
+        this.output = this.sectionedOutput();
+    }
+
     addControls(controls) {
         if (this.when !== 'never') {
             this.runCtrl = controls.appendChild(this.runControl());
@@ -72,16 +77,11 @@ class PythonExecutor extends Executor {
 
     postRun(run_id) {
         delete executors[run_id];
-        delete this.out;
+        delete this.out;  // Prevent further console output
         if (this.input) {
             this.input.remove();
             delete this.input;
         }
-        if (this.output) {
-            const btn = this.output.querySelector('button.tdoc-remove');
-            if (btn) btn.classList.remove('hidden');
-        }
-        delete this.output;
         this.runCtrl.classList.remove('hidden');
         this.stopCtrl.classList.add('hidden');
     }
@@ -109,95 +109,56 @@ class PythonExecutor extends Executor {
             data = data.subarray(i + 1);
             if (this.out) {
                 if (data.length > 0) {
-                    this.out.replaceChildren();
+                    this.out.querySelector('pre').replaceChildren();
                 } else {
-                    this.out.parentNode.remove();
+                    this.out.remove();
                     delete this.out;
                 }
             }
         }
         if (data.length === 0) return;
-        if (!this.out) {
-            const div = this.render(
-                '\uffff_0', `<div class="highlight"><pre></pre></div>`);
-            div.appendChild(element(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .addEventListener('click', () => {
-                    div.remove();
-                    delete this.out;
-                });
-            this.out = div.querySelector('pre');
-            this.setOutputStyle(this.out);
-        }
+        if (!this.out?.isConnected) this.out = this.output.consoleOut('990');
+        const out = this.out.querySelector('pre');
         let node = text(dec.decode(data));
         if (stream === 2) {
             const el = element(`<span class="err"></span>`);
             el.appendChild(node);
             node = el;
         }
-        const atBottom = Math.abs(this.out.scrollHeight - this.out.scrollTop
-                                  - this.out.clientHeight) <= 1;
-        this.out.appendChild(node);
-        if (atBottom) {
-            this.out.scrollTo(this.out.scrollLeft, this.out.scrollHeight);
-        }
+        const atBottom = Math.abs(out.scrollHeight - out.scrollTop
+                                  - out.clientHeight) <= 1;
+        out.appendChild(node);
+        if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
     }
 
     async onInput(type, prompt, ...args) {
-        const div = this.input = this.render(
-            '\uffff_1', `<div class="tdoc-input"></div>`);
         try {
-            if (prompt && prompt !== '') {
-                div.appendChild(element(`<div class="prompt"></div>`))
-                    .appendChild(text(prompt));
-            }
             const {promise, resolve} = Promise.withResolvers();
             switch (type) {
             case 'line': {
-                const input = div.appendChild(element(`\
-<input class="input" autocapitalize="off" autocomplete="off"\
- autocorrect="off" spellcheck="false">`));
-                const btn = div.appendChild(element(`\
-<button class="tdoc-send" title="Send input (Enter)">Send</button>`));
-                btn.addEventListener('click', () => { resolve(input.value); });
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.altKey && !e.ctrlKey &&
-                            !e.metaKey) {
-                        e.preventDefault();
-                        btn.click();
-                    }
-                });
+                const {div, input} = this.output.lineInput(
+                    '991', prompt, input => resolve(input.value));
+                this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
                 setTimeout(() => { focusIfVisible(input); });
                 break;
             }
             case 'text': {
-                const input = div.appendChild(element(`\
-<div class="input tdoc-autosize">\
-<textarea rows="1" autocapitalize="off" autocomplete="off"\
- autocorrect="off" spellcheck="false"\
- oninput="this.parentNode.dataset.text = this.value"></textarea>\
-</div>`))
-                    .querySelector('textarea');
-                const btn = div.appendChild(element(`\
-<button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
-                btn.addEventListener('click', () => { resolve(input.value); });
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
-                            !e.ctrlKey && !e.metaKey) {
-                        e.preventDefault();
-                        btn.click();
-                    }
-                });
+                const {div, input} = this.output.multilineInput(
+                    '991', prompt, input => resolve(input.value));
+                this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
                 setTimeout(() => { focusIfVisible(input); });
                 break;
             }
             case 'buttons-right':
-                div.appendChild(element(`<div class="input"></div>`));
             case 'buttons': {
+                const div = this.input = this.output.input('991', prompt);
+                if (type === 'buttons-right') {
+                    div.appendChild(element(`<div class="input"></div>`));
+                }
                 for (const [index, label] of args[0].entries()) {
                     const btn = div.appendChild(element(
                         `<button class="tdoc-button"></button>`));
@@ -216,36 +177,16 @@ class PythonExecutor extends Executor {
             }
             return await promise;
         } finally {
-            div.remove();
-            delete this.input;
+            if (this.input) {
+                this.input.remove();
+                delete this.input;
+            }
         }
     }
 
     onRender(html, name) {
-        const el = this.render(name, html);
+        const el = this.output.render(name, html);
         return [el.scrollWidth, el.scrollHeight];
-    }
-
-    render(name, html) {
-        const new_el = element(html);
-        new_el.tdocName = name;
-        if (!this.output) {
-            this.output = element(
-                `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
-            this.appendOutputs([this.output]);
-        }
-        for (const el of this.output.children) {
-            if (el.tdocName > name) {
-                el.before(new_el);
-                return new_el;
-            }
-            if (el.tdocName === name) {
-                el.replaceWith(new_el);
-                return new_el;
-            }
-        }
-        this.output.appendChild(new_el);
-        return new_el;
     }
 }
 

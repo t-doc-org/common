@@ -347,8 +347,17 @@ class SectionedOutput {
         return div;
     }
 
-    lineInput(name, onSend) {
+    input(name, prompt) {
         const div = this.render(name, `<div class="tdoc-input"></div>`);
+        if (prompt) {
+            div.appendChild(element(`<div class="prompt"></div>`))
+                .appendChild(text(prompt));
+        }
+        return div;
+    }
+
+    lineInput(name, prompt, onSend) {
+        const div = this.input(name, prompt);
         const input = div.appendChild(element(`\
 <input class="input" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false">`));
@@ -361,7 +370,29 @@ class SectionedOutput {
                 btn.click();
             }
         });
-        return div;
+        return {div, input};
+    }
+
+    multilineInput(name, prompt, onSend) {
+        const div = this.input(name, prompt);
+        const input = div.appendChild(element(`\
+<div class="input tdoc-autosize">\
+<textarea rows="1" autocapitalize="off" autocomplete="off"\
+ autocorrect="off" spellcheck="false"\
+ oninput="this.parentNode.dataset.text = this.value"></textarea>\
+</div>`))
+            .querySelector('textarea');
+        const btn = div.appendChild(element(`\
+<button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
+        btn.addEventListener('click', () => onSend(input));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
+                    !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                btn.click();
+            }
+        });
+        return {div, input};
     }
 }
 
