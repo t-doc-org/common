@@ -51,6 +51,7 @@ class PythonExecutor extends Executor {
     constructor(node) {
         super(node);
         this.output = this.sectionedOutput();
+        this.console = this.output.consoleOut('990');
     }
 
     addControls(controls) {
@@ -77,7 +78,6 @@ class PythonExecutor extends Executor {
 
     postRun(run_id) {
         delete executors[run_id];
-        delete this.out;  // Prevent further console output
         if (this.input) {
             this.input.remove();
             delete this.input;
@@ -88,7 +88,7 @@ class PythonExecutor extends Executor {
 
     async run(run_id) {
         try {
-            this.replaceOutputs([]);
+            this.output.remove();
             const blocks = [];
             for (const {code, node} of this.codeBlocks()) {
                 blocks.push([code, node.id]);
@@ -104,31 +104,7 @@ class PythonExecutor extends Executor {
     }
 
     onWrite(stream, data) {
-        const i = data.lastIndexOf(form_feed);
-        if (i >= 0) {
-            data = data.subarray(i + 1);
-            if (this.out) {
-                if (data.length > 0) {
-                    this.out.querySelector('pre').replaceChildren();
-                } else {
-                    this.out.remove();
-                    delete this.out;
-                }
-            }
-        }
-        if (data.length === 0) return;
-        if (!this.out?.isConnected) this.out = this.output.consoleOut('990');
-        const out = this.out.querySelector('pre');
-        let node = text(dec.decode(data));
-        if (stream === 2) {
-            const el = element(`<span class="err"></span>`);
-            el.appendChild(node);
-            node = el;
-        }
-        const atBottom = Math.abs(out.scrollHeight - out.scrollTop
-                                  - out.clientHeight) <= 1;
-        out.appendChild(node);
-        if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
+        this.console.write(stream === 2 ? 'err' : '', data);
     }
 
     async onInput(type, prompt, ...args) {

@@ -16,10 +16,10 @@ class MicroPythonExecutor extends Executor {
 
     constructor(node) {
         super(node);
-        this.decoders = new Map();
-        this.mp = new MicroPython((...args) => this.writeConsole(...args),
-                                  (...args) => this.onRelease(...args));
         this.output = this.sectionedOutput();
+        this.console = this.output.consoleOut('990');
+        this.mp = new MicroPython((...args) => this.console.write(...args),
+                                  (...args) => this.onRelease(...args));
     }
 
     addControls(controls) {
@@ -102,30 +102,30 @@ class MicroPythonExecutor extends Executor {
 
     async connect() {
         this.setSerial();
-        this.clearConsole();
+        this.console.clear();
         try {
             this.setSerial(await requestSerial());
             await this.mp.claimSerial(false);
             this.enableInput();
         } catch (e) {
             if (e.name !== 'NotFoundError') {
-                this.writeConsole('err', `${e.toString()}\n`);
+                this.console.write('err', `${e.toString()}\n`);
             }
         }
     }
 
     onRelease(reason) {
         this.enableInput(false);
-        if (reason) this.writeConsole('err', `${reason}\n`);
+        if (reason) this.console.write('err', `${reason}\n`);
     }
 
     async rawRepl(fn) {
-        this.clearConsole();
+        this.console.clear();
         this.enableInput(false);
         try {
             await this.mp.rawRepl(fn);
         } catch (e) {
-            this.writeConsole('err', `${e.toString()}\n`);
+            this.console.write('err', `${e.toString()}\n`);
         } finally {
             this.enableInput();
         }
@@ -158,64 +158,14 @@ class MicroPythonExecutor extends Executor {
         await this.rawRepl(async () => {
             await this.mp.writeFile('main.py', enc.encode(this.getCode()));
         });
-        this.writeConsole('', `Program written to main.py\n`);
+        this.console.write('', `Program written to main.py\n`);
     }
 
     async removeMain() {
         await this.rawRepl(async () => {
             await this.mp.removeFile('main.py');
         });
-        this.writeConsole('', `File main.py removed\n`);
-    }
-
-    clearConsole() {
-        if (!this.out) return;
-        this.out.remove();
-        delete this.out;
-        this.decoders.clear();
-    }
-
-    writeConsole(stream, data, done) {
-        // Convert to string if necessary.
-        if (typeof data !== 'string') {
-            let dec = this.decoders.get(stream);
-            if (!dec) {
-                dec = new TextDecoder();
-                this.decoders.set(stream, dec);
-            }
-            data = dec.decode(data, {stream: !done});
-        }
-
-        // Handle form feed characters by clearing the output.
-        const i = data.lastIndexOf(form_feed);
-        if (i >= 0) {
-            data = data.slice(i + 1);
-            if (this.out) {
-                if (data.length > 0) {
-                    this.out.querySelector('pre').replaceChildren();
-                } else {
-                    this.out.remove();
-                    delete this.out;
-                }
-            }
-        }
-
-        // Create the output node if necessary.
-        if (data.length === 0) return;
-        if (!this.out?.isConnected) this.out = this.output.consoleOut('990');
-        const out = this.out.querySelector('pre');
-
-        // Append the text and scroll if at the bottom.
-        let node = text(data);
-        if (stream) {
-            const el = element(`<span class="${stream}"></span>`);
-            el.appendChild(node);
-            node = el;
-        }
-        const atBottom = Math.abs(
-            out.scrollHeight - out.scrollTop - out.clientHeight) <= 1;
-        out.appendChild(node);
-        if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
+        this.console.write('', `File main.py removed\n`);
     }
 }
 

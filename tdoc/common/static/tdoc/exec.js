@@ -314,6 +314,10 @@ class SectionedOutput {
         this.exec = exec;
     }
 
+    remove() {
+        if (this.output) this.output.remove();
+    }
+
     render(name, html) {
         const new_el = element(html);
         new_el.tdocName = name;
@@ -337,14 +341,7 @@ class SectionedOutput {
     }
 
     consoleOut(name) {
-        const div = this.render(
-            name, `<div class="highlight"><pre></pre></div>`);
-        div.appendChild(element(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-            .addEventListener('click', () => div.remove());
-        const pre = div.querySelector('pre');
-        this.exec.setOutputStyle(pre);
-        return div;
+        return new ConsoleOutput(this, name);
     }
 
     input(name, prompt) {
@@ -393,6 +390,74 @@ class SectionedOutput {
             }
         });
         return {div, input};
+    }
+}
+
+const form_feed = '\x0c';
+
+class ConsoleOutput {
+    constructor(output) {
+        this.output = output;
+        this.name = name;
+        this.decoders = new Map();
+    }
+
+    clear() {
+        if (!this.out) return;
+        this.out.remove();
+        delete this.out;
+        this.decoders.clear();
+    }
+
+    write(stream, data, done) {
+        // Convert to string if necessary.
+        if (typeof data !== 'string') {
+            let dec = this.decoders.get(stream);
+            if (!dec) {
+                dec = new TextDecoder();
+                this.decoders.set(stream, dec);
+            }
+            data = dec.decode(data, {stream: !done});
+        }
+
+        // Handle form feed characters by clearing the output.
+        const i = data.lastIndexOf(form_feed);
+        if (i >= 0) {
+            data = data.slice(i + 1);
+            if (this.out) {
+                if (data.length > 0) {
+                    this.out.querySelector('pre').replaceChildren();
+                } else {
+                    this.out.remove();
+                    delete this.out;
+                }
+            }
+        }
+
+        // Create the output node if necessary.
+        if (data.length === 0) return;
+        if (!this.out?.isConnected) {
+            const div = this.out = this.output.render(
+                this.name, `<div class="highlight"><pre></pre></div>`);
+            div.appendChild(element(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
+                .addEventListener('click', () => div.remove());
+            const pre = div.querySelector('pre');
+            this.output.exec.setOutputStyle(pre);
+        }
+        const out = this.out.querySelector('pre');
+
+        // Append the text and scroll if at the bottom.
+        let node = text(data);
+        if (stream) {
+            const el = element(`<span class="${stream}"></span>`);
+            el.appendChild(node);
+            node = el;
+        }
+        const atBottom = Math.abs(
+            out.scrollHeight - out.scrollTop - out.clientHeight) <= 1;
+        out.appendChild(node);
+        if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
     }
 }
 
