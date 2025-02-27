@@ -303,6 +303,66 @@ export class Executor {
         const style = this.node.dataset.tdocOutputStyle;
         if (style) el.setAttribute('style', style);
     }
+
+    sectionedOutput() {
+        return new SectionedOutput(this);
+    }
+}
+
+class SectionedOutput {
+    constructor(exec) {
+        this.exec = exec;
+    }
+
+    render(name, html) {
+        const new_el = element(html);
+        new_el.tdocName = name;
+        if (!this.output?.parentNode) {
+            this.output = element(
+                `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
+            this.exec.appendOutputs([this.output]);
+        }
+        for (const el of this.output.children) {
+            if (el.tdocName > name) {
+                el.before(new_el);
+                return new_el;
+            }
+            if (el.tdocName === name) {
+                el.replaceWith(new_el);
+                return new_el;
+            }
+        }
+        this.output.appendChild(new_el);
+        return new_el;
+    }
+
+    consoleOut(name) {
+        const div = this.render(
+            name, `<div class="highlight"><pre></pre></div>`);
+        div.appendChild(element(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
+            .addEventListener('click', () => div.remove());
+        const pre = div.querySelector('pre');
+        this.exec.setOutputStyle(pre);
+        return div;
+    }
+
+    lineInput(name, onSend) {
+        const div = this.render(name, `<div class="tdoc-input"></div>`);
+        const input = div.appendChild(element(`\
+<input class="input" autocapitalize="off" autocomplete="off"\
+ autocorrect="off" spellcheck="false">`));
+        const btn = div.appendChild(element(`\
+<button class="tdoc-send" title="Send input (Enter)">Send</button>`));
+        btn.addEventListener('click', () => onSend(input));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                btn.click();
+            }
+        });
+        return div;
+    }
 }
 
 // Ensure that the text of editors is stored before navigating away.

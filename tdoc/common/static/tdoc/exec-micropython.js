@@ -19,6 +19,7 @@ class MicroPythonExecutor extends Executor {
         this.decoders = new Map();
         this.mp = new MicroPython((...args) => this.writeConsole(...args),
                                   (...args) => this.onRelease(...args));
+        this.output = this.sectionedOutput();
     }
 
     addControls(controls) {
@@ -63,23 +64,10 @@ class MicroPythonExecutor extends Executor {
     }
 
     inputControl(onSend) {
-        const div = this.render(
-            '\uffff_1', `<div class="tdoc-input"></div>`);
-        const input = div.appendChild(element(`\
-<input class="input" autocapitalize="off" autocomplete="off"\
- autocorrect="off" spellcheck="false">`));
-        const btn = div.appendChild(element(`\
-<button class="tdoc-send" title="Send input (Enter)">Send</button>`));
-        btn.addEventListener('click', () => {
+        const div = this.output.lineInput('\uffff_1', input => {
             const value = input.value;
             input.value = '';
             onSend(value);
-        });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-                btn.click();
-            }
         });
         div.appendChild(this.stopControl());
         return div;
@@ -182,7 +170,7 @@ class MicroPythonExecutor extends Executor {
 
     clearConsole() {
         if (!this.out) return;
-        this.out.parentNode.remove();
+        this.out.remove();
         delete this.out;
         this.decoders.clear();
     }
@@ -204,9 +192,9 @@ class MicroPythonExecutor extends Executor {
             data = data.slice(i + 1);
             if (this.out) {
                 if (data.length > 0) {
-                    this.out.replaceChildren();
+                    this.out.querySelector('pre').replaceChildren();
                 } else {
-                    this.out.parentNode.remove();
+                    this.out.remove();
                     delete this.out;
                 }
             }
@@ -214,18 +202,8 @@ class MicroPythonExecutor extends Executor {
 
         // Create the output node if necessary.
         if (data.length === 0) return;
-        if (!this.out) {
-            const div = this.render(
-                '\uffff_0', `<div class="highlight"><pre></pre></div>`);
-            div.appendChild(element(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .addEventListener('click', () => {
-                    div.remove();
-                    delete this.out;
-                });
-            this.out = div.querySelector('pre');
-            this.setOutputStyle(this.out);
-        }
+        if (!this.out) this.out = this.output.consoleOut('\uffff_0');
+        const out = this.out.querySelector('pre');
 
         // Append the text and scroll if at the bottom.
         let node = text(data);
@@ -234,34 +212,10 @@ class MicroPythonExecutor extends Executor {
             el.appendChild(node);
             node = el;
         }
-        const atBottom = Math.abs(this.out.scrollHeight - this.out.scrollTop
-                                  - this.out.clientHeight) <= 1;
-        this.out.appendChild(node);
-        if (atBottom) {
-            this.out.scrollTo(this.out.scrollLeft, this.out.scrollHeight);
-        }
-    }
-
-    render(name, html) {
-        const new_el = element(html);
-        new_el.tdocName = name;
-        if (!this.output) {
-            this.output = element(
-                `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
-            this.appendOutputs([this.output]);
-        }
-        for (const el of this.output.children) {
-            if (el.tdocName > name) {
-                el.before(new_el);
-                return new_el;
-            }
-            if (el.tdocName === name) {
-                el.replaceWith(new_el);
-                return new_el;
-            }
-        }
-        this.output.appendChild(new_el);
-        return new_el;
+        const atBottom = Math.abs(
+            out.scrollHeight - out.scrollTop - out.clientHeight) <= 1;
+        out.appendChild(node);
+        if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
     }
 }
 
