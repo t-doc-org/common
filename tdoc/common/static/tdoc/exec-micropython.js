@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element, enc, text} from './core.js';
+import {dec, element, enc, text} from './core.js';
 import {Executor} from './exec.js';
 import {MicroPython} from './micropython.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
@@ -158,7 +158,7 @@ class MicroPythonExecutor extends Executor {
     async readMain() {
         await this.rawRepl(async () => {
             const data = await this.mp.readFile('main.py');
-            this.setEditorText(data);
+            this.setEditorText(dec.decode(data));
             this.console.write('', `Program read from main.py\n`);
         });
     }

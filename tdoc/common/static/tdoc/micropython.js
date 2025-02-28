@@ -54,11 +54,13 @@ function pyBytes(data) {
     return parts.join('');
 }
 
-const hexEscape = /\\x([0-9a-f]{2})/g;
-
-function fromPyBytes(data) {
-    return data.replaceAll(hexEscape,
-                           (m, c) => String.fromCharCode(parseInt(c, 16)));
+function fromHex(data) {
+    const len = data.length / 2;
+    const res = new Uint8Array(len);
+    for (let i = 0; i < len; ++i) {
+        res.set([parseInt(data.slice(2 * i, 2 * (i + 1)), 16)], i);
+    }
+    return res;
 }
 
 export class MicroPython {
@@ -95,7 +97,6 @@ export class MicroPython {
 
     startCapture() {
         if (this.capturing) return;
-        // TODO: Capture as Uint8Array instead of string
         this.capDecoder = new TextDecoder();
         this.capData = '';
         this.notifyCapture();
@@ -193,15 +194,13 @@ export class MicroPython {
         // Prepend os.sep if it exists. This handles platforms with
         // non-hierarchical filesystems (e.g. BBC micro:bit) gracefully.
         try {
-            const chunkSize = 256;
-            return fromPyBytes(await this.run(`\
+            return fromHex(await this.run(`\
 import os
 with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
   while True:
     d = f.read(1)
     if not d: break
-    d = d[0]
-    print(chr(d) if d >= 0x20 and d <= 0x7e and d != 0x27 and d != 0x5c else '\\\\x{:02x}'.format(d), end='')
+    print('{:02x}'.format(d[0]), end='')
 `));
         } catch (e) {
             if (!e.message.includes('ENOENT')) throw e;
