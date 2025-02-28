@@ -54,6 +54,13 @@ function pyBytes(data) {
     return parts.join('');
 }
 
+const hexEscape = /\\x([0-9a-f]{2})/g;
+
+function fromPyBytes(data) {
+    return data.replaceAll(hexEscape,
+                           (m, c) => String.fromCharCode(parseInt(c, 16)));
+}
+
 export class MicroPython {
     constructor(onRead, onRelease) {
         this._onRead = onRead;
@@ -186,11 +193,16 @@ export class MicroPython {
         // Prepend os.sep if it exists. This handles platforms with
         // non-hierarchical filesystems (e.g. BBC micro:bit) gracefully.
         try {
-            return await this.run(`\
-import os, sys
+            const chunkSize = 256;
+            return fromPyBytes(await this.run(`\
+import os
 with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
-  sys.stdout.write(f.read())
-`);
+  while True:
+    d = f.read(1)
+    if not d: break
+    d = d[0]
+    print(chr(d) if d >= 0x20 and d <= 0x7e and d != 0x27 and d != 0x5c else '\\\\x{:02x}'.format(d), end='')
+`));
         } catch (e) {
             if (!e.message.includes('ENOENT')) throw e;
             throw new Error(`File not found: ${path}`);
