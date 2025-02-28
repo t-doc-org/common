@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {enc, sleep, timeout, toRadix} from './core.js';
+import {dec, enc, FifoBuffer, sleep, timeout, toRadix} from './core.js';
 
 // TODO: Add support for raw paste mode
 // <https://github.com/micropython/micropython/blob/master/tools/pyboard.py>
@@ -54,13 +54,25 @@ function pyBytes(data) {
     return parts.join('');
 }
 
+function hexDigit(v) {
+    v -= 0x30;  // '0'
+    if (v < 0) throw new Error("Invalid hex digit");
+    if (v < 10) return v;
+    v -= 0x11;  // 'A' - '0'
+    if (v < 6) return 10 + v;
+    v -= 0x20;  // 'a' - 'A'
+    if (v < 6) return 10 + v;
+    throw new Error("Invalid hex digit");
+}
+
 function fromHex(data) {
     const len = data.length / 2;
-    const res = new Uint8Array(len);
     for (let i = 0; i < len; ++i) {
-        res.set([parseInt(data.slice(2 * i, 2 * (i + 1)), 16)], i);
+        const h = data.at(2 * i), l = data.at(2 * i + 1);
+        data.set([hexDigit(data.at(2 * i)) << 4
+                  | hexDigit(data.at(2 * i + 1))], i);
     }
-    return res;
+    return data.subarray(0, len);
 }
 
 export class MicroPython {
@@ -90,15 +102,15 @@ export class MicroPython {
     }
 
     async send(data) {
-        if (this.claim) await this.claim.send(enc.encode(data));
+        if (typeof data === 'string') data = enc.encode(data);
+        if (this.claim) await this.claim.send(data);
     }
 
-    get capturing() { return !!this.capDecoder; }
+    get capturing() { return !!this.cap; }
 
     startCapture() {
         if (this.capturing) return;
-        this.capDecoder = new TextDecoder();
-        this.capData = '';
+        this.cap = new FifoBuffer();
         this.notifyCapture();
     }
 
@@ -112,18 +124,17 @@ export class MicroPython {
 
     stopCapture(prompt) {
         if (!this.capturing) return;
-        const data = this.capData;
-        delete this.capDecoder, this.capData;
+        const cap = this.cap;
+        delete this.cap;
         delete this.capAvailable, this.capNotify;
         this.stream = '';
-        if (data !== '') this._onRead(this.stream, data);
+        if (cap.length > 0) this._onRead(this.stream, cap.read(cap.length));
     }
 
     onRead(data, done) {
         if (this.capturing) {
-            const s = this.capDecoder.decode(data, {stream: !done});
-            if (!s) return;
-            this.capData += s;
+            if (data.length === 0) return;
+            this.cap.write(data);
             this.notifyCapture();
             return;
         }
@@ -170,23 +181,30 @@ export class MicroPython {
     }
 
     async exec(code, streaming) {
-        while (code) {
-            const data = code.slice(0, 256);
-            await this.send(data);
-            code = code.slice(256);
-            await sleep(10);
-        }
+        if (typeof code === 'string') code = enc.encode(code);
+        await this.sendChunked(code);
         await this.eot();
-        const resp = await this.recv(2);
+        const resp = dec.decode(await this.recv(2));
         if (resp !== 'OK') throw new Error(`Failed to execute code: ${resp}`);
         if (streaming) this.streaming = true;
+    }
+
+    async sendChunked(data) {
+        let i = 0;
+        while (i < data.length) {
+            let end = i + 256;
+            if (end > data.length) end = data.length;
+            await this.send(data.subarray(i, end));
+            i = end;
+            await sleep(10);
+        }
     }
 
     async run(code) {
         await this.exec(code);
         const out = await this.expect('\x04');
         const err = await this.expect('\x04>');
-        if (err) throw new Error(err);
+        if (err.length > 0) throw new Error(dec.decode(err));
         return out;
     }
 
@@ -240,27 +258,26 @@ except OSError as e:
 
     async recv(count, ms = 1000) {
         const cancel = timeout(ms);
-        while (this.capData.length < count) {
+        while (this.cap.length < count) {
             await Promise.race([this.capAvailable, cancel]);
         }
         cancel.catch(e => undefined);  // Prevent logging
-        const data = this.capData.slice(0, 2);
-        this.capData = this.capData.slice(2);
-        return data;
+        return this.cap.read(count);
     }
 
     async expect(want, ms = 1000) {
+        if (typeof want === 'string') want = enc.encode(want);
         const cancel = timeout(ms);
         let pos = 0;
         for (;;) {
-            const i = this.capData.indexOf(want, pos);
+            const i = this.cap.indexOf(want, pos);
             if (i >= 0) {
-                const data = this.capData.slice(0, i);
-                this.capData = this.capData.slice(i + want.length);
+                const data = this.cap.read(i);
+                this.cap.drop(want.length);
                 cancel.catch(e => undefined);  // Prevent logging
                 return data;
             }
-            pos = this.capData.length - want.length + 1;
+            pos = this.cap.length - want.length + 1;
             if (pos < 0) pos = 0;
             await Promise.race([this.capAvailable, cancel]);
         }

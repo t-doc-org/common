@@ -208,6 +208,69 @@ export function docPath(path) {
     return path;
 }
 
+// A FIFO buffer of bytes.
+export class FifoBuffer {
+    constructor(size = 256) {
+        this.data = new Uint8Array(size);
+        this.begin = this.end = 0;
+    }
+
+    // Return the number of bytes in the buffer.
+    get length() { return this.end - this.begin; }
+
+    // Read data from the head of the buffer.
+    read(size) {
+        const len = this.length;
+        if (size > len) size = len;
+        const data = this.data.slice(this.begin, this.begin + size);
+        this.begin += size;
+        if (this.begin === this.end) this.begin = this.end = 0;
+        return data;
+    }
+
+    // Drop bytes from the head of the buffer.
+    drop(size) {
+        this.begin += size;
+        if (this.begin > this.end) this.begin = this.end = 0;
+    }
+
+    // Write data to the tail of the buffer.
+    write(data) {
+        if (this.length + data.length > this.data.length) {
+            const newData = new Uint8Array(Math.max(
+                2 * this.data.length, this.data.length + data.length));
+            newData.set(this.data.subarray(this.begin, this.end));
+            this.data = newData;
+            this.end -= this.begin;
+            this.begin = 0;
+        } else if (this.end + data.length > this.data.length) {
+            this.data.copyWithin(0, this.begin, this.end);
+            this.end -= this.begin;
+            this.begin = 0;
+        }
+        this.data.set(data, this.end);
+        this.end += data.length;
+    }
+
+    // Find data within the buffer.
+    indexOf(data, pos) {
+        if (this.begin + pos + data.length > this.end) return -1;
+        const index = this.data.subarray(this.begin + pos, this.end).findIndex(
+            (_, i, arr) => {
+                if (i + data.length > arr.length) return false;
+                for (let j = 0; j < data.length; ++j) {
+                    if (arr.at(i + j) !== data.at(j)) return false;
+                }
+                return true;
+            });
+        return index >= 0 ? pos + index : -1;
+    }
+
+    toString() {
+        return this.data.subarray(this.begin, this.end).toString();
+    }
+}
+
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all
 // calls in a sequence except the last one can be dropped.
 export class RateLimited {
