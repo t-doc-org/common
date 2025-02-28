@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {enc} from './core.js';
+import {enc, sleep} from './core.js';
 
 // A claim on a serial port.
 class Claim {
@@ -94,6 +94,8 @@ class Serial {
                           this.claimed.onRead(value ?? emptyData, done);
                       }
                       if (done) break;
+                      // Avoid blocking the UI if data is received continuously.
+                      await sleep(undefined);
                     }
                 } finally {
                     this.reader.releaseLock();
