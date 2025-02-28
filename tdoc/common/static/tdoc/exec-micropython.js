@@ -43,6 +43,9 @@ class MicroPythonExecutor extends Executor {
             'power-off', 'Hard reset', ' if-connected disabled',
             () => this.reset()));
         ul.appendChild(this.menuItem(
+            'file-arrow-down', 'Read <code>main.py</code>',
+            ' if-connected disabled', () => this.readMain()));
+        ul.appendChild(this.menuItem(
             'file-arrow-up', 'Write to <code>main.py</code>',
             ' if-connected disabled', () => this.writeMain()));
         ul.appendChild(this.menuItem(
@@ -123,7 +126,7 @@ class MicroPythonExecutor extends Executor {
         try {
             await this.mp.rawRepl(fn);
         } catch (e) {
-            this.console.write('err', `${e.toString()}\n`);
+            this.console.write('err', `${e.toString().trimEnd()}\n`);
         } finally {
             this.enableInput();
         }
@@ -152,18 +155,26 @@ class MicroPythonExecutor extends Executor {
         });
     }
 
+    async readMain() {
+        await this.rawRepl(async () => {
+            const data = await this.mp.readFile('main.py');
+            this.setEditorText(data);
+            this.console.write('', `Program read from main.py\n`);
+        });
+    }
+
     async writeMain() {
         await this.rawRepl(async () => {
             await this.mp.writeFile('main.py', enc.encode(this.getCode()));
+            this.console.write('', `Program written to main.py\n`);
         });
-        this.console.write('', `Program written to main.py\n`);
     }
 
     async removeMain() {
         await this.rawRepl(async () => {
             await this.mp.removeFile('main.py');
+            this.console.write('', `File main.py removed\n`);
         });
-        this.console.write('', `File main.py removed\n`);
     }
 }
 

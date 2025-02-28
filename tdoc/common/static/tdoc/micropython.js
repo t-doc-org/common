@@ -88,6 +88,7 @@ export class MicroPython {
 
     startCapture() {
         if (this.capturing) return;
+        // TODO: Capture as Uint8Array instead of string
         this.capDecoder = new TextDecoder();
         this.capData = '';
         this.notifyCapture();
@@ -107,7 +108,7 @@ export class MicroPython {
         delete this.capDecoder, this.capData;
         delete this.capAvailable, this.capNotify;
         this.stream = '';
-        this._onRead(this.stream, data);
+        if (data !== '') this._onRead(this.stream, data);
     }
 
     onRead(data, done) {
@@ -148,7 +149,7 @@ export class MicroPython {
             if (!this.streaming) {
                 this.stream = '';
                 await this.exitRawRepl();
-                await this.expect('\r\n>>>');
+                await this.expect('\r\n>>> ');
             }
             this.stopCapture();
         }
@@ -173,17 +174,30 @@ export class MicroPython {
         if (streaming) this.streaming = true;
     }
 
-    async run(code, ms = 1000) {
+    async run(code) {
         await this.exec(code);
-        const out = await this.expect('\x04', ms);
-        const err = await this.expect('\x04>', ms);
+        const out = await this.expect('\x04');
+        const err = await this.expect('\x04>');
         if (err) throw new Error(err);
         return out;
     }
 
-    async writeFile(path, data) {
+    async readFile(path, data) {
         // Prepend os.sep if it exists. This handles platforms with
         // non-hierarchical filesystems (e.g. BBC micro:bit) gracefully.
+        try {
+            return await this.run(`\
+import os, sys
+with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
+  sys.stdout.write(f.read())
+`);
+        } catch (e) {
+            if (!e.message.includes('ENOENT')) throw e;
+            throw new Error(`File not found: ${path}`);
+        }
+    }
+
+    async writeFile(path, data) {
         await this.run(`\
 import os
 f = open(getattr(os, 'sep', '') + ${pyStr(path)}, 'wb')
