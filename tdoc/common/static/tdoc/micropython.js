@@ -3,9 +3,6 @@
 
 import {dec, enc, FifoBuffer, sleep, timeout, toRadix} from './core.js';
 
-// TODO: Add support for raw paste mode
-// <https://github.com/micropython/micropython/blob/master/tools/pyboard.py>
-
 const options = [{
 //     // Raspberry Pi / MicroPython
 //     match: {usbVendorId: 0x2e8a, usbProductId: 0x0005},
@@ -29,8 +26,8 @@ function pyStr(s) {
     const parts = [`'`];
     for (const c of s) {
         const cp = c.codePointAt(0);
-        parts.push(c == `'` ? `\\'` :
-                   c == `\\` ? `\\\\` :
+        parts.push(c === `'` ? `\\'` :
+                   c === `\\` ? `\\\\` :
                    cp >= 0x20 && cp <= 0x7e ? c :
                    cp <= 0xff ? `\\x${toRadix(cp, 16, 2)}` :
                    cp <= 0xffff ? `\\u${toRadix(cp, 16, 4)}` :
@@ -44,8 +41,8 @@ function pyStr(s) {
 function pyBytes(data) {
     const parts = [`b'`];
     for (const v of data) {
-        parts.push(v == 0x27 ? `\\'` :
-                   v == 0x5c ? `\\\\` :
+        parts.push(v === 0x27 ? `\\'` :
+                   v === 0x5c ? `\\\\` :
                    v >= 0x20 && v <= 0x7e ? String.fromCharCode(v) :
                    `\\x${toRadix(v, 16, 2)}`);
 
@@ -56,13 +53,13 @@ function pyBytes(data) {
 
 function hexDigit(v) {
     v -= 0x30;  // '0'
-    if (v < 0) throw new Error("Invalid hex digit");
+    if (v < 0) throw new RangeError("Invalid hex digit");
     if (v < 10) return v;
     v -= 0x11;  // 'A' - '0'
     if (v < 6) return 10 + v;
     v -= 0x20;  // 'a' - 'A'
     if (v < 6) return 10 + v;
-    throw new Error("Invalid hex digit");
+    throw new RangeError("Invalid hex digit");
 }
 
 function fromHex(data) {
@@ -158,6 +155,7 @@ export class MicroPython {
     async rawRepl(fn) {
         try {
             await this.claimSerial();
+            this.useRawPaste = true;
             this.startCapture();
             this.streaming = false;
             await this.interrupt();
@@ -182,11 +180,46 @@ export class MicroPython {
 
     async exec(code, streaming) {
         if (typeof code === 'string') code = enc.encode(code);
-        await this.sendChunked(code);
-        await this.eot();
-        const resp = dec.decode(await this.recv(2));
-        if (resp !== 'OK') throw new Error(`Failed to execute code: ${resp}`);
+        if (!this.useRawPaste || !await this.sendRawPaste(code)) {
+            this.useRawPaste = false;
+            await this.sendChunked(code);
+        }
         if (streaming) this.streaming = true;
+    }
+
+    async sendRawPaste(data) {
+        await this.send('\x05A\x01');
+        switch (dec.decode(await this.recv(2))) {
+        case 'R\x00': return false;  // Raw paste not supported
+        case 'R\x01': break;  // Raw paste supported
+        default:  // Device doesn't know about raw paste
+            await this.expect('w REPL; CTRL-B to exit\r\n>')
+            return false;
+        }
+        const resp = await this.recv(2);
+        const winSize = resp.at(0) | (resp.at(1) << 8);
+        let win = winSize;
+        for (let i = 0; i < data.length;) {
+            while (win === 0 || this.cap.length > 0) {
+                const resp = (await this.recv(1)).at(0);
+                if (resp === 0x01) {
+                    win += winSize;
+                } else if (resp === 0x04) {
+                    await this.eot();
+                    throw new Error("Code upload was aborted");
+                } else {
+                    throw new Error(`\
+Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
+                }
+            }
+            const len = Math.min(win, data.length - i);
+            await this.send(data.subarray(i, i + len));
+            win -= len;
+            i += len;
+        }
+        await this.eot();
+        await this.expect('\x04');
+        return true;
     }
 
     async sendChunked(data) {
@@ -198,11 +231,14 @@ export class MicroPython {
             i = end;
             await sleep(10);
         }
+        await this.eot();
+        const resp = dec.decode(await this.recv(2));
+        if (resp !== 'OK') throw new Error(`Code upload failed: ${resp}`);
     }
 
-    async run(code) {
+    async run(code, ms = 1000) {
         await this.exec(code);
-        const out = await this.expect('\x04');
+        const out = await this.expect('\x04', ms);
         const err = await this.expect('\x04>');
         if (err.length > 0) throw new Error(dec.decode(err));
         return out;
@@ -219,10 +255,14 @@ with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
     d = f.read(1)
     if not d: break
     print('{:02x}'.format(d[0]), end='')
-`));
+`, 60000));
         } catch (e) {
-            if (!e.message.includes('ENOENT')) throw e;
-            throw new Error(`File not found: ${path}`);
+            if (e instanceof RangeError) {
+                throw new Error(`Failed to read file: ${e.message}`);
+            } else if (e.message.includes('ENOENT')) {
+                throw new Error(`File not found: ${path}`);
+            }
+            throw e;
         }
     }
 
