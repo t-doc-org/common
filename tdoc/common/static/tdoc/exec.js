@@ -355,7 +355,7 @@ class SectionedOutput {
         const btn = div.appendChild(element(`\
 <button class="tdoc-send" title="Send input (Enter)">Send</button>`));
         btn.addEventListener('click', () => onSend(input));
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 btn.click();
@@ -376,7 +376,7 @@ class SectionedOutput {
         const btn = div.appendChild(element(`\
 <button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
         btn.addEventListener('click', () => onSend(input));
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', e => {
             if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
                     !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();

@@ -70,7 +70,16 @@ class MicroPythonExecutor extends Executor {
             input.value = '';
             onSend(value);
         });
-        div.appendChild(this.stopControl());
+        const stop = div.appendChild(this.stopControl());
+        stop.setAttribute('title', `${stop.getAttribute('title')} (Ctrl+C)`);
+        const input = div.querySelector('input');
+        input.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 'c' && !e.altKey && !e.metaKey
+                    && input.selectionStart === input.selectionEnd) {
+                e.preventDefault();
+                stop.click();
+            }
+        });
         return div;
     }
 
