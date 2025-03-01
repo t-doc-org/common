@@ -72,6 +72,10 @@ function fromHex(data) {
     return data.subarray(0, len);
 }
 
+class RemoteError extends Error {
+    toString() { return this.message; }
+}
+
 export class MicroPython {
     constructor(onRead, onRelease) {
         this._onRead = onRead;
@@ -240,7 +244,7 @@ Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
         await this.exec(code);
         const out = await this.expect('\x04', ms);
         const err = await this.expect('\x04>');
-        if (err.length > 0) throw new Error(dec.decode(err));
+        if (err.length > 0) throw new RemoteError(dec.decode(err));
         return out;
     }
 
@@ -259,7 +263,8 @@ with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
         } catch (e) {
             if (e instanceof RangeError) {
                 throw new Error(`Failed to read file: ${e.message}`);
-            } else if (e.message.includes('ENOENT')) {
+            } else if (e instanceof RemoteError
+                       && e.message.includes('ENOENT')) {
                 throw new Error(`File not found: ${path}`);
             }
             throw e;
