@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element, focusIfVisible, text} from './core.js';
+import {element, focusIfVisible, html, text, typesetMath} from './core.js';
 
 function find(node, next) {
     let nodes = node.closest('ol, ul')?.querySelectorAll?.('.tdoc-quizz') ?? [];
@@ -21,7 +21,7 @@ function find(node, next) {
 
 // Add a quizz question with a reply input field after the given node. Return
 // the quizz question container element.
-export function question(node, prompt, check) {
+export function question(node, opts, check) {
     const div = element(`\
 <div class="tdoc-quizz">\
 <div class="prompt"></div>\
@@ -30,9 +30,14 @@ export function question(node, prompt, check) {
  spellcheck="false"><button class="tdoc-check fa-check"></button></div>\
 <div class="hint hide"></div>\
 </div>`);
-    if (prompt) {
-        if (typeof prompt === 'string') prompt = text(prompt);
-        div.querySelector('.prompt').appendChild(prompt);
+    if (typeof opts === 'string') {
+        opts = {prompt: opts ? text(opts) : undefined, math: true};
+    }
+    let prompt, p = opts?.prompt;
+    if (p) {
+        if (typeof p === 'string') p = (opts.html ? html : text)(p);
+        prompt = div.querySelector('.prompt');
+        prompt.appendChild(p);
     }
     const input = div.querySelector('input');
     const btn = div.querySelector('button');
@@ -74,5 +79,6 @@ export function question(node, prompt, check) {
     });
     node.after(div);
     focusIfVisible(input);
+    if (prompt && opts.math) typesetMath(prompt);  // Typeset in the background
     return div;
 }

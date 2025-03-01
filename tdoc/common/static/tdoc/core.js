@@ -103,7 +103,7 @@ export function focusIfVisible(el) {
 // Convert a number to a given radix, optionally left-padding with zeroes.
 export function toRadix(value, radix, length) {
     let s = value.toString(radix);
-    if (length && s.length < length) s = '0'.repeat(length - s.length) + s;
+    if (length) s = s.padStart(length, '0');
     return s;
 }
 

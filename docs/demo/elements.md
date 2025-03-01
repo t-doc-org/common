@@ -52,11 +52,11 @@ async function question(prompt, want) {
   const node = document.currentScript;
   const core = await tdoc.import('tdoc/core.js');
   const quizz = await tdoc.import('tdoc/quizz.js');
-  await core.typesetMath(quizz.question(node, prompt, resp => {
+  await quizz.question(node, prompt, resp => {
     if (resp === want) return true;
     return core.html(
       `The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`);
-  }));
+  });
 }
 </script>
 
