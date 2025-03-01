@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-38)=
+## 0.38 *(2025-03-01)*
+
+- Added a menu entry to read `main.py` in
+  [`{exec} micropython`](/reference/exec.md#micropython).
+- Simplified math typesetting in quizz prompts.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.37...0.38)
+
 (release-0-37)=
 ## 0.37 *(2025-02-21)*
 
