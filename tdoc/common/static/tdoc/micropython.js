@@ -192,7 +192,7 @@ export class MicroPython {
     }
 
     async sendRawPaste(data) {
-        await this.send('\x05A\x01');
+        await this.startRawPaste();
         switch (dec.decode(await this.recv(2))) {
         case 'R\x00': return false;  // Raw paste not supported
         case 'R\x01': break;  // Raw paste supported
@@ -256,9 +256,9 @@ Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
 import os
 with open(getattr(os, 'sep', '') + ${pyStr(path)}, 'rb') as f:
   while True:
-    d = f.read(1)
+    d = f.read(64)
     if not d: break
-    print('{:02x}'.format(d[0]), end='')
+    print(''.join('{:02x}'.format(b) for b in d), end='')
 `, 60000));
         } catch (e) {
             if (e instanceof RangeError) {
@@ -279,8 +279,7 @@ w = f.write
 `);
         const chunkSize = 256;
         while (data.length > 0) {
-            const s = pyBytes(data.subarray(0, chunkSize));
-            await this.run(`w(${s})`);
+            await this.run(`w(${pyBytes(data.subarray(0, chunkSize))})`);
             data = data.subarray(chunkSize);
         }
         await this.run(`f.close()`);
@@ -300,6 +299,7 @@ except OSError as e:
     exitRawRepl() { return this.send('\r\x02'); }
     interrupt() { return this.send('\r\x03'); }
     eot() { return this.send('\x04'); }
+    startRawPaste() { return this.send('\x05A\x01'); }
 
     async recv(count, ms = 1000) {
         const cancel = timeout(ms);
