@@ -390,7 +390,7 @@ class SectionedOutput {
 const form_feed = '\x0c';
 
 class ConsoleOut {
-    constructor(output) {
+    constructor(output, name) {
         this.output = output;
         this.name = name;
         this.decoders = new Map();
