@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {default as sqlite3_init} from '../sqlite/sqlite3-worker1-promiser.mjs';
-import {element, text} from './core.js';
+import {elmt, on, qs, text} from './core.js';
 import {Executor, UserError} from './exec.js';
 
 let promiser;
@@ -80,7 +80,7 @@ class SqlExecutor extends Executor {
                     if (res.columnNames.length === 0) return;
                     if (!output) {
                         output = this.outputTable(res.columnNames);
-                        tbody = output.querySelector('tbody');
+                        tbody = qs(output, 'tbody');
                         this.appendOutputs(output);
                     }
                     if (res.row) {
@@ -108,37 +108,36 @@ class SqlExecutor extends Executor {
     async stop(run_id) {}
 
     outputTable(columns) {
-        const output = element(`\
+        const output = elmt(`\
 <div class="tdoc-exec-output"><div class="pst-scrollable-table-container">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div></div>`);
-        this.setOutputStyle(
-            output.querySelector('.pst-scrollable-table-container'));
-        const tr = output.querySelector('tr');
+        this.setOutputStyle(qs(output, '.pst-scrollable-table-container'));
+        const tr = qs(output, 'tr');
         for (const col of columns) {
-            tr.appendChild(element(`<th class="text-center"></th>`))
+            tr.appendChild(elmt(`<th class="text-center"></th>`))
                 .appendChild(text(col));
         }
         if (this.runCtrl) {
-            output.appendChild(element(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .addEventListener('click', () => { output.remove(); });
+            on(output.appendChild(elmt(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`)))
+                .click(() => { output.remove(); });
         }
         return output;
     }
 
     resultRow(row) {
-        const tr = element(`<tr></tr>`);
+        const tr = elmt(`<tr></tr>`);
         for (const val of row) {
-            tr.appendChild(element(`<td class="text-center"></td>`))
-                .appendChild(val === null ? element(`<code>NULL</code>`)
+            tr.appendChild(elmt(`<td class="text-center"></td>`))
+                .appendChild(val === null ? elmt(`<code>NULL</code>`)
                                           : text(val));
         }
         return tr;
     }
 
     noResultsRow(columns) {
-        return element(`\
+        return elmt(`\
 <tr class="tdoc-no-results">\
 <td colspan="${columns.length}">No results</td>\
 </tr>`);

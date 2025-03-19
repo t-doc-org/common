@@ -1,14 +1,13 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element, focusIfVisible, html, text, typesetMath} from './core.js';
+import {elmt, focusIfVisible, html, on, qs, qsa, text, typesetMath} from './core.js';
 
 function find(node, next) {
-    let nodes = node.closest('ol, ul')?.querySelectorAll?.('.tdoc-quizz') ?? [];
     const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
                         Node.DOCUMENT_POSITION_PRECEDING;
     let found;
-    for (const el of nodes) {
+    for (const el of qsa(node.closest('ol, ul'), '.tdoc-quizz')) {
         if (node.compareDocumentPosition(el) & mask) {
             if (next) return el;
             found = el;
@@ -22,7 +21,7 @@ function find(node, next) {
 // Add a quizz question with a reply input field after the given node. Return
 // the quizz question container element.
 export function question(node, opts, check) {
-    const div = element(`\
+    const div = elmt(`\
 <div class="tdoc-quizz">\
 <div class="prompt"></div>\
 <div class="input">\
@@ -36,12 +35,11 @@ export function question(node, opts, check) {
     let prompt, p = opts?.prompt;
     if (p) {
         if (typeof p === 'string') p = (opts.html ? html : text)(p);
-        prompt = div.querySelector('.prompt');
+        prompt = qs(div, '.prompt');
         prompt.appendChild(p);
     }
-    const input = div.querySelector('input');
-    const btn = div.querySelector('button');
-    const hint = div.querySelector('.hint');
+    const input = qs(div, 'input'), btn = qs(div, 'button');
+    const hint = qs(div, '.hint');
     function checkResp(resp) {
         input.parentNode.classList.remove('good', 'bad');
         hint.classList.add('hide');
@@ -54,29 +52,27 @@ export function question(node, opts, check) {
         }
         return res === true;
     }
-    input.addEventListener('input', () => {
+    on(input).input(() => {
         input.parentNode.classList.remove('good', 'bad');
         hint.classList.add('hide');
-    });
-    input.addEventListener('keydown', (e) => {
+    }).keydown(e => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
         if (e.key === 'Enter') {
             e.preventDefault();
             if (!checkResp(input.value)) return;
-            find(div, true)?.querySelector?.('input')?.focus?.()
+            qs(find(div, true), 'input')?.focus?.()
         } else if (e.key === 'ArrowUp' && !e.shiftKey) {
             e.preventDefault();
-            find(div, false)?.querySelector?.('input')?.focus?.()
+            qs(find(div, false), 'input')?.focus?.()
         } else if (e.key === 'ArrowDown' && !e.shiftKey) {
             e.preventDefault();
-            find(div, true)?.querySelector?.('input')?.focus?.()
+            qs(find(div, true), 'input')?.focus?.()
         }
-    });
-    input.addEventListener('blur', () => hint.classList.add('hide'));
-    btn.addEventListener('click', () => checkResp(input.value));
-    btn.addEventListener('blur', (e) => {
-        if (e.relatedTarget !== input) hint.classList.add('hide');
-    });
+    }).blur(() => hint.classList.add('hide'));
+    on(btn).click(() => checkResp(input.value))
+        .blur(e => {
+            if (e.relatedTarget !== input) hint.classList.add('hide');
+        });
     node.after(div);
     focusIfVisible(input);
     if (prompt && opts.math) typesetMath(prompt);  // Typeset in the background

@@ -30,11 +30,38 @@ export function html(html) {
 }
 
 // Create an element node.
-export function element(html) {
+export function elmt(html) {
     const el = document.createElement('template');
     el.innerHTML = html.trim();
     return el.content.firstChild;
 }
+// TODO: Remove once all occurrences have been replaced
+export const element = elmt;
+
+// Query a single matching element from a node.
+export function qs(node, selector) {
+    return node?.querySelector?.(selector);
+}
+
+const emptyNodeList = document.createElement('template').querySelectorAll('p');
+
+// Query all matching elements from a node.
+export function qsa(node, selector) {
+    if (node === undefined || node === null) return emptyNodeList;
+    return node.querySelectorAll(selector);
+}
+
+const onHandler = {
+    get(obj, prop, recv) {
+        return (handler, opts) => {
+            obj.addEventListener(prop, handler, opts);
+            return recv;
+        }
+    }
+};
+
+// Return a proxy object whose methods set event handlers.
+export function on(node) { return new Proxy(node, onHandler); }
 
 // Return true iff the given element is within the root viewport.
 export function isVisible(el) {
@@ -47,7 +74,7 @@ export function isVisible(el) {
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 export function inlineMath(value) {
-    const el = element('<span class="math notranslate nohighlight"></span>');
+    const el = elmt('<span class="math notranslate nohighlight"></span>');
     const [start, end] = MathJax.tex?.inlineMath ?? ['\\(', '\\)'];
     el.appendChild(text(`${start}${value}${end}`));
     return el;
@@ -71,7 +98,7 @@ export function displayMath(value) {
         if (i < parts.length - 1) out.push('\\\\');
     }
     if (parts.length > 1) out.push('\\end{aligned}\\end{align} ');
-    const el = element('<div class="math notranslate nohighlight"></div>');
+    const el = elmt('<div class="math notranslate nohighlight"></div>');
     const [start, end] = MathJax.tex?.displayMath ?? ['\\[', '\\]'];
     el.appendChild(text(`${start}${out.join('')}${end}`));
     return el;

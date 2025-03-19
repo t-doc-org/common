@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, element, enc, text} from './core.js';
+import {dec, elmt, enc, on, qs, qsa, text} from './core.js';
 import {Executor} from './exec.js';
 import {MicroPython} from './micropython.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
@@ -30,13 +30,13 @@ class MicroPythonExecutor extends Executor {
     }
 
     toolsControl() {
-        const ctrl = element(`
+        const ctrl = elmt(`
 <div class="dropstart">\
 <button class="tdoc fa-screwdriver-wrench" title="Tools"\
  data-bs-toggle="dropdown" data-bs-offset="-7,4"></button>\
 <ul class="dropdown-menu"></ul>\
 </div>`);
-        const ul = ctrl.querySelector('ul');
+        const ul = qs(ctrl, 'ul');
         ul.appendChild(this.menuItem('plug', 'Connect', '',
                                      () => this.connect()));
         ul.appendChild(this.menuItem(
@@ -55,12 +55,12 @@ class MicroPythonExecutor extends Executor {
     }
 
     menuItem(icon, text, cls, onClick) {
-        const it = element(`\
+        const it = elmt(`\
 <li><a class="dropdown-item${cls}">\
 <span class="btn__icon-container tdoc fa-${icon}"></span>\
 <span class="btn__text-container">${text}</span>\
 </a></li>`);
-        it.querySelector('a').addEventListener('click', onClick);
+        on(qs(it, 'a')).click(onClick);
         return it;
     }
 
@@ -72,8 +72,8 @@ class MicroPythonExecutor extends Executor {
         });
         const stop = div.appendChild(this.stopControl());
         stop.setAttribute('title', `${stop.getAttribute('title')} (Ctrl+C)`);
-        const input = div.querySelector('input');
-        input.addEventListener('keydown', e => {
+        const input = qs(div, 'input');
+        on(input).keydown(e => {
             if (e.ctrlKey && e.key === 'c' && !e.altKey && !e.metaKey
                     && input.selectionStart === input.selectionEnd) {
                 e.preventDefault();
@@ -96,7 +96,7 @@ class MicroPythonExecutor extends Executor {
 
     enableInput(enable) {
         enable = enable ?? this.mp.claim;
-        for (const el of this.input.querySelectorAll('input, button')) {
+        for (const el of qsa(this.input, 'input, button')) {
             el.disabled = !enable;
         }
     }
@@ -104,7 +104,7 @@ class MicroPythonExecutor extends Executor {
     setSerial(serial) {
         this.mp.setSerial(serial);
         this.runCtrl.disabled = !serial;
-        for (const el of this.node.querySelectorAll(
+        for (const el of qsa(this.node,
                 '.tdoc-exec-controls .dropdown-item.if-connected')) {
             el.classList.toggle('disabled', !serial);
         }

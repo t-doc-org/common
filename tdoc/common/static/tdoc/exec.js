@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, element, RateLimited, rootUrl, text} from './core.js';
+import {domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, text} from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -49,7 +49,7 @@ function nodeById(id) {
 // Move the content of .lineno nodes to the data-n attribute. It is added back
 // in CSS, but won't appear in text content.
 function fixLineNos(node) {
-    for (const ln of node.querySelectorAll('.linenos')) {
+    for (const ln of qsa(node, '.linenos')) {
         ln.dataset.n = ln.textContent;
         ln.replaceChildren();
     }
@@ -66,13 +66,13 @@ export class Executor {
     static async apply(cls) {
         cls.ready = cls.init();  // Initialize concurrently
         await domLoaded;
-        for (const node of document.querySelectorAll(
-                `div.tdoc-exec-runner-${cls.runner}`)) {
+        for (const node of qsa(document,
+                               `div.tdoc-exec-runner-${cls.runner}`)) {
             fixLineNos(node);
             const handler = new cls(node);
             node.tdocExec = handler;
             if (handler.editable) handler.addEditor();
-            const controls = element(`<div class="tdoc-exec-controls"></div>`);
+            const controls = elmt(`<div class="tdoc-exec-controls"></div>`);
             handler.addControls(controls);
             if (controls.children.length > 0) node.appendChild(controls);
             cls.ready.then(() => { handler.onReady(); });
@@ -83,9 +83,7 @@ export class Executor {
     }
 
     // Return the text content of the <pre> tag of a node.
-    static preText(node) {
-        return node.querySelector('pre').textContent;
-    }
+    static preText(node) { return qs(node, 'pre').textContent; }
 
     // Return the text content of the editor associated with a node if an editor
     // was added, or the content of the <pre> tag.
@@ -136,10 +134,10 @@ export class Executor {
         const view = newEditor({
             extensions, doc,
             language: this.constructor.highlight,
-            parent: this.node.querySelector('div.highlight'),
+            parent: qs(this.node, 'div.highlight'),
         });
-        view.dom.setAttribute(
-            'style', this.node.querySelector('pre').getAttribute('style'));
+        view.dom.setAttribute('style',
+                              qs(this.node, 'pre').getAttribute('style'));
     }
 
     // Called on every editor update.
@@ -179,28 +177,28 @@ export class Executor {
 
     // Create a "Run" control.
     runControl() {
-        const ctrl = element(`\
+        const ctrl = elmt(`\
 <button class="fa-play tdoc-run"\
  title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
 </button>`);
-        ctrl.addEventListener('click', () => this.doRun());
+        on(ctrl).click(() => this.doRun());
         return ctrl;
     }
 
     // Create a "Stop" control.
     stopControl() {
-        const ctrl = element(
+        const ctrl = elmt(
             `<button class="fa-stop tdoc-stop" title="Stop"></button>`);
-        ctrl.addEventListener('click', () => this.doStop());
+        on(ctrl).click(() => this.doStop());
         return ctrl;
     }
 
     // Create a "Reset" control.
     resetEditorControl() {
-        const ctrl = element(`
+        const ctrl = elmt(`
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`);
-        ctrl.addEventListener('click', () => this.setEditorText(this.origText));
+        on(ctrl).click(() => this.setEditorText(this.origText));
         return ctrl;
     }
 
@@ -293,7 +291,7 @@ export class Executor {
 
     // Append an error output node associated with the {exec} block.
     appendErrorOutput() {
-        const output = element(`\
+        const output = elmt(`\
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
         this.appendOutputs(output);
         return output;
@@ -315,10 +313,10 @@ class SectionedOutput {
     }
 
     render(name, html) {
-        const new_el = element(html);
+        const new_el = elmt(html);
         new_el.tdocName = name;
         if (!this.output?.parentNode) {
-            this.output = element(
+            this.output = elmt(
                 `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
             this.exec.appendOutputs(this.output);
         }
@@ -341,7 +339,7 @@ class SectionedOutput {
     input(name, prompt) {
         const div = this.render(name, `<div class="tdoc-input"></div>`);
         if (prompt) {
-            div.appendChild(element(`<div class="prompt"></div>`))
+            div.appendChild(elmt(`<div class="prompt"></div>`))
                 .appendChild(text(prompt));
         }
         return div;
@@ -349,13 +347,13 @@ class SectionedOutput {
 
     lineInput(name, prompt, onSend) {
         const div = this.input(name, prompt);
-        const input = div.appendChild(element(`\
+        const input = div.appendChild(elmt(`\
 <input class="input" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false">`));
-        const btn = div.appendChild(element(`\
+        const btn = div.appendChild(elmt(`\
 <button class="tdoc-send" title="Send input (Enter)">Send</button>`));
-        btn.addEventListener('click', () => onSend(input));
-        input.addEventListener('keydown', e => {
+        on(btn).click(() => onSend(input));
+        on(input).keydown(e => {
             if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 btn.click();
@@ -366,17 +364,16 @@ class SectionedOutput {
 
     multilineInput(name, prompt, onSend) {
         const div = this.input(name, prompt);
-        const input = div.appendChild(element(`\
+        const input = qs(div.appendChild(elmt(`\
 <div class="input tdoc-autosize">\
 <textarea rows="1" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"\
  oninput="this.parentNode.dataset.text = this.value"></textarea>\
-</div>`))
-            .querySelector('textarea');
-        const btn = div.appendChild(element(`\
+</div>`)), 'textarea');
+        const btn = div.appendChild(elmt(`\
 <button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
-        btn.addEventListener('click', () => onSend(input));
-        input.addEventListener('keydown', e => {
+        on(btn).click(() => onSend(input));
+        on(input).keydown(e => {
             if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
                     !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
@@ -420,7 +417,7 @@ class ConsoleOut {
             data = data.slice(i + 1);
             if (this.out) {
                 if (data.length > 0) {
-                    this.out.querySelector('pre').replaceChildren();
+                    qs(this.out, 'pre').replaceChildren();
                 } else {
                     this.out.remove();
                     delete this.out;
@@ -433,18 +430,18 @@ class ConsoleOut {
         if (!this.out?.isConnected) {
             const div = this.out = this.output.render(
                 this.name, `<div class="highlight"><pre></pre></div>`);
-            div.appendChild(element(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .addEventListener('click', () => div.remove());
-            const pre = div.querySelector('pre');
+            on(div.appendChild(elmt(`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`)))
+                .click(() => div.remove());
+            const pre = qs(div, 'pre');
             this.output.exec.setOutputStyle(pre);
         }
-        const out = this.out.querySelector('pre');
+        const out = qs(this.out, 'pre');
 
         // Append the text and scroll if at the bottom.
         let node = text(data);
         if (stream) {
-            const el = element(`<span class="${stream}"></span>`);
+            const el = elmt(`<span class="${stream}"></span>`);
             el.appendChild(node);
             node = el;
         }
@@ -456,21 +453,20 @@ class ConsoleOut {
 }
 
 // Ensure that the text of editors is stored before navigating away.
-addEventListener('beforeunload', () => {
-    for (const node of document.querySelectorAll(
-            'div.tdoc-exec[data-tdoc-editor]')) {
+on(window).beforeunload(() => {
+    for (const node of qsa(document, 'div.tdoc-exec[data-tdoc-editor]')) {
         const storer = node.tdocExec.storeEditor;
         if (storer) storer.flush();
     }
 });
 
 // Update the text of editors when their stored content changes.
-addEventListener('storage', e => {
+on(window).storage(e => {
     if (e.storageArea !== localStorage) return;
     if (!e.key.startsWith(editorPrefix)) return;
     const name = e.key.slice(editorPrefix.length);
-    const node = document.querySelector(
-        `div.tdoc-exec[data-tdoc-editor="${CSS.escape(name)}"]`);
+    const node = qs(document,
+                    `div.tdoc-exec[data-tdoc-editor="${CSS.escape(name)}"]`);
     if (!node) return;
     node.tdocExec.setEditorText(e.newValue, [storeUpdate.of(true)]);
 });

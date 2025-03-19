@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {element} from './core.js';
+import {elmt, on, qs} from './core.js';
 import {Executor} from './exec.js';
 
 class HtmlExecutor extends Executor {
@@ -18,7 +18,7 @@ class HtmlExecutor extends Executor {
     }
 
     async run(run_id) {
-        const output = element(`\
+        const output = elmt(`\
 <div class="tdoc-exec-output tdoc-sectioned">\
 <div class="tdoc-navbar">\
 <button class="fa-arrow-left tdoc-back" title="Back"></button>\
@@ -38,33 +38,27 @@ class HtmlExecutor extends Executor {
  referrerpolicy="no-referrer">\
 </iframe>\
 </div>`);
-        const iframe = output.querySelector('iframe');
+        const iframe = qs(output, 'iframe');
         this.setOutputStyle(iframe);
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');
-        output.querySelector('.tdoc-back')
-            .addEventListener('click', () => { history.back(); });
-        output.querySelector('.tdoc-forward')
-            .addEventListener('click', () => { history.forward(); });
-        output.querySelector('.tdoc-reload')
-            .addEventListener('click', () => {
-                try {  // Try to reload if non-cross-origin
-                    iframe.contentWindow.history.go();
-                } catch (e) {}
-            });
-        output.querySelector('.tdoc-maximize')
-            .addEventListener('click', () => {
-                document.documentElement.classList.add('tdoc-fullscreen');
-                output.classList.add('tdoc-fullscreen');
-            });
-        output.querySelector('.tdoc-restore')
-            .addEventListener('click', () => {
-                document.documentElement.classList.remove('tdoc-fullscreen');
-                output.classList.remove('tdoc-fullscreen');
-            });
-        output.querySelector('.tdoc-close')
-            .addEventListener('click', () => { output.remove(); });
+        on(qs(output, '.tdoc-back')).click(() => { history.back(); });
+        on(qs(output, '.tdoc-forward')).click(() => { history.forward(); });
+        on(qs(output, '.tdoc-reload')).click(() => {
+            try {  // Try to reload if non-cross-origin
+                iframe.contentWindow.history.go();
+            } catch (e) {}
+        });
+        on(qs(output, '.tdoc-maximize')).click(() => {
+            document.documentElement.classList.add('tdoc-fullscreen');
+            output.classList.add('tdoc-fullscreen');
+        });
+        on(qs(output, '.tdoc-restore')).click(() => {
+            document.documentElement.classList.remove('tdoc-fullscreen');
+            output.classList.remove('tdoc-fullscreen');
+        });
+        on(qs(output, '.tdoc-close')).click(() => { output.remove(); });
         this.replaceOutputs(output);
     }
 

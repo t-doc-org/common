@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {XWorker} from '../polyscript/index.js';
-import {dec, element, focusIfVisible, text} from './core.js';
+import {dec, elmt, focusIfVisible, on, text} from './core.js';
 import {Executor} from './exec.js';
 
 const base = import.meta.resolve('../');
@@ -19,7 +19,7 @@ const worker = XWorker(import.meta.resolve('./exec-python.py'), {
     config: {...tdoc?.exec?.python, files},
 });
 const {promise: ready, resolve: resolve_ready} = Promise.withResolvers();
-worker.sync.ready = (msg) => {
+worker.sync.ready = msg => {
     console.info(`[t-doc] ${msg}`);
     resolve_ready();
 };
@@ -131,10 +131,10 @@ class PythonExecutor extends Executor {
             case 'buttons': {
                 const div = this.input = this.output.input('991', prompt);
                 if (type === 'buttons-right') {
-                    div.appendChild(element(`<div class="input"></div>`));
+                    div.appendChild(elmt(`<div class="input"></div>`));
                 }
                 for (const [index, label] of args[0].entries()) {
-                    const btn = div.appendChild(element(
+                    const btn = div.appendChild(elmt(
                         `<button class="tdoc-button"></button>`));
                     const icon = /^@icon\{([^}]+)\}$/.exec(label);
                     if (icon) {
@@ -142,7 +142,7 @@ class PythonExecutor extends Executor {
                     } else {
                         btn.appendChild(text(label));
                     }
-                    btn.addEventListener('click', () => { resolve(index); });
+                    on(btn).click(() => { resolve(index); });
                 }
                 break;
             }

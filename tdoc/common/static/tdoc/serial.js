@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {enc, sleep} from './core.js';
+import {enc, on, sleep} from './core.js';
 
 // A claim on a serial port.
 class Claim {
@@ -178,7 +178,7 @@ const handlers = new Map();
 
 if (navigator.serial) {
     // Get notified on connection and disconnection.
-    navigator.serial.addEventListener('connect', e => {
+    on(navigator.serial).connect(e => {
         let s = serials.get(e.target);
         if (!s) {
             s = new Serial(e.target);
@@ -187,8 +187,7 @@ if (navigator.serial) {
         for (const h of handlers.values()) {
             if (h.onConnect) h.onConnect(s);
         }
-    });
-    navigator.serial.addEventListener('disconnect', async e => {
+    }).disconnect(async e => {
         const s = serials.get(e.target);
         if (!s) return;
         await s.unclaim(undefined, "The port was disconnected");
