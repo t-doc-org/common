@@ -54,8 +54,6 @@ export function elmt(html, ...values) {
     el.innerHTML = html.trim();
     return el.content.firstChild;
 }
-// TODO: Remove once all occurrences have been replaced
-export const element = elmt;
 
 // Query a single matching element from a node.
 export function qs(node, selector) {
