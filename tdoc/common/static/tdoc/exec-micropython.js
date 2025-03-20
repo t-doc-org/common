@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, elmt, enc, on, qs, qsa, text} from './core.js';
+import {dec, elmt, enc, html, on, qs, qsa, text} from './core.js';
 import {Executor} from './exec.js';
 import {MicroPython} from './micropython.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
@@ -30,12 +30,12 @@ class MicroPythonExecutor extends Executor {
     }
 
     toolsControl() {
-        const ctrl = elmt(`
+        const ctrl = elmt`
 <div class="dropstart">\
 <button class="tdoc fa-screwdriver-wrench" title="Tools"\
  data-bs-toggle="dropdown" data-bs-offset="-7,4"></button>\
 <ul class="dropdown-menu"></ul>\
-</div>`);
+</div>`;
         const ul = qs(ctrl, 'ul');
         ul.appendChild(this.menuItem('plug', 'Connect', '',
                                      () => this.connect()));
@@ -43,25 +43,27 @@ class MicroPythonExecutor extends Executor {
             'power-off', 'Hard reset', ' if-connected disabled',
             () => this.reset()));
         ul.appendChild(this.menuItem(
-            'file-arrow-down', 'Read <code>main.py</code>',
+            'file-arrow-down', html`Read <code>main.py</code>`,
             ' if-connected disabled', () => this.readMain()));
         ul.appendChild(this.menuItem(
-            'file-arrow-up', 'Write to <code>main.py</code>',
+            'file-arrow-up', html`Write to <code>main.py</code>`,
             ' if-connected disabled', () => this.writeMain()));
         ul.appendChild(this.menuItem(
-            'trash', 'Remove <code>main.py</code>', ' if-connected disabled',
-            () => this.removeMain()));
+            'trash', html`Remove <code>main.py</code>`,
+            ' if-connected disabled', () => this.removeMain()));
         return ctrl;
     }
 
-    menuItem(icon, text, cls, onClick) {
-        const it = elmt(`\
+    menuItem(icon, label, cls, onClick) {
+        const li = elmt`\
 <li><a class="dropdown-item${cls}">\
 <span class="btn__icon-container tdoc fa-${icon}"></span>\
-<span class="btn__text-container">${text}</span>\
-</a></li>`);
-        on(qs(it, 'a')).click(onClick);
-        return it;
+<span class="btn__text-container"></span>\
+</a></li>`;
+        if (typeof label === 'string') label = text(label);
+        qs(li, '.btn__text-container').appendChild(label);
+        on(qs(li, 'a')).click(onClick);
+        return li;
     }
 
     inputControl(onSend) {

@@ -17,20 +17,39 @@ export const domLoaded = new Promise(resolve => {
     }
 });
 
+// Escape text for inclusion in HTML.
+export function escape(text) {
+    return text.replace(/[&<>"']/g, m => `&#${m.charCodeAt(0)};`);
+}
+
 // Create a text node.
 export function text(value) {
     return document.createTextNode(value);
 }
 
+// Perform string interpolation of an HTML snippet.
+function interpolateHtml(html, values) {
+    if (html.length === 1 && !values[0]) return html[0];
+    const parts = [];
+    for (const [i, s] of html.entries()) {
+        parts.push(s);
+        const v = values[i];
+        if (v) parts.push(escape(v.toString()));
+    }
+    return parts.join('');
+}
+
 // Create an DocumentFragment node.
-export function html(html) {
+export function html(html, ...values) {
+    if (typeof html !== 'string') html = interpolateHtml(html, values);
     const el = document.createElement('template');
     el.innerHTML = html;
     return el.content;
 }
 
-// Create an element node.
-export function elmt(html) {
+// Create an Element node.
+export function elmt(html, ...values) {
+    if (typeof html !== 'string') html = interpolateHtml(html, values);
     const el = document.createElement('template');
     el.innerHTML = html.trim();
     return el.content.firstChild;
@@ -74,10 +93,9 @@ export function isVisible(el) {
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 export function inlineMath(value) {
-    const el = elmt('<span class="math notranslate nohighlight"></span>');
     const [start, end] = MathJax.tex?.inlineMath ?? ['\\(', '\\)'];
-    el.appendChild(text(`${start}${value}${end}`));
-    return el;
+    return elmt`\
+<span class="math notranslate nohighlight">${start}${value}${end}</span>`;
 }
 
 // Return a <div> containing display math. The element must be typeset after
@@ -98,10 +116,9 @@ export function displayMath(value) {
         if (i < parts.length - 1) out.push('\\\\');
     }
     if (parts.length > 1) out.push('\\end{aligned}\\end{align} ');
-    const el = elmt('<div class="math notranslate nohighlight"></div>');
     const [start, end] = MathJax.tex?.displayMath ?? ['\\[', '\\]'];
-    el.appendChild(text(`${start}${out.join('')}${end}`));
-    return el;
+    return elmt`\
+<div class="math notranslate nohighlight">${start}${out.join('')}${end}</div>`;
 }
 
 let typeset = globalThis.MathJax?.startup?.promise;

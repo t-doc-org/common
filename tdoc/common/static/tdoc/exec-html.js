@@ -18,7 +18,7 @@ class HtmlExecutor extends Executor {
     }
 
     async run(run_id) {
-        const output = elmt(`\
+        const output = elmt`\
 <div class="tdoc-exec-output tdoc-sectioned">\
 <div class="tdoc-navbar">\
 <button class="fa-arrow-left tdoc-back" title="Back"></button>\
@@ -37,7 +37,7 @@ class HtmlExecutor extends Executor {
  serial; usb; web-share"\
  referrerpolicy="no-referrer">\
 </iframe>\
-</div>`);
+</div>`;
         const iframe = qs(output, 'iframe');
         this.setOutputStyle(iframe);
         const blocks = [];

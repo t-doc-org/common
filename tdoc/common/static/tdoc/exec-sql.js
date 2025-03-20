@@ -108,39 +108,38 @@ class SqlExecutor extends Executor {
     async stop(run_id) {}
 
     outputTable(columns) {
-        const output = elmt(`\
+        const output = elmt`\
 <div class="tdoc-exec-output"><div class="pst-scrollable-table-container">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
-</div></div>`);
+</div></div>`;
         this.setOutputStyle(qs(output, '.pst-scrollable-table-container'));
         const tr = qs(output, 'tr');
         for (const col of columns) {
-            tr.appendChild(elmt(`<th class="text-center"></th>`))
-                .appendChild(text(col));
+            tr.appendChild(elmt`<th class="text-center">${col}</th>`);
         }
         if (this.runCtrl) {
-            on(output.appendChild(elmt(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`)))
+            on(output.appendChild(elmt`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => { output.remove(); });
         }
         return output;
     }
 
     resultRow(row) {
-        const tr = elmt(`<tr></tr>`);
+        const tr = elmt`<tr></tr>`;
         for (const val of row) {
-            tr.appendChild(elmt(`<td class="text-center"></td>`))
-                .appendChild(val === null ? elmt(`<code>NULL</code>`)
+            tr.appendChild(elmt`<td class="text-center"></td>`)
+                .appendChild(val === null ? elmt`<code>NULL</code>`
                                           : text(val));
         }
         return tr;
     }
 
     noResultsRow(columns) {
-        return elmt(`\
+        return elmt`\
 <tr class="tdoc-no-results">\
 <td colspan="${columns.length}">No results</td>\
-</tr>`);
+</tr>`;
     }
 }
 

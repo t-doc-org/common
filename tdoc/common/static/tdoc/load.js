@@ -17,7 +17,7 @@ domLoaded.then(() => {
         const title = qs(el, '.admonition-title')
         on(title).click(() => el.classList.toggle('expand'));
         // Enable keyboard navigation.
-        on(title.appendChild(elmt('<button></button>'))).click(e => {
+        on(title.appendChild(elmt`<button></button>`)).click(e => {
             el.classList.toggle('expand');
             e.stopPropagation();
         });

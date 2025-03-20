@@ -131,11 +131,11 @@ class PythonExecutor extends Executor {
             case 'buttons': {
                 const div = this.input = this.output.input('991', prompt);
                 if (type === 'buttons-right') {
-                    div.appendChild(elmt(`<div class="input"></div>`));
+                    div.appendChild(elmt`<div class="input"></div>`);
                 }
                 for (const [index, label] of args[0].entries()) {
-                    const btn = div.appendChild(elmt(
-                        `<button class="tdoc-button"></button>`));
+                    const btn = div.appendChild(
+                        elmt`<button class="tdoc-button"></button>`);
                     const icon = /^@icon\{([^}]+)\}$/.exec(label);
                     if (icon) {
                         btn.classList.add(`fa-${icon[1]}`);

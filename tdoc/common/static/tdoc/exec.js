@@ -72,7 +72,7 @@ export class Executor {
             const handler = new cls(node);
             node.tdocExec = handler;
             if (handler.editable) handler.addEditor();
-            const controls = elmt(`<div class="tdoc-exec-controls"></div>`);
+            const controls = elmt`<div class="tdoc-exec-controls"></div>`;
             handler.addControls(controls);
             if (controls.children.length > 0) node.appendChild(controls);
             cls.ready.then(() => { handler.onReady(); });
@@ -177,27 +177,27 @@ export class Executor {
 
     // Create a "Run" control.
     runControl() {
-        const ctrl = elmt(`\
+        const ctrl = elmt`\
 <button class="fa-play tdoc-run"\
  title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
-</button>`);
+</button>`;
         on(ctrl).click(() => this.doRun());
         return ctrl;
     }
 
     // Create a "Stop" control.
     stopControl() {
-        const ctrl = elmt(
-            `<button class="fa-stop tdoc-stop" title="Stop"></button>`);
+        const ctrl =
+            elmt`<button class="fa-stop tdoc-stop" title="Stop"></button>`;
         on(ctrl).click(() => this.doStop());
         return ctrl;
     }
 
     // Create a "Reset" control.
     resetEditorControl() {
-        const ctrl = elmt(`
+        const ctrl = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
- title="Reset editor content"></button>`);
+ title="Reset editor content"></button>`;
         on(ctrl).click(() => this.setEditorText(this.origText));
         return ctrl;
     }
@@ -291,8 +291,8 @@ export class Executor {
 
     // Append an error output node associated with the {exec} block.
     appendErrorOutput() {
-        const output = elmt(`\
-<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`);
+        const output = elmt`\
+<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`;
         this.appendOutputs(output);
         return output;
     }
@@ -316,8 +316,8 @@ class SectionedOutput {
         const new_el = elmt(html);
         new_el.tdocName = name;
         if (!this.output?.parentNode) {
-            this.output = elmt(
-                `<div class="tdoc-exec-output tdoc-sectioned"></div>`);
+            this.output =
+                elmt`<div class="tdoc-exec-output tdoc-sectioned"></div>`;
             this.exec.appendOutputs(this.output);
         }
         for (const el of this.output.children) {
@@ -339,19 +339,18 @@ class SectionedOutput {
     input(name, prompt) {
         const div = this.render(name, `<div class="tdoc-input"></div>`);
         if (prompt) {
-            div.appendChild(elmt(`<div class="prompt"></div>`))
-                .appendChild(text(prompt));
+            div.appendChild(elmt`<div class="prompt">${prompt}</div>`);
         }
         return div;
     }
 
     lineInput(name, prompt, onSend) {
         const div = this.input(name, prompt);
-        const input = div.appendChild(elmt(`\
+        const input = div.appendChild(elmt`\
 <input class="input" autocapitalize="off" autocomplete="off"\
- autocorrect="off" spellcheck="false">`));
-        const btn = div.appendChild(elmt(`\
-<button class="tdoc-send" title="Send input (Enter)">Send</button>`));
+ autocorrect="off" spellcheck="false">`);
+        const btn = div.appendChild(elmt`\
+<button class="tdoc-send" title="Send input (Enter)">Send</button>`);
         on(btn).click(() => onSend(input));
         on(input).keydown(e => {
             if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
@@ -364,14 +363,14 @@ class SectionedOutput {
 
     multilineInput(name, prompt, onSend) {
         const div = this.input(name, prompt);
-        const input = qs(div.appendChild(elmt(`\
+        const input = qs(div.appendChild(elmt`\
 <div class="input tdoc-autosize">\
 <textarea rows="1" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false"\
  oninput="this.parentNode.dataset.text = this.value"></textarea>\
-</div>`)), 'textarea');
-        const btn = div.appendChild(elmt(`\
-<button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`));
+</div>`), 'textarea');
+        const btn = div.appendChild(elmt`\
+<button class="tdoc-send" title="Send input (Shift+Enter)">Send</button>`);
         on(btn).click(() => onSend(input));
         on(input).keydown(e => {
             if (e.key === 'Enter' && e.shiftKey && !e.altKey &&
@@ -430,8 +429,8 @@ class ConsoleOut {
         if (!this.out?.isConnected) {
             const div = this.out = this.output.render(
                 this.name, `<div class="highlight"><pre></pre></div>`);
-            on(div.appendChild(elmt(`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`)))
+            on(div.appendChild(elmt`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => div.remove());
             const pre = qs(div, 'pre');
             this.output.exec.setOutputStyle(pre);
@@ -441,7 +440,7 @@ class ConsoleOut {
         // Append the text and scroll if at the bottom.
         let node = text(data);
         if (stream) {
-            const el = elmt(`<span class="${stream}"></span>`);
+            const el = elmt`<span class="${stream}"></span>`;
             el.appendChild(node);
             node = el;
         }

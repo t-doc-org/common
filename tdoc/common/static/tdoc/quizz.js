@@ -21,22 +21,21 @@ function find(node, next) {
 // Add a quizz question with a reply input field after the given node. Return
 // the quizz question container element.
 export function question(node, opts, check) {
-    const div = elmt(`\
+    const div = elmt`\
 <div class="tdoc-quizz">\
 <div class="prompt"></div>\
 <div class="input">\
 <input autocapitalize="off" autocomplete="off" autocorrect="off"\
  spellcheck="false"><button class="tdoc-check fa-check"></button></div>\
 <div class="hint hide"></div>\
-</div>`);
+</div>`;
     if (typeof opts === 'string') {
         opts = {prompt: opts ? text(opts) : undefined, math: true};
     }
     let prompt, p = opts?.prompt;
     if (p) {
-        if (typeof p === 'string') p = (opts.html ? html : text)(p);
         prompt = qs(div, '.prompt');
-        prompt.appendChild(p);
+        prompt.appendChild(typeof p === 'string' ? text(p) : p);
     }
     const input = qs(div, 'input'), btn = qs(div, 'button');
     const hint = qs(div, '.hint');
