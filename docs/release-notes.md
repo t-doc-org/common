@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-39)=
+## 0.39 *(2025-03-20)*
+
+- Added table-based quizz generation functionality.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.38...0.39)
+
 (release-0-38)=
 ## 0.38 *(2025-03-01)*
 
