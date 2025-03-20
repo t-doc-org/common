@@ -77,3 +77,43 @@ export function question(node, opts, check) {
     if (prompt && opts.math) typesetMath(prompt);  // Typeset in the background
     return div;
 }
+
+export function genTable(node, addCells) {
+    // Find the first table that precedes `node`.
+    let table;
+    while (!table) {
+        node = node.previousElementSibling;
+        if (!node) {
+            console.error("<table> not found");
+            return;
+        }
+        table = qs(node, 'table.table');
+    }
+
+    // Add a column to all existing rows for the check button.
+    qs(table, 'thead > tr').appendChild(elmt`<th></th>`);
+    let tbody = qs(table, 'tbody');
+    if (!tbody) tbody = table.appendChild(elmt`<tbody></tbody>`);
+    for (const tr of qsa(tbody, 'tr')) {
+        tr.appendChild(elmt`<td></td>`);
+    }
+
+    function addRow() {
+        const row = elmt`<tr class="tdoc-quizz-row text-center"></tr>`;
+        const button = elmt`<button class="tdoc fa-check"></button>`;
+        const {verify, focus} = addCells(table, row, button);
+        if (!verify) return;
+        row.appendChild(elmt`<td></td>`).appendChild(button);
+        on(button).click(() => {
+            if (!verify()) return;
+            button.replaceWith(
+                elmt`<span class="tdoc-color-good fa-check"></span>`);
+            const focus = addRow();
+            if (focus) focus.focus();
+        });
+        tbody.appendChild(row);
+        return focus;
+    }
+
+    addRow();
+}

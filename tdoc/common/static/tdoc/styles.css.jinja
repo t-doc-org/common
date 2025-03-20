@@ -247,6 +247,34 @@ div.tdoc-quizz > .hint.hide {
     opacity: 0;
 }
 
+/* Table-based quizzes */
+.tdoc-quizz-row {
+    vertical-align: middle;
+}
+.tdoc-quizz-row select {
+    background-color: field;
+    border: 1px solid var(--pst-color-border);
+}
+.tdoc-quizz-row input {
+    width: 100%;
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline-start: 2px;
+    padding-inline-end: 2px;
+}
+.tdoc-quizz-row td:last-child {
+    width: 0;
+}
+.tdoc-quizz-row .tdoc-color-good {
+    color: var(--pst-color-success);
+}
+.tdoc-quizz-row .tdoc-bg-bad {
+    background-image: linear-gradient(-45deg,
+        var(--pst-color-danger-bg) 10%, field 10% 50%,
+        var(--pst-color-danger-bg) 50% 60%, field 60%);
+    background-size: 14.14px 14.14px;
+}
+
 /* Auto-sizing text area */
 .tdoc-autosize {
     display: grid;
@@ -409,17 +437,23 @@ div.tdoc-exec div.tdoc-exec-controls {
 
 /* SQL execution results */
 .table > tbody > tr:nth-child(odd).tdoc-no-results {
-    background: repeating-linear-gradient(-45deg,
-        var(--pst-color-table-row-zebra-low-bg) 0px 2px,
-        var(--pst-color-table-row-zebra-high-bg) 2px 20px);
+    background-image: linear-gradient(-45deg,
+        var(--pst-color-table-row-zebra-low-bg) 5%,
+        var(--pst-color-table-row-zebra-high-bg) 5% 50%,
+        var(--pst-color-table-row-zebra-low-bg) 50% 55%,
+        var(--pst-color-table-row-zebra-high-bg) 55%);
+    background-size: 28.28px 28.28px;
 }
 .tdoc-error {
     margin-bottom: 1rem;
     border: 1px solid var(--pst-color-danger);
     padding: 0.5rem;
-    background: repeating-linear-gradient(-45deg,
-        var(--pst-color-table-row-zebra-low-bg) 0px 2px,
-        var(--pst-color-table-row-zebra-high-bg) 2px 20px);
+    background-image: linear-gradient(-45deg,
+        var(--pst-color-table-row-zebra-low-bg) 5%,
+        var(--pst-color-table-row-zebra-high-bg) 5% 50%,
+        var(--pst-color-table-row-zebra-low-bg) 50% 55%,
+        var(--pst-color-table-row-zebra-high-bg) 55%);
+    background-size: 28.28px 28.28px;
 }
 
 /* Drop-down menus. */

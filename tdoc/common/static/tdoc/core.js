@@ -79,6 +79,11 @@ const onHandler = {
     }
 };
 
+// Enable or disable one or more elements.
+export function enable(value, ...els) {
+    for (const el of els) el.disabled = !value;
+}
+
 // Return a proxy object whose methods set event handlers.
 export function on(node) { return new Proxy(node, onHandler); }
 

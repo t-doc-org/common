@@ -25,6 +25,18 @@
     tdoc.imports = (...modules) => Promise.all(
         modules.map(m => import(new URL(m, staticUrl))));
 
+    // Return a function that waits for a set of promises before invoking a
+    // function. The current script is passed as the first argument.
+    tdoc.when = (...args) => {
+        let ready = Promise.all(args.slice(0, -1));
+        const fn = args.at(-1);
+        return async (...args) => {
+            let script = document.currentScript;
+            await ready;
+            return await fn(script, ...args);
+        };
+    };
+
     // Set data-* attributes on the <html> tag.
     Object.assign(document.documentElement.dataset, tdoc.html_data);
 
@@ -38,19 +50,19 @@
     };
 
     // Enable origin trials
-    function registerOriginTrial(token) {
+    function enableOriginTrial(token) {
         const meta = document.createElement('meta');
         meta.httpEquiv = 'origin-trial';
         meta.content = token;
         document.head.append(meta);
     }
     // https://developer.chrome.com/origintrials/#/view_trial/1603844417297317889
-    registerOriginTrial(`\
+    enableOriginTrial(`\
 Ao6LvHcUOFEV1phI13OFiPm4SiJNS+CbkMZbtiypgmN6RpB63mKB0YnLuLLNdDUCPRtOzT9K8M1VCnX\
 72U5Z1goAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQX\
 NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0NDY3NTIwMH0=`);
     // https://developer.microsoft.com/en-us/microsoft-edge/origin-trials/trials/cea04bbf-b9ff-4ae6-8ea8-454bef2f6e6b
-    registerOriginTrial(`\
+    enableOriginTrial(`\
 A3yGefyVRes8vnz4JYPA6lAUM2jtb0H7pmnljIna6+dq16pv+UkC2ZxrvRTim2QxdgA1LeU2w4rOPAU\
 M9fnLtQIAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQX\
 NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc0MjEzOTg5N30=`);
