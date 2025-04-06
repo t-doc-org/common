@@ -180,7 +180,7 @@ The `micropython` runner only works on devices supporting the
 [WebSerial API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API).
 Currently, this limits the use to
 [Chromium-based browsers](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium)
-(e.g. Chrome, Edge, Brave).
+(e.g. Chrome, Edge).
 ```
 
 The target device must already be programmed with a MicroPython firmware. The
