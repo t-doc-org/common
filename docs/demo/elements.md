@@ -9,14 +9,16 @@ This section configures page metadata with a {rst:dir}`metadata` directive to
 hide solutions by default.
 
 ```{metadata}
-hide-solutions: true
+solutions: hide
 ```
 
 ## Solutions
 
 This section has several {rst:dir}`solution` blocks, and the page is
-configured to hide solutions by default. Click the "Toggle solutions" button in
-the navbar to show or hide them.
+configured to hide solutions by default. Click the "Toggle solutions"
+(<span class="tdoc-icon fa-eye"></span> /
+<span class="tdoc-icon fa-eye-slash"></span>) button in the navbar to show or
+hide them.
 
 ```{solution}
 This solution follows the per-page setting.

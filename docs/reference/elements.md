@@ -100,12 +100,17 @@ combine.
 
 ````{rst:directive} .. solution:: [title]
 This directive adds an admonition of type `solution`. The title defaults to
-"Solution", and the body is collapsed by default. The solutions on a page can be
-shown or hidden by clicking the "Toggle solutions" button in the navbar.
+"Solution", and the body is collapsed by default.
 
-By default, solutions are shown when loading the page. The default can be
-changed by setting `hide-solutions: true` in the
-[document metadata](#document-metadata).
+The `solutions:` key in the [document metadata](#document-metadata) controls how
+solutions are displayed.
+
+- `show` (default): Solutions are shown on the page.
+- `hide`: Solutions are hidden when the page loads. They can be shown or hidden
+  by clicking the "Toggle solutions" (<span class="tdoc-icon fa-eye"></span> /
+  <span class="tdoc-icon fa-eye-slash"></span>) button in the navbar.
+- `remove`: Solutions are removed from the page altogether. When using the local
+  server, this option behaves like `solutions: hide`.
 
 {.rubric}
 Options
@@ -122,8 +127,8 @@ A reference target for the admonition.
 When set, the admonition is expanded by default.
 ```
 ```{rst:directive:option} show
-When set, the admonition is always shown, even if solutions are hidden via the
-toggle button.
+When set, the admonition is always shown, even if solutions are hidden or
+removed.
 ```
 ````
 
