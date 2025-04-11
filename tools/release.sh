@@ -14,6 +14,8 @@ echo "Version:  ${version}"
 echo "Previous: ${previous}"
 echo
 hg -R "${common}" log --graph --rev="${previous}:tip"
+echo
+hg -R "${common}" diff
 
 echo
 read -r -p "Create release? " reply
