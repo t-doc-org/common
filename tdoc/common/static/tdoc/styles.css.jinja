@@ -4,12 +4,7 @@
 .hidden:not(#¶) {
     display: none;
 }
-section.hidden-heading:not(#¶) > h1:first-child,
-section.hidden-heading:not(#¶) > h2:first-child,
-section.hidden-heading:not(#¶) > h3:first-child,
-section.hidden-heading:not(#¶) > h4:first-child,
-section.hidden-heading:not(#¶) > h5:first-child,
-section.hidden-heading:not(#¶) > h6:first-child {
+section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
     display: none;
 }
 .line-height-normal:not(#¶) .highlight pre {
@@ -135,46 +130,33 @@ div.highlight pre > .linenos::before {
 }
 
 /* Icons */
-span.tdoc[class^=fa-],
-span.tdoc[class*=" fa-"],
-span[class^=tdoc-][class*=" fa-"],
-span[class*=" tdoc-"][class^=fa-],
-span[class*=" tdoc-"][class*=" fa-"] {
+span:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
+                                                     [class*=" fa-"]) {
     font: var(--fa-font-solid);
 }
 
 /* Buttons */
-button.tdoc,
-button[class^=tdoc-],
-button[class*=" tdoc-"] {
+button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
     border: 1px solid var(--pst-color-border);
     border-radius: 0.25rem;
     background-color: var(--pst-color-surface);
     transition: background-color 0.3s;
 }
-button.tdoc:not([disabled]),
-button[class^=tdoc-]:not([disabled]),
-button[class*=" tdoc-"]:not([disabled]) {
+button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):not([disabled]) {
     color: var(--pst-color-text-muted);
 }
-button.tdoc:hover:not([disabled]),
-button[class^=tdoc-]:hover:not([disabled]),
-button[class*=" tdoc-"]:hover:not([disabled]) {
+button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):not([disabled]):hover {
     background-color: var(--pst-color-border);
 }
-button.tdoc[class*=" fa-"],
-button.tdoc[class^=fa-],
-button[class^=tdoc-][class*=" fa-"],
-button[class*=" tdoc-"][class^=fa-],
-button[class*=" tdoc-"][class*=" fa-"] {
+button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
+                                                       [class*=" fa-"]) {
     width: 1.8rem;
     height: 1.8rem;
     font: var(--fa-font-solid);
 }
 
 /* Inputs */
-input[class^=tdoc-],
-input[class*=" tdoc-"] {
+input:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline: 2px;
@@ -213,7 +195,6 @@ div.tdoc-quizz > .input > input {
     padding-inline-start: 2px;
     padding-inline-end: 2rem;
 }
-div.tdoc-quizz > .input::before,
 div.tdoc-quizz > .input::before {
     position: absolute;
     right: 2.4rem;
@@ -398,8 +379,7 @@ div.tdoc-exec-output.tdoc-fullscreen > iframe {
 }
 
 /* Editor */
-div.tdoc-exec[data-tdoc-editor] div.highlight pre,
-div.tdoc-exec[data-tdoc-editor] div.highlight button.copybtn {
+div.tdoc-exec[data-tdoc-editor] div.highlight :is(pre, button.copybtn) {
     display: none;
 }
 div.tdoc-exec[data-tdoc-editor] div.cm-editor {
@@ -420,8 +400,7 @@ html[data-theme=dark] div.cm-editor {
 }
 
 /* Execution controls */
-div.tdoc-exec[class^=highlight-],
-div.tdoc-exec[class*=" highlight-"] {
+div.tdoc-exec:is([class^=highlight-], [class*=" highlight-"]) {
     flex-direction: row;
     column-gap: 0.3rem;
 }
@@ -474,8 +453,7 @@ div.tdoc-exec div.tdoc-exec-controls {
     padding-left: 0.5rem;
     cursor: pointer;
 }
-.dropdown-menu .btn__icon-container.tdoc[class^=fa-],
-.dropdown-menu .btn__icon-container.tdoc[class*=" fa-"] {
+.dropdown-menu .btn__icon-container.tdoc:is([class^=fa-], [class*=" fa-"]) {
     font: var(--fa-font-solid);
     display: inline-flex;
     width: 1.7rem;
@@ -550,7 +528,8 @@ code.literal.literal.literal {
 }
 
 /* Reduce the bottom margin of directive definition list options. */
-dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary, .simple):not(._) {
+dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
+              .simple):not(.¶) {
     margin-bottom: 1rem;
 }
 
