@@ -19,6 +19,7 @@ import sys
 import threading
 import time
 from urllib import parse
+import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
 from . import __project__, __version__, store, util, wsgi
@@ -69,6 +70,8 @@ def main(argv, stdin, stdout, stderr):
         default=1.0,
         help="The interval in seconds at which to check for source changes "
              "(default: %(default)s).")
+    arg('--open', action='store_true', dest='open',
+        help="Open the site in a browser tab after the first build completes.")
     arg('--port', metavar='PORT', type=int, dest='port', default=8000,
         help="The port to bind the server to (default: %(default)s).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
@@ -221,6 +224,7 @@ class Application:
         self.returncode = 0
         self.conn_count = -1
         self.idle_start = 0
+        self.opened = False
         self.build_mtime = None
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
@@ -337,6 +341,9 @@ class Application:
         o = self.cfg.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
         o.flush()
+        if self.cfg.open and not self.opened:
+            self.opened = True
+            webbrowser.open_new_tab(f'http://{host}:{port}/')
         if sys.prefix == sys.base_prefix: return
 
         # Running in a venv; check for an upgrade marker.
