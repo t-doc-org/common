@@ -5,7 +5,7 @@
 set -o errexit -o pipefail -o nounset
 shopt -s nullglob
 
-common="$(realpath "$(dirname $0)/..")"
+common="$(realpath "$(dirname "$0")/..")"
 src="${common}/run.py"
 for dest in "${common}/../"*"/run.py"; do
     [[ "${src}" -ef "${dest}" ]] && continue
