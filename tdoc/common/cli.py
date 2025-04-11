@@ -285,6 +285,7 @@ class Application:
                 build_mtime = mtime
             else:
                 self.remove(self.build_dir(mtime))
+            self.print_upgrade()
             prev = time.time_ns()
         if build_mtime is not None: self.remove(self.build_dir(build_mtime))
 
@@ -344,9 +345,10 @@ class Application:
         if self.cfg.open and not self.opened:
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
-        if sys.prefix == sys.base_prefix: return
 
-        # Running in a venv; check for an upgrade marker.
+    def print_upgrade(self):
+        if sys.prefix == sys.base_prefix: return  # Not running in a venv
+        o = self.cfg.stdout
         try:
             marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
             cur, new = marker.read_text().split(' ')[:2]
