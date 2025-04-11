@@ -83,7 +83,7 @@ the archives themselves.
                             out.write(f" ({url})")
                         out.write("\n")
                 try:
-                    license = (root / 'LICENSE').read_text().strip()
+                    license = (root / 'LICENSE').read_text('utf-8').strip()
                 except OSError:
                     pass
                 else:

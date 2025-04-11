@@ -351,7 +351,7 @@ class Application:
         o = self.cfg.stdout
         try:
             marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
-            cur, new = marker.read_text().split(' ')[:2]
+            cur, new = marker.read_text('utf-8').split(' ')[:2]
             if cur == new: return
             o.write(f"""\
 {o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
