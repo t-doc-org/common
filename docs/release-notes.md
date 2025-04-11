@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-40)=
+## 0.40 *(2025-04-11)*
+
+- Added a metadata setting to remove the content of {rst:dir}`solution`
+  directives from the output.
+- Added an option to open the site in a browser when running the local server.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.39...0.40)
+
 (release-0-39)=
 ## 0.39 *(2025-03-20)*
 
