@@ -19,7 +19,7 @@ import venv
 VERSION = ''
 
 package = 't-doc-common'
-default_command = ['tdoc', 'serve']
+default_command = ['tdoc', 'serve', '--open']
 
 
 def main(argv, stdin, stdout, stderr):
