@@ -13,14 +13,7 @@ import subprocess
 import sys
 import threading
 
-# TODO: Auto-detect from directory structure, like in update-run-py.sh
-repos = {
-    'ai-teaching': 'https://github.com/t-doc-org/ai-teaching',
-    'common': 'https://github.com/t-doc-org/common',
-    'informatique': 'https://github.com/t-doc-org/informatique',
-    'janm': 'https://github.com/t-doc-org/janm',
-    't-doc-org.github.io': 'https://github.com/t-doc-org/t-doc-org.github.io',
-}
+github_org = 'https://github.com/t-doc-org'
 
 
 class Error(Exception): pass
@@ -30,6 +23,12 @@ def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve().parent
     os.chdir(base)
     tests = base / 'tmp' / 'tests'
+
+    # Find repository checkouts.
+    repos = {}
+    for d in base.parent.iterdir():
+        if (d / 'run.py').exists() and (d / 'docs' / 'conf.py').exists():
+            repos[d.name] = f'{github_org}/{d.name}'
 
     lock = threading.Lock()
     def write(text):
