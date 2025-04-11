@@ -12,9 +12,8 @@ import shutil
 import subprocess
 import sys
 import threading
-import webbrowser
 
-
+# TODO: Auto-detect from directory structure, like in update-run-py.sh
 repos = {
     'ai-teaching': 'https://github.com/t-doc-org/ai-teaching',
     'common': 'https://github.com/t-doc-org/common',
@@ -125,7 +124,7 @@ def run_tests(tests, repo, url, port, wheel, write):
     # Run the local server, wait for it to serve or exit.
     write(f"{repo}: Running local server\n")
     p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
-             '--exit-on-idle=2', f'--port={port}', wait=False)
+             '--exit-on-idle=2', '--open', f'--port={port}', wait=False)
     try:
         out = io.StringIO()
         for line in p.stdout:
@@ -135,7 +134,6 @@ def run_tests(tests, repo, url, port, wheel, write):
             out.write(line)
             if (m := serving_re.match(line)) is None: continue
             write(f"{repo}: {line}")
-            webbrowser.open(m.group(1))
             out = None
     finally:
         write(f"{repo}: Local server terminated\n")
