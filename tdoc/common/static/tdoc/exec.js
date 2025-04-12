@@ -347,7 +347,7 @@ class SectionedOutput {
     lineInput(name, prompt, onSend) {
         const div = this.input(name, prompt);
         const input = div.appendChild(elmt`\
-<input class="input" autocapitalize="off" autocomplete="off"\
+<input class="input" type="text" autocapitalize="off" autocomplete="off"\
  autocorrect="off" spellcheck="false">`);
         const btn = div.appendChild(elmt`\
 <button class="tdoc-send" title="Send input (Enter)">Send</button>`);

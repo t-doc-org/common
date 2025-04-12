@@ -25,7 +25,7 @@ export function question(node, opts, check) {
 <div class="tdoc-quizz">\
 <div class="prompt"></div>\
 <div class="input">\
-<input autocapitalize="off" autocomplete="off" autocorrect="off"\
+<input type="text" autocapitalize="off" autocomplete="off" autocorrect="off"\
  spellcheck="false"><button class="tdoc-check fa-check"></button></div>\
 <div class="hint hide"></div>\
 </div>`;

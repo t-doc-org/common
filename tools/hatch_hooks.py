@@ -63,8 +63,9 @@ the archives themselves.
                     continue
                 out.write(f"\n---\n\nName: {pkg['name']}\n"
                           f"Version: {pkg['version']}\n"
-                          f"License: {pkg['license']}\n"
-                          f"Description: {pkg['description']}\n")
+                          f"License: {pkg['license']}\n")
+                if desc := pkg.get('description'):
+                    out.write(f"Description: {desc}\n")
                 if repo := pkg.get('repository'):
                     if isinstance(repo, str):
                         out.write(f"Repository: {repo}\n")
@@ -102,6 +103,7 @@ class BuildHook(BuildHookInterface, HookMixin):
 
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
+        self.copytree_node('@drauu/core/dist', 'drauu', globs=['*.mjs'])
         self.copytree_node('mathjax/es5', 'mathjax')
         self.copytree_node('polyscript/dist', 'polyscript', globs=[
             '*.js', '*.js.map',

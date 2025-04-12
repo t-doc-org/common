@@ -74,6 +74,7 @@ def setup(app):
 
     app.connect('config-inited', on_config_inited)
     app.connect('html-page-context', on_html_page_context)
+    app.connect('html-page-context', add_draw_button, priority=500.6)
     if build_tag(app) is not None:
         app.connect('html-page-context', add_reload_js)
         app.connect('html-page-context', add_terminate_button, priority=500.4)
@@ -128,6 +129,16 @@ def on_html_page_context(app, page, template, context, doctree):
     app.add_js_file('tdoc/early.js', priority=1,
                     scope=context['pathto']('', resource=True))
     app.add_js_file('tdoc/load.js', type='module')
+
+
+def add_draw_button(app, page, template, context, doctree):
+    if doctree is None: return
+    context["header_buttons"].append({
+        'type': 'javascript',
+        'javascript': 'tdocDraw()',
+        'tooltip': _("Draw"),
+        'label': 'draw',
+    })
 
 
 def add_reload_js(app, page, template, context, doctree):

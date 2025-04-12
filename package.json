@@ -13,6 +13,7 @@
     "@codemirror/state": "^6.5.1",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.36.2",
+    "@drauu/core": "^0.4.3",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@sqlite.org/sqlite-wasm": "^3.48.0-build4",
     "mathjax": "^3.2.2",
