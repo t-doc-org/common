@@ -425,13 +425,9 @@ Release notes: <https://t-doc.org/common/release-notes.html\
             yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
         t = parse.parse_qs(env.get('QUERY_STRING', '')).get('t', [None])[0]
         # Send padding back at regular intervals to allow detecting when the
-        # client closes the connection (causes a BrokenPipeError). Since the
-        # content length is needed upfront, a fixed size is returned, and
-        # the request is terminated if the padding exceeds the available space.
-        size = 600
+        # client closes the connection (causes a BrokenPipeError).
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', 'text/plain; charset=utf-8'),
-            ('Content-Length', str(size)),
         ])
         if method == HTTPMethod.HEAD: return
         with self.lock:
@@ -439,16 +435,12 @@ Release notes: <https://t-doc.org/common/release-notes.html\
             self.conn_count += 1
             try:
                 while ((mtime := self.build_mtime) is None
-                       or t == build_tag(mtime)) and size > 0:
-                    if self.lock.wait(timeout=1): continue
-                    yield b' '
-                    size -= 1
+                       or build_tag(mtime) == t):
+                    if not self.lock.wait(timeout=0.5): yield b' '
             finally:
                 self.conn_count -= 1
                 if self.conn_count == 0: self.idle_start = time.time_ns()
-        tag = build_tag(mtime).encode('utf-8')
-        if len(tag) > size: tag = b''  # Not enough remaining capacity
-        yield b' ' * (size - len(tag)) + tag
+        yield build_tag(mtime).encode('utf-8')
 
     def handle_terminate(self, env, respond):
         if env['REQUEST_METHOD'] != HTTPMethod.POST:

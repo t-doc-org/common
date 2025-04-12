@@ -3,6 +3,7 @@
 
 const build = tdoc['build'];
 console.info(`[t-doc] Build tag: ${build}`);
+const dec = new TextDecoder();
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -14,7 +15,17 @@ async function reloadOnTagChange() {
             const resp = await fetch(
                 `${document.location.origin}/*build?t=${build}`);
             if (resp.ok) {
-                const tag = (await resp.text()).trim();
+                let tag = '';
+                const reader = resp.body.getReader();
+                try {
+                    for (;;) {
+                      const {value, done} = await reader.read();
+                      tag += dec.decode(value).trim();
+                      if (done) break;
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
                 if (tag === '') continue;
                 if (tag !== build) location.reload();
             }
