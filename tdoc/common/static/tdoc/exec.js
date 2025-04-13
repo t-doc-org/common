@@ -56,6 +56,8 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
+// TODO: Migrate to prefix `tdoc:${rootUrl.pathname}:editor:`, migrating
+//       existing content
 const editorPrefix = `tdoc:editor:${rootUrl.pathname}:`;
 
 // A base class for {exec} block handlers.
