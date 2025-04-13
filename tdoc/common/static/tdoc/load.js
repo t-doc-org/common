@@ -59,7 +59,6 @@ tdoc.draw = () => {
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
     drawing = createDrauu({el: drawingSvg});
     setState({});
-    // TODO: Don't capture 'keydown' events on window
     // TODO: Use bootstrap tooltips instead of title=
     const toolbar = qs(document, '.header-article-items__start')
         .appendChild(elmt`\
