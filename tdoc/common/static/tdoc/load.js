@@ -27,15 +27,19 @@ domLoaded.then(() => {
 
 
 // Handle the "draw" button.
-let drawing;
+let drawing, drawingSvg;
 globalThis.tdocDraw = () => {
     const ds = document.documentElement.dataset;
     if (ds.tdocDraw !== undefined) {
         delete ds.tdocDraw;
+        drawing.unmount();
         return;
     }
     ds.tdocDraw = '';
-    if (drawing) return;
+    if (drawing) {
+        drawing.mount(drawingSvg);
+        return;
+    }
 
     const markerFact = 8;
     function brushSize() {
@@ -53,14 +57,13 @@ globalThis.tdocDraw = () => {
         };
     }
 
-    const svg = qs(document, '.bd-content').appendChild(elmt`\
+    drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
     drawing = createDrauu({
-        el: svg,
+        el: drawingSvg,
         brush: {mode: 'stylus', color: `#ff0000ff`, size: 3},
     });
-    // TODO: Use mount() / unmount() in addition to data-tdoc-drawing
     // TODO: Don't capture 'keydown' events on window
     // TODO: Use bootstrap tooltips instead of title=
     const toolbar = qs(document, '.header-article-items__start')
