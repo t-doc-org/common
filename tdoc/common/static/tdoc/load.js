@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, elmt, on, qs, qsa, rgb2hex} from './core.js';
+import {domLoaded, elmt, Stored, on, qs, qsa, rgb2hex} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -27,10 +27,8 @@ domLoaded.then(() => {
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
-const drawState = {
-    tool: 'stylus', eraser: false,
-    size: 3, color: '#ff0000', marker: false,
-};
+const drawState = new Stored('drawState', {});
+drawState.value.eraser = false;
 globalThis.tdocDraw = () => {
     const ds = document.documentElement.dataset;
     if (ds.tdocDraw !== undefined) {
@@ -45,14 +43,15 @@ globalThis.tdocDraw = () => {
     }
 
     function setState(opts) {
-        Object.assign(drawState, opts);
-        const mode = drawState.eraser ? 'eraseLine' :
-                     drawState.tool === 'arrow' ? 'line' : drawState.tool;
+        const st = drawState.value;
+        Object.assign(st, opts);
+        drawState.store();
+        const mode = st.eraser ? 'eraseLine' :
+                     st.tool === 'arrow' ? 'line' : st.tool;
         if (drawing.mode !== mode) drawing.mode = mode;
-        drawing.brush.arrowEnd = drawState.tool === 'arrow';
-        drawing.brush.size = drawState.size * (drawState.marker ? 8 : 1);
-        drawing.brush.color = drawState.color
-                              + (drawState.marker ? '40' : 'ff');
+        drawing.brush.arrowEnd = st.tool === 'arrow';
+        drawing.brush.size = st.size * (st.marker ? 8 : 1);
+        drawing.brush.color = st.color + (st.marker ? '40' : 'ff');
     }
 
     drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
@@ -83,10 +82,10 @@ globalThis.tdocDraw = () => {
 </ul>\
 </div>\
 <input type="checkbox" name="eraser" class="btn fa-eraser"\
- data-mode="eraseLine" title="Eraser">\
+ ${drawState.value.eraser ? 'checked="checked" ' : ''}title="Eraser">\
 <button name="clear" class="btn fa-trash" title="Clear"></button>\
 <input class="tdoc-size" type="range" min="1" max="8" step="1"\
- value="${drawState.size}" title="Stroke width">\
+ title="Stroke width">\
 <div class="tdoc-color dropdown-center">\
 <button class="btn fa-square" title="Color" data-bs-toggle="dropdown"></button>\
 <ul class="dropdown-menu">\
@@ -98,36 +97,56 @@ globalThis.tdocDraw = () => {
 <li><a class="dropdown-item fa-square" style="color: #f0f000;"></a></li>\
 </ul>\
 </div>\
-<input type="checkbox" name="marker" class="btn fa-marker" title="Marker">\
+<input type="checkbox" name="marker" class="btn fa-marker"\
+ ${drawState.value.marker ? 'checked="checked" ' : ''}title="Marker">\
 </div>`);
-    const toolButton = qs(toolbar, '.tdoc-tool button');
+
+    const toolBtn = qs(toolbar, '.tdoc-tool button');
     for (const el of qsa(toolbar, '.tdoc-tool .dropdown-item')) {
         const tool = el.dataset.tool, icon = el.classList[1];
-        if (drawState.tool === tool) toolButton.classList.add(icon);
+        if (drawState.value.tool === tool) toolBtn.classList.add(icon);
         el.addEventListener('click', () => {
-            toolButton.classList.remove(toolButton.classList[1]);
-            toolButton.classList.add(icon);
+            toolBtn.classList.remove(toolBtn.classList[1]);
+            toolBtn.classList.add(icon);
             setState({tool});
         });
     }
+    if (toolBtn.classList[1] === undefined) {
+        setState({tool: 'stylus'});
+        toolBtn.classList.add('fa-paintbrush');
+    }
+
     qs(toolbar, '[name=eraser]').addEventListener('click', e => {
         setState({eraser: e.target.checked});
     });
     qs(toolbar, '[name=clear]').addEventListener('click', () => {
         drawing.clear();
     });
-    qs(toolbar, '.tdoc-size').addEventListener('input', e => {
+
+    const sizeSlider = qs(toolbar, '.tdoc-size');
+    if (!(drawState.value.size && +sizeSlider.min <= drawState.value.size
+            && drawState.value.size <= +sizeSlider.max)) {
+        setState({size: 3});
+    }
+    sizeSlider.value = drawState.value.size;
+    sizeSlider.addEventListener('input', e => {
         setState({size: +e.target.value});
     });
-    const colorButton = qs(toolbar, '.tdoc-color button');
+
+    const colorBtn = qs(toolbar, '.tdoc-color button');
     for (const el of qsa(toolbar, '.tdoc-color .dropdown-item')) {
         const color = rgb2hex(el.style.color);
-        if (drawState.color === color) colorButton.style.color = color;
+        if (drawState.value.color === color) colorBtn.style.color = color;
         el.addEventListener('click', () => {
-            colorButton.style.color = color;
+            colorBtn.style.color = color;
             setState({color});
         });
     }
+    if (!colorBtn.style.color) {
+        setState({color: '#ff0000'});
+        colorBtn.style.color = drawState.value.color;
+    }
+
     qs(toolbar, '[name=marker]').addEventListener('click', e => {
         setState({marker: e.target.checked});
     });

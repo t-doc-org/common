@@ -5,7 +5,7 @@
 export const enc = new TextEncoder();
 export const dec = new TextDecoder();
 
-// The URL of the root of the book.
+// The URL of the root of the site.
 export const rootUrl = new URL('../..', import.meta.url);
 
 // Resolves when the DOM content has loaded and deferred scripts have executed.
@@ -328,6 +328,20 @@ export class FifoBuffer {
     toString() {
         return this.data.subarray(this.begin, this.end).toString();
     }
+}
+
+// A value that is stored as JSON in local storage, namespaced to the site.
+export class Stored {
+    constructor(name, def) {
+        this.name = name;
+        const v = localStorage.getItem(this.key);
+        this._value = v !== null ? JSON.parse(v) : def;
+    }
+
+    get key() { return `tdoc:${rootUrl.pathname}:${this.name}`; }
+    get value() { return this._value; }
+    set value(v) { this._value = v; this.store(); }
+    store() { localStorage.setItem(this.key, JSON.stringify(this._value)); }
 }
 
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all
