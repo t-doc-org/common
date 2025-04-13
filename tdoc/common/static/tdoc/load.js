@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, elmt, Stored, on, qs, qsa, rgb2hex} from './core.js';
+import {addTooltip, domLoaded, elmt, Stored, on, qs, qsa, rgb2hex} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -59,34 +59,35 @@ tdoc.draw = () => {
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
     drawing = createDrauu({el: drawingSvg});
     setState({});
-    // TODO: Use bootstrap tooltips instead of title=
     const toolbar = qs(document, '.header-article-items__start')
         .appendChild(elmt`\
 <div class="header-article-item tdoc-draw-toolbar">\
 <div class="tdoc-tool dropdown-center">\
-<button class="btn" title="Tool" data-bs-toggle="dropdown"></button>\
+<button class="btn" data-bs-toggle="dropdown"></button>\
 <ul class="dropdown-menu">\
 <li><a class="dropdown-item fa-paintbrush" data-tool="stylus"\
- title="Brush"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Brush"></a></li>\
 <li><a class="dropdown-item fa-pencil" data-tool="draw"\
- title="Pencil"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Pencil"></a></li>\
 <li><a class="dropdown-item fa-pen-ruler" data-tool="line"\
- title="Line"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Line"></a></li>\
 <li><a class="dropdown-item fa-arrow-right" data-tool="arrow"\
- title="Arrow"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Arrow"></a></li>\
 <li><a class="dropdown-item fa-square" data-tool="rectangle"\
- title="Rectangle"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Rectangle"></a></li>\
 <li><a class="dropdown-item fa-circle" data-tool="ellipse"\
- title="Ellipse"></a></li>\
+ data-bs-toggle="tooltip" data-bs-title="Ellipse"></a></li>\
 </ul>\
 </div>\
 <input type="checkbox" name="eraser" class="btn fa-eraser"\
- ${drawState.value.eraser ? 'checked="checked" ' : ''}title="Eraser">\
-<button name="clear" class="btn fa-trash" title="Clear"></button>\
+ data-bs-toggle="tooltip" data-bs-title="Eraser"\
+${drawState.value.eraser ? ' checked="checked"' : ''}>\
+<button name="clear" class="btn fa-trash" data-bs-toggle="tooltip"\
+ data-bs-title="Clear"></button>\
 <input class="tdoc-size" type="range" min="1" max="8" step="1"\
- title="Stroke width">\
+ data-bs-toggle="tooltip" data-bs-title="Stroke width">\
 <div class="tdoc-color dropdown-center">\
-<button class="btn fa-square" title="Color" data-bs-toggle="dropdown"></button>\
+<button class="btn fa-square" data-bs-toggle="dropdown"></button>\
 <ul class="dropdown-menu">\
 <li><a class="dropdown-item fa-square" style="color: #ff0000;"></a></li>\
 <li><a class="dropdown-item fa-square" style="color: #008000;"></a></li>\
@@ -97,8 +98,14 @@ tdoc.draw = () => {
 </ul>\
 </div>\
 <input type="checkbox" name="marker" class="btn fa-marker"\
- ${drawState.value.marker ? 'checked="checked" ' : ''}title="Marker">\
+ data-bs-toggle="tooltip" data-bs-title="Marker"\
+${drawState.value.marker ? ' checked="checked"' : ''}>\
 </div>`);
+
+    for (const el of qsa(toolbar, '[data-bs-toggle=tooltip]')) {
+        addTooltip(el, {placement: el.classList.contains('dropdown-item') ?
+                                   'right' : 'bottom'});
+    }
 
     const toolBtn = qs(toolbar, '.tdoc-tool button');
     for (const el of qsa(toolbar, '.tdoc-tool .dropdown-item')) {

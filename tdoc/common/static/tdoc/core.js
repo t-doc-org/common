@@ -93,6 +93,15 @@ export function isVisible(el) {
            rect.right <= document.documentElement.clientWidth;
 }
 
+// Add a tooltip instance to an element.
+export function addTooltip(el, opts) {
+    return new bootstrap.Tooltip(el, {
+        delay: {show: 500, hide: 100},
+        trigger: 'hover',
+        ...opts,
+    });
+}
+
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 export function inlineMath(value) {
