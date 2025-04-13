@@ -29,7 +29,7 @@ domLoaded.then(() => {
 let drawing, drawingSvg;
 const drawState = new Stored('drawState', {});
 drawState.value.eraser = false;
-globalThis.tdocDraw = () => {
+tdoc.draw = () => {
     const ds = document.documentElement.dataset;
     if (ds.tdocDraw !== undefined) {
         drawing.unmount();
@@ -153,13 +153,13 @@ globalThis.tdocDraw = () => {
 };
 
 // Handle the "terminate server" button.
-globalThis.tdocTerminate = async ret => {
+tdoc.terminateServer = async ret => {
     await fetch(`${location.origin}/*terminate?r=${ret ?? 0}`,
                 {method: 'POST', cache: 'no-cache', referrer: ''});
 };
 
 // Handle the "toggle solutions" button.
-globalThis.tdocToggleSolutions = () => {
+tdoc.toggleSolutions = () => {
     const ds = document.documentElement.dataset;
     if (ds.tdocSolutions === 'hide') {
         delete ds.tdocSolutions;

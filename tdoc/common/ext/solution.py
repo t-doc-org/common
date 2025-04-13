@@ -82,7 +82,7 @@ def add_header_button(app, page, template, context, doctree):
                for sol in doctree.findall(solution)): return
     context["header_buttons"].append({
         'type': 'javascript',
-        'javascript': 'tdocToggleSolutions()',
+        'javascript': 'tdoc.toggleSolutions()',
         'tooltip': _("Toggle solutions"),
         'label': 'toggle-solutions',
     })

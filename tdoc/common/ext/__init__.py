@@ -135,7 +135,7 @@ def add_draw_button(app, page, template, context, doctree):
     if doctree is None: return
     context["header_buttons"].append({
         'type': 'javascript',
-        'javascript': 'tdocDraw()',
+        'javascript': 'tdoc.draw()',
         'tooltip': _("Draw"),
         'label': 'draw',
     })
@@ -149,7 +149,7 @@ def add_terminate_button(app, page, template, context, doctree):
     if doctree is None: return
     context["header_buttons"].append({
         'type': 'javascript',
-        'javascript': 'tdocTerminate()',
+        'javascript': 'tdoc.terminateServer()',
         'tooltip': _("Terminate the local server"),
         'label': 'terminate',
     })
