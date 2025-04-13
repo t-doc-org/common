@@ -25,6 +25,22 @@ domLoaded.then(() => {
     }
 });
 
+// Handle the "terminate server" button.
+tdoc.terminateServer = async ret => {
+    await fetch(`${location.origin}/*terminate?r=${ret ?? 0}`,
+                {method: 'POST', cache: 'no-cache', referrer: ''});
+};
+
+// Handle the "toggle solutions" button.
+tdoc.toggleSolutions = () => {
+    const ds = document.documentElement.dataset;
+    if (ds.tdocSolutions === 'hide') {
+        delete ds.tdocSolutions;
+    } else {
+        ds.tdocSolutions = 'hide';
+    }
+};
+
 // Handle the "draw" button.
 let drawing, drawingSvg;
 const drawState = new Stored('drawState', {});
@@ -156,20 +172,4 @@ ${drawState.value.marker ? ' checked="checked"' : ''}>\
     qs(toolbar, '[name=marker]').addEventListener('click', e => {
         setState({marker: e.target.checked});
     });
-};
-
-// Handle the "terminate server" button.
-tdoc.terminateServer = async ret => {
-    await fetch(`${location.origin}/*terminate?r=${ret ?? 0}`,
-                {method: 'POST', cache: 'no-cache', referrer: ''});
-};
-
-// Handle the "toggle solutions" button.
-tdoc.toggleSolutions = () => {
-    const ds = document.documentElement.dataset;
-    if (ds.tdocSolutions === 'hide') {
-        delete ds.tdocSolutions;
-    } else {
-        ds.tdocSolutions = 'hide';
-    }
 };
