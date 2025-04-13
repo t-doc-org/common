@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-41)=
+## 0.41 *(2025-04-13)*
+
+- Added functionality to draw over page content.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.40...0.41)
+
 (release-0-40)=
 ## 0.40 *(2025-04-11)*
 
