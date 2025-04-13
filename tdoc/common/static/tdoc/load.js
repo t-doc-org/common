@@ -31,8 +31,8 @@ let drawing, drawingSvg;
 globalThis.tdocDraw = () => {
     const ds = document.documentElement.dataset;
     if (ds.tdocDraw !== undefined) {
-        delete ds.tdocDraw;
         drawing.unmount();
+        delete ds.tdocDraw;
         return;
     }
     ds.tdocDraw = '';
@@ -60,6 +60,7 @@ globalThis.tdocDraw = () => {
     drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
+    drawingSvg.addEventListener('contextmenu', e => e.preventDefault());
     drawing = createDrauu({
         el: drawingSvg,
         brush: {mode: 'stylus', color: `#ff0000ff`, size: 3},
