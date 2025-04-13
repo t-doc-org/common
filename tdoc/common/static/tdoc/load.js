@@ -36,37 +36,53 @@ globalThis.tdocDraw = () => {
     }
     ds.tdocDraw = '';
     if (drawing) return;
-    const opacity = 'ff';
+
+    const markerFact = 8;
+    function brushSize() {
+        return drawing.brush.size
+            / (drawing.brush.color.slice(7) !== 'ff' ? markerFact : 1)
+    }
+    function setBrush(opts) {
+        const col = opts.color ?? drawing.brush.color.slice(0, 7);
+        const tr = opts.transparent ?? (drawing.brush.color.slice(7) !== 'ff');
+        const size = opts.size ?? brushSize();
+        drawing.brush = {
+            ...drawing.brush,
+            color: col + (tr ? '40' : 'ff'),
+            size: size * (tr ? markerFact : 1),
+        };
+    }
+
     const svg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
     drawing = createDrauu({
         el: svg,
-        brush: {mode: 'stylus', color: `#ff0000${opacity}`, size: 3},
+        brush: {mode: 'stylus', color: `#ff0000ff`, size: 3},
     });
-    // TODO: Button: transparent
     // TODO: Button: clear
     // TODO: Use mount() / unmount() in addition to data-tdoc-drawing
+    // TODO: Use bootstrap tooltips instead of title=
     // TODO: Don't capture 'keydown' events on window
     const toolbar = qs(document, '.header-article-items__start')
         .appendChild(elmt`\
 <div class="header-article-item tdoc-draw-toolbar">\
-<input type="radio" name="tool" class="tdoc btn fa-pen" data-mode="stylus"\
+<input type="radio" name="tool" class="btn fa-pen" data-mode="stylus"\
  title="Stylus">\
-<input type="radio" name="tool" class="tdoc btn fa-pencil" data-mode="draw"\
+<input type="radio" name="tool" class="btn fa-pencil" data-mode="draw"\
  title="Pencil">\
-<input type="radio" name="tool" class="tdoc btn fa-pen-ruler" data-mode="line"\
+<input type="radio" name="tool" class="btn fa-pen-ruler" data-mode="line"\
  title="Line">\
-<input type="radio" name="tool" class="tdoc btn fa-arrow-right"\
+<input type="radio" name="tool" class="btn fa-arrow-right"\
  data-mode="line" data-arrow="y" title="Arrow">\
-<input type="radio" name="tool" class="tdoc btn fa-square"\
+<input type="radio" name="tool" class="btn fa-square"\
  data-mode="rectangle" title="Rectangle">\
-<input type="radio" name="tool" class="tdoc btn fa-circle" data-mode="ellipse"\
+<input type="radio" name="tool" class="btn fa-circle" data-mode="ellipse"\
  title="Ellipse">\
-<input type="radio" name="tool" class="tdoc btn fa-eraser"\
+<input type="radio" name="tool" class="btn fa-eraser"\
  data-mode="eraseLine" title="Eraser">\
-<input class="tdoc-size" type="range" min="1" max="25" step="0.5"\
- value="${drawing.brush.size}" title="Size">\
+<input class="tdoc-size" type="range" min="1" max="8" step="1"\
+ value="${brushSize()}" title="Size">\
 <div class="tdoc-color dropdown-center">\
 <button class="btn fa-square" title="Color" data-bs-toggle="dropdown"></button>\
 <ul class="dropdown-menu">\
@@ -78,6 +94,7 @@ globalThis.tdocDraw = () => {
 <li><a class="dropdown-item fa-square" style="color: #f0f000;"></a></li>\
 </ul>\
 </div>\
+<input type="checkbox" name="marker" class="btn fa-marker" title="Marker">\
 </div>`);
     const toolBtns = qsa(toolbar, '[name=tool]');
     for (const el of toolBtns) {
@@ -91,8 +108,7 @@ globalThis.tdocDraw = () => {
         });
     }
     qs(toolbar, '.tdoc-size').addEventListener('input', e => {
-        // TODO: Make scale exponential
-        drawing.brush.size = +e.target.value;
+        setBrush({size: +e.target.value});
     });
     const colorButton = qs(toolbar, '.tdoc-color button');
     for (const el of qsa(toolbar, '.tdoc-color .dropdown-item')) {
@@ -102,9 +118,12 @@ globalThis.tdocDraw = () => {
         }
         el.addEventListener('click', () => {
             colorButton.style.color = color;
-            drawing.brush.color = color + opacity;
+            setBrush({color});
         });
     }
+    qs(toolbar, '[name=marker]').addEventListener('click', e => {
+        setBrush({transparent: e.target.checked});
+    });
 };
 
 // Handle the "terminate server" button.

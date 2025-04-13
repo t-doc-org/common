@@ -174,18 +174,18 @@ html[data-tdoc-draw] .article-header-buttons button.btn-draw {
 html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
     display: none;
 }
-.tdoc-draw-toolbar input[type=radio][name=tool] {
+.tdoc-draw-toolbar input:is([type=radio], [type=checkbox]) {
     appearance: none;
     font: var(--fa-font-solid);
     font-size: 1.3rem;
 }
-.tdoc-draw-toolbar input[type=radio][name=tool]:checked {
+.tdoc-draw-toolbar input:is([type=radio], [type=checkbox]):checked {
     background-color: var(--pst-color-border);
 }
 .tdoc-draw-toolbar .tdoc-size {
     margin-left: 0.5rem;
     margin-right: 0.5rem;
-    width: 5rem;
+    width: 3rem;
 }
 .tdoc-draw-toolbar .tdoc-size:focus-visible {
     outline: none;
