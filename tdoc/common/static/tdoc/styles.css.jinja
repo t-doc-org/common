@@ -224,6 +224,11 @@ html[data-tdoc-draw] svg#tdoc-drawing {
     pointer-events: auto;
     touch-action: none;
 }
+@media print {
+    svg#tdoc-drawing {
+        display: none;
+    }
+}
 
 /* Quizz questions */
 div.tdoc-quizz {
