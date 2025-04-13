@@ -174,18 +174,18 @@ html[data-tdoc-draw] .article-header-buttons button.btn-draw {
 html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
     display: none;
 }
-.tdoc-draw-toolbar input:is([type=radio], [type=checkbox]) {
+.tdoc-draw-toolbar input[type=checkbox] {
     appearance: none;
     font: var(--fa-font-solid);
     font-size: 1.3rem;
 }
-.tdoc-draw-toolbar input:is([type=radio], [type=checkbox]):checked {
+.tdoc-draw-toolbar input[type=checkbox]:checked {
     background-color: var(--pst-color-border);
 }
 .tdoc-draw-toolbar .tdoc-size {
     margin-left: 0.5rem;
     margin-right: 0.5rem;
-    width: 3rem;
+    width: 4rem;
 }
 .tdoc-draw-toolbar .tdoc-size:focus-visible {
     outline: none;
@@ -194,14 +194,19 @@ html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
     font: var(--fa-font-solid);
     font-size: 1.3rem;
 }
-.tdoc-draw-toolbar .tdoc-color .dropdown-menu {
+.tdoc-draw-toolbar :is(.tdoc-tool, .tdoc-color) button {
+    width: 2.5rem;
+    justify-content: center;
+}
+.tdoc-draw-toolbar :is(.tdoc-tool, .tdoc-color) .dropdown-menu {
     min-width: 0;
 }
-.tdoc-draw-toolbar .tdoc-color .dropdown-item {
+.tdoc-draw-toolbar :is(.tdoc-tool, .tdoc-color) .dropdown-item {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     font: var(--fa-font-solid);
     font-size: 1.3rem;
+    justify-content: center;
 }
 .bd-content {
     position: relative;
