@@ -34,7 +34,7 @@ blockquote div > p:has(+ p.attribution) {
     margin-bottom: 0;
 }
 
-/* Server termination buggons. */
+/* Server termination buttons. */
 .article-header-buttons button.btn-terminate::before {
     font: var(--fa-font-solid);
     content: '\f52a';
@@ -168,24 +168,40 @@ input[type=text]:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
     font: var(--fa-font-solid);
     content: '\f304';
 }
-html[data-tdoc-draw=active] .article-header-buttons button.btn-draw {
+html[data-tdoc-draw] .article-header-buttons button.btn-draw {
     background-color: var(--pst-color-border);
 }
-.tdoc-draw-toolbar {
-    column-gap: 0.2rem;
-}
-html:not([data-tdoc-draw=active]) .tdoc-draw-toolbar {
+html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
     display: none;
 }
-.tdoc-draw-toolbar button[class^=tdoc-tool-] {
-    border: none;
-    background-color: inherit;
+.tdoc-draw-toolbar input[type=radio][name=tool] {
+    appearance: none;
+    font: var(--fa-font-solid);
+    font-size: 1.3rem;
 }
-.tdoc-draw-toolbar button[class^=tdoc-tool-].active {
-    background-color: var(--pst-color-surface);
+.tdoc-draw-toolbar input[type=radio][name=tool]:checked {
+    background-color: var(--pst-color-border);
 }
 .tdoc-draw-toolbar .tdoc-size {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
     width: 5rem;
+}
+.tdoc-draw-toolbar .tdoc-size:focus-visible {
+    outline: none;
+}
+.tdoc-draw-toolbar button {
+    font: var(--fa-font-solid);
+    font-size: 1.3rem;
+}
+.tdoc-draw-toolbar .tdoc-color .dropdown-menu {
+    min-width: 0;
+}
+.tdoc-draw-toolbar .tdoc-color .dropdown-item {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font: var(--fa-font-solid);
+    font-size: 1.3rem;
 }
 .bd-content {
     position: relative;
@@ -199,7 +215,7 @@ svg#tdoc-drawing {
     z-index: 1000;
     pointer-events: none;
 }
-html[data-tdoc-draw=active] svg#tdoc-drawing {
+html[data-tdoc-draw] svg#tdoc-drawing {
     pointer-events: auto;
 }
 
@@ -536,18 +552,19 @@ div.tdoc-exec div.tdoc-exec-controls {
 }
 
 /* Fix the vertical alignment of navbar icons. */
-.article-header-buttons {
-    align-items: stretch;
-}
-.article-header-buttons > div.dropdown > button {
-    height: 100%;
-}
-.article-header-buttons button.pst-navbar-icon {
-    height: inherit;
-}
 .article-header-buttons .btn__icon-container {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+}
+
+/* Don't open dropdown menus on hover. */
+.bd-header-article .btn:hover + .dropdown-menu:not(.show) {
+    display: none;
+}
+
+/* Add a slight background shading on hover to menu items. */
+.bd-header-article .dropdown-menu .dropdown-item:hover {
+    background-color: var(--bs-dropdown-link-hover-bg);
 }
 
 /* Prevent the wrapper background set by pygments from being visible if the

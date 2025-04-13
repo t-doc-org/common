@@ -154,6 +154,18 @@ export function toRadix(value, radix, length) {
     return s;
 }
 
+// Convert an rgb() or rgba() color to its hex representation.
+export function rgb2hex(value) {
+    const m = value.match(
+        /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+\.?\d*))?\)$/);
+    if (!m) return;
+    let res = m.slice(1, 4).map(v => toRadix(parseFloat(v), 16, 2)).join('');
+    if (m[4] !== undefined) {
+        res += toRadix(Math.round(parseFloat(m[4]) * 255), 16, 2);
+    }
+    return `#${res}`;
+}
+
 const cMinus = '-'.charCodeAt(0), cPlus = '+'.charCodeAt(0);
 const c0 = '0'.charCodeAt(0), cA = 'A'.charCodeAt(0);
 
