@@ -60,10 +60,9 @@ globalThis.tdocDraw = () => {
         el: svg,
         brush: {mode: 'stylus', color: `#ff0000ff`, size: 3},
     });
-    // TODO: Button: clear
     // TODO: Use mount() / unmount() in addition to data-tdoc-drawing
-    // TODO: Use bootstrap tooltips instead of title=
     // TODO: Don't capture 'keydown' events on window
+    // TODO: Use bootstrap tooltips instead of title=
     const toolbar = qs(document, '.header-article-items__start')
         .appendChild(elmt`\
 <div class="header-article-item tdoc-draw-toolbar">\
@@ -81,6 +80,7 @@ globalThis.tdocDraw = () => {
  title="Ellipse">\
 <input type="radio" name="tool" class="btn fa-eraser"\
  data-mode="eraseLine" title="Eraser">\
+<button name="clear" class="btn fa-trash" title="Clear"></button>\
 <input class="tdoc-size" type="range" min="1" max="8" step="1"\
  value="${brushSize()}" title="Size">\
 <div class="tdoc-color dropdown-center">\
@@ -107,6 +107,9 @@ globalThis.tdocDraw = () => {
             drawing.brush.arrowEnd = !!e.target.dataset.arrow;
         });
     }
+    qs(toolbar, '[name=clear]').addEventListener('click', () => {
+        drawing.clear();
+    });
     qs(toolbar, '.tdoc-size').addEventListener('input', e => {
         setBrush({size: +e.target.value});
     });
