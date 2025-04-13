@@ -93,7 +93,9 @@ iframe.tdoc {
 html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
     display: none;
 }
-/* TODO: The icons have different widths, so the button moves when clicked. */
+.article-header-buttons button.btn-toggle-solutions {
+    min-width: 2.7rem;
+}
 .article-header-buttons button.btn-toggle-solutions::before {
     font: var(--fa-font-solid);
     content: '\f070';
@@ -562,7 +564,10 @@ div.tdoc-exec div.tdoc-exec-controls {
     border-bottom: none;
 }
 
-/* Fix the vertical alignment of navbar icons. */
+/* Fix the alignment of navbar icons. */
+.article-header-buttons button {
+    justify-content: center;
+}
 .article-header-buttons .btn__icon-container {
     display: inline-flex;
     align-items: center;
