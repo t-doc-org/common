@@ -78,10 +78,6 @@ globalThis.tdocDraw = () => {
  title="Line">\
 <input type="radio" name="tool" class="btn fa-arrow-right"\
  data-mode="line" data-arrow="y" title="Arrow">\
-<input type="radio" name="tool" class="btn fa-square"\
- data-mode="rectangle" title="Rectangle">\
-<input type="radio" name="tool" class="btn fa-circle" data-mode="ellipse"\
- title="Ellipse">\
 <input type="radio" name="tool" class="btn fa-eraser"\
  data-mode="eraseLine" title="Eraser">\
 <button name="clear" class="btn fa-trash" title="Clear"></button>\
