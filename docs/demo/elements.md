@@ -50,34 +50,82 @@ The helpers in the
 module enable the creation of quizzes as dynamic page elements.
 
 <script>
-async function question(prompt, want) {
-  const node = document.currentScript;
-  const [{html}, {question}] = await tdoc.imports(
-    'tdoc/core.js',
-    'tdoc/quizz.js',
-  );
-  await question(node, prompt, resp => {
-    if (resp === want) return true;
-    return html`\
+'use strict';
+(() => {
+    let core = tdoc.import('tdoc/core.js').then(m => { core = m; });
+    let quizz = tdoc.import('tdoc/quizz.js').then(m => { quizz = m; });
+
+    tdoc.question = tdoc.when(core, quizz, (script, prompt, want) => {
+        return quizz.question(script, prompt, resp => {
+            if (resp === want) return true;
+            return core.html`\
 The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
-  });
-}
+      });
+    });
+
+    tdoc.tableQuizz = tdoc.when(core, quizz, (script, max) => {
+        quizz.genTable(script, (table, row, button) => {
+            // Generate a new random question.
+            const value = Math.floor(Math.random() * (max + 1));
+
+            // Add the row cells.
+            row.appendChild(core.elmt`<td class="text-center">${value}</td>`);
+            const sel = core.qs(row.appendChild(core.elmt`\
+<td class="text-center">\
+<select><option></option><option>odd</option><option>even</option></select>\
+</td>`), 'select');
+            const input = core.qs(row.appendChild(core.elmt`\
+<td>\
+<input type="text" autocapitalize="off" autocomplete="off" autocorrect="off"\
+ spellcheck="false">\
+</td>`), 'input');
+            core.on(input).keydown(e => {
+                if (e.key === 'Enter' && !e.altKey && !e.ctrlKey
+                        && !e.metaKey) {
+                    e.preventDefault();
+                    button.click();
+                }
+            });
+
+            function verify() {
+                const v = sel.value === 'odd' ? true :
+                          sel.value === 'even' ? false : null;
+                let res = v === (value % 2 === 1);
+                sel.classList.toggle('tdoc-bg-bad', !res);
+                const ok = input.value.trim() === (-value).toString();
+                input.classList.toggle('tdoc-bg-bad', !ok);
+                res = res & ok;
+                if (res) core.enable(false, sel, input);
+                return res;
+            }
+
+            return {verify, focus: sel};
+        });
+    });
+})();
 </script>
 
 1.  <script>
     const value = Math.floor(256 * Math.random());
-    question(
+    tdoc.question(
       `Convert \\(${value.toString(2).padStart(8, '0')}_2\\) to decimal.`,
       value.toString());
     </script>
 2.  <script>
-    question(`\
+    tdoc.question(`\
     What is the answer to the ultimate question of life, the universe, and \
     everything? Explain your reasoning in full detail, provide references, and \
     indicate plausible alternatives.`, '42');
     </script>
 3.  The input field of quizz questions without a prompt uses the whole line.
-    <script>question(undefined, "cool");</script>
+    <script>tdoc.question(undefined, "cool");</script>
+
+They also enable creating randomized drill exercises.
+
+| Value | Odd / even | Opposite |
+| :---: | :--------: | :------: |
+
+<script>tdoc.tableQuizz(99);</script>
 
 ## IFrames
 
