@@ -86,6 +86,7 @@ class MicroPythonExecutor extends Executor {
     }
 
     onReady() {
+        if (this.when === 'never') return;
         this.enableInput(false);
         this.setSerial();
         onSerial(this, {
