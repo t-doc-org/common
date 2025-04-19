@@ -5,37 +5,21 @@ import {XWorker} from '../polyscript/index.js';
 import {dec, elmt, focusIfVisible, on, text} from './core.js';
 import {Executor} from './exec.js';
 
-const base = import.meta.resolve('../');
-const files = {}
-for (const [k, v] of Object.entries(tdoc?.exec?.python?.files ?? {})) {
-    files[(new URL(k, base)).toString()] = v;
-}
-files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
-
-const worker = XWorker(import.meta.resolve('./exec-python.py'), {
-    type: 'pyodide',
-    version: import.meta.resolve('../pyodide/pyodide.mjs'),
-    // https://docs.pyscript.net/latest/user-guide/configuration/
-    config: {...tdoc?.exec?.python, files},
-});
-const {promise: ready, resolve: resolve_ready} = Promise.withResolvers();
-worker.sync.ready = msg => {
-    console.info(`[t-doc] ${msg}`);
-    resolve_ready();
-};
-
+let worker;
 const executors = {};
-worker.sync.write = (run_id, ...args) => {
-    const exec = executors[run_id];
-    if (exec) return exec.onWrite(...args);
-};
-worker.sync.input = (run_id, ...args) => {
-    const exec = executors[run_id];
-    if (exec) return exec.onInput(...args);
-};
-worker.sync.render = (run_id, ...args) => {
-    const exec = executors[run_id];
-    if (exec) return exec.onRender(...args);
+const hooks = {
+    write: (run_id, ...args) => {
+        const exec = executors[run_id];
+        if (exec) return exec.onWrite(...args);
+    },
+    input: (run_id, ...args) => {
+        const exec = executors[run_id];
+        if (exec) return exec.onInput(...args);
+    },
+    render: (run_id, ...args) => {
+        const exec = executors[run_id];
+        if (exec) return exec.onRender(...args);
+    },
 };
 
 class PythonExecutor extends Executor {
@@ -43,7 +27,26 @@ class PythonExecutor extends Executor {
     static highlight = 'python';
 
     static async init() {
-        await ready;
+        const base = import.meta.resolve('../');
+        const files = {}
+        for (const [k, v] of Object.entries(tdoc.exec?.python?.files ?? {})) {
+            files[(new URL(k, base)).toString()] = v;
+        }
+        files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
+
+        worker = XWorker(import.meta.resolve('./exec-python.py'), {
+            type: 'pyodide',
+            version: import.meta.resolve('../pyodide/pyodide.mjs'),
+            // https://docs.pyscript.net/latest/user-guide/configuration/
+            config: {...tdoc.exec?.python, files},
+        });
+        const {promise, resolve} = Promise.withResolvers();
+        worker.sync.ready = msg => {
+            console.info(`[t-doc] ${msg}`);
+            resolve();
+        };
+        for (const [k, v] of Object.entries(hooks)) worker.sync[k] = v;
+        await promise;
     }
 
     constructor(node) {
