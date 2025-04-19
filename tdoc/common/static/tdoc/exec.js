@@ -97,7 +97,6 @@ export class Executor {
     constructor(node) {
         this.node = node;
         this.when = node.dataset.tdocWhen;
-        this.origText = Executor.preText(this.node).trim();
     }
 
     // True iff the {exec} block has an editor.
@@ -111,23 +110,25 @@ export class Executor {
 
     // Add an editor to the {exec} block.
     addEditor() {
-        const extensions = [];
+        const exec = this;
+        const extensions = [
+            cmview.ViewPlugin.fromClass(class {
+                update(update) { return exec.onEditorUpdate(update); }
+            }),
+        ];
         if (this.when !== 'never') {
             extensions.push(cmview.keymap.of([
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
-        let doc = this.origText;
+        const preText = Executor.preText(this.node).trimEnd();
+        let doc = preText;
         const key = this.editorKey;
         if (key) {
             const st = localStorage.getItem(key);
             if (st !== null) doc = st;
             this.storeEditor = new RateLimited(5000);
-            const exec = this;
             extensions.push(
-                cmview.ViewPlugin.fromClass(class {
-                    update(update) { return exec.onEditorUpdate(update); }
-                }),
                 cmview.EditorView.domEventObservers({
                     'blur': () => this.storeEditor.flush(),
                 }),
@@ -138,23 +139,37 @@ export class Executor {
             language: this.constructor.highlight,
             parent: qs(this.node, 'div.highlight'),
         });
+        this.origText = view.state.toText(preText);
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
+
+        if (preText !== '' || key) {
+            this.resetEditor = elmt`\
+<button class="fa-rotate-left tdoc-reset-editor"\
+ title="Reset editor content"></button>`;
+            this.resetEditor.disabled = view.state.doc.eq(this.origText);
+            on(this.resetEditor).click(() => this.setEditorText(this.origText));
+        }
     }
 
-    // Called on every editor update.
+    // Handle editor updates.
     onEditorUpdate(update) {
         if (!update.docChanged) return;
+        const doc = update.state.doc;
+        let isOrig;  // Compute isOrig only if necessary
+        if (this.resetEditor) {
+            isOrig = doc.eq(this.origText);
+            this.resetEditor.disabled = isOrig;
+        }
+        if (!this.storeEditor) return;
         for (const tr of update.transactions) {
             if (tr.annotation(storeUpdate)) return;
         }
-        const doc = update.state.doc;
         this.storeEditor.schedule(() => {
-            const txt = doc.toString();
-            if (txt !== this.origText) {
-                localStorage.setItem(this.editorKey, txt);
-            } else {
+            if (isOrig ?? doc.eq(this.origText)) {
                 localStorage.removeItem(this.editorKey);
+            } else {
+                localStorage.setItem(this.editorKey, doc.toString());
             }
         });
     }
@@ -168,13 +183,14 @@ export class Executor {
             changes: {from: 0, to: view.state.doc.length, insert: text},
             annotations,
         }));
+        if (this.resetEditor) {
+            this.resetEditor.disabled = view.state.doc.eq(this.origText);
+        }
     }
 
     // Add controls to the {exec} block.
     addControls(controls) {
-        if (this.editable && this.origText !== '') {
-            controls.appendChild(this.resetEditorControl());
-        }
+        if (this.resetEditor) controls.appendChild(this.resetEditor);
     }
 
     // Create a "Run" control.
@@ -192,15 +208,6 @@ export class Executor {
         const ctrl =
             elmt`<button class="fa-stop tdoc-stop" title="Stop"></button>`;
         on(ctrl).click(() => this.doStop());
-        return ctrl;
-    }
-
-    // Create a "Reset" control.
-    resetEditorControl() {
-        const ctrl = elmt`\
-<button class="fa-rotate-left tdoc-reset-editor"\
- title="Reset editor content"></button>`;
-        on(ctrl).click(() => this.setEditorText(this.origText));
         return ctrl;
     }
 

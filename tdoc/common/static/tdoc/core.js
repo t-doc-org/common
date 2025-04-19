@@ -40,19 +40,16 @@ function interpolateHtml(html, values) {
 }
 
 // Create an DocumentFragment node.
-export function html(html, ...values) {
-    if (typeof html !== 'string') html = interpolateHtml(html, values);
+export function html(tmpl, ...values) {
+    if (typeof tmpl !== 'string') tmpl = interpolateHtml(tmpl, values);
     const el = document.createElement('template');
-    el.innerHTML = html;
+    el.innerHTML = tmpl;
     return el.content;
 }
 
 // Create an Element node.
-export function elmt(html, ...values) {
-    if (typeof html !== 'string') html = interpolateHtml(html, values);
-    const el = document.createElement('template');
-    el.innerHTML = html.trim();
-    return el.content.firstChild;
+export function elmt(tmpl, ...values) {
+    return html(tmpl, ...values).firstElementChild;
 }
 
 // Query a single matching element from a node.
