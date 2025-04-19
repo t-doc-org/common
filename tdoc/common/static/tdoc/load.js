@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {addTooltip, domLoaded, elmt, Stored, on, qs, qsa, rgb2hex} from './core.js';
+import {addTooltip, domLoaded, elmt, htmlData, on, qs, qsa, rgb2hex, Stored, StoredJson} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -32,27 +32,35 @@ tdoc.terminateServer = async ret => {
 };
 
 // Handle the "toggle solutions" button.
+if (htmlData.tdocSolutions === 'remove') {
+    const solutions = new Stored('solutions');
+    if (solutions.value) {
+        if (solutions.value === 'show') {
+            delete htmlData.tdocSolutions;
+        } else {
+            htmlData.tdocSolutions = solutions.value;
+        }
+    }
+}
 tdoc.toggleSolutions = () => {
-    const ds = document.documentElement.dataset;
-    if (ds.tdocSolutions === 'hide') {
-        delete ds.tdocSolutions;
+    if (htmlData.tdocSolutions) {
+        delete htmlData.tdocSolutions;
     } else {
-        ds.tdocSolutions = 'hide';
+        htmlData.tdocSolutions = 'hide';
     }
 };
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
-const drawState = new Stored('drawState', {});
+const drawState = new StoredJson('drawState', {});
 drawState.value.eraser = false;
 tdoc.draw = () => {
-    const ds = document.documentElement.dataset;
-    if (ds.tdocDraw !== undefined) {
+    if (htmlData.tdocDraw !== undefined) {
         drawing.unmount();
-        delete ds.tdocDraw;
+        delete htmlData.tdocDraw;
         return;
     }
-    ds.tdocDraw = '';
+    htmlData.tdocDraw = '';
     if (drawing) {
         drawing.mount(drawingSvg);
         return;

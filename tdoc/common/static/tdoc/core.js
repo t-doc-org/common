@@ -5,6 +5,9 @@
 export const enc = new TextEncoder();
 export const dec = new TextDecoder();
 
+// The dataset of the <html> tag.
+export const htmlData = document.documentElement.dataset;
+
 // The URL of the root of the site.
 export const rootUrl = new URL('../..', import.meta.url);
 
@@ -336,18 +339,31 @@ export class FifoBuffer {
     }
 }
 
-// A value that is stored as JSON in local storage, namespaced to the site.
+// A value that is stored as a string in local storage, namespaced to the site.
 export class Stored {
+    static key(name) { return `tdoc:${rootUrl.pathname}:${name}`; }
+    static get(name) { return localStorage.getItem(this.key(name)); }
+    static set(name, value) { localStorage.setItem(this.key(name), value); }
+    static del(name) { localStorage.removeItem(this.key(name)); }
+
     constructor(name, def) {
         this.name = name;
-        const v = localStorage.getItem(this.key);
-        this._value = v !== null ? JSON.parse(v) : def;
+        const v = Stored.get(name);
+        this._value = v !== null ? this.decode(v) : def;
     }
 
-    get key() { return `tdoc:${rootUrl.pathname}:${this.name}`; }
     get value() { return this._value; }
     set value(v) { this._value = v; this.store(); }
-    store() { localStorage.setItem(this.key, JSON.stringify(this._value)); }
+    store() { Stored.set(this.name, this.encode(this._value)); }
+
+    encode(v) { return v; }
+    decode(v) { return v; }
+}
+
+// A value that is stored as JSON in local storage, namespaced to the site.
+export class StoredJson extends Stored {
+    encode(v) { return JSON.stringify(v); }
+    decode(v) { return JSON.parse(v); }
 }
 
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all

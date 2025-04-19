@@ -28,10 +28,9 @@
     // Return a function that waits for a set of promises before invoking a
     // function. The current script is passed as the first argument.
     tdoc.when = (...args) => {
-        let ready = Promise.all(args.slice(0, -1));
-        const fn = args.at(-1);
+        const ready = Promise.all(args.slice(0, -1)), fn = args.at(-1);
         return async (...args) => {
-            let script = document.currentScript;
+            const script = document.currentScript;
             await ready;
             return await fn(script, ...args);
         };

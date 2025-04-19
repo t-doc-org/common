@@ -109,8 +109,8 @@ solutions are displayed.
 - `hide`: Solutions are hidden when the page loads. They can be shown or hidden
   by clicking the "Toggle solutions" (<span class="tdoc-icon fa-eye"></span> /
   <span class="tdoc-icon fa-eye-slash"></span>) button in the navbar.
-- `remove`: Solutions are removed from the page altogether. When using the local
-  server, this option behaves like `solutions: hide`.
+- `remove`: Solutions are hidden and cannot be shown, except when using the
+  local server.
 
 {.rubric}
 Options

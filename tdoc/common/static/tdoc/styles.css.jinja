@@ -90,7 +90,7 @@ iframe.tdoc {
 }
 
 /* Solutions */
-html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
+html[data-tdoc-solutions] .admonition.solution:not(.always-show) {
     display: none;
 }
 .article-header-buttons button.btn-toggle-solutions {
@@ -100,9 +100,13 @@ html[data-tdoc-solutions=hide] .admonition.solution:not(.always-show) {
     font: var(--fa-font-solid);
     content: '\f070';
 }
-html[data-tdoc-solutions=hide] .article-header-buttons
+html[data-tdoc-solutions] .article-header-buttons
         button.btn-toggle-solutions::before {
     content: '\f06e';
+}
+html[data-tdoc-solutions=remove] .article-header-buttons
+        button.btn-toggle-solutions {
+    display: none;
 }
 
 /* Inline code */
