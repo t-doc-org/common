@@ -341,7 +341,7 @@ export class FifoBuffer {
 
 // A value that is stored as a string in local storage, namespaced to the site.
 export class Stored {
-    static key(name) { return `tdoc:${rootUrl.pathname}:${name}`; }
+    static key(name) { return `tdoc:${name}`; }
     static get(name) { return localStorage.getItem(this.key(name)); }
     static set(name, value) { localStorage.setItem(this.key(name), value); }
     static del(name) { localStorage.removeItem(this.key(name)); }
@@ -355,6 +355,7 @@ export class Stored {
     get value() { return this._value; }
     set value(v) { this._value = v; this.store(); }
     store() { Stored.set(this.name, this.encode(this._value)); }
+    del() { Stored.del(this.name); }
 
     encode(v) { return v; }
     decode(v) { return v; }
