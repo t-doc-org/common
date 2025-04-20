@@ -8,6 +8,6 @@
 [![PyPI](https://img.shields.io/pypi/v/t-doc-common.svg?color=blue)](https://pypi.org/project/t-doc-common/)
 
 This package contains the common functionality for documents based on t-doc. See
-the [documentation](https://t-doc.org/common/) for more information.
+the [documentation](https://common.t-doc.org/) for more information.
 
 This software is distributed under the [MIT](LICENSE.txt) license.

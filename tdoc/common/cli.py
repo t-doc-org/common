@@ -356,7 +356,7 @@ class Application:
             o.write(f"""\
 {o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
  {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
-Release notes: <https://t-doc.org/common/release-notes.html\
+Release notes: <https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}>
 {o.BOLD}Restart the server to upgrade.{o.NORM}
 """)
