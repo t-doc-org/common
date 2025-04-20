@@ -116,7 +116,7 @@ are located below the `docs` directory.
 
 ## Deploy documents
 
-To deploy the repository to [`tdoc.org`](https://t-doc.org), make sure that all
+To deploy the repository to [`tdoc.org`](https://t-doc.org/), make sure that all
 changes have been committed (and that new files have been added with Mercurial),
 then push the changes to the server.
 
@@ -124,7 +124,7 @@ then push the changes to the server.
 hg push
 ```
 
-The changes should be live at `https://t-doc.org/REPO` within a few minutes. If
+The changes should be live at `https://REPO.t-doc.org/` within a few minutes. If
 the build fails, GitHub should send you an email notification. It contains a
 link to the build log, which should allow figuring out what went wrong.
 

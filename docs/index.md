@@ -4,8 +4,8 @@
 # t-doc
 
 This site describes the **documentation system** that forms the base of the
-[t-doc.org](https://t-doc.org) site. It is distributed as a single Python package
-([`t-doc-common`](https://pypi.org/project/t-doc-common/)) under the
+[t-doc.org](https://t-doc.org/) site. It is distributed as a single Python
+package ([`t-doc-common`](https://pypi.org/project/t-doc-common/)) under the
 [MIT](https://opensource.org/license/mit) license, and consists of the following
 components:
 
@@ -19,7 +19,7 @@ components:
   sites and deploys them to [GitHub Pages](https://pages.github.com/) on every
   version control push.
 
-t-doc builds on the following software:
+t-doc builds on the following open-source software:
 
 - **[Sphinx](https://www.sphinx-doc.org/):** A documentation generation system.
 - **[MyST](https://mystmd.org/):** A
