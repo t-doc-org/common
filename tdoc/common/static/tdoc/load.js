@@ -106,7 +106,7 @@ tdoc.draw = () => {
 ${drawState.value.eraser ? ' checked="checked"' : ''}>\
 <button name="clear" class="btn fa-trash" data-bs-toggle="tooltip"\
  data-bs-title="Clear"></button>\
-<input class="tdoc-size" type="range" min="1" max="8" step="1"\
+<input type="range" class="tdoc-size" min="1" max="8" step="1"\
  data-bs-toggle="tooltip" data-bs-title="Stroke width">\
 <div class="tdoc-color dropdown-center">\
 <button class="btn fa-square" data-bs-toggle="dropdown"></button>\

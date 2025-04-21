@@ -131,8 +131,8 @@ update(true);
 ## Key
 
 <div class="fields">
-<div>Password:</div><input class="tdoc-password">
-<div class="pad">Salt:</div><input class="tdoc-salt">
+<div>Password:</div><input type="text" class="tdoc-password">
+<div class="pad">Salt:</div><input type="text" class="tdoc-salt">
 </div>
 
 ## Encrypt
@@ -156,7 +156,7 @@ update(true);
 ## Decrypt
 
 <div class="fields">
-<div>IV:</div><input class="tdoc-iv">
+<div>IV:</div><input type="text" class="tdoc-iv">
 </div>
 
 <div class="input tdoc-autosize">
