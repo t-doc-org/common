@@ -117,13 +117,13 @@ creating and editing documents.
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  _venv/dev/bin/pip install --user --upgrade --editable .
+  _venv/dev/bin/pip install --upgrade --editable .
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  _venv/dev/bin/pip install --user --upgrade --editable .
+  _venv/dev/bin/pip install --upgrade --editable .
   ```
   ````
   `````
