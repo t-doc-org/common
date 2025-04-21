@@ -41,7 +41,8 @@ class SqlExecutor extends Executor {
     static runner = 'sql';
     static highlight = 'sql';
 
-    static async init() {
+    static async init(runable) {
+        if (!runable) return;
         promiser = await sqlite3_init({
             // debug: console.debug,
         });

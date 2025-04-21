@@ -147,9 +147,15 @@ def check_refs(node, names, runner, typ, doctree):
                 base_node=node)
 
 
-def set_html_page_config(app, page, config):
-    if (cfg := app.env.metadata[page].get('exec')) is not None:
-        config['exec'] = cfg
+def set_html_page_config(app, page, config, doctree):
+    cfg = {}
+    if (md := app.env.metadata[page].get('exec')) is not None:
+        cfg['metadata'] = md
+    if doctree:
+        runable = {n['tdoc-runner']: True for n in doctree.findall(exec)
+                   if n['when'] != 'never'}
+        if runable: cfg['runable'] = runable
+    if cfg: config['exec'] = cfg
 
 
 def add_js(app, page, template, context, doctree):

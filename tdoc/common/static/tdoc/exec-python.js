@@ -26,10 +26,12 @@ class PythonExecutor extends Executor {
     static runner = 'python';
     static highlight = 'python';
 
-    static async init() {
+    static async init(runable) {
+        if (!runable) return;
         const base = import.meta.resolve('../');
+        const md = tdoc.exec?.metadata?.python;
         const files = {}
-        for (const [k, v] of Object.entries(tdoc.exec?.python?.files ?? {})) {
+        for (const [k, v] of Object.entries(md?.files ?? {})) {
             files[(new URL(k, base)).toString()] = v;
         }
         files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
@@ -38,7 +40,7 @@ class PythonExecutor extends Executor {
             type: 'pyodide',
             version: import.meta.resolve('../pyodide/pyodide.mjs'),
             // https://docs.pyscript.net/latest/user-guide/configuration/
-            config: {...tdoc.exec?.python, files},
+            config: {...md, files},
         });
         const {promise, resolve} = Promise.withResolvers();
         worker.sync.ready = msg => {

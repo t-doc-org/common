@@ -8,8 +8,6 @@ class HtmlExecutor extends Executor {
     static runner = 'html';
     static highlight = 'html';
 
-    static async init() {}
-
     addControls(controls) {
         if (this.when === 'click' || (this.editable && this.when !== 'never')) {
             this.runCtrl = controls.appendChild(this.runControl());

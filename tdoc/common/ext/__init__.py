@@ -123,7 +123,7 @@ def on_html_page_context(app, page, template, context, doctree):
 
     # Set up early and on-load JavaScript.
     tdoc = copy.deepcopy(app.config.tdoc)
-    app.emit('tdoc-html-page-config', page, tdoc)
+    app.emit('tdoc-html-page-config', page, tdoc, doctree)
     tdoc = json.dumps(tdoc, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1,

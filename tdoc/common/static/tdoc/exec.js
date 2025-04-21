@@ -56,8 +56,6 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
-// TODO: Migrate to prefix `tdoc:${rootUrl.pathname}:editor:`, migrating
-//       existing content
 const editorPrefix = `tdoc:editor:${rootUrl.pathname}:`;
 
 // A base class for {exec} block handlers.
@@ -66,7 +64,7 @@ export class Executor {
 
     // Apply an {exec} block handler class.
     static async apply(cls) {
-        cls.ready = cls.init();  // Initialize concurrently
+        cls.ready = cls.init(tdoc.exec?.runable?.[cls.runner] ?? false);
         await domLoaded;
         for (const node of qsa(document,
                                `div.tdoc-exec-runner-${cls.runner}`)) {
@@ -93,6 +91,10 @@ export class Executor {
         const view = findEditor(node);
         return view ? view.state.doc.toString() : this.preText(node);
     }
+
+    // Initialize the runner. `runable` is true iff at least one of the {exec}
+    // blocks has `when != 'never'`.
+    static async init(runable) {}
 
     constructor(node) {
         this.node = node;

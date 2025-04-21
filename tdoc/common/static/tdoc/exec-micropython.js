@@ -10,8 +10,6 @@ class MicroPythonExecutor extends Executor {
     static runner = 'micropython';
     static highlight = 'python';
 
-    static async init() {}
-
     constructor(node) {
         super(node);
         this.output = this.sectionedOutput();

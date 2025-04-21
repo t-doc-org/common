@@ -61,7 +61,7 @@ def solutions(env, page):
     return v
 
 
-def set_html_page_config(app, page, config):
+def set_html_page_config(app, page, config, doctree):
     if (v := solutions(app.env, page)) != 'show':
         config['html_data']['tdocSolutions'] = v
 
