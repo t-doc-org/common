@@ -29,6 +29,8 @@ def main(argv, stdin, stdout, stderr):
     for d in base.parent.iterdir():
         if (d / 'run.py').exists() and (d / 'docs' / 'conf.py').exists():
             repos[d.name] = f'{github_org}/{d.name}'
+    width = max(len(repo) for repo in repos)
+    def label(repo): return f"{repo:{width}} | "
 
     lock = threading.Lock()
     def write(text):
@@ -41,32 +43,32 @@ def main(argv, stdin, stdout, stderr):
     tests.mkdir(parents=True, exist_ok=True)
     try:
         write("Building wheel\n")
-        wheel = build_wheel(tests, )
+        wheel = build_wheel(tests)
 
         # Run tests.
-        port = 8000
+        port = 8001
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
-            for repo, url in repos.items():
+            for repo, url in sorted(repos.items()):
                 def test(repo=repo, port=port):
-                    run_tests(tests, repo, url, port, wheel, write)
+                    run_tests(tests, repo, label(repo), url, port, wheel, write)
                 tasks[repo] = ex.submit(test)
                 port += 1
 
         # Display output of failures.
-        for repo in repos:
+        for repo in sorted(repos):
             t = tasks[repo]
             if (e := t.exception()) is None: continue
             se = str(e)
             eol = "" if se.endswith("\n") else "\n"
-            write(f"\n{'=' * 79}\n[{repo}] FAIL\n{'=' * 79}\n{se}{eol}")
+            write(f"\n{'=' * 79}\n{label(repo)}FAIL\n{'=' * 79}\n{se}{eol}")
 
         # Display summary.
         write("\n")
-        for repo in repos:
+        for repo in sorted(repos):
             t = tasks[repo]
             e = t.exception()
-            write(f"[{repo}] {'PASS' if e is None else 'FAIL'}\n")
+            write(f"{label(repo)}{'PASS' if e is None else 'FAIL'}\n")
     finally:
         shutil.rmtree(tests, onexc=on_error)
     return 1 if any(t.exception() is not None for t in tasks.values()) else 0
@@ -86,10 +88,10 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, url, port, wheel, write):
+def run_tests(tests, repo, label, url, port, wheel, write):
     # Clone the document repository.
     repo_dir = tests / repo
-    write(f"[{repo}] Cloning\n")
+    write(f"{label}Cloning\n")
     run('git', 'clone', url, repo_dir, '--branch', 'main')
 
     def vrun(*args, wait=True, **kwargs):
@@ -105,37 +107,37 @@ def run_tests(tests, repo, url, port, wheel, write):
         return p
 
     # Get version information. This creates the venv.
-    write(f"[{repo}] Getting version information\n")
+    write(f"{label}Getting version information\n")
     vrun('tdoc', 'version', '--debug')
 
     # Build the HTML.
-    write(f"[{repo}] Building HTML\n")
+    write(f"{label}Building HTML\n")
     vrun('tdoc', 'build', '--debug', 'html')
 
     # Clean the HTML output.
-    write(f"[{repo}] Cleaning HTML output\n")
+    write(f"{label}Cleaning HTML output\n")
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
-    write(f"[{repo}] Creating store\n")
+    write(f"{label}Creating store\n")
     vrun('tdoc', 'store', 'create', '--debug', '--open')
 
     # Run the local server, wait for it to serve or exit.
-    write(f"[{repo}] Running local server\n")
+    write(f"{label}Running local server\n")
     p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
              '--exit-on-idle=2', '--open', f'--port={port}', wait=False)
     try:
         out = io.StringIO()
         for line in p.stdout:
             if out is None:
-                write(f"[{repo}] {line}")
+                write(f"{label}{line}")
                 continue
             out.write(line)
             if (m := serving_re.match(line)) is None: continue
-            write(f"[{repo}] {line}")
+            write(f"{label}{line}")
             out = None
     finally:
-        write(f"[{repo}] Local server terminated\n")
+        write(f"{label}Local server terminated\n")
         if p.wait() == 0: return
         output = f"\n\n{out.getvalue()}" if out is not None else ""
         raise Error(f"The local server has terminated with an error.{output}")
