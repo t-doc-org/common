@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, text} from './core.js';
+import {domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, Stored, text} from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -56,7 +56,8 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
-const editorPrefix = `tdoc:editor:${rootUrl.pathname}:`;
+const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
+                     : `tdoc:editor:${rootUrl.pathname}:`;
 
 // A base class for {exec} block handlers.
 export class Executor {
@@ -104,11 +105,8 @@ export class Executor {
     // True iff the {exec} block has an editor.
     get editable() { return this.node.dataset.tdocEditor !== undefined; }
 
-    // The name of the local storage key for the editor content.
-    get editorKey() {
-        const editor = this.node.dataset.tdocEditor;
-        return editor ? editorPrefix + editor : undefined;
-    }
+    // The ID of the editor.
+    get editorId() { return this.node.dataset.tdocEditor || undefined; }
 
     // Add an editor to the {exec} block.
     addEditor() {
@@ -125,14 +123,14 @@ export class Executor {
         }
         const preText = Executor.preText(this.node).trimEnd();
         let doc = preText;
-        const key = this.editorKey;
-        if (key) {
-            const st = localStorage.getItem(key);
-            if (st !== null) doc = st;
-            this.storeEditor = new RateLimited(5000);
+        const editorId = this.editorId;
+        if (editorId) {
+            this.editorStore = new Stored(editorPrefix + editorId, doc);
+            doc = this.editorStore.value;
+            this.editorStorer = new RateLimited(5000);
             extensions.push(
                 cmview.EditorView.domEventObservers({
-                    'blur': () => this.storeEditor.flush(),
+                    'blur': () => this.editorStorer.flush(),
                 }),
             );
         }
@@ -145,12 +143,15 @@ export class Executor {
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
 
-        if (preText !== '' || key) {
+        if (preText !== '' || editorId) {
             this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
-            on(this.resetEditor).click(() => this.setEditorText(this.origText));
+            on(this.resetEditor).click(() => {
+                this.setEditorText(this.origText);
+                if (this.editorStorer) this.editorStorer.flush();
+            });
         }
     }
 
@@ -163,15 +164,15 @@ export class Executor {
             isOrig = doc.eq(this.origText);
             this.resetEditor.disabled = isOrig;
         }
-        if (!this.storeEditor) return;
+        if (!this.editorStorer) return;
         for (const tr of update.transactions) {
             if (tr.annotation(storeUpdate)) return;
         }
-        this.storeEditor.schedule(() => {
+        this.editorStorer.schedule(() => {
             if (isOrig ?? doc.eq(this.origText)) {
-                localStorage.removeItem(this.editorKey);
+                this.editorStore.del();
             } else {
-                localStorage.setItem(this.editorKey, doc.toString());
+                this.editorStore.value = doc.toString();
             }
         });
     }
@@ -465,7 +466,7 @@ class ConsoleOut {
 // Ensure that the text of editors is stored before navigating away.
 on(window).beforeunload(() => {
     for (const node of qsa(document, 'div.tdoc-exec[data-tdoc-editor]')) {
-        const storer = node.tdocExec.storeEditor;
+        const storer = node.tdocExec.editorStorer;
         if (storer) storer.flush();
     }
 });

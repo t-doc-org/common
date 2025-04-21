@@ -33,7 +33,7 @@ tdoc.terminateServer = async ret => {
 
 // Handle the "toggle solutions" button.
 if (htmlData.tdocSolutions === 'remove') {
-    const solutions = new Stored('solutions');
+    const solutions = new Stored('tdoc:solutions');
     if (solutions.value) {
         if (solutions.value === 'show') {
             delete htmlData.tdocSolutions;
@@ -52,7 +52,7 @@ tdoc.toggleSolutions = () => {
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
-const drawState = new StoredJson('drawState', {});
+const drawState = new StoredJson('tdoc:drawState', {});
 drawState.value.eraser = false;
 tdoc.draw = () => {
     if (htmlData.tdocDraw !== undefined) {
@@ -67,9 +67,7 @@ tdoc.draw = () => {
     }
 
     function setState(opts) {
-        const st = drawState.value;
-        Object.assign(st, opts);
-        drawState.store();
+        const st = drawState.update(v => Object.assign(v, opts));
         const mode = st.eraser ? 'eraseLine' :
                      st.tool === 'arrow' ? 'line' : st.tool;
         if (drawing.mode !== mode) drawing.mode = mode;
