@@ -7,7 +7,6 @@
 .fields {
     display: flex;
     flex-direction: row;
-    align-content: stretch;
     align-items: baseline;
     margin: 1rem 0;
     column-gap: 0.3rem;
@@ -24,11 +23,7 @@
 .input textarea {
     width: 100%;
 }
-.output {
-    margin: 1rem 0;
-    width: 100%;
-}
-.output pre {
+:is(.iv, .output) pre {
     word-break: break-all;
     white-space: pre-wrap;
 }
@@ -64,14 +59,10 @@ async function encryptInput(key, plain) {
 const decOutput = document.querySelector('#decrypt .output pre');
 
 async function decryptInput(key, iv, data) {
-    try {
-        const plain = await decryptSecret(key, {iv, data});
-        decOutput.replaceChildren(text(plain !== '' ? plain : " "));
-        decOutput.classList.remove('error');
-    } catch (e) {
-        decOutput.replaceChildren(text(`Decryption failed: ${e.toString()}`));
-        decOutput.classList.add('error');
-    }
+    const plain = await decryptSecret(key, {iv, data});
+    decOutput.replaceChildren(text(
+        plain === null ? "Decryption failed" : plain !== '' ? plain : " "));
+    decOutput.classList.toggle('error', plain === null);
 }
 
 const pwd = document.querySelector('.tdoc-password');
