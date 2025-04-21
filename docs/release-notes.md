@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-42)=
+## 0.42 *(2025-04-21)*
+
+- Added a visual indication that editor content is unchanged.
+- Added a mechanism to show removed solutions.
+- Prepared for per-site subdomains.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.41...0.42)
+
 (release-0-41)=
 ## 0.41 *(2025-04-13)*
 
