@@ -59,14 +59,14 @@ def main(argv, stdin, stdout, stderr):
             if (e := t.exception()) is None: continue
             se = str(e)
             eol = "" if se.endswith("\n") else "\n"
-            write(f"\n{'=' * 79}\n{repo}: FAIL\n{'=' * 79}\n{se}{eol}")
+            write(f"\n{'=' * 79}\n[{repo}] FAIL\n{'=' * 79}\n{se}{eol}")
 
         # Display summary.
         write("\n")
         for repo in repos:
             t = tasks[repo]
             e = t.exception()
-            write(f"{repo}: {'PASS' if e is None else 'FAIL'}\n")
+            write(f"[{repo}] {'PASS' if e is None else 'FAIL'}\n")
     finally:
         shutil.rmtree(tests, onexc=on_error)
     return 1 if any(t.exception() is not None for t in tasks.values()) else 0
@@ -89,7 +89,7 @@ serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 def run_tests(tests, repo, url, port, wheel, write):
     # Clone the document repository.
     repo_dir = tests / repo
-    write(f"{repo}: Cloning\n")
+    write(f"[{repo}] Cloning\n")
     run('git', 'clone', url, repo_dir, '--branch', 'main')
 
     def vrun(*args, wait=True, **kwargs):
@@ -105,37 +105,37 @@ def run_tests(tests, repo, url, port, wheel, write):
         return p
 
     # Get version information. This creates the venv.
-    write(f"{repo}: Getting version information\n")
+    write(f"[{repo}] Getting version information\n")
     vrun('tdoc', 'version', '--debug')
 
     # Build the HTML.
-    write(f"{repo}: Building HTML\n")
+    write(f"[{repo}] Building HTML\n")
     vrun('tdoc', 'build', '--debug', 'html')
 
     # Clean the HTML output.
-    write(f"{repo}: Cleaning HTML output\n")
+    write(f"[{repo}] Cleaning HTML output\n")
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
-    write(f"{repo}: Creating store\n")
+    write(f"[{repo}] Creating store\n")
     vrun('tdoc', 'store', 'create', '--debug', '--open')
 
     # Run the local server, wait for it to serve or exit.
-    write(f"{repo}: Running local server\n")
+    write(f"[{repo}] Running local server\n")
     p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
              '--exit-on-idle=2', '--open', f'--port={port}', wait=False)
     try:
         out = io.StringIO()
         for line in p.stdout:
             if out is None:
-                write(f"{repo}: {line}")
+                write(f"[{repo}] {line}")
                 continue
             out.write(line)
             if (m := serving_re.match(line)) is None: continue
-            write(f"{repo}: {line}")
+            write(f"[{repo}] {line}")
             out = None
     finally:
-        write(f"{repo}: Local server terminated\n")
+        write(f"[{repo}] Local server terminated\n")
         if p.wait() == 0: return
         output = f"\n\n{out.getvalue()}" if out is not None else ""
         raise Error(f"The local server has terminated with an error.{output}")
