@@ -119,8 +119,18 @@ a code {
 }
 
 /* Code blocks */
+div.literal-block-wrapper {
+    overflow: hidden;
+}
 div.literal-block-wrapper div.code-block-caption {
     padding: 0.3rem;
+}
+div.literal-block-wrapper div.highlight {
+    border-radius: 0;
+}
+div.literal-block-wrapper div.highlight pre {
+    border: none;
+    border-radius: 0;
 }
 div.highlight {
     position: relative;
