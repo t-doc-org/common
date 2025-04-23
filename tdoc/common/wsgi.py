@@ -10,18 +10,27 @@ def http_status(status):
     return f'{status} {status.phrase}'
 
 
-def error(respond, status):
+def error(respond, status, exc_info=None):
+    body = status.description.encode('utf-8')
     respond(http_status(status), [
         ('Content-Type', 'text/plain; charset=utf-8'),
-    ])
-    return [status.description.encode('utf-8')]
+        ('Content-Length', str(len(body))),
+    ], exc_info)
+    return [body]
 
 
-def method(env, respond, *allowed):
+class Error(Exception):
+    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR):
+        super().__init__(status)
+
+    @property
+    def status(self): return self.args[0]
+
+
+def method(env, *allowed):
     m = env['REQUEST_METHOD']
-    if allowed and m not in allowed:
-        return None, error(respond, HTTPStatus.METHOD_NOT_ALLOWED)
-    return m, None
+    if allowed and m not in allowed: raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
+    return m
 
 
 def read_json(env):
@@ -34,7 +43,7 @@ def respond_json(respond, data):
     respond(http_status(HTTPStatus.OK), [
         ('Content-Type', 'application/json'),
         ('Content-Length', str(len(body))),
-        ('Cache-Control', 'no-cache'),
+        ('Cache-Control', 'no-store'),
     ])
     return [body]
 

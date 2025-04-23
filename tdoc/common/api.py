@@ -6,6 +6,7 @@ from http import HTTPMethod, HTTPStatus
 import json
 import pathlib
 import sqlite3
+import sys
 import threading
 import time
 from wsgiref import util
@@ -78,31 +79,27 @@ class Api:
         finally:
             db.close()
 
-    def check_acl(self, db, token, perm):
-        for perms, in db.execute(
-                "select perms from auth where token in (?, '*')", (token,)):
-            perms = perms.split(',')
-            if perm in perms or '*' in perms: return True
-        return False
+    def check_acl(self, env, perm):
+        token = ''
+        if (auth := env.get('HTTP_AUTHORIZATION')) is not None:
+            parts = auth.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                token = parts[1]
+        with self.transaction(env) as db:
+            for perms, in db.execute(
+                    "select perms from auth where token in (?, '*')", (token,)):
+                perms = perms.split(',')
+                if perm in perms or '*' in perms: return
+        raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
 
     def __call__(self, env, respond):
         name = util.shift_path_info(env)
         if (handler := self.endpoints.get(name, None)) is None:
-            return wsgi.error(respond, HTTPStatus.NOT_FOUND)
-
-        # Parse the Authorization header if present.
-        token = ''
-        if (auth := env.get('HTTP_AUTHORIZATION')) is not None:
-            parts = auth.split()
-            if len(parts) != 2 or parts[0].lower() != 'bearer':
-                return wsgi.error(respond, HTTPStatus.BAD_REQUEST)
-            token = parts[1]
-
+            return (yield from wsgi.error(respond, HTTPStatus.NOT_FOUND))
         try:
-            with self.transaction(env) as db:
-                if not self.check_acl(db, token, name):
-                    return wsgi.error(respond, HTTPStatus.UNAUTHORIZED)
-            return handler(env, respond)
+            yield from handler(env, respond)
+        except wsgi.Error as e:
+            return (yield from wsgi.error(respond, e.status, sys.exc_info()))
         finally:
             if (db := self.thread_local.db) is not None \
                      and not env.get('tdoc.db_cache_per_thread'):
@@ -110,14 +107,14 @@ class Api:
                 db.close()
 
     def handle_log(self, env, respond):
-        method, err = wsgi.method(env, respond, HTTPMethod.POST)
-        if err is not None: return err
-        if env['PATH_INFO']: return wsgi.error(respond, HTTPStatus.NOT_FOUND)
+        method = wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        self.check_acl(env, 'log')
         with self.transaction(env) as db:
             try:
                 req = wsgi.read_json(env)
             except Exception as e:
-                return wsgi.error(respond, HTTPStatus.BAD_REQUEST)
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
             db.execute("""
                 insert into log (time, location, session, data)
                     values (?, ?, ?, json(?));

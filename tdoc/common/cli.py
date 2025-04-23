@@ -358,13 +358,13 @@ Release notes: <https://common.t-doc.org/release-notes.html\
             pass
 
     def __call__(self, env, respond):
+        # Dispatch to API if this is an API call.
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
         if wsgiutil.shift_path_info(env) == '*api':
             return self.api(env, respond)
         env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
-        return self.handle_default(env, respond)
 
-    def handle_default(self, env, respond):
+        # Handle a file request.
         env['wsgi.multithread'] = True
         if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
                                                      HTTPMethod.GET):
@@ -389,8 +389,7 @@ Release notes: <https://common.t-doc.org/release-notes.html\
 
         if not stat.S_ISREG(st.st_mode):
             return wsgi.error(respond, HTTPStatus.NOT_FOUND)
-        mime_type = mimetypes.guess_type(path)[0]
-        if not mime_type: mime_type = 'application/octet-stream'
+        mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
@@ -413,14 +412,13 @@ Release notes: <https://common.t-doc.org/release-notes.html\
         return res / '' if trailing else res
 
     def handle_build(self, env, respond):
-        if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
-                                                     HTTPMethod.GET):
-            yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
+        method = wsgi.method(env, HTTPMethod.HEAD, HTTPMethod.GET)
         t = parse.parse_qs(env.get('QUERY_STRING', '')).get('t', [None])[0]
         # Send padding back at regular intervals to allow detecting when the
         # client closes the connection (causes a BrokenPipeError).
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', 'text/plain; charset=utf-8'),
+            ('Cache-Control', 'no-store'),
         ])
         if method == HTTPMethod.HEAD: return
         with self.lock:
@@ -435,8 +433,7 @@ Release notes: <https://common.t-doc.org/release-notes.html\
         yield str(mtime).encode('utf-8')
 
     def handle_terminate(self, env, respond):
-        if env['REQUEST_METHOD'] != HTTPMethod.POST:
-            yield from wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
+        wsgi.method(env, HTTPMethod.POST)
         r = parse.parse_qs(env.get('QUERY_STRING', '')).get('r', ['0'])[0]
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', 'text/plain; charset=utf-8'),
@@ -447,6 +444,7 @@ Release notes: <https://common.t-doc.org/release-notes.html\
         except ValueError:
             self.returncode = 1
         self.server.shutdown()
+        return []
 
 
 if __name__ == '__main__':
