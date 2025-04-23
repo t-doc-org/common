@@ -6,10 +6,9 @@ import {bearerAuthorization, fetchJson, rootUrl} from './core.js';
 export const url = (() => {
     if (tdoc.dev) return '/*api';
     if (tdoc.api_url) return tdoc.api_url;
-    const url = new URL(location);
-    if (url.hostname === 't-doc.org' || url.hostname.endsWith('.t-doc.org')) {
-        url.hostname = 'api.t-doc.org';
-        return url.toString();
+    const loc = new URL(location);
+    if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
+        return `${loc.protocol}//api.t-doc.org`;
     }
     return null;
 })();
