@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 from http import HTTPStatus
-import json as _json
+import json
+import re
 
 
 def http_status(status):
@@ -25,11 +26,11 @@ def method(env, respond, *allowed):
 
 def read_json(env):
     data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
-    return _json.loads(data)
+    return json.loads(data)
 
 
 def respond_json(respond, data):
-    body = _json.dumps(data, separators=(',', ':')).encode('utf-8')
+    body = json.dumps(data, separators=(',', ':')).encode('utf-8')
     respond(http_status(HTTPStatus.OK), [
         ('Content-Type', 'application/json'),
         ('Content-Length', str(len(body))),
@@ -39,6 +40,16 @@ def respond_json(respond, data):
 
 
 def cors(origins=(), methods=(), headers=(), max_age=None):
+    def allow_origin(origin):
+        return [('Access-Control-Allow-Origin', origin)] \
+               if re.fullmatch(origin) else []
+    if isinstance(origins, str) and origins != '*':
+        origins = re.compile(origins)
+    if origins == '*' or '*' in origins:
+        def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
+    else:
+        origins = re.compile('|'.join(f'(?:{re.escape(o)})' for o in origins))
+
     achs = []
     if methods:
         achs.append(('Access-Control-Allow-Methods', ', '.join(methods)))
@@ -49,15 +60,10 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
 
     def decorator(fn):
         def handle(env, respond):
-            if '*' in origins:
-                ao = [('Access-Control-Allow-Origin', '*')]
-            elif (origin := env.get('HTTP_ORIGIN')) in origins:
-                ao = [('Access-Control-Allow-Origin', origin)]
-            else:
-                ao = []
-
             def respond_with_allow_origin(status, headers, exc_info=None):
-                return respond(status, headers + ao, exc_info)
+                return respond(
+                    status, headers + allow_origin(env.get('HTTP_ORIGIN', '')),
+                    exc_info)
 
             if (env['REQUEST_METHOD'] == 'OPTIONS' and
                     env.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD') is not None):
