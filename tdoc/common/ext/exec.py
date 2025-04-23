@@ -26,7 +26,7 @@ def setup(app):
     app.connect('doctree-resolved', check_references)
     app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_js)
-    app.add_config_value('tdoc_python_modules', [], 'html')
+    app.add_config_value('tdoc_python_modules', [], 'html', list)
     app.connect('config-inited', set_python_modules)
     app.connect('write-started', write_static_files)
     return {

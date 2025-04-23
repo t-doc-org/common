@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 const build = tdoc.build;
-console.info(`[t-doc] Build tag: ${build}`);
+console.info(`[t-doc] Build: ${build}`);
 const dec = new TextDecoder();
 
 function sleep(ms) {

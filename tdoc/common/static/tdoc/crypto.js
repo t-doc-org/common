@@ -36,9 +36,9 @@ export async function decrypt(key, iv, data) {
 // parameter and the given salt.
 export async function pageKey(param, salt) {
     try {
-        const hash = document.location.hash;
+        const hash = location.hash;
         for (const p of [...(hash.startsWith('#?') ? [hash.slice(1)] : []),
-                         document.location.search]) {
+                         location.search]) {
             const params = new URLSearchParams(p);
             const value = params.get(param);
             if (value !== null) return await deriveKey(value, salt);

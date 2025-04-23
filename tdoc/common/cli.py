@@ -209,10 +209,6 @@ def try_stat(path):
         return None
 
 
-def build_tag(mtime):
-    return f'tdoc-build-{mtime}'
-
-
 class Application:
     def __init__(self, cfg, addr):
         self.cfg = cfg
@@ -314,7 +310,7 @@ class Application:
         with self.lock: self.building = True
         try:
             res = sphinx_build(self.cfg, 'html', build=build,
-                               tags=['tdoc-dev', build_tag(mtime)])
+                               tags=['tdoc-dev', f'tdoc-build-{mtime}'])
             if res.returncode == 0: return build
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")
@@ -431,13 +427,12 @@ Release notes: <https://common.t-doc.org/release-notes.html\
             if self.conn_count < 0: self.conn_count = 0  # First connection
             self.conn_count += 1
             try:
-                while ((mtime := self.build_mtime) is None
-                       or build_tag(mtime) == t):
+                while ((mtime := self.build_mtime) is None or str(mtime) == t):
                     if not self.lock.wait(timeout=0.5): yield b' '
             finally:
                 self.conn_count -= 1
                 if self.conn_count == 0: self.idle_start = time.time_ns()
-        yield build_tag(mtime).encode('utf-8')
+        yield str(mtime).encode('utf-8')
 
     def handle_terminate(self, env, respond):
         if env['REQUEST_METHOD'] != HTTPMethod.POST:

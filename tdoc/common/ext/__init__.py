@@ -52,20 +52,20 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
-def build_tag(app):
+def build_id(app):
     for tag in app.tags:
-        if tag.startswith('tdoc-build-'):
-            return tag
+        if (t := tag.removeprefix('tdoc-build-')) != tag: return t
 
 
 def setup(app):
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
 
-    app.add_config_value('license', '', 'html')
+    app.add_config_value('license', '', 'html', str)
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
-    app.add_config_value('tdoc', {}, 'html')
+    app.add_config_value('tdoc', {}, 'html', dict)
+    app.add_config_value('tdoc_api', '', 'html', str)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
 
@@ -75,7 +75,7 @@ def setup(app):
     app.connect('config-inited', on_config_inited)
     app.connect('html-page-context', on_html_page_context)
     app.connect('html-page-context', add_draw_button, priority=500.6)
-    if build_tag(app) is not None:
+    if build_id(app) is not None:
         app.connect('html-page-context', add_reload_js)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
@@ -119,7 +119,9 @@ def on_html_page_context(app, page, template, context, doctree):
         'conf': copy.deepcopy(app.config.tdoc),
         'enable_sab': app.config.tdoc_enable_sab, 'html_data': {},
     }
-    if v := build_tag(app): tdoc['build'] = v
+    if 'tdoc-dev' in app.tags: tdoc['dev'] = True
+    if v := app.config.tdoc_api: tdoc['api_url'] = v
+    if v := build_id(app): tdoc['build'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     tdoc = json.dumps(tdoc, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')

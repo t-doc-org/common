@@ -1,6 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+import * as api from './tdoc/api.js';
 import {bearerAuthorization, domLoaded, fetchJson, text, toBase64} from './tdoc/core.js';
 import {decryptSecret, pageKey, random} from './tdoc/crypto.js';
 
@@ -10,19 +11,7 @@ const token = await decryptSecret(key, {
     data: 'PuPII8bR2FZNjsahCUBQR1ABT6iR3VO09n43BM3R81UGIxR8mFuNdmcoXyabZrYX',
 });
 
-const api = tdoc.conf.api_url ?? '/*api';
 const session = await toBase64(await random(18));
-
-function log(data) {
-    return fetchJson(`${api}/log`, {
-        headers: bearerAuthorization(token),
-        body: {
-            'time': Date.now(),
-            'location': location.origin + location.pathname,
-            'session': session, 'data': data,
-        },
-    });
-}
 
 let count = 0;
 
@@ -31,6 +20,6 @@ domLoaded.then(() => {
     app.querySelector('button').addEventListener('click', async () => {
         ++count;
         app.querySelector('span').replaceChildren(text(`${count}`));
-        console.log(await log({'count': count}));
+        console.log(await api.log(session, {'count': count}, {token}));
     });
 });

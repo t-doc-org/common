@@ -3,7 +3,6 @@
 
 import sys
 
-from tdoc import common
 from tdoc.common.defaults import *
 
 project = "t-doc"
@@ -11,7 +10,7 @@ copyright = "%Y Remy Blank"
 license = 'MIT'
 language = 'en'
 
-keep_warnings = True
+#myst_links_external_new_tab = True
 
 html_theme_options = {
     'repository_url': 'https://github.com/t-doc-org/common',
@@ -20,10 +19,6 @@ html_theme_options = {
 tdoc_enable_sab = 'no'
 # tdoc_enable_sab = 'cross-origin-isolation'
 # tdoc_enable_sab = 'sabayon'
-
-tdoc = {
-    'api_url': 'https://api.t-doc.org' if 'tdoc-dev' not in tags else None,
-}
 
 intersphinx_mapping = {
     'python': (
