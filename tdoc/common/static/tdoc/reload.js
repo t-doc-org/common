@@ -12,8 +12,7 @@ function sleep(ms) {
 async function reloadOnTagChange() {
     for (;;) {
         try {
-            const resp = await fetch(
-                `${document.location.origin}/*build?t=${build}`);
+            const resp = await fetch(`/*api/build?t=${build}`);
             if (resp.ok) {
                 let tag = '';
                 const reader = resp.body.getReader();

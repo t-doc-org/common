@@ -22,7 +22,7 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, store, util, wsgi
+from . import __project__, __version__, api, util, wsgi
 
 # TODO: Implement incremental builds, by copying previous build output
 
@@ -164,9 +164,9 @@ def cmd_serve(cfg):
 
 
 def cmd_store_create(cfg):
-    st = store.Store(cfg.store)
-    st.path.parent.mkdir(parents=True, exist_ok=True)
-    st.create(open_acl=cfg.open)
+    app = api.Api(cfg.store)
+    app.path.parent.mkdir(parents=True, exist_ok=True)
+    app.create_store(open_acl=cfg.open)
 
 
 def cmd_version(cfg):
@@ -210,7 +210,7 @@ def try_stat(path):
 
 
 def build_tag(mtime):
-    return f'tdoc_build_{mtime}'
+    return f'tdoc-build-{mtime}'
 
 
 class Application:
@@ -229,12 +229,10 @@ class Application:
         self.building = False
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
-        self.apps = {
-            '*build': self.handle_build,
-            '*terminate': self.handle_terminate,
-        }
-        if cfg.store and cfg.store.exists():
-            self.apps['*store'] = store.Store(cfg.store)
+        self.api = api.Api(cfg.store if cfg.store and cfg.store.exists()
+                           else None)
+        self.api.add_endpoint('build', self.handle_build)
+        self.api.add_endpoint('terminate', self.handle_terminate)
 
     def __enter__(self): return self
 
@@ -365,9 +363,8 @@ Release notes: <https://common.t-doc.org/release-notes.html\
 
     def __call__(self, env, respond):
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
-        name = wsgiutil.shift_path_info(env)
-        if (handler := self.apps.get(name)) is not None:
-            return handler(env, respond)
+        if wsgiutil.shift_path_info(env) == '*api':
+            return self.api(env, respond)
         env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
         return self.handle_default(env, respond)
 

@@ -54,7 +54,7 @@ def format_data_attrs(translator, /, **kwargs):
 
 def build_tag(app):
     for tag in app.tags:
-        if tag.startswith('tdoc_build_'):
+        if tag.startswith('tdoc-build-'):
             return tag
 
 
@@ -77,6 +77,7 @@ def setup(app):
     app.connect('html-page-context', add_draw_button, priority=500.6)
     if build_tag(app) is not None:
         app.connect('html-page-context', add_reload_js)
+    if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('write-started', write_static_files)
 
@@ -99,12 +100,6 @@ def on_config_inited(app, config):
             and (app.confdir / '_static').exists():
         config.html_static_path.append('_static')
 
-    # Set defaults in the t-doc config.
-    tdoc = config.tdoc
-    tdoc.setdefault('html_data', {})
-    tdoc['enable_sab'] = config.tdoc_enable_sab
-    if (build := build_tag(app)) is not None: tdoc['build'] = build
-
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
     opts.setdefault('use_sidenotes', True)
@@ -116,13 +111,15 @@ def on_config_inited(app, config):
 
 def on_html_page_context(app, page, template, context, doctree):
     context['tdoc_version'] = __version__
-    license = app.config.license
-    if license: context['license'] = license
-    license_url = app.config.license_url
-    if license_url: context['license_url'] = license_url
+    if v := app.config.license: context['license'] = v
+    if v := app.config.license_url: context['license_url'] = v
 
     # Set up early and on-load JavaScript.
-    tdoc = copy.deepcopy(app.config.tdoc)
+    tdoc = {
+        'conf': copy.deepcopy(app.config.tdoc),
+        'enable_sab': app.config.tdoc_enable_sab, 'html_data': {},
+    }
+    if v := build_tag(app): tdoc['build'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     tdoc = json.dumps(tdoc, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')

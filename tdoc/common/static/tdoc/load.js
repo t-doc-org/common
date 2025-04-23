@@ -27,7 +27,7 @@ domLoaded.then(() => {
 
 // Handle the "terminate server" button.
 tdoc.terminateServer = async ret => {
-    await fetch(`${location.origin}/*terminate?r=${ret ?? 0}`,
+    await fetch(`/*api/terminate?r=${ret ?? 0}`,
                 {method: 'POST', cache: 'no-cache', referrer: ''});
 };
 

@@ -66,7 +66,7 @@ NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc1MzE0MjQwMH0=`);
 
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;
-    const enableSAB = tdoc['enable_sab'];
+    const enableSAB = tdoc.enable_sab;
     const url = new URL(`../tdoc-worker.js?sab=${enableSAB}`, staticUrl)
         .toString();
     if (enableSAB === 'no' && workers) {

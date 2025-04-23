@@ -22,8 +22,7 @@ tdoc_enable_sab = 'no'
 # tdoc_enable_sab = 'sabayon'
 
 tdoc = {
-    'store_url': 'https://api.t-doc.org/store'
-                 if 'tdoc-dev' not in tags else None,
+    'api_url': 'https://api.t-doc.org' if 'tdoc-dev' not in tags else None,
 }
 
 intersphinx_mapping = {

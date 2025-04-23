@@ -10,11 +10,11 @@ const token = await decryptSecret(key, {
     data: 'PuPII8bR2FZNjsahCUBQR1ABT6iR3VO09n43BM3R81UGIxR8mFuNdmcoXyabZrYX',
 });
 
-const storeUrl = tdoc.store_url || `${location.origin}/*store`;
+const api = tdoc.conf.api_url ?? '/*api';
 const session = await toBase64(await random(18));
 
 function log(data) {
-    return fetchJson(`${storeUrl}/log`, {
+    return fetchJson(`${api}/log`, {
         headers: bearerAuthorization(token),
         body: {
             'time': Date.now(),

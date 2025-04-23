@@ -19,11 +19,17 @@ class ThreadLocal(threading.local):
         self.__dict__.update(kwargs)
 
 
-class Store:
+class Api:
     thread_local = ThreadLocal(db=None)
 
     def __init__(self, path):
-        self.path = pathlib.Path(path).resolve()
+        self.path = pathlib.Path(path).resolve() if path else None
+        self.endpoints = {
+            'log': self.handle_log,
+        }
+
+    def add_endpoint(self, name, handler):
+        self.endpoints[name] = handler
 
     def connect(self, params, timeout=10, autocommit=False):
         return sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
@@ -42,7 +48,7 @@ class Store:
             db.rollback()
             raise
 
-    def create(self, open_acl=False):
+    def create_store(self, open_acl=False):
         db = self.connect('mode=rwc', autocommit=True)
         try:
             db.execute('pragma journal_mode=WAL')
@@ -80,8 +86,8 @@ class Store:
         return False
 
     def __call__(self, env, respond):
-        cmd = util.shift_path_info(env)
-        if (handler := getattr(self, f'handle_{cmd}', None)) is None:
+        name = util.shift_path_info(env)
+        if (handler := self.endpoints.get(name, None)) is None:
             return wsgi.error(respond, HTTPStatus.NOT_FOUND)
 
         # Parse the Authorization header if present.
@@ -94,7 +100,7 @@ class Store:
 
         try:
             with self.transaction(env) as db:
-                if not self.check_acl(db, token, cmd):
+                if not self.check_acl(db, token, name):
                     return wsgi.error(respond, HTTPStatus.UNAUTHORIZED)
             return handler(env, respond)
         finally:
