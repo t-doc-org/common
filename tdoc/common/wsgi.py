@@ -40,15 +40,17 @@ def respond_json(respond, data):
 
 
 def cors(origins=(), methods=(), headers=(), max_age=None):
-    def allow_origin(origin):
-        return [('Access-Control-Allow-Origin', origin)] \
-               if re.fullmatch(origin) else []
-    if isinstance(origins, str) and origins != '*':
-        origins = re.compile(origins)
-    if origins == '*' or '*' in origins:
+    if origins == '*':
         def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
+    elif isinstance(origins, str):
+        pat = re.compile(origins)
+        def allow_origin(origin):
+            return [('Access-Control-Allow-Origin', origin)] \
+                   if pat.fullmatch(origin) else []
     else:
-        origins = re.compile('|'.join(f'(?:{re.escape(o)})' for o in origins))
+        def allow_origin(origin):
+            return [('Access-Control-Allow-Origin', origin)] \
+                   if origin in origins else []
 
     achs = []
     if methods:
