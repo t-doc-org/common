@@ -320,8 +320,16 @@ export class FifoBuffer {
         this.end += data.length;
     }
 
+    // Find a value within the buffer.
+    findValue(value, pos) {
+        if (this.begin + pos + 1 > this.end) return -1;
+        const index = this.data.subarray(this.begin + pos, this.end)
+                               .indexOf(value);
+        return index >= 0 ? pos + index : -1;
+    }
+
     // Find data within the buffer.
-    indexOf(data, pos) {
+    findData(data, pos) {
         if (this.begin + pos + data.length > this.end) return -1;
         const index = this.data.subarray(this.begin + pos, this.end).findIndex(
             (_, i, arr) => {

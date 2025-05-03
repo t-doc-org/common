@@ -315,7 +315,7 @@ except OSError as e:
         const cancel = timeout(ms);
         let pos = 0;
         for (;;) {
-            const i = this.cap.indexOf(want, pos);
+            const i = this.cap.findData(want, pos);
             if (i >= 0) {
                 const data = this.cap.read(i);
                 this.cap.drop(want.length);

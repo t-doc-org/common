@@ -151,6 +151,7 @@ class EventApi:
         with self.lock:
             if (obs := self.observables.get(key)) is not None: return obs
             # TODO: Create dynamic observable
+        raise Exception("Observable not found")
 
     @contextlib.contextmanager
     def watcher(self):
@@ -199,10 +200,11 @@ class EventApi:
     def watch(self, watcher, adds):
         failed = []
         for add in adds:
-            if (obs := self.find_observable(add['req'])) is not None:
-                watcher.watch(add['wid'], obs)
-            else:
-                failed.append(req)
+            if (wid := add.get('wid')) is None: continue
+            try:
+                watcher.watch(wid, self.find_observable(add['req']))
+            except Exception:
+                failed.append(wid)
         return failed
 
 
