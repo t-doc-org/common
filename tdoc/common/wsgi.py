@@ -10,8 +10,9 @@ def http_status(status):
     return f'{status} {status.phrase}'
 
 
-def error(respond, status, exc_info=None):
-    body = status.description.encode('utf-8')
+def error(respond, status, msg=None, exc_info=None):
+    if msg is None: msg = status.description
+    body = msg.encode('utf-8')
     respond(http_status(status), [
         ('Content-Type', 'text/plain; charset=utf-8'),
         ('Content-Length', str(len(body))),
@@ -20,11 +21,14 @@ def error(respond, status, exc_info=None):
 
 
 class Error(Exception):
-    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR):
-        super().__init__(status)
+    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR, msg=None):
+        super().__init__(status, msg)
 
     @property
     def status(self): return self.args[0]
+
+    @property
+    def message(self): return self.args[1]
 
 
 def method(env, *allowed):
@@ -33,13 +37,20 @@ def method(env, *allowed):
     return m
 
 
+def to_json(data, sort_keys=False):
+    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
+
+
 def read_json(env):
-    data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
-    return json.loads(data)
+    try:
+        data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
+        return json.loads(data)
+    except Exception as e:
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 
 
 def respond_json(respond, data):
-    body = json.dumps(data, separators=(',', ':')).encode('utf-8')
+    body = to_json(data).encode('utf-8')
     respond(http_status(HTTPStatus.OK), [
         ('Content-Type', 'application/json'),
         ('Content-Length', str(len(body))),

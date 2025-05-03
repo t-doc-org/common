@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
+import hashlib
 from http import HTTPMethod, HTTPStatus
-import json
 import pathlib
+import queue
+import secrets
 import sqlite3
 import sys
 import threading
@@ -25,7 +27,9 @@ class Api:
 
     def __init__(self, path):
         self.path = pathlib.Path(path).resolve() if path else None
+        self.event = EventApi(self)
         self.endpoints = {
+            'event': self.event,
             'log': self.handle_log,
         }
 
@@ -99,7 +103,8 @@ class Api:
         try:
             yield from handler(env, respond)
         except wsgi.Error as e:
-            return (yield from wsgi.error(respond, e.status, sys.exc_info()))
+            return (yield from wsgi.error(respond, e.status, e.message,
+                                          exc_info=sys.exc_info()))
         finally:
             if (db := self.thread_local.db) is not None \
                      and not env.get('tdoc.db_cache_per_thread'):
@@ -107,18 +112,177 @@ class Api:
                 db.close()
 
     def handle_log(self, env, respond):
-        method = wsgi.method(env, HTTPMethod.POST)
+        wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         self.check_acl(env, 'log')
+        req = wsgi.read_json(env)
         with self.transaction(env) as db:
-            try:
-                req = wsgi.read_json(env)
-            except Exception as e:
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
             db.execute("""
                 insert into log (time, location, session, data)
                     values (?, ?, ?, json(?));
             """, (int(req.get('time', time.time_ns() // 1000000)),
                   req['location'], req.get('session'),
-                  json.dumps(req['data'], separators=(',', ':'))))
+                  wsgi.to_json(req['data'])))
         return wsgi.respond_json(respond, {})
+
+
+class EventApi:
+    def __init__(self, api):
+        self.api = api
+        self.endpoints = {
+            'sub': self.handle_sub,
+            'watch': self.handle_watch,
+        }
+        self.lock = threading.Lock()
+        self.observables = {}
+        self.watchers = {}
+
+    def __call__(self, env, respond):
+        name = util.shift_path_info(env)
+        if (handler := self.endpoints.get(name, None)) is None:
+            raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        return handler(env, respond)
+
+    def add_observable(self, obs):
+        with self.lock: self.observables[obs.key] = obs
+
+    def find_observable(self, req):
+        key = Observable.hash(req)
+        with self.lock:
+            if (obs := self.observables.get(key)) is not None: return obs
+            # TODO: Create dynamic observable
+
+    @contextlib.contextmanager
+    def watcher(self):
+        with Watcher() as watcher:
+            with self.lock:
+                while True:
+                    sid = secrets.token_urlsafe(20)
+                    if sid not in self.watchers: break
+                watcher.sid = sid
+                self.watchers[sid] = watcher
+            try:
+                yield watcher
+            finally:
+                with self.lock: del self.watchers[sid]
+
+    def handle_watch(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        req = wsgi.read_json(env)
+        with self.watcher() as watcher:
+            respond(wsgi.http_status(HTTPStatus.OK), [
+                ('Content-Type', 'text/plain; charset=utf-8'),
+                ('Cache-Control', 'no-store'),
+            ])
+            resp = {'sid': watcher.sid}
+            if failed := self.watch(watcher, req.get('add', [])):
+                resp['failed'] = failed
+            yield wsgi.to_json(resp).encode('utf-8') + b'\n'
+            yield from watcher
+
+    def handle_sub(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        req = wsgi.read_json(env)
+        if (sid := req.get('sid', None)) is None:
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing field 'sid'")
+        with self.lock:
+            if (watcher := self.watchers.get(sid)) is None:
+                raise wsgi.Error(HTTPStatus.NOT_FOUND, "Unknown stream ID")
+        resp = {}
+        for wid in req.get('remove', []): watcher.unwatch(wid)
+        if failed := self.watch(watcher, req.get('add', [])):
+            resp['failed'] = failed
+        return wsgi.respond_json(respond, resp)
+
+    def watch(self, watcher, adds):
+        failed = []
+        for add in adds:
+            if (obs := self.find_observable(add['req'])) is not None:
+                watcher.watch(add['wid'], obs)
+            else:
+                failed.append(req)
+        return failed
+
+
+class Watcher:
+    def __init__(self):
+        self.queue = queue.SimpleQueue()
+        self.lock = threading.Lock()
+        self.watches = {}
+
+    def send(self, wid, msg):
+        self.queue.put((wid, msg))
+
+    def __iter__(self):
+        while True:
+            try:
+                wid, msg = self.queue.get(timeout=1)
+                yield b'{"wid":%d,"data":' % wid
+                yield msg
+                yield b'}\n'
+            except queue.Empty:
+                yield b'\n'
+
+    def __enter__(self): return self
+
+    def __exit__(self, typ, value, tb):
+        with self.lock:
+            watches, self.watches = self.watches, {}
+        for wid, obs in watches.items(): obs.unwatch(self, wid)
+
+    def watch(self, wid, obs):
+        with self.lock:
+            if wid in self.watches: return
+            self.watches[wid] = obs
+        obs.watch(self, wid)
+
+    def unwatch(self, wid):
+        with self.lock: obs = self.watches.pop(wid, None)
+        if obs is not None: obs.unwatch(self, wid)
+
+
+class Observable:
+    @staticmethod
+    def hash(req):
+        return hashlib.sha256(
+            wsgi.to_json(req, sort_keys=True).encode('utf-8')).digest()
+
+    def __init__(self, req):
+        self.key = self.hash(req)
+        self.lock = threading.Lock()
+        self.watches = set()
+
+    def send_initial_locked(self, watcher, wid): pass
+
+    def send_locked(self, msg):
+        for watcher, wid in self.watches: watcher.send(wid, msg)
+
+    def watch(self, watcher, wid):
+        key = (watcher, wid)
+        with self.lock:
+            if key in self.watches: return
+            self.watches.add(key)
+            self.send_initial_locked(watcher, wid)
+
+    def unwatch(self, watcher, wid):
+        with self.lock: self.watches.discard((watcher, wid))
+
+
+class ValueObservable(Observable):
+    def __init__(self, name, value):
+        super().__init__({'name': name})
+        self._value = value
+
+    def set(self, value):
+        with self.lock:
+            if value == self._value: return
+            self._value = value
+            self.send_locked(self._msg())
+
+    def send_initial_locked(self, watcher, wid):
+        watcher.send(wid, self._msg())
+
+    def _msg(self):
+        return wsgi.to_json(self._value).encode('utf-8')

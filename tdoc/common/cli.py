@@ -222,11 +222,12 @@ class Application:
         self.idle_start = 0
         self.opened = False
         self.build_mtime = None
-        self.building = False
+        self.build_obs = api.ValueObservable('build', self.build_mtime)
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
         self.api = api.Api(cfg.store if cfg.store and cfg.store.exists()
                            else None)
+        self.api.event.add_observable(self.build_obs)
         self.api.add_endpoint('build', self.handle_build)
         self.api.add_endpoint('terminate', self.handle_terminate)
 
@@ -273,6 +274,7 @@ class Application:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
                     self.lock.notify_all()
+                self.build_obs.set(str(mtime))
                 self.print_serving()
                 if build_mtime is not None:
                     self.remove(self.build_dir(build_mtime))
@@ -307,15 +309,12 @@ class Application:
 
     def build(self, mtime):
         build = self.build_dir(mtime)
-        with self.lock: self.building = True
         try:
             res = sphinx_build(self.cfg, 'html', build=build,
                                tags=['tdoc-dev', f'tdoc-build-{mtime}'])
             if res.returncode == 0: return build
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")
-        finally:
-            with self.lock: self.building = False
         if self.cfg.exit_on_failure:
             self.returncode = 1
             self.server.shutdown()
