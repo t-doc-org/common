@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {bearerAuthorization, dec, fetchJson, FifoBuffer, rootUrl, sleep} from './core.js';
+import {backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, rootUrl, sleep} from './core.js';
 
 export const url = (() => {
     if (tdoc.dev) return '/*api';
@@ -72,8 +72,9 @@ class EventsApi {
     async run() {
         this.running = true;
         try {
+            let retries = 0;
             for (;;) {
-                let resolve;
+                let start = performance.now(), resolve;
                 try {
                     const req = {};
                     if (this.watches.size > 0) {
@@ -89,8 +90,8 @@ class EventsApi {
                     resolve();
                     delete this.sid;
                 }
-                // TODO: Use exponential backoff if previous stream was short
-                await sleep(1000);
+                if (performance.now() - start > 30000) retries = 0;
+                await sleep(backoff(1000, 10000, retries++));
             }
         } finally {
             this.running = false;

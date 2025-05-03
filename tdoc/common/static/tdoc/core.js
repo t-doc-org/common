@@ -68,6 +68,11 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
+// Enable or disable one or more elements.
+export function enable(value, ...els) {
+    for (const el of els) el.disabled = !value;
+}
+
 const onHandler = {
     get(obj, prop, recv) {
         return (handler, opts) => {
@@ -76,11 +81,6 @@ const onHandler = {
         }
     }
 };
-
-// Enable or disable one or more elements.
-export function enable(value, ...els) {
-    for (const el of els) el.disabled = !value;
-}
 
 // Return a proxy object whose methods set event handlers.
 export function on(node) { return new Proxy(node, onHandler); }
@@ -377,6 +377,14 @@ export class Stored {
 export class StoredJson extends Stored {
     encode(v) { return JSON.stringify(v); }
     decode(v) { return JSON.parse(v); }
+}
+
+// Return an exponential backoff delay.
+export function backoff(min, max, retries) {
+    let delay = min * 1.3 ** retries;
+    if (delay > max) delay = max;
+    delay -= delay * 0.4 * Math.random();
+    return delay >= min ? delay : min;
 }
 
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all
