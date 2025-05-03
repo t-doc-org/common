@@ -75,8 +75,6 @@ def setup(app):
     app.connect('config-inited', on_config_inited)
     app.connect('html-page-context', on_html_page_context)
     app.connect('html-page-context', add_draw_button, priority=500.6)
-    if build_id(app) is not None:
-        app.connect('html-page-context', add_reload_js)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('write-started', write_static_files)
@@ -138,10 +136,6 @@ def add_draw_button(app, page, template, context, doctree):
         'tooltip': _("Draw"),
         'label': 'draw',
     })
-
-
-def add_reload_js(app, page, template, context, doctree):
-    app.add_js_file('tdoc/reload.js', type='module')
 
 
 def add_terminate_button(app, page, template, context, doctree):

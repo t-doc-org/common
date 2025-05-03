@@ -213,7 +213,7 @@ class Application:
     def __init__(self, cfg, addr):
         self.cfg = cfg
         self.addr = addr
-        self.lock = threading.Condition(threading.Lock())
+        self.lock = threading.Lock()
         self.directory = self.build_dir(0) / 'html'
         self.stop = False
         self.min_mtime = time.time_ns()
@@ -228,7 +228,6 @@ class Application:
         self.api = api.Api(cfg.store if cfg.store and cfg.store.exists()
                            else None)
         self.api.event.add_observable(self.build_obs)
-        self.api.add_endpoint('build', self.handle_build)
         self.api.add_endpoint('terminate', self.handle_terminate)
 
     def __enter__(self): return self
@@ -273,7 +272,6 @@ class Application:
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
-                    self.lock.notify_all()
                 self.build_obs.set(str(mtime))
                 self.print_serving()
                 if build_mtime is not None:
@@ -409,27 +407,6 @@ Release notes: <https://common.t-doc.org/release-notes.html\
                 continue
             res = res / part
         return res / '' if trailing else res
-
-    def handle_build(self, env, respond):
-        method = wsgi.method(env, HTTPMethod.HEAD, HTTPMethod.GET)
-        t = parse.parse_qs(env.get('QUERY_STRING', '')).get('t', [None])[0]
-        # Send padding back at regular intervals to allow detecting when the
-        # client closes the connection (causes a BrokenPipeError).
-        respond(wsgi.http_status(HTTPStatus.OK), [
-            ('Content-Type', 'text/plain; charset=utf-8'),
-            ('Cache-Control', 'no-store'),
-        ])
-        if method == HTTPMethod.HEAD: return
-        with self.lock:
-            if self.conn_count < 0: self.conn_count = 0  # First connection
-            self.conn_count += 1
-            try:
-                while ((mtime := self.build_mtime) is None or str(mtime) == t):
-                    if not self.lock.wait(timeout=0.5): yield b' '
-            finally:
-                self.conn_count -= 1
-                if self.conn_count == 0: self.idle_start = time.time_ns()
-        yield str(mtime).encode('utf-8')
 
     def handle_terminate(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)

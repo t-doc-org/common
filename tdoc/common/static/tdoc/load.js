@@ -1,6 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+import {events, Watch} from './api.js';
 import {addTooltip, domLoaded, elmt, htmlData, on, qs, qsa, rgb2hex, Stored, StoredJson} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
@@ -179,3 +180,11 @@ ${drawState.value.marker ? ' checked="checked"' : ''}>\
         setState({marker: e.target.checked});
     });
 };
+
+const build = tdoc.build;
+if (build) {
+    console.info(`[t-doc] Build: ${build}`);
+    events.sub({add: [new Watch({name: 'build'}, async data => {
+        if (data && data !== build) location.reload();
+    })]});
+}
