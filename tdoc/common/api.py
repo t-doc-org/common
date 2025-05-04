@@ -22,11 +22,98 @@ class ThreadLocal(threading.local):
         self.__dict__.update(kwargs)
 
 
+class Store:
+    def __init__(self, path, timeout=10, dev=False):
+        self.path = pathlib.Path(path).resolve()
+        self.timeout = timeout
+        self.dev = dev
+        # TODO: Check database version, as separate method
+
+    def connect(self, params='mode=rw', autocommit=False):
+        return sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
+                               timeout=self.timeout, autocommit=autocommit,
+                               check_same_thread=True)
+
+    def meta(self, db, key, default=None):
+        for value, in db.execute(
+                "select value from meta where key = ?", (key,)):
+            return value
+        return default
+
+    def create(self, version=None, dev=False):
+        self._check_version(version)
+        if self.path.exists():
+            raise Exception("Store database already exists")
+        # WAL cannot be enabled within a transaction, and autocommit=False
+        # always has a transaction open. Create the database with
+        # autocommit=True as a workaround.
+        with contextlib.closing(
+                self.connect('mode=rwc', autocommit=True)) as db:
+            db.execute("pragma journal_mode=WAL")
+        with contextlib.closing(self.connect()) as db:
+            return self._upgrade(db, from_version=0, to_version=version,
+                                 dev=dev)
+
+    def upgrade(self, version=None):
+        self._check_version(version)
+        with contextlib.closing(self.connect()) as db:
+            from_version = self.meta(db, 'version')
+            to_version = self._upgrade(db, from_version=from_version,
+                                       to_version=version,
+                                       dev=self.meta(db, 'dev', 0))
+            return from_version, to_version
+
+    def _check_version(self, version):
+        if version is None: return
+        for v, _ in self.versions():
+            if v == version: return
+        raise Exception(f"Invalid store version: {version}")
+
+    def _upgrade(self, db, from_version, to_version, dev):
+        version = from_version
+        for v, fn in self.versions(from_version + 1):
+            if to_version is not None and v > to_version: break
+            with db:
+                fn(db, dev)
+                db.execute("insert or replace into meta values ('version', ?)",
+                           (v,))
+            version = v
+        return version
+
+    def versions(self, version=1):
+        while True:
+            if (fn := getattr(self, f'version_{version}', None)) is None:
+                return
+            yield version, fn
+            version += 1
+
+    def version_1(self, db, dev):
+        db.executescript("""
+            create table meta (
+                key text primary key,
+                value any
+            ) strict;
+            create table auth (
+                token text primary key,
+                perms text not null
+            ) strict;
+            create table log (
+                time int not null,
+                location text not null,
+                session text,
+                data text
+            ) strict;
+        """)
+        db.execute("insert into meta values ('dev', ?)", (1 if dev else 0,))
+        if dev:
+            db.execute("insert into auth (token, perms) values ('*', '*')")
+
+
 class Api:
     thread_local = ThreadLocal(db=None)
 
-    def __init__(self, path):
-        self.path = pathlib.Path(path).resolve() if path else None
+    def __init__(self, path, db_timeout=10):
+        self.store = Store(path, timeout=db_timeout) if path else None
         self.event = EventApi(self)
         self.endpoints = {
             'event': self.event,
@@ -36,52 +123,12 @@ class Api:
     def add_endpoint(self, name, handler):
         self.endpoints[name] = handler
 
-    def connect(self, params, timeout=10, autocommit=False):
-        return sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
-                               timeout=timeout, autocommit=autocommit,
-                               check_same_thread=True)
-
-    @contextlib.contextmanager
-    def transaction(self, env):
+    @property
+    def db(self):
+        if self.store is None: raise Exception("No store available")
         if (db := self.thread_local.db) is None:
-            self.thread_local.db = db = self.connect(
-                'mode=rw', timeout=env.get('tdoc.db_timeout', 10))
-        try:
-            yield db
-            db.commit()
-        except BaseException:
-            db.rollback()
-            raise
-
-    def create_store(self, open_acl=False):
-        db = self.connect('mode=rwc', autocommit=True)
-        try:
-            db.execute('pragma journal_mode=WAL')
-            db.executescript("""
-                create table meta (
-                    key text primary key,
-                    value any
-                ) strict;
-                insert into meta values ('version', 1);
-                create table auth (
-                    token text primary key,
-                    perms text not null
-                ) strict;
-                create table log (
-                    time int not null,
-                    location text not null,
-                    session text,
-                    data text
-                ) strict;
-            """)
-            if open_acl:
-                db.execute("insert into auth (token, perms) values ('*', '*')")
-            db.commit()
-        except BaseException:
-            db.rollback()
-            raise
-        finally:
-            db.close()
+            db = self.thread_local.db = self.store.connect()
+        return db
 
     def check_acl(self, env, perm):
         token = ''
@@ -89,7 +136,7 @@ class Api:
             parts = auth.split()
             if len(parts) == 2 and parts[0].lower() == 'bearer':
                 token = parts[1]
-        with self.transaction(env) as db:
+        with self.db as db:
             for perms, in db.execute(
                     "select perms from auth where token in (?, '*')", (token,)):
                 perms = perms.split(',')
@@ -116,7 +163,7 @@ class Api:
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         self.check_acl(env, 'log')
         req = wsgi.read_json(env)
-        with self.transaction(env) as db:
+        with self.db as db:
             db.execute("""
                 insert into log (time, location, session, data)
                     values (?, ?, ?, json(?));

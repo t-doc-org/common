@@ -90,8 +90,18 @@ def main(argv, stdin, stdout, stderr):
     p = store.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument
-    arg('--open', action='store_true', dest='open',
-        help="Add an open ACL to the created store.")
+    arg('--dev', action='store_true', dest='dev',
+        help="Create the store for dev mode.")
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version at which to create the store (default: latest).")
+    add_store_option(arg)
+    add_common_options(p)
+
+    p = store.add_parser('upgrade', help="Upgrade the store database.")
+    p.set_defaults(handler=cmd_store_upgrade)
+    arg = p.add_argument
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version to which to upgrade the store (default: latest).")
     add_store_option(arg)
     add_common_options(p)
 
@@ -164,9 +174,22 @@ def cmd_serve(cfg):
 
 
 def cmd_store_create(cfg):
-    app = api.Api(cfg.store)
-    app.path.parent.mkdir(parents=True, exist_ok=True)
-    app.create_store(open_acl=cfg.open)
+    if not cfg.store: raise Exception("--store: Empty path")
+    store = api.Store(cfg.store)
+    store.path.parent.mkdir(parents=True, exist_ok=True)
+    version = store.create(version=cfg.version, dev=cfg.dev)
+    cfg.stdout.write(f"Store created (version: {version})\n")
+
+
+def cmd_store_upgrade(cfg):
+    if not cfg.store: raise Exception("--store: empty path")
+    store = api.Store(cfg.store)
+    from_version, to_version = store.upgrade(version=cfg.version)
+    if from_version != to_version:
+        cfg.stdout.write(
+            f"Store upgraded (version: {from_version} => {to_version})\n")
+    else:
+        cfg.stdout.write(f"Store already up-to-date (version: {to_version})\n")
 
 
 def cmd_version(cfg):
