@@ -226,10 +226,8 @@ class RequestHandler(simple_server.WSGIRequestHandler):
 
 
 def try_stat(path):
-    try:
+    with contextlib.suppress(OSError):
         return path.stat()
-    except OSError:
-        return None
 
 
 class Application:
@@ -363,7 +361,7 @@ class Application:
     def print_upgrade(self):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
         o = self.cfg.stdout
-        try:
+        with contextlib.suppress(Exception):
             marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
             cur, new = marker.read_text('utf-8').split(' ')[:2]
             if cur == new: return
@@ -374,10 +372,10 @@ Release notes: <https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}>
 {o.BOLD}Restart the server to upgrade.{o.NORM}
 """)
-        except Exception:
-            pass
 
     def __call__(self, env, respond):
+        env['tdoc.dev'] = True
+
         # Dispatch to API if this is an API call.
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
         if wsgiutil.shift_path_info(env) == '*api':

@@ -11,6 +11,13 @@ export const htmlData = document.documentElement.dataset;
 // The URL of the root of the site.
 export const rootUrl = new URL('../..', import.meta.url);
 
+// The URL of the page. In dev mode, the URL is without origin.
+export const pageUrl = (() => {
+    const path = location.pathname;
+    return (tdoc.dev ? '' : location.origin) + path
+           + (path.endsWith('/') ? 'index.html' : '');
+})();
+
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 export const domLoaded = new Promise(resolve => {
     if (document.readyState !== 'loading') {

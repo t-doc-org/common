@@ -15,6 +15,18 @@ from wsgiref import util
 
 from . import wsgi
 
+# TODO: Replace thread-local connection with a connection pool; cache
+#       per-request connection in env
+
+missing = object()
+
+def arg(data, name, validate=None):
+    if (v := data.get(name, missing)) is missing:
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Missing argument '{name}'")
+    if validate is not None and not validate(v):
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Invalid argument '{name}'")
+    return v
+
 
 class ThreadLocal(threading.local):
     def __init__(self, **kwargs):
@@ -75,8 +87,10 @@ class Store:
             if to_version is not None and v > to_version: break
             with db:
                 fn(db, dev)
-                db.execute("insert or replace into meta values ('version', ?)",
-                           (v,))
+                db.execute("""
+                    insert or replace into meta (key, value)
+                        values ('version', ?)
+                """, (v,))
             version = v
         return version
 
@@ -108,6 +122,14 @@ class Store:
         if dev:
             db.execute("insert into auth (token, perms) values ('*', '*')")
 
+    def version_2(self, db, dev):
+        db.executescript("""
+            create table solutions (
+                page text primary key,
+                show text not null
+            ) strict;
+        """)
+
 
 class Api:
     thread_local = ThreadLocal(db=None)
@@ -118,6 +140,7 @@ class Api:
         self.endpoints = {
             'event': self.event,
             'log': self.handle_log,
+            'solutions': self.handle_solutions,
         }
 
     def add_endpoint(self, name, handler):
@@ -129,6 +152,16 @@ class Api:
         if (db := self.thread_local.db) is None:
             db = self.thread_local.db = self.store.connect()
         return db
+
+    def is_dev(self, env):
+        return env.get('tdoc.dev', False)
+
+    def origin(self, env):
+        return env['HTTP_ORIGIN'] if not self.is_dev(env) else ''
+
+    def check_same_origin(self, env, url):
+        if not url.startswith(f'{self.origin(env)}/'):
+            raise wsgi.Error(HTTPStatus.FORBIDDEN)
 
     def check_acl(self, env, perm):
         token = ''
@@ -145,7 +178,7 @@ class Api:
 
     def __call__(self, env, respond):
         name = util.shift_path_info(env)
-        if (handler := self.endpoints.get(name, None)) is None:
+        if (handler := self.endpoints.get(name)) is None:
             return (yield from wsgi.error(respond, HTTPStatus.NOT_FOUND))
         try:
             yield from handler(env, respond)
@@ -166,10 +199,23 @@ class Api:
         with self.db as db:
             db.execute("""
                 insert into log (time, location, session, data)
-                    values (?, ?, ?, json(?));
+                    values (?, ?, ?, json(?))
             """, (int(req.get('time', time.time_ns() // 1000000)),
                   req['location'], req.get('session'),
                   wsgi.to_json(req['data'])))
+        return wsgi.respond_json(respond, {})
+
+    def handle_solutions(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        req = wsgi.read_json(env)
+        with self.db as db:
+            # TODO: Check ACL
+            self.check_same_origin(env, page := arg(req, 'page'))
+            show = arg(req, 'show', lambda v: v in ('show', 'remove'))
+            db.execute("""
+                insert or replace into solutions (page, show) values (?, ?)
+            """, (page, show))
         return wsgi.respond_json(respond, {})
 
 
@@ -182,22 +228,28 @@ class EventApi:
         }
         self.lock = threading.Lock()
         self.observables = {}
+        self.observable_types = {
+            'solutions': SolutionsObservable,
+        }
         self.watchers = {}
 
     def __call__(self, env, respond):
         name = util.shift_path_info(env)
-        if (handler := self.endpoints.get(name, None)) is None:
+        if (handler := self.endpoints.get(name)) is None:
             raise wsgi.Error(HTTPStatus.NOT_FOUND)
         return handler(env, respond)
 
     def add_observable(self, obs):
         with self.lock: self.observables[obs.key] = obs
 
-    def find_observable(self, req):
+    def find_observable(self, req, env):
         key = Observable.hash(req)
         with self.lock:
             if (obs := self.observables.get(key)) is not None: return obs
-            # TODO: Create dynamic observable
+            if (typ := self.observable_types.get(req['name'])) is not None:
+                obs = typ(req, self, env)
+                self.observables[obs.key] = obs
+                return obs
         raise Exception("Observable not found")
 
     @contextlib.contextmanager
@@ -224,7 +276,7 @@ class EventApi:
                 ('Cache-Control', 'no-store'),
             ])
             resp = {'sid': watcher.sid}
-            if failed := self.watch(watcher, req.get('add', [])):
+            if failed := self.watch(watcher, req.get('add', []), env):
                 resp['failed'] = failed
             yield wsgi.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
@@ -233,23 +285,22 @@ class EventApi:
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         req = wsgi.read_json(env)
-        if (sid := req.get('sid', None)) is None:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing field 'sid'")
+        sid = arg(req, 'sid')
         with self.lock:
             if (watcher := self.watchers.get(sid)) is None:
                 raise wsgi.Error(HTTPStatus.NOT_FOUND, "Unknown stream ID")
         resp = {}
         for wid in req.get('remove', []): watcher.unwatch(wid)
-        if failed := self.watch(watcher, req.get('add', [])):
+        if failed := self.watch(watcher, req.get('add', []), env):
             resp['failed'] = failed
         return wsgi.respond_json(respond, resp)
 
-    def watch(self, watcher, adds):
+    def watch(self, watcher, adds, env):
         failed = []
         for add in adds:
             if (wid := add.get('wid')) is None: continue
             try:
-                watcher.watch(wid, self.find_observable(add['req']))
+                watcher.watch(wid, self.find_observable(add['req'], env))
             except Exception:
                 failed.append(wid)
         return failed
@@ -300,10 +351,11 @@ class Observable:
 
     def __init__(self, req):
         self.key = self.hash(req)
-        self.lock = threading.Lock()
+        self.lock = threading.Condition(threading.Lock())
         self.watches = set()
 
     def send_initial_locked(self, watcher, wid): pass
+    def stop_locked(self): pass
 
     def send_locked(self, msg):
         for watcher, wid in self.watches: watcher.send(wid, msg)
@@ -316,7 +368,9 @@ class Observable:
             self.send_initial_locked(watcher, wid)
 
     def unwatch(self, watcher, wid):
-        with self.lock: self.watches.discard((watcher, wid))
+        with self.lock:
+            self.watches.discard((watcher, wid))
+            if not self.watches: self.stop_locked()
 
 
 class ValueObservable(Observable):
@@ -330,8 +384,49 @@ class ValueObservable(Observable):
             self._value = value
             self.send_locked(self._msg())
 
+    def _msg(self):
+        return wsgi.to_json(self._value).encode('utf-8')
+
     def send_initial_locked(self, watcher, wid):
         watcher.send(wid, self._msg())
 
+
+class DbObservable(Observable):
+    def __init__(self, req, events):
+        super().__init__(req)
+        self.events = events
+
+
+class SolutionsObservable(DbObservable):
+    def __init__(self, req, events, env):
+        super().__init__(req, events)
+        self._page = arg(req, 'page')
+        self.events.api.check_same_origin(env, self._page)
+        self._data = {'show': None}
+        self._stop = False
+        self._poller = threading.Thread(target=self.poll)
+        self._poller.start()
+
     def _msg(self):
-        return wsgi.to_json(self._value).encode('utf-8')
+        return wsgi.to_json(self._data).encode('utf-8')
+
+    def send_initial_locked(self, watcher, wid):
+        watcher.send(wid, self._msg())
+
+    def stop_locked(self):
+        self._stop = True
+        self.lock.notify()
+
+    def poll(self):
+        with contextlib.closing(self.events.api.store.connect()) as db:
+            with self.lock: show = self._data['show']
+            while True:
+                with contextlib.suppress(Exception), db:
+                    for show, in db.execute(
+                            "select show from solutions where page = ?",
+                            (self._page,)): pass
+                with self.lock:
+                    if show != self._data['show']:
+                        self._data['show'] = show
+                        self.send_locked(self._msg())
+                    if self.lock.wait_for(lambda: self._stop, 1): break

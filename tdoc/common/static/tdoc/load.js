@@ -1,8 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {events, Watch} from './api.js';
-import {addTooltip, domLoaded, elmt, htmlData, on, qs, qsa, rgb2hex, Stored, StoredJson} from './core.js';
+import * as api from './api.js';
+import {addTooltip, domLoaded, elmt, htmlData, on, pageUrl, qs, qsa, rgb2hex, Stored, StoredJson} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -28,26 +28,50 @@ domLoaded.then(() => {
 
 // Handle the "terminate server" button.
 tdoc.terminateServer = async ret => {
+    // TODO: Move to api.js
     await fetch(`/*api/terminate?r=${ret ?? 0}`,
                 {method: 'POST', cache: 'no-cache', referrer: ''});
 };
 
 // Handle the "toggle solutions" button.
-if (htmlData.tdocSolutions === 'remove') {
-    const solutions = new Stored('tdoc:solutions');
-    if (solutions.value) {
-        if (solutions.value === 'show') {
-            delete htmlData.tdocSolutions;
-        } else {
-            htmlData.tdocSolutions = solutions.value;
+if (qs(document, '.btn-toggle-solutions')) {
+    if (htmlData.tdocSolutions === 'remove') {
+        const v = new Stored('tdoc:solutions').value;
+        if (v === 'hide' || v === 'remove') {
+            htmlData.tdocSolutions = v;
+        } else if (v === 'control') {
+            htmlData.tdocSolutions = 'control-hide';
+        }
+        const sol = htmlData.tdocSolutions;
+        if (sol !== 'hide') {
+            const prefix = sol.startsWith('control-') ? 'control-' : '';
+            api.events.sub({add: [new api.Watch(
+                {name: 'solutions', page: pageUrl},
+                async data => {
+                    if (data.show === null) return;
+                    if (prefix) {
+                        htmlData.tdocSolutions = prefix + data.show;
+                    } else if (data.show === 'remove') {
+                        htmlData.tdocSolutions = data.show;
+                    } else {
+                        delete htmlData.tdocSolutions;
+                    }
+                })]});
         }
     }
 }
 tdoc.toggleSolutions = () => {
-    if (htmlData.tdocSolutions) {
-        delete htmlData.tdocSolutions;
-    } else {
+    const sol = htmlData.tdocSolutions;
+    if (sol === 'hide') {
+        htmlData.tdocSolutions = 'show';
+    } else if (sol === 'show') {
         htmlData.tdocSolutions = 'hide';
+    } else if (sol === 'control-remove') {
+        htmlData.tdocSolutions = 'control-show';
+        api.solutions('show');
+    } else if (sol === 'control-show') {
+        htmlData.tdocSolutions = 'control-remove';
+        api.solutions('remove');
     }
 };
 
@@ -184,7 +208,7 @@ ${drawState.value.marker ? ' checked="checked"' : ''}>\
 const build = tdoc.build;
 if (build) {
     console.info(`[t-doc] Build: ${build}`);
-    events.sub({add: [new Watch({name: 'build'}, async data => {
+    api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
         if (data && data !== build) location.reload();
     })]});
 }

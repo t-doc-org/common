@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, rootUrl, sleep} from './core.js';
+import {backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, pageUrl, sleep} from './core.js';
 
 export const url = (() => {
     if (tdoc.dev) return '/*api';
@@ -24,6 +24,12 @@ export function log(session, data, options) {
     });
 }
 
+export function solutions(show) {
+    return fetchJson(`${url}/solutions`, {
+        body: {page: pageUrl, show},
+    });
+}
+
 export class Watch {
     static lastId = 0;
 
@@ -31,7 +37,7 @@ export class Watch {
         this.req = req;
         this.onEvent = onEvent;
         this.onFailed = onFailed ?? (() => {
-            console.error(`Watch failure: ${this.req}`);
+            console.error(`Watch failure: ${JSON.stringify(this.req)}`);
         });
         this.id = ++this.constructor.lastId;
     }
