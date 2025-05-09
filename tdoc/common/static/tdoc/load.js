@@ -34,7 +34,16 @@ tdoc.terminateServer = async ret => {
 };
 
 // Handle the "toggle solutions" button.
-if (qs(document, '.btn-toggle-solutions')) {
+const toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
+function updateSolutionsTooltip() {
+    const title = htmlData.tdocSolutions.endsWith('hide')
+                  || htmlData.tdocSolutions.endsWith('remove') ?
+                  "Show solutions" : "Hide solutions";
+    bootstrap.Tooltip.getInstance(toggleSolutionsBtn)
+        .setContent({'.tooltip-inner': title});
+}
+if (toggleSolutionsBtn) {
+    on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
     if (htmlData.tdocSolutions === 'remove') {
         const v = new Stored('tdoc:solutions').value;
         if (v === 'hide' || v === 'remove') {
@@ -73,6 +82,7 @@ tdoc.toggleSolutions = () => {
         htmlData.tdocSolutions = 'control-remove';
         api.solutions('remove');
     }
+    updateSolutionsTooltip();
 };
 
 // Handle the "draw" button.
