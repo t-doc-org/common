@@ -54,10 +54,12 @@ class Solution(admonitions.BaseAdmonition):
 
 def solutions(env, page):
     md = env.metadata[page]
-    if (v := md.get('solutions', 'show')) not in ('show', 'hide', 'remove'):
+    # TODO: Remove 'remove'
+    if (v := md.get('solutions', 'show')) not in ('show', 'hide', 'dynamic',
+                                                  'remove'):
         _log.warning(f"Invalid 'solutions' value in {{metadata}}: {v}")
         v = md['solutions'] = 'show'
-    if v == 'remove' and 'tdoc-dev' in env.app.tags: v = 'hide'
+    if v == 'remove': v = 'dynamic'
     return v
 
 
@@ -68,8 +70,8 @@ def set_html_page_config(app, page, config, doctree):
 
 def add_header_button(app, page, template, context, doctree):
     if doctree is None: return
-    if not any('always-show' not in sol['classes']
-               for sol in doctree.findall(solution)): return
+    if all('always-show' in sol['classes']
+           for sol in doctree.findall(solution)): return
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.toggleSolutions()',

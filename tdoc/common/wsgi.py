@@ -31,10 +31,27 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
+def is_dev(env):
+    return env.get('tdoc.dev', False)
+
+
 def method(env, *allowed):
     m = env['REQUEST_METHOD']
     if allowed and m not in allowed: raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
     return m
+
+
+def origin(env):
+    if (v := env.get('HTTP_ORIGIN')) is None:
+        raise Error(HTTPStatus.PRECONDITION_FAILED, "Missing Origin: header")
+    return v if not is_dev(env) else ''
+
+
+def authorization(env):
+    if (auth := env.get('HTTP_AUTHORIZATION')) is None: return ''
+    parts = auth.split()
+    if len(parts) != 2 or parts[0].lower() != 'bearer': return ''
+    return parts[1]
 
 
 def to_json(data, sort_keys=False):
@@ -46,7 +63,7 @@ def read_json(env):
         data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
         return json.loads(data)
     except Exception as e:
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        raise Error(HTTPStatus.BAD_REQUEST)
 
 
 def respond_json(respond, data):

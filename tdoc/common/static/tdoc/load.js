@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {addTooltip, domLoaded, elmt, htmlData, on, pageUrl, qs, qsa, rgb2hex, Stored, StoredJson} from './core.js';
+import {
+    addTooltip, domLoaded, elmt, htmlData, on, page, qs, qsa, rgb2hex, Stored,
+    StoredJson,
+} from './core.js';
 import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -36,53 +39,35 @@ tdoc.terminateServer = async ret => {
 // Handle the "toggle solutions" button.
 const toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
 function updateSolutionsTooltip() {
-    const title = htmlData.tdocSolutions.endsWith('hide')
-                  || htmlData.tdocSolutions.endsWith('remove') ?
+    const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                   "Show solutions" : "Hide solutions";
     bootstrap.Tooltip.getInstance(toggleSolutionsBtn)
         .setContent({'.tooltip-inner': title});
 }
 if (toggleSolutionsBtn) {
     on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
-    if (htmlData.tdocSolutions === 'remove') {
-        const v = new Stored('tdoc:solutions').value;
-        if (v === 'hide' || v === 'remove') {
-            htmlData.tdocSolutions = v;
-        } else if (v === 'control') {
-            htmlData.tdocSolutions = 'control-hide';
-        }
-        const sol = htmlData.tdocSolutions;
-        if (sol !== 'hide') {
-            const prefix = sol.startsWith('control-') ? 'control-' : '';
-            api.events.sub({add: [new api.Watch(
-                {name: 'solutions', page: pageUrl},
-                async data => {
-                    if (data.show === null) return;
-                    if (prefix) {
-                        htmlData.tdocSolutions = prefix + data.show;
-                    } else if (data.show === 'remove') {
-                        htmlData.tdocSolutions = data.show;
-                    } else {
-                        delete htmlData.tdocSolutions;
-                    }
-                })]});
-        }
+    if (htmlData.tdocSolutions === 'dynamic') {
+        api.events.sub({add: [new api.Watch(
+            {name: 'solutions', page: page.path},
+            data => { htmlData.tdocSolutionsState = data.show ?? 'hide'; })]});
+        api.user.onChange(async () => {
+            if (await api.user.member_of('solutions:write')) {
+                htmlData.tdocSolutionsCtrl = '';
+            } else {
+                delete htmlData.tdocSolutionsCtrl;
+            }
+        });
     }
 }
+
 tdoc.toggleSolutions = () => {
-    const sol = htmlData.tdocSolutions;
-    if (sol === 'hide') {
-        htmlData.tdocSolutions = 'show';
-    } else if (sol === 'show') {
-        htmlData.tdocSolutions = 'hide';
-    } else if (sol === 'control-remove') {
-        htmlData.tdocSolutions = 'control-show';
-        api.solutions('show');
-    } else if (sol === 'control-show') {
-        htmlData.tdocSolutions = 'control-remove';
-        api.solutions('remove');
-    }
+    htmlData.tdocSolutionsState =
+        (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ? 'show' : 'hide';
     updateSolutionsTooltip();
+    if (htmlData.tdocSolutions === 'dynamic'
+            && htmlData.tdocSolutionsCtrl !== undefined) {
+        api.solutions(htmlData.tdocSolutionsState);
+    }
 };
 
 // Handle the "draw" button.

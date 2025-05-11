@@ -11,12 +11,26 @@ export const htmlData = document.documentElement.dataset;
 // The URL of the root of the site.
 export const rootUrl = new URL('../..', import.meta.url);
 
-// The URL of the page. In dev mode, the URL is without origin.
-export const pageUrl = (() => {
-    const path = location.pathname;
-    return (tdoc.dev ? '' : location.origin) + path
-           + (path.endsWith('/') ? 'index.html' : '');
-})();
+// Information about the page.
+export const page = {
+    origin: tdoc.dev ? '' : location.origin,
+    path: location.pathname
+          + (location.pathname.endsWith('/') ? 'index.html' : ''),
+
+    get hashParams() {
+        if (!location.hash.startsWith('#?')) return;
+        return new URLSearchParams(location.hash.slice(1));
+    },
+
+    set hashParams(params) {
+        let hash = params.toString();
+        if (hash) hash = `#?${hash}`;
+        if (hash === location.hash) return;
+        history.replaceState(
+            null, '',
+            location.origin + location.pathname + location.search + hash);
+    }
+};
 
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 export const domLoaded = new Promise(resolve => {
@@ -252,7 +266,8 @@ export async function fetchJson(url, opts) {
         ...opts.body ? {body: JSON.stringify(opts.body)} : {},
     });
     if (resp.status !== 200) {
-        throw Error(`Request failed: ${resp.status} ${resp.statusText}`);
+        throw Error(`Request failed: ${resp.status} ${resp.statusText}`,
+                    {cause: {status: resp.status}});
     }
     return await resp.json();
 }
@@ -367,13 +382,21 @@ export class Stored {
 
     get value() { return this._value; }
     set value(v) { this._value = v; this.store(); }
-    store() { localStorage.setItem(this.key, this.encode(this._value)); }
-    del() { localStorage.removeItem(this.key); }
 
     update(fn) {
         fn(this._value);
         this.store();
         return this._value;
+    }
+
+    del() { localStorage.removeItem(this.key); }
+
+    store() {
+        if (this._value !== undefined && this._value !== null) {
+            localStorage.setItem(this.key, this.encode(this._value));
+        } else {
+            localStorage.removeItem(this.key);
+        }
     }
 
     encode(v) { return v; }

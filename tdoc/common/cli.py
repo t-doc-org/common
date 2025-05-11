@@ -3,6 +3,7 @@
 
 import argparse
 import contextlib
+import datetime
 from http import HTTPMethod, HTTPStatus
 import itertools
 import mimetypes
@@ -39,13 +40,11 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
-    add_sphinx_options(p)
-    add_common_options(p)
+    add_options(p, sphinx=True)
 
     p = root.add_parser('clean', help="Clean the build products of a book.")
     p.set_defaults(handler=cmd_clean)
-    add_sphinx_options(p)
-    add_common_options(p)
+    add_options(p, sphinx=True)
 
     p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
@@ -80,40 +79,21 @@ def main(argv, stdin, stdout, stderr):
     arg('--watch', metavar='PATH', type='path', action='append', dest='watch',
         default=[],
         help="Additional directories to watch for changes.")
-    add_sphinx_options(p)
-    add_common_options(p)
+    add_options(p, sphinx=True)
 
-    p = root.add_parser('store', help="Store-related commands.")
-    store = p.add_subparsers(title="Sub-commands")
-    store.required = True
-
-    p = store.add_parser('create', help="Create the store database.")
-    p.set_defaults(handler=cmd_store_create)
-    arg = p.add_argument
-    arg('--dev', action='store_true', dest='dev',
-        help="Create the store for dev mode.")
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version at which to create the store (default: latest).")
-    add_store_option(arg)
-    add_common_options(p)
-
-    p = store.add_parser('upgrade', help="Upgrade the store database.")
-    p.set_defaults(handler=cmd_store_upgrade)
-    arg = p.add_argument
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version to which to upgrade the store (default: latest).")
-    add_store_option(arg)
-    add_common_options(p)
+    add_store_commands(root)
+    add_token_commands(root)
 
     p = root.add_parser('version', help="Display version information.")
     p.set_defaults(handler=cmd_version)
-    add_common_options(p)
+    add_options(p)
 
     cfg = parser.parse_args(argv[1:])
     return cfg.handler(cfg)
 
 
-def add_common_options(parser):
+def add_options(parser, sphinx=False):
+    if sphinx: add_sphinx_options(parser)
     arg = parser.add_argument_group("Common options").add_argument
     arg('--color', dest='color', choices=['auto', 'false', 'true'],
         default='auto',
@@ -130,12 +110,6 @@ def add_sphinx_options(parser):
         help="The path to the source files (default: %(default)s).")
     arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
         default=[], help="Additional options to pass to sphinx-build.")
-
-
-def add_store_option(arg):
-    arg('--store', metavar='PATH', type='path', dest='store',
-        default='tmp/store.sqlite',
-        help="The path to the store database (default: %(default)s).")
 
 
 def cmd_build(cfg):
@@ -173,23 +147,133 @@ def cmd_serve(cfg):
     return app.returncode
 
 
-def cmd_store_create(cfg):
+def add_store_commands(parser):
+    p = parser.add_parser('store', help="Store-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('create', help="Create the store database.")
+    p.set_defaults(handler=cmd_store_create)
+    arg = p.add_argument
+    arg('--dev', action='store_true', dest='dev',
+        help="Create the store for dev mode.")
+    add_store_option(arg)
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version at which to create the store (default: latest).")
+    add_options(p)
+
+    p = sp.add_parser('upgrade', help="Upgrade the store database.")
+    p.set_defaults(handler=cmd_store_upgrade)
+    arg = p.add_argument
+    add_store_option(arg)
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version to which to upgrade the store (default: latest).")
+    add_options(p)
+
+
+def add_store_option(arg):
+    arg('--store', metavar='PATH', type='path', dest='store',
+        default='tmp/store.sqlite',
+        help="The path to the store database (default: %(default)s).")
+
+
+def get_store(cfg):
     if not cfg.store: raise Exception("--store: Empty path")
-    store = api.Store(cfg.store)
+    return api.Store(cfg.store)
+
+
+def cmd_store_create(cfg):
+    store = get_store(cfg)
     store.path.parent.mkdir(parents=True, exist_ok=True)
     version = store.create(version=cfg.version, dev=cfg.dev)
     cfg.stdout.write(f"Store created (version: {version})\n")
 
 
 def cmd_store_upgrade(cfg):
-    if not cfg.store: raise Exception("--store: empty path")
-    store = api.Store(cfg.store)
+    store = get_store(cfg)
     from_version, to_version = store.upgrade(version=cfg.version)
     if from_version != to_version:
         cfg.stdout.write(
             f"Store upgraded (version: {from_version} => {to_version})\n")
     else:
         cfg.stdout.write(f"Store already up-to-date (version: {to_version})\n")
+
+
+def add_token_commands(parser):
+    p = parser.add_parser('token', help="Token-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('create', help="Create tokens.")
+    p.set_defaults(handler=cmd_token_create)
+    arg = p.add_argument
+    arg('--expire', metavar='TIME', type='timestamp', dest='expire',
+        default=None, help="The expiry timestamp.")
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('user', metavar='USER', nargs='+',
+        help="The users for whom to create tokens.")
+    add_options(p)
+
+    p = sp.add_parser('expire', help="Expire tokens.")
+    p.set_defaults(handler=cmd_token_expire)
+    arg = p.add_argument
+    arg('--time', metavar='TIME', type='timestamp', dest='time',
+        default=None,
+        help="The time when the tokens should expire (default: now).")
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('token', metavar='TOKEN', nargs='+',
+        help="The users and / or tokens to expire.")
+    add_options(p)
+
+    p = sp.add_parser('list', help="List tokens.")
+    p.set_defaults(handler=cmd_token_list)
+    arg = p.add_argument
+    arg('--expired', action='store_true', dest='expired',
+        help="Include expired tokens.")
+    add_origin_option(arg)
+    add_store_option(arg)
+    add_options(p)
+
+
+def add_origin_option(arg):
+    arg('--origin', metavar='URL', dest='origin', default='',
+        help="The origin on which to operate.")
+
+
+def cmd_token_create(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db:
+        tokens = store.create_tokens(db, cfg.origin, cfg.user, cfg.expire)
+    width = max(len(cfg.user) for r in tokens)
+    o = cfg.stdout
+    for user, token in zip(cfg.user, tokens):
+        cfg.stdout.write(
+            f"{o.CYAN}{user:{width}}{o.NORM} "
+            f"<{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}>\n")
+
+
+def cmd_token_expire(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db:
+        store.expire_tokens(db, cfg.origin, cfg.token, cfg.time)
+
+
+def cmd_token_list(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db:
+        tokens = list(store.tokens(db, cfg.origin, expired=cfg.expired))
+    epoch = datetime.datetime.fromtimestamp(0)
+    tokens.sort(key=lambda r: (r[0], r[2], r[3] or epoch, r[1]))
+    width = max(len(r[0]) for r in tokens)
+    o = cfg.stdout
+    for user, token, created, expires in tokens:
+        if expires: expires = f", expires: {expires.isoformat(' ', 'seconds')}"
+        cfg.stdout.write(
+            f"{o.CYAN}{user:{width}}{o.NORM} "
+            f"<{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}>\n"
+            f"  Created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
 
 
 def cmd_version(cfg):
@@ -246,8 +330,9 @@ class Application:
         self.build_obs = api.ValueObservable('build', self.build_mtime)
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
-        self.api = api.Api(cfg.store if cfg.store and cfg.store.exists()
-                           else None)
+        self.api = api.Api(
+            cfg.store if cfg.store and cfg.store.exists() else None,
+            stderr=cfg.stderr)
         self.api.event.add_observable(self.build_obs)
         self.api.add_endpoint('terminate', self.handle_terminate)
 

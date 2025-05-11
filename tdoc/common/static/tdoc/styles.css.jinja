@@ -90,8 +90,9 @@ iframe.tdoc {
 }
 
 /* Solutions */
-html:is([data-tdoc-solutions=hide], [data-tdoc-solutions=remove])
-        .admonition.solution:not(.always-show) {
+html:is([data-tdoc-solutions]:not([data-tdoc-solutions-state]),
+        [data-tdoc-solutions-state=hide]
+    ):not([data-tdoc-solutions-ctrl]) .admonition.solution:not(.always-show) {
     display: none;
 }
 .article-header-buttons button.btn-toggle-solutions {
@@ -101,11 +102,12 @@ html:is([data-tdoc-solutions=hide], [data-tdoc-solutions=remove])
     font: var(--fa-font-solid);
     content: '\f070';
 }
-html:is([data-tdoc-solutions*=hide], [data-tdoc-solutions*=remove])
-        .article-header-buttons button.btn-toggle-solutions::before {
+html:is([data-tdoc-solutions]:not([data-tdoc-solutions-state]),
+        [data-tdoc-solutions-state=hide]
+    ) .article-header-buttons button.btn-toggle-solutions::before {
     content: '\f06e';
 }
-html:is(:not([data-tdoc-solutions]), [data-tdoc-solutions=remove])
+html:not([data-tdoc-solutions=hide]):not([data-tdoc-solutions-ctrl])
         .article-header-buttons button.btn-toggle-solutions {
     display: none;
 }

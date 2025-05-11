@@ -1,7 +1,10 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, pageUrl, sleep} from './core.js';
+import {
+    backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, on, page, sleep,
+    StoredJson,
+} from './core.js';
 
 export const url = (() => {
     if (tdoc.dev) return '/*api';
@@ -13,20 +16,97 @@ export const url = (() => {
     return null;
 })();
 
+class User extends EventTarget {
+    static stored = new StoredJson('tdoc:api:user');
+
+    constructor() {
+        super();
+        this.ready = new Promise(res => { this.resolve = res; });
+        this.handleLogin();
+        if (!this.initialized) this.login(this.constructor.stored.value?.token);
+    }
+
+    async token() {
+        if (this.ready) await this.ready;
+        return this.data?.token;
+    }
+
+    async member_of(group) {
+        if (this.ready) await this.ready;
+        const groups = this.data?.groups ?? [];
+        return groups.includes(group) || groups.includes('*');
+    }
+
+    async onChange(fn) {
+        await fn();
+        this.addEventListener('change', fn);
+    }
+
+    set(data) {
+        this.data = data;
+        if (this.resolve) {
+            this.resolve();
+            delete this.ready, this.resolve;
+        }
+        this.dispatchEvent(new CustomEvent('change'));
+    }
+
+    async login(token) {
+        this.initialized = true;
+        if (!token) return this.logout();
+        try {
+            const data = await fetchJson(`${url}/user`, {
+                headers: bearerAuthorization(token),
+            });
+            data.token = token;
+            this.constructor.stored.value = data;
+            this.set(data);
+        } catch (e) {
+            if (this.resolve) this.set(this.constructor.stored.value);
+        }
+    }
+
+    logout() {
+        this.initialized = true;
+        this.constructor.stored.value = undefined;
+        this.set(undefined);
+    }
+
+    handleLogin() {
+        const params = page.hashParams
+        if (!page.hashParams) return;
+        if (params.get('logout') !== null) {
+            params.delete('logout');
+            page.hashParams = params;
+            this.logout();
+        }
+        const token = params.get('login');
+        if (token) {
+            params.delete('login');
+            page.hashParams = params;
+            this.login(token);  // Background
+        }
+    }
+}
+
+export const user = new User();
+on(window).hashchange(() => user.handleLogin());
+
 export function log(session, data, options) {
     return fetchJson(`${url}/log`, {
         headers: bearerAuthorization(options?.token),
         body: {
             'time': Date.now(),
-            'location': location.origin + location.pathname,
+            'location': page.origin + page.path,
             'session': session, 'data': data,
         },
     });
 }
 
-export function solutions(show) {
-    return fetchJson(`${url}/solutions`, {
-        body: {page: pageUrl, show},
+export async function solutions(show) {
+    return await fetchJson(`${url}/solutions`, {
+        headers: bearerAuthorization(await user.token()),
+        body: {page: page.path, show},
     });
 }
 
@@ -70,7 +150,10 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await fetchJson(`${url}/event/sub`, {body: req});
+            const resp = await fetchJson(`${url}/event/sub`, {
+                headers: bearerAuthorization(await user.token()),
+                body: req,
+            });
             this.reportFailed(resp.failed);
         } catch (e) {}
     }
@@ -105,13 +188,17 @@ class EventsApi {
     }
 
     async stream(req, connected) {
-        const abort = new AbortController();
+        this.token = await user.token();
+        this.abort = new AbortController();
         try {
             const resp = await fetch(`${url}/event/watch`, {
                 method: 'POST', cache: 'no-cache', referrer: '',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...bearerAuthorization(this.token),
+                },
                 body: JSON.stringify(req),
-                signal: abort.signal,
+                signal: this.abort.signal,
             });
             if (resp.status !== 200) return;
             const reader = resp.body.getReader();
@@ -144,7 +231,8 @@ class EventsApi {
                 reader.releaseLock();
             }
         } finally {
-            abort.abort();
+            this.abort.abort();
+            delete this.abort;
         }
     }
 
@@ -165,6 +253,11 @@ class EventsApi {
             if (w !== undefined && w.onFailed) w.onFailed();
         }
     }
+
+    restartOnTokenChange(token) {
+        if (this.abort && token !== this.token) this.abort.abort();
+    }
 }
 
 export const events = new EventsApi();
+user.onChange(async () => events.restartOnTokenChange(await user.token()));
