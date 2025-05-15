@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-43)=
+## 0.43 *(2025-05-15)*
+
+- Added dynamic control of the visibility of solutions.
+- Added support for user authentication.
+- Added an event streaming API to enable more dynamic pages.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.42...0.43)
+
 (release-0-42)=
 ## 0.42 *(2025-04-21)*
 
