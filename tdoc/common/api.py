@@ -103,8 +103,8 @@ class Api:
         if (handler := self.endpoints.get(name)) is None:
             return (yield from wsgi.error(respond, HTTPStatus.NOT_FOUND))
         try:
-            self.authenticate(env)
             try:
+                self.authenticate(env)
                 yield from handler(env, respond)
             except wsgi.Error as e:
                 return (yield from wsgi.error(respond, e.status, e.message,
