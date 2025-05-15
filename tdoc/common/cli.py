@@ -267,8 +267,8 @@ def cmd_serve(cfg):
     class Server(ServerBase):
         address_family = family
 
-    with Application(cfg, addr) as app, Server(addr, RequestHandler) as srv:
-        app.server = srv
+    with Server(addr, RequestHandler) as srv, \
+            Application(cfg, addr, srv) as app:
         srv.set_app(app)
         try:
             srv.serve_forever()
@@ -535,26 +535,25 @@ def try_stat(path):
 
 
 class Application:
-    def __init__(self, cfg, addr):
+    def __init__(self, cfg, addr, server):
         self.cfg = cfg
         self.addr = addr
+        self.server = server
         self.lock = threading.Lock()
         self.directory = self.build_dir(0) / 'html'
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.conn_count = -1
-        self.idle_start = 0
-        self.opened = False
-        self.build_mtime = None
-        self.build_obs = api.ValueObservable('build', self.build_mtime)
-        self.builder = threading.Thread(target=self.watch_and_build)
-        self.builder.start()
         self.api = api.Api(
             cfg.store if cfg.store and cfg.store.exists() else None,
             stderr=cfg.stderr)
-        self.api.event.add_observable(self.build_obs)
         self.api.add_endpoint('terminate', self.handle_terminate)
+        self.opened = False
+        self.build_mtime = None
+        self.build_obs = api.ValueObservable('build', self.build_mtime)
+        self.api.event.add_observable(self.build_obs)
+        self.builder = threading.Thread(target=self.watch_and_build)
+        self.builder.start()
 
     def __enter__(self): return self
 
@@ -570,13 +569,13 @@ class Application:
         prev, prev_mtime, build_mtime = 0, 0, None
         while True:
             if prev != 0: time.sleep(0.1)
-            now = time.time_ns()
             with self.lock:
                 if self.stop: break
-                if (self.conn_count == 0 and idle > 0
-                        and now > self.idle_start + idle):
-                    self.server.shutdown()
-                    break
+            now = time.time_ns()
+            if (idle > 0 and (lw := self.api.event.last_watcher) is not None
+                    and now > lw + idle):
+                self.server.shutdown()
+                break
             if now < prev + interval: continue
             mtime = self.latest_mtime()
             if mtime <= prev_mtime:

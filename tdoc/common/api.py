@@ -169,6 +169,7 @@ class EventApi:
             'solutions': SolutionsObservable,
         }
         self.watchers = {}
+        self._last_watcher = None
 
     def __call__(self, env, respond):
         name = util.shift_path_info(env)
@@ -193,6 +194,10 @@ class EventApi:
                 return obs
         raise Exception("Observable not found")
 
+    @property
+    def last_watcher(self):
+        with self.lock: return self._last_watcher
+
     @contextlib.contextmanager
     def watcher(self):
         with Watcher() as watcher:
@@ -202,10 +207,14 @@ class EventApi:
                     sid = secrets.token_urlsafe(8)
                 watcher.sid = sid
                 self.watchers[sid] = watcher
+                self._last_watcher = None
             try:
                 yield watcher
             finally:
-                with self.lock: del self.watchers[sid]
+                with self.lock:
+                    del self.watchers[sid]
+                    if not self.watchers:
+                        self._last_watcher = time.time_ns()
 
     def handle_watch(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
