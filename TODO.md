@@ -1,5 +1,12 @@
 # Ideas
 
+- TODO: Make all editors multi-session. Store content on server => backup.
+  Allows having multiple sessions open, e.g. on laptop and desktop.
+
+- TODO: Allow teacher to select a student session to display and interact with
+  their editor content. Allows live-correcting a student's exercise while
+  projecting to the class.
+
 - TODO: Render as pdf with solutions (open dropdowns).
 
 - TODO: Make the `name` attribute in graphviz work. This requires a fix in
