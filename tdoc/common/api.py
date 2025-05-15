@@ -18,6 +18,7 @@ from wsgiref import util
 
 from . import wsgi
 
+# TODO: Move Store to a separate module
 # TODO: Replace thread-local connection with a connection pool; cache
 #       per-request connection in env
 # TODO: Degrade gracefully without a database
@@ -31,6 +32,16 @@ class ThreadLocal(threading.local):
         self.__dict__.update(kwargs)
 
 
+def to_datetime(nsec):
+    if nsec is None: return
+    return datetime.datetime.fromtimestamp(nsec / 1e9)
+
+
+def to_nsec(dt, default=None):
+    if dt is None: return default
+    return int(dt.timestamp() * 1e9)
+
+
 def fetch_row(db, sql, params=(), default=None):
     for row in db.execute(sql, params): return row
     return default
@@ -42,10 +53,17 @@ class Store:
         self.timeout = timeout
         # TODO: Check database version, as separate method
 
-    def connect(self, params='mode=rw', autocommit=False):
-        return sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
-                               timeout=self.timeout, autocommit=autocommit,
-                               check_same_thread=True)
+    def connect(self, params='mode=rw'):
+        # Some pragmas cannot be used or are ineffective within a transaction,
+        # and autocommit=False always has a transaction open. Open the
+        # connection with autocommit=True, then switch after configuration.
+        db = sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
+                             timeout=self.timeout, autocommit=True,
+                             check_same_thread=True)
+        db.execute("pragma journal_mode = wal")
+        db.execute("pragma foreign_keys = on")
+        db.autocommit = False
+        return db
 
     def meta(self, db, key, default=None):
         for value, in db.execute(
@@ -54,19 +72,13 @@ class Store:
         return default
 
     def dev(self, db):
-        return bool(self.meta(db, 'dev', 0))
+        return bool(self.meta(db, 'dev', False))
 
     def create(self, version=None, dev=False):
         self._check_version(version)
         if self.path.exists():
             raise Exception("Store database already exists")
-        # WAL cannot be enabled within a transaction, and autocommit=False
-        # always has a transaction open. Create the database with
-        # autocommit=True as a workaround.
-        with contextlib.closing(
-                self.connect('mode=rwc', autocommit=True)) as db:
-            db.execute("pragma journal_mode=WAL")
-        with contextlib.closing(self.connect()) as db:
+        with contextlib.closing(self.connect('mode=rwc')) as db:
             return self._upgrade(db, from_version=0, to_version=version,
                                  dev=dev)
 
@@ -105,97 +117,243 @@ class Store:
             yield version, fn
             version += 1
 
-    def tokens(self, db, origin, expired=False):
-        if not origin and not self.dev(db):
-            raise Exception("No origin specified")
-        now = time.time_ns()
-        for token, user, created, expires in db.execute("""
-                    select token, user, created, expires from user_tokens
-                    where origin = ? and (? or expires is null or ? < expires)
-                """, (origin, expired, now)):
-            created = datetime.datetime.fromtimestamp(created / 1e9)
-            if expires is not None:
-                expires = datetime.datetime.fromtimestamp(expires / 1e9)
-            yield user, token, created, expires
+    def users(self, db):
+        return [(name, uid, to_datetime(created))
+                for uid, name, created in db.execute("""
+                    select id, name, created from users
+                """)]
 
-    def create_tokens(self, db, origin, users, expires=None):
-        if not origin and not self.dev(db):
-            raise Exception("No origin specified")
+    def create_users(self, db, names):
         now = time.time_ns()
-        if expires: expires = int(expires.timestamp() * 1e9)
+        db.executemany("""
+            insert into users (id, name, created) values (?, ?, ?)
+        """, [(secrets.randbelow(1 << 63), n, now) for n in names])
+        uids = [fetch_row(db, "select id from users where name = ?",
+                          (n,))[0]
+                for n in names]
+        return uids
+
+    def user_memberships(self, db, origin, user, transitive=False):
+        self.check_origin(db, origin)
+        return list(db.execute("""
+            select group_, transitive from user_memberships
+            left join users on users.id = user
+            where origin = ? and users.name = ?
+              and (? or not transitive)
+        """, (origin, user, transitive)))
+
+    def tokens(self, db, expired=False):
+        now = time.time_ns()
+        return [(name, uid, token, to_datetime(created), to_datetime(expires))
+                for token, uid, name, created, expires in db.execute("""
+                    select token, users.id, users.name, user_tokens.created,
+                           expires
+                    from user_tokens
+                    left join users on users.id = user_tokens.user
+                    where ? or expires is null or ? < expires
+                """, (expired, now))]
+
+    def create_tokens(self, db, users, expires=None):
+        now = time.time_ns()
+        expires = to_nsec(expires)
         tokens = [secrets.token_urlsafe() for _ in users]
-        with db:
-            db.executemany("""
-                insert into user_tokens (origin, token, user, created, expires)
-                    values (?, ?, ?, ?, ?)
-            """, [(origin, token, user, now, expires)
-                  for user, token in zip(users, tokens)])
+        # TODO: Use subquery instead of resolving users upfront
+        uids = []
+        for user in users:
+            for uid, in db.execute(
+                "select id from users where name = ?", (user,)): break
+            else:
+                raise Exception(f"Unknown user: {user}")
+            uids.append(uid)
+        db.executemany("""
+            insert into user_tokens (token, user, created, expires)
+                values (?, ?, ?, ?)
+        """, [(token, uid, now, expires)
+              for uid, token in zip(uids, tokens)])
         return tokens
 
-    def expire_tokens(self, db, origin, tokens, expires=None):
+    def expire_tokens(self, db, tokens, expires=None):
+        expires = to_nsec(expires, time.time_ns())
+        db.executemany("""
+            update user_tokens set expires = ?
+            where token = ?
+               or exists(select 1 from users where id = user and name = ?)
+        """, [(expires, token, token) for token in tokens])
+
+    def check_origin(self, db, origin):
         if not origin and not self.dev(db):
             raise Exception("No origin specified")
-        expires = int(expires.timestamp() * 1e9) if expires else time.time_ns()
-        with db:
+
+    def groups(self, db):
+        return [g for g, in db.execute("""
+                    select distinct group_ from user_memberships
+                    union
+                    select distinct group_ from group_memberships
+                    union
+                    select distinct member from group_memberships
+                """)]
+
+    def group_members(self, db, origin, group=None, transitive=False):
+        # TODO: Make group a regexp
+        self.check_origin(db, origin)
+        return list(db.execute("""
+            select group_, 'user', users.name, transitive from user_memberships
+            left join users on users.id = user
+            where origin = :origin
+              and (:group is null or group_ = :group)
+              and (:transitive or not transitive)
+            union all
+            select group_, 'group', member, false from group_memberships
+            where origin = :origin
+              and (:group is null or group_ = :group)
+        """, {'origin': origin, 'group': group, 'transitive': transitive}))
+
+    def group_memberships(self, db, origin, group):
+        self.check_origin(db, origin)
+        return [g for g, in db.execute("""
+                    select group_ from group_memberships
+                    where origin = ? and member = ?
+                """, (origin, group))]
+
+    def modify_groups(self, db, origin, groups, add_users=None, add_groups=None,
+                      remove_users=None, remove_groups=None):
+        self.check_origin(db, origin)
+        if add_users:
             db.executemany("""
-                update user_tokens set expires = ?
-                where origin = ? and (token = ? or user = ?)
-            """, [(expires, origin, token, token) for token in tokens])
+                insert or replace into user_memberships
+                    (origin, user, group_, transitive)
+                    values (?, (select id from users where name = ?), ?, false)
+            """, [(origin, name, group) for name in add_users
+                  for group in groups])
+        if remove_users:
+            db.executemany("""
+                delete from user_memberships
+                where origin = ?
+                  and user in (select id from users where name = ?)
+                  and group_ = ?
+            """, [(origin, name, group) for name in remove_users
+                  for group in groups])
+        if add_groups:
+            db.executemany("""
+                insert or ignore into group_memberships (origin, member, group_)
+                    values (?, ?, ?)
+            """, [(origin, name, group) for name in add_groups
+                  for group in groups])
+        if remove_groups:
+            db.executemany("""
+                delete from group_memberships
+                where origin = ? and member = ? and group_ = ?
+            """, [(origin, name, group) for name in remove_groups
+                  for group in groups])
+        self.compute_transitive_memberships(db, origin)
+
+    def compute_transitive_memberships(self, db, origin):
+        items = list(db.execute("""
+            select user, group_ from user_memberships
+            where origin = ? and not transitive
+        """, (origin,)))
+        gm = {}
+        for member, group in db.execute("""
+                    select member, group_ from group_memberships
+                    where origin = ?
+                """, (origin,)):
+            gm.setdefault(member, []).append(group)
+        trans = set()
+        while items:
+            uid, group = it = items.pop()
+            if it in trans: continue
+            trans.add(it)
+            items.extend((uid, g) for g in gm.get(group, []))
+        db.execute("""
+            delete from user_memberships where origin = ? and transitive
+        """, (origin,))
+        db.executemany("""
+            insert or ignore into
+                user_memberships (origin, user, group_, transitive)
+                values (?, ?, ?, true)
+        """, [(origin, uid, group) for uid, group in trans])
 
     def version_1(self, db, dev, now):
         db.executescript("""
-            create table meta (
-                key text primary key,
-                value any
-            ) strict;
-            create table auth (
-                token text primary key,
-                perms text not null
-            ) strict;
-            create table log (
-                time int not null,
-                location text not null,
-                session text,
-                data text
-            ) strict;
-        """)
-        db.execute("insert into meta values ('dev', ?)", (1 if dev else 0,))
+create table meta (
+    key text primary key,
+    value any
+) strict;
+create table auth (
+    token text primary key,
+    perms text not null
+) strict;
+create table log (
+    time int not null,
+    location text not null,
+    session text,
+    data text
+) strict;
+""")
+        db.execute("insert into meta values ('dev', ?)", (bool(dev),))
         if not dev: return
         db.execute("insert into auth (token, perms) values ('*', '*')")
 
     def version_2(self, db, dev, now):
         db.executescript("""
-            create table user_tokens (
-                origin text not null,
-                token text not null,
-                user text not null,
-                created integer not null,
-                expires integer,
-                primary key (origin, token)
-            ) strict;
-            create table group_memberships (
-                origin text not null,
-                member text not null,
-                group_ text not null,
-                transitive integer not null,
-                primary key (origin, member, group_)
-            ) strict;
-            create table solutions (
-                origin text not null,
-                page text not null,
-                show text not null,
-                primary key (origin, page)
-            ) strict;
-        """)
+-- Convert the meta table to "without rowid".
+alter table meta rename to _meta;
+create table meta (
+    key text primary key,
+    value any
+) strict, without rowid;
+insert into meta select * from _meta;
+drop table _meta;
+
+-- Create tables for user management.
+create table users (
+    id integer primary key,
+    name text not null unique,
+    created integer not null
+) strict;
+create table user_tokens (
+    token text primary key,
+    user integer not null,
+    created integer not null,
+    expires integer,
+    foreign key (user) references users(id)
+) strict, without rowid;
+
+-- Create tables for group management.
+create table user_memberships (
+    origin text not null,
+    user integer not null,
+    group_ text not null,
+    transitive integer not null,
+    primary key (origin, user, group_),
+    foreign key (user) references users(id)
+) strict, without rowid;
+create table group_memberships (
+    origin text not null,
+    member text not null,
+    group_ text not null,
+    primary key (origin, member, group_)
+) strict, without rowid;
+
+-- Create table for solutions state management.
+create table solutions (
+    origin text not null,
+    page text not null,
+    show text not null,
+    primary key (origin, page)
+) strict, without rowid;
+""")
         if not dev: return
         db.execute("""
-            insert into user_tokens (origin, token, user, created)
-                values ('', 'admin', 'admin', ?)
-        """, (now,))
+insert into users (id, name, created) values (1, 'admin', ?)
+""", (now,))
         db.execute("""
-            insert into group_memberships (origin, member, group_, transitive)
-                values ('', 'admin', '*', 0)
-        """)
+insert into user_tokens (token, user, created) values ('admin', 1, ?)
+""", (now,))
+        db.execute("""
+insert into user_memberships (origin, user, group_, transitive)
+    values ('', 1, '*', false)
+""")
 
 
 def arg(data, name, validate=None):
@@ -243,13 +401,11 @@ class Api:
     def authenticate(self, env):
         user = None
         if token := wsgi.authorization(env):
-            origin = wsgi.origin(env)
             with self.db as db:
                 user, = fetch_row(db, """
                     select user from user_tokens
-                    where origin = ? and token = ?
-                      and (expires is null or ? < expires)
-                """, (origin, token, time.time_ns()), default=(None,))
+                    where token = ? and (expires is null or ? < expires)
+                """, (token, time.time_ns()), default=(None,))
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         env['tdoc.user'] = user
 
@@ -258,26 +414,13 @@ class Api:
         if user is None and not anon: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         return user
 
-    def groups(self, env, db):
-        if (groups := env.get('tdoc.user.groups', missing)) is missing:
-            groups = set()
-            if (user := self.user(env)) is not None:
-                origin = wsgi.origin(env)
-                groups.update(g for g, in db.execute("""
-                        select group_ from group_memberships
-                        where origin = ? and member = ?
-                """, (origin, user)))
-            env['tdoc.user.groups'] = groups
-        return groups
-
     def member_of(self, env, db, group):
         origin = wsgi.origin(env)
         if (user := self.user(env)) is None: return False
         return bool(fetch_row(db, f"""
             select exists(
-                select 1 from group_memberships
-                where origin = ? and member = ?
-                  and (group_ = ? or group_ = '*')
+                select 1 from user_memberships
+                where origin = ? and user = ? and (group_ = ? or group_ = '*')
             )
         """, (origin, user, group))[0])
 
@@ -339,9 +482,17 @@ class Api:
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         user = self.user(env, anon=False)
-        with self.db as db: groups = self.groups(env, db)
+        origin = wsgi.origin(env)
+        with self.db as db:
+            name, = fetch_row(db, """
+                select name from users where id = ?
+            """, (user,))
+            groups = [g for g, in db.execute("""
+                select group_ from user_memberships
+                where origin = ? and user = ?
+            """, (origin, user))]
         return wsgi.respond_json(
-            respond, {'name': user, 'groups': sorted(groups)})
+            respond, {'id': user, 'name': name, 'groups': groups})
 
 
 class EventApi:

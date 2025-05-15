@@ -46,6 +46,8 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_clean)
     add_options(p, sphinx=True)
 
+    add_group_commands(root)
+
     p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument
@@ -83,6 +85,7 @@ def main(argv, stdin, stdout, stderr):
 
     add_store_commands(root)
     add_token_commands(root)
+    add_user_commands(root)
 
     p = root.add_parser('version', help="Display version information.")
     p.set_defaults(handler=cmd_version)
@@ -112,6 +115,11 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
+def comma_separated(s):
+    if s is None: return []
+    return s.split(',')
+
+
 def cmd_build(cfg):
     for target in cfg.target:
         res = sphinx_build(cfg, target, build=cfg.build)
@@ -120,6 +128,122 @@ def cmd_build(cfg):
 
 def cmd_clean(cfg):
     return sphinx_build(cfg, 'clean', build=cfg.build).returncode
+
+
+def add_group_commands(parser):
+    p = parser.add_parser('group', help="Group-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    def add_groups(arg):
+        for name in ('group', 'groups'):
+            arg(f'--{name}', metavar="GROUP,...", dest='groups',
+                help="A comma-separated list of groups.")
+
+    def add_users(arg):
+        for name in ('user', 'users'):
+            arg(f'--{name}', metavar="USER,...", dest='users',
+                help="A comma-separated list of users.")
+
+    p = sp.add_parser('add', help="Add members to one or more groups.")
+    p.set_defaults(handler=cmd_group_add)
+    arg = p.add_argument
+    add_groups(arg)
+    add_origin_option(arg)
+    add_store_option(arg)
+    add_users(arg)
+    arg('group', metavar='GROUP', nargs='+', help="The group to add to.")
+    add_options(p)
+
+    p = sp.add_parser('list', help="List groups.")
+    p.set_defaults(handler=cmd_group_list)
+    arg = p.add_argument
+    add_store_option(arg)
+    add_options(p)
+
+    p = sp.add_parser('members', help="List members of a group.")
+    p.set_defaults(handler=cmd_group_members)
+    arg = p.add_argument
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('--transitive', action='store_true', dest='transitive',
+        help="Include transitive memberships.")
+    arg('group', metavar='GROUP', nargs='?', help="The name of the group.")
+    add_options(p)
+
+    p = sp.add_parser('memberships', help="List group memberships for a group.")
+    p.set_defaults(handler=cmd_group_memberships)
+    arg = p.add_argument
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('group', metavar='GROUP', help="The name of the group.")
+    add_options(p)
+
+    p = sp.add_parser('remove', help="Remove members from one or more groups.")
+    p.set_defaults(handler=cmd_group_remove)
+    arg = p.add_argument
+    add_groups(arg)
+    add_origin_option(arg)
+    add_store_option(arg)
+    add_users(arg)
+    arg('group', metavar='GROUP', nargs='+', help="The group to remove from.")
+    add_options(p)
+
+
+def cmd_group_add(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        store.modify_groups(db, cfg.origin, cfg.group,
+                            add_users=comma_separated(cfg.users),
+                            add_groups=comma_separated(cfg.groups))
+
+
+def cmd_group_list(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        groups = store.groups(db)
+    groups.sort()
+    o = cfg.stdout
+    for group in groups: cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
+
+
+def cmd_group_members(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        members = store.group_members(db, cfg.origin, cfg.group,
+                                      cfg.transitive)
+    members.sort()
+    wgroup = max(len(m[0]) for m in members)
+    wname = max(len(m[2]) for m in members)
+    o = cfg.stdout
+    prev = None
+    for group, typ, name, transitive in members:
+        prefix = f"{o.CYAN}{group:{wgroup}}{o.NORM}" if group != prev \
+                 else f"{'':{wgroup}}"
+        if transitive:
+            cfg.stdout.write(
+                f"{prefix}  {typ:5} {o.LWHITE}{name:{wname}}{o.NORM}  "
+                "(transitive)\n")
+        else:
+            cfg.stdout.write(f"{prefix}  {typ:5} {o.LWHITE}{name}{o.NORM}\n")
+        prev = group
+
+
+def cmd_group_memberships(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        groups = store.group_memberships(db, cfg.origin, cfg.group)
+    groups.sort()
+    o = cfg.stdout
+    for group in groups: cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
+
+
+def cmd_group_remove(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        store.modify_groups(db, cfg.origin, cfg.group,
+                            remove_users=comma_separated(cfg.users),
+                            remove_groups=comma_separated(cfg.groups))
 
 
 def cmd_serve(cfg):
@@ -208,7 +332,7 @@ def add_token_commands(parser):
     p.set_defaults(handler=cmd_token_create)
     arg = p.add_argument
     arg('--expire', metavar='TIME', type='timestamp', dest='expire',
-        default=None, help="The expiry timestamp.")
+        help="The token expiry timestamp.")
     add_origin_option(arg)
     add_store_option(arg)
     arg('user', metavar='USER', nargs='+',
@@ -219,9 +343,7 @@ def add_token_commands(parser):
     p.set_defaults(handler=cmd_token_expire)
     arg = p.add_argument
     arg('--time', metavar='TIME', type='timestamp', dest='time',
-        default=None,
         help="The time when the tokens should expire (default: now).")
-    add_origin_option(arg)
     add_store_option(arg)
     arg('token', metavar='TOKEN', nargs='+',
         help="The users and / or tokens to expire.")
@@ -244,36 +366,108 @@ def add_origin_option(arg):
 
 def cmd_token_create(cfg):
     store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db:
-        tokens = store.create_tokens(db, cfg.origin, cfg.user, cfg.expire)
-    width = max(len(cfg.user) for r in tokens)
+    with contextlib.closing(store.connect()) as db, db:
+        tokens = store.create_tokens(db, cfg.user, cfg.expire)
+    width = max(len(u) for u in cfg.user)
     o = cfg.stdout
     for user, token in zip(cfg.user, tokens):
         cfg.stdout.write(
             f"{o.CYAN}{user:{width}}{o.NORM} "
-            f"<{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}>\n")
+            f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n")
 
 
 def cmd_token_expire(cfg):
     store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db:
-        store.expire_tokens(db, cfg.origin, cfg.token, cfg.time)
+    with contextlib.closing(store.connect()) as db, db:
+        store.expire_tokens(db, cfg.token, cfg.time)
 
 
 def cmd_token_list(cfg):
     store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db:
-        tokens = list(store.tokens(db, cfg.origin, expired=cfg.expired))
+    with contextlib.closing(store.connect()) as db, db:
+        tokens = store.tokens(db, expired=cfg.expired)
     epoch = datetime.datetime.fromtimestamp(0)
-    tokens.sort(key=lambda r: (r[0], r[2], r[3] or epoch, r[1]))
-    width = max(len(r[0]) for r in tokens)
+    tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
+    wuser = max(len(u) for u, *_ in tokens)
     o = cfg.stdout
-    for user, token, created, expires in tokens:
+    for user, uid, token, created, expires in tokens:
         if expires: expires = f", expires: {expires.isoformat(' ', 'seconds')}"
         cfg.stdout.write(
-            f"{o.CYAN}{user:{width}}{o.NORM} "
-            f"<{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}>\n"
-            f"  Created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
+            f"{o.CYAN}{user:{wuser}}{o.NORM} "
+            f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n"
+            f"  created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
+
+
+def add_user_commands(parser):
+    p = parser.add_parser('user', help="User-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('create', help="Create users.")
+    p.set_defaults(handler=cmd_user_create)
+    arg = p.add_argument
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('--token-expire', metavar='TIME', type='timestamp', dest='token_expire',
+        help="The expiry time of the users' token.")
+    arg('user', metavar='USER', nargs='+',
+        help="The names of the users to create.")
+    add_options(p)
+
+    p = sp.add_parser('list', help="List users.")
+    p.set_defaults(handler=cmd_user_list)
+    arg = p.add_argument
+    add_store_option(arg)
+    add_options(p)
+
+    p = sp.add_parser('memberships', help="List group memberships for a user.")
+    p.set_defaults(handler=cmd_user_memberships)
+    arg = p.add_argument
+    add_origin_option(arg)
+    add_store_option(arg)
+    arg('--transitive', action='store_true', dest='transitive',
+        help="Include transitive memberships.")
+    arg('user', metavar='USER', help="The name of the user.")
+    add_options(p)
+
+
+def cmd_user_create(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        uids = store.create_users(db, cfg.user)
+        tokens = store.create_tokens(db, cfg.user, cfg.token_expire)
+    wuser = max(len(u) for u in cfg.user)
+    o = cfg.stdout
+    for user, uid, token in zip(cfg.user, uids, tokens):
+        cfg.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
+                         f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n")
+
+
+def cmd_user_list(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        users = store.users(db)
+    users.sort(key=lambda r: r[0])
+    wuser = max(len(u[0]) for u in users)
+    o = cfg.stdout
+    for user, uid, created in users:
+        cfg.stdout.write(
+            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
+            f"created: {created.isoformat(' ', 'seconds')}\n")
+
+
+def cmd_user_memberships(cfg):
+    store = get_store(cfg)
+    with contextlib.closing(store.connect()) as db, db:
+        groups = store.user_memberships(db, cfg.origin, cfg.user)
+    groups.sort()
+    wgroup = max(len(g[0]) for g in groups)
+    o = cfg.stdout
+    for group, transitive in groups:
+        if transitive:
+            cfg.stdout.write(f"{o.CYAN}{group:{wgroup}}{o.NORM} (transitive)\n")
+        else:
+            cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
 
 
 def cmd_version(cfg):
