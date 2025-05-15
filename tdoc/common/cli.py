@@ -309,7 +309,7 @@ def add_store_commands(parser):
 
 def add_store_option(arg):
     arg('--store', metavar='PATH', type='path', dest='store',
-        default='tmp/store.sqlite',
+        default=os.environ.get('TDOC_STORE', 'tmp/store.sqlite'),
         help="The path to the store database (default: %(default)s).")
 
 
