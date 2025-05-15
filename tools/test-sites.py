@@ -120,7 +120,7 @@ def run_tests(tests, repo, label, url, port, wheel, write):
 
     # Create the store.
     write(f"{label}Creating store\n")
-    vrun('tdoc', 'store', 'create', '--debug', '--open')
+    vrun('tdoc', 'store', 'create', '--debug', '--dev')
 
     # Run the local server, wait for it to serve or exit.
     write(f"{label}Running local server\n")
