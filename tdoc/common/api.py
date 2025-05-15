@@ -8,6 +8,7 @@ from http import HTTPMethod, HTTPStatus
 import json
 import pathlib
 import queue
+import re
 import secrets
 import sqlite3
 import sys
@@ -64,7 +65,7 @@ class Store:
         db.execute("pragma foreign_keys = on")
         db.autocommit = False
         db.create_function(
-            'regexp', 2, lambda pat, v: re.fullmatch(pat, v) is not None,
+            'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
             deterministic=True)
         return db
 
@@ -120,11 +121,12 @@ class Store:
             yield version, fn
             version += 1
 
-    def users(self, db):
+    def users(self, db, users=''):
         return [(name, uid, to_datetime(created))
                 for uid, name, created in db.execute("""
                     select id, name, created from users
-                """)]
+                    where name regexp ?
+                """, (users,))]
 
     def create_users(self, db, names):
         now = time.time_ns()
@@ -136,16 +138,16 @@ class Store:
                 for n in names]
         return uids
 
-    def user_memberships(self, db, origin, user, transitive=False):
+    def user_memberships(self, db, origin, users='', transitive=False):
         self.check_origin(db, origin)
         return list(db.execute("""
-            select group_, transitive from user_memberships
+            select users.name, group_, transitive from user_memberships
             left join users on users.id = user
-            where origin = ? and users.name = ?
+            where origin = ? and users.name regexp ?
               and (? or not transitive)
-        """, (origin, user, transitive)))
+        """, (origin, users, transitive)))
 
-    def tokens(self, db, expired=False):
+    def tokens(self, db, users='', expired=False):
         now = time.time_ns()
         return [(name, uid, token, to_datetime(created), to_datetime(expires))
                 for token, uid, name, created, expires in db.execute("""
@@ -153,8 +155,9 @@ class Store:
                            expires
                     from user_tokens
                     left join users on users.id = user_tokens.user
-                    where ? or expires is null or ? < expires
-                """, (expired, now))]
+                    where users.name regexp ?
+                      and (? or expires is null or ? < expires)
+                """, (users, expired, now))]
 
     def create_tokens(self, db, users, expires=None):
         now = time.time_ns()
@@ -179,36 +182,36 @@ class Store:
         if not origin and not self.dev(db):
             raise Exception("No origin specified")
 
-    def groups(self, db):
+    def groups(self, db, groups=''):
         return [g for g, in db.execute("""
                     select distinct group_ from user_memberships
+                    where group_ regexp :groups
                     union
                     select distinct group_ from group_memberships
+                    where group_ regexp :groups
                     union
                     select distinct member from group_memberships
-                """)]
+                    where member regexp :groups
+                """, {'groups': groups})]
 
-    def group_members(self, db, origin, group=None, transitive=False):
-        # TODO: Make group a regexp
+    def group_members(self, db, origin, groups='', transitive=False):
         self.check_origin(db, origin)
         return list(db.execute("""
             select group_, 'user', users.name, transitive from user_memberships
             left join users on users.id = user
-            where origin = :origin
-              and (:group is null or group_ = :group)
+            where origin = :origin and group_ regexp :groups
               and (:transitive or not transitive)
             union all
             select group_, 'group', member, false from group_memberships
-            where origin = :origin
-              and (:group is null or group_ = :group)
-        """, {'origin': origin, 'group': group, 'transitive': transitive}))
+            where origin = :origin and group_ regexp :groups
+        """, {'origin': origin, 'groups': groups, 'transitive': transitive}))
 
-    def group_memberships(self, db, origin, group):
+    def group_memberships(self, db, origin, groups=''):
         self.check_origin(db, origin)
-        return [g for g, in db.execute("""
-                    select group_ from group_memberships
-                    where origin = ? and member = ?
-                """, (origin, group))]
+        return list(db.execute("""
+            select member, group_ from group_memberships
+            where origin = ? and member regexp ?
+        """, (origin, groups)))
 
     def modify_groups(self, db, origin, groups, add_users=None, add_groups=None,
                       remove_users=None, remove_groups=None):
