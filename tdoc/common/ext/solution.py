@@ -4,6 +4,7 @@
 from docutils import languages, nodes
 from docutils.parsers.rst import directives
 from docutils.parsers.rst.directives import admonitions
+from sphinx import config
 from sphinx.util import logging
 
 from . import _, __version__
@@ -12,6 +13,8 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
+    app.add_config_value('tdoc_solutions', 'show', 'html',
+                         config.ENUM('show', 'hide', 'dynamic'))
     app.add_directive('solution', Solution)
     app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('tdoc-html-page-config', set_html_page_config)
@@ -52,19 +55,13 @@ class Solution(admonitions.BaseAdmonition):
         return res
 
 
-def solutions(env, page):
-    md = env.metadata[page]
-    # TODO: Remove 'remove'
-    if (v := md.get('solutions', 'show')) not in ('show', 'hide', 'dynamic',
-                                                  'remove'):
+def set_html_page_config(app, page, config, doctree):
+    md = app.env.metadata[page]
+    v = md.get('solutions', app.config.tdoc_solutions)
+    if not app.config.values['tdoc_solutions'].valid_types.match(v):
         _log.warning(f"Invalid 'solutions' value in {{metadata}}: {v}")
         v = md['solutions'] = 'show'
-    if v == 'remove': v = 'dynamic'
-    return v
-
-
-def set_html_page_config(app, page, config, doctree):
-    if (v := solutions(app.env, page)) != 'show':
+    if v != 'show':
         config['html_data']['tdocSolutions'] = v
 
 
