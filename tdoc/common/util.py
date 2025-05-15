@@ -129,6 +129,6 @@ def main(fn):
             sys.exit(1)
         except BaseException as e:
             if '--debug' in argv: raise
-            stderr.write(f'\n{e}\n')
+            stderr.write(f'\nERROR: {e}\n')
             sys.exit(1)
     return wrapper
