@@ -63,6 +63,9 @@ class Store:
         db.execute("pragma journal_mode = wal")
         db.execute("pragma foreign_keys = on")
         db.autocommit = False
+        db.create_function(
+            'regexp', 2, lambda pat, v: re.fullmatch(pat, v) is not None,
+            deterministic=True)
         return db
 
     def meta(self, db, key, default=None):
@@ -157,19 +160,11 @@ class Store:
         now = time.time_ns()
         expires = to_nsec(expires)
         tokens = [secrets.token_urlsafe() for _ in users]
-        # TODO: Use subquery instead of resolving users upfront
-        uids = []
-        for user in users:
-            for uid, in db.execute(
-                "select id from users where name = ?", (user,)): break
-            else:
-                raise Exception(f"Unknown user: {user}")
-            uids.append(uid)
         db.executemany("""
             insert into user_tokens (token, user, created, expires)
-                values (?, ?, ?, ?)
-        """, [(token, uid, now, expires)
-              for uid, token in zip(uids, tokens)])
+                values (?, (select id from users where name = ?), ?, ?)
+        """, [(token, user, now, expires)
+              for user, token in zip(users, tokens)])
         return tokens
 
     def expire_tokens(self, db, tokens, expires=None):
