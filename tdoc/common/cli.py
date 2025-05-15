@@ -25,6 +25,7 @@ from wsgiref import simple_server, util as wsgiutil
 
 from . import __project__, __version__, api, store, util, wsgi
 
+# TODO: Split groups of sub-commands into separate modules
 # TODO: Implement incremental builds, by copying previous build output
 
 

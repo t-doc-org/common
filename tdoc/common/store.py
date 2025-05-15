@@ -7,6 +7,7 @@ import pathlib
 import re
 import secrets
 import sqlite3
+import threading
 import time
 
 
@@ -26,19 +27,35 @@ class Connection(sqlite3.Connection):
         return default
 
 
+class ConnectionPool:
+    def __init__(self, store):
+        self.store = store
+        self.lock = threading.Lock()
+        self.connections = []
+
+    def get(self):
+        with self.lock:
+            if self.connections: return self.connections.pop()
+        return self.store.connect(check_same_thread=False)
+
+    def release(self, db):
+        with self.lock: self.connections.append(db)
+
+
 class Store:
     def __init__(self, path, timeout=10):
         self.path = pathlib.Path(path).resolve()
         self.timeout = timeout
         # TODO: Check database version, as separate method
 
-    def connect(self, params='mode=rw'):
+    def connect(self, params='mode=rw', check_same_thread=True):
         # Some pragmas cannot be used or are ineffective within a transaction,
         # and autocommit=False always has a transaction open. Open the
         # connection with autocommit=True, then switch after configuration.
         db = sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
                              timeout=self.timeout, autocommit=True,
-                             check_same_thread=True, factory=Connection)
+                             check_same_thread=check_same_thread,
+                             factory=Connection)
         db.execute("pragma journal_mode = wal")
         db.execute("pragma foreign_keys = on")
         db.autocommit = False

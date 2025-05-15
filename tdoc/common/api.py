@@ -15,17 +15,9 @@ from wsgiref import util
 
 from . import store, wsgi
 
-# TODO: Replace thread-local connection with a connection pool; cache
-#       per-request connection in env
 # TODO: Degrade gracefully without a database
 
 missing = object()
-
-
-class ThreadLocal(threading.local):
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.__dict__.update(kwargs)
 
 
 def arg(data, name, validate=None):
@@ -41,12 +33,14 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 
 class Api:
-    thread_local = ThreadLocal(db=None)
-
     def __init__(self, path, stderr=None, db_timeout=10):
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
-        self.store = store.Store(path, timeout=db_timeout) if path else None
+        if path:
+            self.store = store.Store(path, timeout=db_timeout)
+            self.pool = store.ConnectionPool(self.store)
+        else:
+            self.store = None
         self.event = EventApi(self)
         self.endpoints = {
             'event': self.event,
@@ -62,18 +56,17 @@ class Api:
         if e is None: e = sys.exception()
         traceback.print_exception(file=self.stderr)
 
-    @property
-    def db(self):
+    def db(self, env):
+        if (db := env.get('tdoc.db')) is not None: return db
         if self.store is None:
             raise wsgi.Error(HTTPStatus.NOT_IMPLEMENTED, "No store available")
-        if (db := self.thread_local.db) is None:
-            db = self.thread_local.db = self.store.connect()
+        db = env['tdoc.db'] = self.pool.get()
         return db
 
     def authenticate(self, env):
         user = None
         if token := wsgi.authorization(env):
-            with self.db as db:
+            with self.db(env) as db:
                 user, = db.row("""
                     select user from user_tokens
                     where token = ? and (expires is null or ? < expires)
@@ -98,7 +91,7 @@ class Api:
 
     def check_acl(self, env, perm):
         token = wsgi.authorization(env)
-        with self.db as db:
+        with self.db(env) as db:
             for perms, in db.execute(
                     "select perms from auth where token in (?, '*')", (token,)):
                 perms = perms.split(',')
@@ -109,24 +102,22 @@ class Api:
         name = util.shift_path_info(env)
         if (handler := self.endpoints.get(name)) is None:
             return (yield from wsgi.error(respond, HTTPStatus.NOT_FOUND))
-        self.authenticate(env)
         try:
-            yield from handler(env, respond)
-        except wsgi.Error as e:
-            return (yield from wsgi.error(respond, e.status, e.message,
-                                          exc_info=sys.exc_info()))
+            self.authenticate(env)
+            try:
+                yield from handler(env, respond)
+            except wsgi.Error as e:
+                return (yield from wsgi.error(respond, e.status, e.message,
+                                              exc_info=sys.exc_info()))
         finally:
-            if (db := self.thread_local.db) is not None \
-                     and not env.get('tdoc.db_cache_per_thread'):
-                self.thread_local.db = None
-                db.close()
+            if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 
     def handle_log(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         self.check_acl(env, 'log')
         req = wsgi.read_json(env)
-        with self.db as db:
+        with self.db(env) as db:
             db.execute("""
                 insert into log (time, location, session, data)
                     values (?, ?, ?, json(?))
@@ -142,7 +133,7 @@ class Api:
         req = wsgi.read_json(env)
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
-        with self.db as db:
+        with self.db(env) as db:
             check(self.member_of(env, db, 'solutions:write'))
             db.execute("""
                 insert or replace into solutions (origin, page, show)
@@ -155,7 +146,7 @@ class Api:
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         user = self.user(env, anon=False)
         origin = wsgi.origin(env)
-        with self.db as db:
+        with self.db(env) as db:
             name, = db.row("""
                 select name from users where id = ?
             """, (user,))
