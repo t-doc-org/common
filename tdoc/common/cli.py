@@ -23,7 +23,7 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, util, wsgi
+from . import __project__, __version__, api, store, util, wsgi
 
 # TODO: Implement incremental builds, by copying previous build output
 
@@ -314,7 +314,7 @@ def add_store_option(arg):
 
 def get_store(cfg):
     if not cfg.store: raise Exception("--store: Empty path")
-    return api.Store(cfg.store)
+    return store.Store(cfg.store)
 
 
 def cmd_store_create(cfg):
