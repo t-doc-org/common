@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-44)=
+## 0.44 *(2025-05-16)*
+
+- Added a config value to set the default solution visibility.
+- Fixed an internal error in unauthenticated API requests.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.43...0.44)
+
 (release-0-43)=
 ## 0.43 *(2025-05-15)*
 
