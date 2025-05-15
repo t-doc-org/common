@@ -147,15 +147,13 @@ class Api:
         user = self.user(env, anon=False)
         origin = wsgi.origin(env)
         with self.db(env) as db:
-            name, = db.row("""
-                select name from users where id = ?
-            """, (user,))
+            name, = db.row("select name from users where id = ?", (user,))
             groups = [g for g, in db.execute("""
                 select group_ from user_memberships
                 where origin = ? and user = ?
             """, (origin, user))]
         return wsgi.respond_json(
-            respond, {'id': user, 'name': name, 'groups': groups})
+            respond, {'name': name, 'groups': groups})
 
 
 class EventApi:
