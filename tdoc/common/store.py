@@ -28,8 +28,9 @@ class Connection(sqlite3.Connection):
 
 
 class ConnectionPool:
-    def __init__(self, store):
+    def __init__(self, store, size=None):
         self.store = store
+        self.size = size
         self.lock = threading.Lock()
         self.connections = []
 
@@ -39,7 +40,9 @@ class ConnectionPool:
         return self.store.connect(check_same_thread=False)
 
     def release(self, db):
-        with self.lock: self.connections.append(db)
+        with self.lock:
+            if self.size is None or len(self.connections) < self.size:
+                self.connections.append(db)
 
 
 class Store:

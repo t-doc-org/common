@@ -33,12 +33,12 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 
 class Api:
-    def __init__(self, path, stderr=None, db_timeout=10):
+    def __init__(self, path, stderr=None, db_timeout=10, db_pool_size=16):
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
         if path:
             self.store = store.Store(path, timeout=db_timeout)
-            self.pool = store.ConnectionPool(self.store)
+            self.pool = store.ConnectionPool(self.store, size=db_pool_size)
         else:
             self.store = None
         self.event = EventApi(self)
