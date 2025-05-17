@@ -54,7 +54,7 @@ class Api:
 
     def print_exception(self, e=None):
         if e is None: e = sys.exception()
-        traceback.print_exception(file=self.stderr)
+        traceback.print_exception(e, file=self.stderr)
 
     def db(self, env):
         if (db := env.get('tdoc.db')) is not None: return db
