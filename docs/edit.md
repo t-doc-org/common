@@ -106,6 +106,10 @@ are located below the `docs` directory.
   - When the build is successful, the browser **automatically reloads** all open
     pages.
   - If a build fails, the errors can be viewed in the terminal.
+  - After the initial full build of all pages, the server **rebuilds only pages
+    that change**. This is much faster, but can sometimes cause artifacts or
+    failures. If this happens, restart the local server to trigger a full
+    rebuild, and report the issue to t-doc's authors.
 
 - **Stop the local server** by clicking the
   <span style="font: var(--fa-font-solid);">&#xf52a;</span> button in the
