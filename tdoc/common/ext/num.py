@@ -30,6 +30,9 @@ def setup(app):
 class NoNum:
     def __contains__(self, value): return False
     def __mod__(self, other): return ''
+    def __str__(self): return 'NoNum'
+    def __eq__(self, other): return isinstance(other, NoNum)
+    def __ne__(self, other): return not isinstance(other, NoNum)
 
 
 def update_numfig_format(app, config):
@@ -69,7 +72,8 @@ class num(nodes.Inline, nodes.TextElement): pass
 class NumCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
-        app.env.tdoc_nums = {}  # docname => id => target
+        if not hasattr(app.env, 'tdoc_nums'):
+            app.env.tdoc_nums = {}  # docname => id => target
 
     def clear_doc(self, app, env, docname):
         env.tdoc_nums.pop(docname, None)

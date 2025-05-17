@@ -101,7 +101,8 @@ class exec(nodes.literal_block): pass
 class ExecCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
-        app.env.tdoc_editors = {}  # ID => (docname, location)
+        if not hasattr(app.env, 'tdoc_editors'):
+            app.env.tdoc_editors = {}  # ID => (docname, location)
 
     def clear_doc(self, app, env, docname):
         editors = env.tdoc_editors
