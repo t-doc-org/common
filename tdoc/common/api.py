@@ -15,8 +15,6 @@ from wsgiref import util
 
 from . import store, wsgi
 
-# TODO: Degrade gracefully without a database
-
 missing = object()
 
 
@@ -36,11 +34,8 @@ class Api:
     def __init__(self, path, stderr=None, db_timeout=10, db_pool_size=16):
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
-        if path:
-            self.store = store.Store(path, timeout=db_timeout)
-            self.pool = store.ConnectionPool(self.store, size=db_pool_size)
-        else:
-            self.store = None
+        self.store = store.Store(path, timeout=db_timeout)
+        self.pool = store.ConnectionPool(self.store, size=db_pool_size)
         self.event = EventApi(self)
         self.endpoints = {
             'event': self.event,
@@ -58,8 +53,6 @@ class Api:
 
     def db(self, env):
         if (db := env.get('tdoc.db')) is not None: return db
-        if self.store is None:
-            raise wsgi.Error(HTTPStatus.NOT_IMPLEMENTED, "No store available")
         db = env['tdoc.db'] = self.pool.get()
         return db
 

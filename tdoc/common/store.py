@@ -47,18 +47,22 @@ class ConnectionPool:
 
 class Store:
     def __init__(self, path, timeout=10):
-        self.path = pathlib.Path(path).resolve()
+        self.path = pathlib.Path(path).resolve() if path is not None else None
         self.timeout = timeout
+        if self.path is None:  # Create an in-memory database
+            self._mem_db = self.connect()  # Keep at least one connection alive
+            self.create(dev=True)
         # TODO: Check database version, as separate method
 
     def connect(self, params='mode=rw', check_same_thread=True):
+        uri = f'{self.path.as_uri()}?{params}' if self.path is not None \
+              else 'file:store?mode=memory&cache=shared'
         # Some pragmas cannot be used or are ineffective within a transaction,
         # and autocommit=False always has a transaction open. Open the
         # connection with autocommit=True, then switch after configuration.
-        db = sqlite3.connect(f'{self.path.as_uri()}?{params}', uri=True,
-                             timeout=self.timeout, autocommit=True,
-                             check_same_thread=check_same_thread,
-                             factory=Connection)
+        db = sqlite3.connect(uri, uri=True, timeout=self.timeout,
+                             factory=Connection, autocommit=True,
+                             check_same_thread=check_same_thread)
         db.execute("pragma journal_mode = wal")
         db.execute("pragma foreign_keys = on")
         db.autocommit = False
@@ -78,7 +82,7 @@ class Store:
 
     def create(self, version=None, dev=False):
         self._check_version(version)
-        if self.path.exists():
+        if self.path is not None and self.path.exists():
             raise Exception("Store database already exists")
         with contextlib.closing(self.connect('mode=rwc')) as db:
             return self._upgrade(db, from_version=0, to_version=version,

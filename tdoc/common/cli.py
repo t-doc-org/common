@@ -27,6 +27,8 @@ from . import __project__, __version__, api, store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
+dev_store = pathlib.Path('tmp/store.sqlite')
+
 
 @util.main
 def main(argv, stdin, stdout, stderr):
@@ -260,6 +262,9 @@ def cmd_group_remove(cfg):
 
 
 def cmd_serve(cfg):
+    if cfg.store is None and (ds := dev_store.resolve()).exists():
+        cfg.store = ds
+
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
@@ -310,16 +315,18 @@ def add_store_commands(parser):
 
 def add_store_option(arg):
     arg('--store', metavar='PATH', type='path', dest='store',
-        default=os.environ.get('TDOC_STORE', 'tmp/store.sqlite'),
-        help="The path to the store database (default: %(default)s).")
+        default=os.environ.get('TDOC_STORE'),
+        help="The path to the store database.")
 
 
 def get_store(cfg):
-    if not cfg.store: raise Exception("--store: Empty path")
+    if not cfg.store: raise Exception("--store: No path specified")
     return store.Store(cfg.store)
 
 
 def cmd_store_create(cfg):
+    if cfg.store is None and cfg.dev and (ds := dev_store.resolve()).exists():
+        cfg.store = ds
     store = get_store(cfg)
     store.path.parent.mkdir(parents=True, exist_ok=True)
     version = store.create(version=cfg.version, dev=cfg.dev)
@@ -327,6 +334,8 @@ def cmd_store_create(cfg):
 
 
 def cmd_store_upgrade(cfg):
+    if cfg.store is None and (ds := dev_store.resolve()).exists():
+        cfg.store = ds
     store = get_store(cfg)
     from_version, to_version = store.upgrade(version=cfg.version)
     if from_version != to_version:
@@ -545,9 +554,7 @@ class Application:
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.api = api.Api(
-            cfg.store if cfg.store and cfg.store.exists() else None,
-            stderr=cfg.stderr)
+        self.api = api.Api(cfg.store, stderr=cfg.stderr)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.build_mtime = None
