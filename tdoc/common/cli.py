@@ -26,7 +26,6 @@ from wsgiref import simple_server, util as wsgiutil
 from . import __project__, __version__, api, store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
-# TODO: Implement incremental builds, by copying previous build output
 
 
 @util.main
@@ -68,9 +67,8 @@ def main(argv, stdin, stdout, stderr):
         default=f'(^|{re.escape(os.sep)})__pycache__$',
         help="A regexp matching files and directories to ignore from watching "
              "(default: %(default)s).")
-    arg('--incremental', dest='incremental', choices=['auto', 'false', 'true'],
-        default='auto',
-        help="Control incremental building (default: %(default)s).")
+    arg('--full-builds', action='store_true', dest='full_builds',
+        help="Perform full builds on source changes.")
     arg('--interval', metavar='DURATION', type=float, dest='interval',
         default=1.0,
         help="The interval in seconds at which to check for source changes "
@@ -570,8 +568,7 @@ class Application:
         delay = self.cfg.delay * 1_000_000_000
         idle = self.cfg.exit_on_idle * 1_000_000_000
         prev, prev_mtime, build_mtime = 0, 0, None
-        next_dir = self.build_dir('next') if self.cfg.incremental == 'true' or (
-            self.cfg.incremental == 'auto' and os.name != 'posix') else None
+        build_next = self.build_dir('next')
         while True:
             if prev != 0: time.sleep(0.1)
             with self.lock:
@@ -598,10 +595,9 @@ class Application:
                 self.cfg.stdout.write(
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
-            build = self.build_dir(mtime)
-            if next_dir is not None and next_dir.exists():
-                os.rename(next_dir, build)
-            if self.build(build):
+            if self.build(build_next):
+                build = self.build_dir(mtime)
+                os.rename(build_next, build)
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
@@ -611,16 +607,14 @@ class Application:
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                self.remove(build)
-            if next_dir is not None and build_mtime is not None:
-                if next_dir.exists(): self.remove(next_dir)
-                shutil.copytree(self.build_dir(build_mtime), next_dir,
+                self.remove(build_next)
+            if not self.cfg.full_builds and build_mtime is not None:
+                shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
             self.print_upgrade()
             prev = time.time_ns()
-        if build_mtime is not None:
-            self.remove(self.build_dir(build_mtime))
-            if next_dir is not None: self.remove(next_dir)
+        if build_mtime is not None: self.remove(self.build_dir(build_mtime))
+        self.remove(build_next)
 
     def latest_mtime(self):
         def on_error(e):
@@ -658,6 +652,7 @@ class Application:
 
     def remove(self, build):
         build.relative_to(self.cfg.build)  # Ensure we're below the build dir
+        if not build.exists(): return
         def on_error(fn, path, e):
             self.cfg.stderr.write(f"Removal: {fn}: {path}: {e}\n")
         shutil.rmtree(build, onexc=on_error)
