@@ -200,10 +200,15 @@ ${drawState.value.marker ? ' checked="checked"' : ''}>\
     });
 };
 
-const build = tdoc.build;
-if (build) {
-    console.info(`[t-doc] Build: ${build}`);
+if (tdoc.dev) {
+    let build;
     api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
-        if (data && data !== build) location.reload();
+        if (!data) return;
+        if (!build) {
+            build = data;
+            console.info(`[t-doc] Build: ${build}`);
+        } else if (data !== build) {
+            location.reload();
+        }
     })]});
 }

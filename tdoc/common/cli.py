@@ -634,8 +634,8 @@ class Application:
         build = self.build_dir(mtime)
         try:
             res = sphinx_build(self.cfg, 'html', build=build,
-                               tags=['tdoc-dev', f'tdoc-build-{mtime}'])
             if res.returncode == 0: return build
+                               tags=['tdoc-dev'])
         except Exception as e:
             self.cfg.stderr.write(f"Build: {e}\n")
         if self.cfg.exit_on_failure:

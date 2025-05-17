@@ -31,8 +31,7 @@ class HtmlExecutor extends Executor {
  allow="accelerometer; ambient-light-sensor; autoplay; bluetooth; camera;\
  clipboard-write; encrypted-media; fullscreen; gamepad; geolocation; gyroscope;\
  hid; idle-detection; local-fonts; magnetometer; microphone; midi;\
- picture-in-picture; screen-wake-lock;\
- serial; usb; web-share"\
+ picture-in-picture; screen-wake-lock; serial; usb; web-share"\
  referrerpolicy="no-referrer">\
 </iframe>\
 </div>`;

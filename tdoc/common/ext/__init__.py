@@ -52,11 +52,6 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
-def build_id(app):
-    for tag in app.tags:
-        if (t := tag.removeprefix('tdoc-build-')) != tag: return t
-
-
 def setup(app):
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
@@ -119,7 +114,6 @@ def on_html_page_context(app, page, template, context, doctree):
     }
     if 'tdoc-dev' in app.tags: tdoc['dev'] = True
     if v := app.config.tdoc_api: tdoc['api_url'] = v
-    if v := build_id(app): tdoc['build'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     tdoc = json.dumps(tdoc, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
