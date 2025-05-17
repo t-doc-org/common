@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-45)=
+## 0.45 *(2025-05-17)*
+
+- Made automatic rebuilds in the dev server incremental. This significantly
+  speeds up the edit-view loop.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.44...0.45)
+
 (release-0-44)=
 ## 0.44 *(2025-05-16)*
 
