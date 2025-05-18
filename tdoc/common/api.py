@@ -15,6 +15,8 @@ from wsgiref import util
 
 from . import wsgi
 
+# TODO: Move as much SQL as possible to Connection
+
 missing = object()
 
 
@@ -75,7 +77,7 @@ class Api:
     def member_of(self, env, db, group):
         origin = wsgi.origin(env)
         if (user := self.user(env)) is None: return False
-        return bool(db.row(f"""
+        return bool(db.row("""
             select exists(
                 select 1 from user_memberships
                 where origin = ? and user = ? and (group_ = ? or group_ = '*')

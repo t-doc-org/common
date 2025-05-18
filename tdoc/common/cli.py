@@ -126,7 +126,10 @@ def add_store_option(arg):
 
 
 @contextlib.contextmanager
-def get_store(cfg, allow_mem=False, check_latest=True):
+def get_store(cfg, allow_mem=False, default_dev=True, check_latest=True):
+    if default_dev and cfg.store is None \
+            and (ds := dev_store.resolve()).exists():
+        cfg.store = ds
     if not allow_mem and not cfg.store:
         raise Exception("--store: No path specified")
     with store.Store(cfg.store) as st:
@@ -147,6 +150,12 @@ Would you like to perform the upgrade (y/n)? """)
                                         f"(current: {version}, want: {latest})")
                     upgrade_store(cfg, st, db, version, latest)
         yield st
+
+
+@contextlib.contextmanager
+def get_db(cfg):
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db:
+        yield db
 
 
 def store_backup_path(cfg):
@@ -246,24 +255,24 @@ def add_group_commands(parser):
 
 
 def cmd_group_add(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        store.modify_groups(db, cfg.origin, cfg.group,
-                            add_users=comma_separated(cfg.users),
-                            add_groups=comma_separated(cfg.groups))
+    with get_db(cfg) as db, db:
+        db.modify_groups(cfg.origin, cfg.group,
+                         add_users=comma_separated(cfg.users),
+                         add_groups=comma_separated(cfg.groups))
 
 
 def cmd_group_list(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        groups = store.groups(db, cfg.groups)
+    with get_db(cfg) as db, db:
+        groups = db.groups(cfg.groups)
     groups.sort()
     o = cfg.stdout
     for group in groups: cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
 
 
 def cmd_group_members(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        members = store.group_members(db, cfg.origin, cfg.groups,
-                                      transitive=cfg.transitive)
+    with get_db(cfg) as db, db:
+        members = db.group_members(cfg.origin, cfg.groups,
+                                   transitive=cfg.transitive)
     members.sort()
     wgroup = max((len(m[0]) for m in members), default=0)
     wname = max((len(m[2]) for m in members), default=0)
@@ -282,8 +291,8 @@ def cmd_group_members(cfg):
 
 
 def cmd_group_memberships(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        memberships = store.group_memberships(db, cfg.origin, cfg.groups)
+    with get_db(cfg) as db, db:
+        memberships = db.group_memberships(cfg.origin, cfg.groups)
     memberships.sort()
     wmember = max((len(m[0]) for m in memberships), default=0)
     o = cfg.stdout
@@ -296,16 +305,13 @@ def cmd_group_memberships(cfg):
 
 
 def cmd_group_remove(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        store.modify_groups(db, cfg.origin, cfg.group,
-                            remove_users=comma_separated(cfg.users),
-                            remove_groups=comma_separated(cfg.groups))
+    with get_db(cfg) as db, db:
+        db.modify_groups(cfg.origin, cfg.group,
+                         remove_users=comma_separated(cfg.users),
+                         remove_groups=comma_separated(cfg.groups))
 
 
 def cmd_serve(cfg):
-    if cfg.store is None and (ds := dev_store.resolve()).exists():
-        cfg.store = ds
-
     for family, _, _, _, addr in socket.getaddrinfo(
             cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
@@ -365,31 +371,27 @@ def add_store_commands(parser):
 
 
 def cmd_store_backup(cfg):
-    if cfg.store is None and (ds := dev_store.resolve()).exists():
-        cfg.store = ds
-    if cfg.destination is None: cfg.destination = store_backup_path(cfg)
     with get_store(cfg, check_latest=False) as store, \
             contextlib.closing(store.connect(params='mode=ro')) as db:
+        if cfg.destination is None: cfg.destination = store_backup_path(cfg)
         store.backup(db, cfg.destination)
 
 
 def cmd_store_create(cfg):
     if cfg.store is None and cfg.dev: cfg.store = dev_store.resolve()
-    with get_store(cfg, check_latest=False) as store:
+    with get_store(cfg, default_dev=False, check_latest=False) as store:
         store.path.parent.mkdir(parents=True, exist_ok=True)
         version = store.create(version=cfg.version, dev=cfg.dev)
     cfg.stdout.write(f"Store created (version: {version})\n")
 
 
 def cmd_store_upgrade(cfg):
-    if cfg.store is None and (ds := dev_store.resolve()).exists():
-        cfg.store = ds
-    o = cfg.stdout
     with get_store(cfg, check_latest=False) as store, \
             contextlib.closing(store.connect()) as db:
         version, latest = store.version(db)
         if version == latest:
-            o.write(f"Store is already up-to-date (version: {version})\n")
+            cfg.stdout.write(
+                f"Store is already up-to-date (version: {version})\n")
             return
         upgrade_store(cfg, store, db, version,
                       cfg.version if cfg.version is not None else latest)
@@ -439,8 +441,8 @@ def add_origin_option(arg):
 
 
 def cmd_token_create(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        tokens = store.create_tokens(db, cfg.user, cfg.expire)
+    with get_db(cfg) as db, db:
+        tokens = db.create_tokens(cfg.user, cfg.expire)
     width = max((len(u) for u in cfg.user), default=0)
     o = cfg.stdout
     for user, token in zip(cfg.user, tokens):
@@ -450,13 +452,13 @@ def cmd_token_create(cfg):
 
 
 def cmd_token_expire(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        store.expire_tokens(db, cfg.token, cfg.time)
+    with get_db(cfg) as db, db:
+        db.expire_tokens(cfg.token, cfg.time)
 
 
 def cmd_token_list(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        tokens = store.tokens(db, cfg.users, expired=cfg.expired)
+    with get_db(cfg) as db, db:
+        tokens = db.tokens(cfg.users, expired=cfg.expired)
     epoch = datetime.datetime.fromtimestamp(0)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
     wuser = max((len(u) for u, *_ in tokens), default=0)
@@ -508,9 +510,9 @@ def add_user_commands(parser):
 
 
 def cmd_user_create(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        uids = store.create_users(db, cfg.user)
-        tokens = store.create_tokens(db, cfg.user, cfg.token_expire)
+    with get_db(cfg) as db, db:
+        uids = db.create_users(cfg.user)
+        tokens = db.create_tokens(cfg.user, cfg.token_expire)
     wuser = max((len(u) for u in cfg.user), default=0)
     o = cfg.stdout
     for user, uid, token in zip(cfg.user, uids, tokens):
@@ -519,8 +521,8 @@ def cmd_user_create(cfg):
 
 
 def cmd_user_list(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        users = store.users(db, cfg.users)
+    with get_db(cfg) as db, db:
+        users = db.users(cfg.users)
     users.sort(key=lambda r: r[0])
     wuser = max((len(u[0]) for u in users), default=0)
     o = cfg.stdout
@@ -531,9 +533,9 @@ def cmd_user_list(cfg):
 
 
 def cmd_user_memberships(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
-        memberships = store.user_memberships(db, cfg.origin, cfg.users,
-                                             transitive=cfg.transitive)
+    with get_db(cfg) as db, db:
+        memberships = db.user_memberships(cfg.origin, cfg.users,
+                                          transitive=cfg.transitive)
     memberships.sort()
     wuser = max((len(m[0]) for m in memberships), default=0)
     wgroup = max((len(m[1]) for m in memberships), default=0)

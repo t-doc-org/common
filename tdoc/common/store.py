@@ -10,7 +10,7 @@ import sqlite3
 import threading
 import time
 
-# TODO: Move all Store methods taking a db to Connection
+# TODO: Namespace DB logic, e.g. db.users.list(), db.tokens.create()
 
 
 def to_datetime(nsec):
@@ -27,6 +27,164 @@ class Connection(sqlite3.Connection):
     def row(self, sql, params=(), default=None):
         for row in self.execute(sql, params): return row
         return default
+
+    def meta(self, key, default=None):
+        for value, in self.execute(
+                "select value from meta where key = ?", (key,)):
+            return value
+        return default
+
+    @property
+    def dev(self):
+        return bool(self.meta('dev', False))
+
+    def check_origin(self, origin):
+        if not origin and not self.dev:
+            raise Exception("No origin specified")
+
+    def users(self, users=''):
+        return [(name, uid, to_datetime(created))
+                for uid, name, created in self.execute("""
+                    select id, name, created from users
+                    where name regexp ?
+                """, (users,))]
+
+    def create_users(self, names):
+        now = time.time_ns()
+        uids = [secrets.randbelow(1 << 63) for _ in names]
+        self.executemany("""
+            insert into users (id, name, created) values (?, ?, ?)
+        """, [(uid, name, now) for uid, name in zip(uids, names)])
+        return uids
+
+    def user_memberships(self, origin, users='', transitive=False):
+        self.check_origin(origin)
+        return list(self.execute("""
+            select users.name, group_, transitive from user_memberships
+            left join users on users.id = user
+            where origin = ? and users.name regexp ?
+              and (? or not transitive)
+        """, (origin, users, transitive)))
+
+    def tokens(self, users='', expired=False):
+        now = time.time_ns()
+        return [(name, uid, token, to_datetime(created), to_datetime(expires))
+                for token, uid, name, created, expires in self.execute("""
+                    select token, users.id, users.name, user_tokens.created,
+                           expires
+                    from user_tokens
+                    left join users on users.id = user_tokens.user
+                    where users.name regexp ?
+                      and (? or expires is null or ? < expires)
+                """, (users, expired, now))]
+
+    def create_tokens(self, users, expires=None):
+        now = time.time_ns()
+        expires = to_nsec(expires)
+        tokens = [secrets.token_urlsafe() for _ in users]
+        self.executemany("""
+            insert into user_tokens (token, user, created, expires)
+                values (?, (select id from users where name = ?), ?, ?)
+        """, [(token, user, now, expires)
+              for user, token in zip(users, tokens)])
+        return tokens
+
+    def expire_tokens(self, tokens, expires=None):
+        expires = to_nsec(expires, time.time_ns())
+        self.executemany("""
+            update user_tokens set expires = ?
+            where token = ?
+               or exists(select 1 from users where id = user and name = ?)
+        """, [(expires, token, token) for token in tokens])
+
+    def groups(self, groups=''):
+        return [g for g, in self.execute("""
+                    select distinct group_ from user_memberships
+                    where group_ regexp :groups
+                    union
+                    select distinct group_ from group_memberships
+                    where group_ regexp :groups
+                    union
+                    select distinct member from group_memberships
+                    where member regexp :groups
+                """, {'groups': groups})]
+
+    def group_members(self, origin, groups='', transitive=False):
+        self.check_origin(origin)
+        return list(self.execute("""
+            select group_, 'user', users.name, transitive from user_memberships
+            left join users on users.id = user
+            where origin = :origin and group_ regexp :groups
+              and (:transitive or not transitive)
+            union all
+            select group_, 'group', member, false from group_memberships
+            where origin = :origin and group_ regexp :groups
+        """, {'origin': origin, 'groups': groups, 'transitive': transitive}))
+
+    def group_memberships(self, origin, groups=''):
+        self.check_origin(origin)
+        return list(self.execute("""
+            select member, group_ from group_memberships
+            where origin = ? and member regexp ?
+        """, (origin, groups)))
+
+    def modify_groups(self, origin, groups, add_users=None, add_groups=None,
+                      remove_users=None, remove_groups=None):
+        self.check_origin(origin)
+        if add_users:
+            self.executemany("""
+                insert or replace into user_memberships
+                    (origin, user, group_, transitive)
+                    values (?, (select id from users where name = ?), ?, false)
+            """, [(origin, name, group) for name in add_users
+                  for group in groups])
+        if remove_users:
+            self.executemany("""
+                delete from user_memberships
+                where origin = ?
+                  and user in (select id from users where name = ?)
+                  and group_ = ?
+            """, [(origin, name, group) for name in remove_users
+                  for group in groups])
+        if add_groups:
+            self.executemany("""
+                insert or ignore into group_memberships (origin, member, group_)
+                    values (?, ?, ?)
+            """, [(origin, name, group) for name in add_groups
+                  for group in groups])
+        if remove_groups:
+            self.executemany("""
+                delete from group_memberships
+                where origin = ? and member = ? and group_ = ?
+            """, [(origin, name, group) for name in remove_groups
+                  for group in groups])
+        self.compute_transitive_memberships(origin)
+
+    def compute_transitive_memberships(self, origin):
+        items = list(self.execute("""
+            select user, group_ from user_memberships
+            where origin = ? and not transitive
+        """, (origin,)))
+        gm = {}
+        for member, group in self.execute("""
+                    select member, group_ from group_memberships
+                    where origin = ?
+                """, (origin,)):
+            gm.setdefault(member, []).append(group)
+        trans = set()
+        while items:
+            uid, group = it = items.pop()
+            if it in trans: continue
+            trans.add(it)
+            items.extend((uid, g) for g in gm.get(group, []))
+        self.execute("""
+            delete from user_memberships where origin = ? and transitive
+        """, (origin,))
+        self.executemany("""
+            insert or ignore into
+                user_memberships (origin, user, group_, transitive)
+                values (?, ?, ?, true)
+        """, [(origin, uid, group) for uid, group in trans])
 
 
 class ConnectionPool:
@@ -89,15 +247,6 @@ class Store:
                 self.connect(path=dest, params='mode=rwc')) as ddb:
             db.backup(ddb)
 
-    def meta(self, db, key, default=None):
-        for value, in db.execute(
-                "select value from meta where key = ?", (key,)):
-            return value
-        return default
-
-    def dev(self, db):
-        return bool(self.meta(db, 'dev', False))
-
     def create(self, version=None, dev=False):
         self._check_version(version)
         if self.path is not None and self.path.exists():
@@ -108,9 +257,9 @@ class Store:
 
     def upgrade(self, db, version=None, on_version=None):
         self._check_version(version)
-        from_version = self.meta(db, 'version')
+        from_version = db.meta('version')
         to_version = self._upgrade(db, from_version=from_version,
-                                   to_version=version, dev=self.dev(db),
+                                   to_version=version, dev=db.dev,
                                    on_version=on_version)
         return from_version, to_version
 
@@ -143,157 +292,9 @@ class Store:
             version += 1
 
     def version(self, db):
-        version = self.meta(db, 'version')
+        version = db.meta('version')
         latest = max(v for v, _ in self.versions())
         return version, latest
-
-    def users(self, db, users=''):
-        return [(name, uid, to_datetime(created))
-                for uid, name, created in db.execute("""
-                    select id, name, created from users
-                    where name regexp ?
-                """, (users,))]
-
-    def create_users(self, db, names):
-        now = time.time_ns()
-        uids = [secrets.randbelow(1 << 63) for _ in names]
-        db.executemany("""
-            insert into users (id, name, created) values (?, ?, ?)
-        """, [(uid, name, now) for uid, name in zip(uids, names)])
-        return uids
-
-    def user_memberships(self, db, origin, users='', transitive=False):
-        self.check_origin(db, origin)
-        return list(db.execute("""
-            select users.name, group_, transitive from user_memberships
-            left join users on users.id = user
-            where origin = ? and users.name regexp ?
-              and (? or not transitive)
-        """, (origin, users, transitive)))
-
-    def tokens(self, db, users='', expired=False):
-        now = time.time_ns()
-        return [(name, uid, token, to_datetime(created), to_datetime(expires))
-                for token, uid, name, created, expires in db.execute("""
-                    select token, users.id, users.name, user_tokens.created,
-                           expires
-                    from user_tokens
-                    left join users on users.id = user_tokens.user
-                    where users.name regexp ?
-                      and (? or expires is null or ? < expires)
-                """, (users, expired, now))]
-
-    def create_tokens(self, db, users, expires=None):
-        now = time.time_ns()
-        expires = to_nsec(expires)
-        tokens = [secrets.token_urlsafe() for _ in users]
-        db.executemany("""
-            insert into user_tokens (token, user, created, expires)
-                values (?, (select id from users where name = ?), ?, ?)
-        """, [(token, user, now, expires)
-              for user, token in zip(users, tokens)])
-        return tokens
-
-    def expire_tokens(self, db, tokens, expires=None):
-        expires = to_nsec(expires, time.time_ns())
-        db.executemany("""
-            update user_tokens set expires = ?
-            where token = ?
-               or exists(select 1 from users where id = user and name = ?)
-        """, [(expires, token, token) for token in tokens])
-
-    def check_origin(self, db, origin):
-        if not origin and not self.dev(db):
-            raise Exception("No origin specified")
-
-    def groups(self, db, groups=''):
-        return [g for g, in db.execute("""
-                    select distinct group_ from user_memberships
-                    where group_ regexp :groups
-                    union
-                    select distinct group_ from group_memberships
-                    where group_ regexp :groups
-                    union
-                    select distinct member from group_memberships
-                    where member regexp :groups
-                """, {'groups': groups})]
-
-    def group_members(self, db, origin, groups='', transitive=False):
-        self.check_origin(db, origin)
-        return list(db.execute("""
-            select group_, 'user', users.name, transitive from user_memberships
-            left join users on users.id = user
-            where origin = :origin and group_ regexp :groups
-              and (:transitive or not transitive)
-            union all
-            select group_, 'group', member, false from group_memberships
-            where origin = :origin and group_ regexp :groups
-        """, {'origin': origin, 'groups': groups, 'transitive': transitive}))
-
-    def group_memberships(self, db, origin, groups=''):
-        self.check_origin(db, origin)
-        return list(db.execute("""
-            select member, group_ from group_memberships
-            where origin = ? and member regexp ?
-        """, (origin, groups)))
-
-    def modify_groups(self, db, origin, groups, add_users=None, add_groups=None,
-                      remove_users=None, remove_groups=None):
-        self.check_origin(db, origin)
-        if add_users:
-            db.executemany("""
-                insert or replace into user_memberships
-                    (origin, user, group_, transitive)
-                    values (?, (select id from users where name = ?), ?, false)
-            """, [(origin, name, group) for name in add_users
-                  for group in groups])
-        if remove_users:
-            db.executemany("""
-                delete from user_memberships
-                where origin = ?
-                  and user in (select id from users where name = ?)
-                  and group_ = ?
-            """, [(origin, name, group) for name in remove_users
-                  for group in groups])
-        if add_groups:
-            db.executemany("""
-                insert or ignore into group_memberships (origin, member, group_)
-                    values (?, ?, ?)
-            """, [(origin, name, group) for name in add_groups
-                  for group in groups])
-        if remove_groups:
-            db.executemany("""
-                delete from group_memberships
-                where origin = ? and member = ? and group_ = ?
-            """, [(origin, name, group) for name in remove_groups
-                  for group in groups])
-        self.compute_transitive_memberships(db, origin)
-
-    def compute_transitive_memberships(self, db, origin):
-        items = list(db.execute("""
-            select user, group_ from user_memberships
-            where origin = ? and not transitive
-        """, (origin,)))
-        gm = {}
-        for member, group in db.execute("""
-                    select member, group_ from group_memberships
-                    where origin = ?
-                """, (origin,)):
-            gm.setdefault(member, []).append(group)
-        trans = set()
-        while items:
-            uid, group = it = items.pop()
-            if it in trans: continue
-            trans.add(it)
-            items.extend((uid, g) for g in gm.get(group, []))
-        db.execute("""
-            delete from user_memberships where origin = ? and transitive
-        """, (origin,))
-        db.executemany("""
-            insert or ignore into
-                user_memberships (origin, user, group_, transitive)
-                values (?, ?, ?, true)
-        """, [(origin, uid, group) for uid, group in trans])
 
     def version_1(self, db, dev, now):
         db.executescript("""
