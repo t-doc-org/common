@@ -57,6 +57,23 @@ class DbNamespace:
 
 
 class Users(DbNamespace):
+    def member_of(self, origin, user, group):
+        if user is None: return False
+        return bool(self.row("""
+            select exists(
+                select 1 from user_memberships
+                where origin = ? and user = ? and (group_ = ? or group_ = '*')
+            )
+        """, (origin, user, group))[0])
+
+    def info(self, origin, user):
+        name, = self.row("select name from users where id = ?", (user,))
+        groups = [g for g, in self.execute("""
+            select group_ from user_memberships
+            where origin = ? and user = ?
+        """, (origin, user))]
+        return {'name': name, 'groups': groups}
+
     def list(self, users=''):
         return [(name, uid, to_datetime(created))
                 for uid, name, created in self.execute("""
@@ -83,6 +100,12 @@ class Users(DbNamespace):
 
 
 class Tokens(DbNamespace):
+    def authenticate(self, token):
+        return self.row("""
+            select user from user_tokens
+            where token = ? and (expires is null or ? < expires)
+        """, (token, time.time_ns()), default=(None,))[0]
+
     def list(self, users='', expired=False):
         now = time.time_ns()
         return [(name, uid, token, to_datetime(created), to_datetime(expires))

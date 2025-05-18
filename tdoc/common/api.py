@@ -15,8 +15,6 @@ from wsgiref import util
 
 from . import wsgi
 
-# TODO: Move as much SQL as possible to Connection
-
 missing = object()
 
 
@@ -61,11 +59,7 @@ class Api:
     def authenticate(self, env):
         user = None
         if token := wsgi.authorization(env):
-            with self.db(env) as db:
-                user, = db.row("""
-                    select user from user_tokens
-                    where token = ? and (expires is null or ? < expires)
-                """, (token, time.time_ns()), default=(None,))
+            with self.db(env) as db: user = db.tokens.authenticate(token)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         env['tdoc.user'] = user
 
@@ -75,14 +69,7 @@ class Api:
         return user
 
     def member_of(self, env, db, group):
-        origin = wsgi.origin(env)
-        if (user := self.user(env)) is None: return False
-        return bool(db.row("""
-            select exists(
-                select 1 from user_memberships
-                where origin = ? and user = ? and (group_ = ? or group_ = '*')
-            )
-        """, (origin, user, group))[0])
+        return db.users.member_of(wsgi.origin(env), self.user(env), group)
 
     def check_acl(self, env, perm):
         token = wsgi.authorization(env)
@@ -140,15 +127,8 @@ class Api:
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         user = self.user(env, anon=False)
-        origin = wsgi.origin(env)
-        with self.db(env) as db:
-            name, = db.row("select name from users where id = ?", (user,))
-            groups = [g for g, in db.execute("""
-                select group_ from user_memberships
-                where origin = ? and user = ?
-            """, (origin, user))]
-        return wsgi.respond_json(
-            respond, {'name': name, 'groups': groups})
+        with self.db(env) as db: info = db.users.info(wsgi.origin(env), user)
+        return wsgi.respond_json(respond, info)
 
 
 class EventApi:
