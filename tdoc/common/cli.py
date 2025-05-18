@@ -599,7 +599,7 @@ class Application:
             if mtime <= prev_mtime:
                 prev = now
                 continue
-            if now < mtime + delay:
+            if now < mtime + delay and prev_mtime != 0:
                 prev = mtime + delay - interval
                 continue
             if prev_mtime != 0:
