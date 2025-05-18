@@ -3,14 +3,13 @@
 
 import contextlib
 import datetime
+import functools
 import pathlib
 import re
 import secrets
 import sqlite3
 import threading
 import time
-
-# TODO: Namespace DB logic, e.g. db.users.list(), db.tokens.create()
 
 
 def to_datetime(nsec):
@@ -42,14 +41,30 @@ class Connection(sqlite3.Connection):
         if not origin and not self.dev:
             raise Exception("No origin specified")
 
-    def users(self, users=''):
+    @functools.cached_property
+    def users(self): return Users(self)
+
+    @functools.cached_property
+    def tokens(self): return Tokens(self)
+
+    @functools.cached_property
+    def groups(self): return Groups(self)
+
+
+class DbNamespace:
+    def __init__(self, db): self.db = db
+    def __getattr__(self, name): return getattr(self.db, name)
+
+
+class Users(DbNamespace):
+    def list(self, users=''):
         return [(name, uid, to_datetime(created))
                 for uid, name, created in self.execute("""
                     select id, name, created from users
                     where name regexp ?
                 """, (users,))]
 
-    def create_users(self, names):
+    def create(self, names):
         now = time.time_ns()
         uids = [secrets.randbelow(1 << 63) for _ in names]
         self.executemany("""
@@ -57,7 +72,7 @@ class Connection(sqlite3.Connection):
         """, [(uid, name, now) for uid, name in zip(uids, names)])
         return uids
 
-    def user_memberships(self, origin, users='', transitive=False):
+    def memberships(self, origin, users='', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select users.name, group_, transitive from user_memberships
@@ -66,7 +81,9 @@ class Connection(sqlite3.Connection):
               and (? or not transitive)
         """, (origin, users, transitive)))
 
-    def tokens(self, users='', expired=False):
+
+class Tokens(DbNamespace):
+    def list(self, users='', expired=False):
         now = time.time_ns()
         return [(name, uid, token, to_datetime(created), to_datetime(expires))
                 for token, uid, name, created, expires in self.execute("""
@@ -78,7 +95,7 @@ class Connection(sqlite3.Connection):
                       and (? or expires is null or ? < expires)
                 """, (users, expired, now))]
 
-    def create_tokens(self, users, expires=None):
+    def create(self, users, expires=None):
         now = time.time_ns()
         expires = to_nsec(expires)
         tokens = [secrets.token_urlsafe() for _ in users]
@@ -89,7 +106,7 @@ class Connection(sqlite3.Connection):
               for user, token in zip(users, tokens)])
         return tokens
 
-    def expire_tokens(self, tokens, expires=None):
+    def expire(self, tokens, expires=None):
         expires = to_nsec(expires, time.time_ns())
         self.executemany("""
             update user_tokens set expires = ?
@@ -97,7 +114,9 @@ class Connection(sqlite3.Connection):
                or exists(select 1 from users where id = user and name = ?)
         """, [(expires, token, token) for token in tokens])
 
-    def groups(self, groups=''):
+
+class Groups(DbNamespace):
+    def list(self, groups=''):
         return [g for g, in self.execute("""
                     select distinct group_ from user_memberships
                     where group_ regexp :groups
@@ -109,7 +128,7 @@ class Connection(sqlite3.Connection):
                     where member regexp :groups
                 """, {'groups': groups})]
 
-    def group_members(self, origin, groups='', transitive=False):
+    def members(self, origin, groups='', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select group_, 'user', users.name, transitive from user_memberships
@@ -121,15 +140,15 @@ class Connection(sqlite3.Connection):
             where origin = :origin and group_ regexp :groups
         """, {'origin': origin, 'groups': groups, 'transitive': transitive}))
 
-    def group_memberships(self, origin, groups=''):
+    def memberships(self, origin, groups=''):
         self.check_origin(origin)
         return list(self.execute("""
             select member, group_ from group_memberships
             where origin = ? and member regexp ?
         """, (origin, groups)))
 
-    def modify_groups(self, origin, groups, add_users=None, add_groups=None,
-                      remove_users=None, remove_groups=None):
+    def modify(self, origin, groups, add_users=None, add_groups=None,
+               remove_users=None, remove_groups=None):
         self.check_origin(origin)
         if add_users:
             self.executemany("""

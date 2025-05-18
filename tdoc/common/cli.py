@@ -256,14 +256,14 @@ def add_group_commands(parser):
 
 def cmd_group_add(cfg):
     with get_db(cfg) as db, db:
-        db.modify_groups(cfg.origin, cfg.group,
+        db.groups.modify(cfg.origin, cfg.group,
                          add_users=comma_separated(cfg.users),
                          add_groups=comma_separated(cfg.groups))
 
 
 def cmd_group_list(cfg):
     with get_db(cfg) as db, db:
-        groups = db.groups(cfg.groups)
+        groups = db.groups.list(cfg.groups)
     groups.sort()
     o = cfg.stdout
     for group in groups: cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
@@ -271,8 +271,8 @@ def cmd_group_list(cfg):
 
 def cmd_group_members(cfg):
     with get_db(cfg) as db, db:
-        members = db.group_members(cfg.origin, cfg.groups,
-                                   transitive=cfg.transitive)
+        members = db.groups.members(cfg.origin, cfg.groups,
+                                    transitive=cfg.transitive)
     members.sort()
     wgroup = max((len(m[0]) for m in members), default=0)
     wname = max((len(m[2]) for m in members), default=0)
@@ -292,7 +292,7 @@ def cmd_group_members(cfg):
 
 def cmd_group_memberships(cfg):
     with get_db(cfg) as db, db:
-        memberships = db.group_memberships(cfg.origin, cfg.groups)
+        memberships = db.groups.memberships(cfg.origin, cfg.groups)
     memberships.sort()
     wmember = max((len(m[0]) for m in memberships), default=0)
     o = cfg.stdout
@@ -306,7 +306,7 @@ def cmd_group_memberships(cfg):
 
 def cmd_group_remove(cfg):
     with get_db(cfg) as db, db:
-        db.modify_groups(cfg.origin, cfg.group,
+        db.groups.modify(cfg.origin, cfg.group,
                          remove_users=comma_separated(cfg.users),
                          remove_groups=comma_separated(cfg.groups))
 
@@ -442,7 +442,7 @@ def add_origin_option(arg):
 
 def cmd_token_create(cfg):
     with get_db(cfg) as db, db:
-        tokens = db.create_tokens(cfg.user, cfg.expire)
+        tokens = db.tokens.create(cfg.user, cfg.expire)
     width = max((len(u) for u in cfg.user), default=0)
     o = cfg.stdout
     for user, token in zip(cfg.user, tokens):
@@ -453,12 +453,12 @@ def cmd_token_create(cfg):
 
 def cmd_token_expire(cfg):
     with get_db(cfg) as db, db:
-        db.expire_tokens(cfg.token, cfg.time)
+        db.tokens.expire(cfg.token, cfg.time)
 
 
 def cmd_token_list(cfg):
     with get_db(cfg) as db, db:
-        tokens = db.tokens(cfg.users, expired=cfg.expired)
+        tokens = db.tokens.list(cfg.users, expired=cfg.expired)
     epoch = datetime.datetime.fromtimestamp(0)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
     wuser = max((len(u) for u, *_ in tokens), default=0)
@@ -511,8 +511,8 @@ def add_user_commands(parser):
 
 def cmd_user_create(cfg):
     with get_db(cfg) as db, db:
-        uids = db.create_users(cfg.user)
-        tokens = db.create_tokens(cfg.user, cfg.token_expire)
+        uids = db.users.create(cfg.user)
+        tokens = db.tokens.create(cfg.user, cfg.token_expire)
     wuser = max((len(u) for u in cfg.user), default=0)
     o = cfg.stdout
     for user, uid, token in zip(cfg.user, uids, tokens):
@@ -522,7 +522,7 @@ def cmd_user_create(cfg):
 
 def cmd_user_list(cfg):
     with get_db(cfg) as db, db:
-        users = db.users(cfg.users)
+        users = db.users.list(cfg.users)
     users.sort(key=lambda r: r[0])
     wuser = max((len(u[0]) for u in users), default=0)
     o = cfg.stdout
@@ -534,8 +534,8 @@ def cmd_user_list(cfg):
 
 def cmd_user_memberships(cfg):
     with get_db(cfg) as db, db:
-        memberships = db.user_memberships(cfg.origin, cfg.users,
-                                          transitive=cfg.transitive)
+        memberships = db.users.memberships(cfg.origin, cfg.users,
+                                           transitive=cfg.transitive)
     memberships.sort()
     wuser = max((len(m[0]) for m in memberships), default=0)
     wgroup = max((len(m[1]) for m in memberships), default=0)
