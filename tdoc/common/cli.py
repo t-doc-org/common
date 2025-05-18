@@ -119,6 +119,35 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
+def add_store_option(arg):
+    arg('--store', metavar='PATH', type='path', dest='store',
+        default=os.environ.get('TDOC_STORE'),
+        help="The path to the store database.")
+
+
+@contextlib.contextmanager
+def get_store(cfg, allow_mem=False, check_latest=True):
+    if not allow_mem and not cfg.store:
+        raise Exception("--store: No path specified")
+    with store.Store(cfg.store) as st:
+        if check_latest:
+            version, latest = st.version()
+            if version != latest:
+                o = cfg.stdout
+                o.write(f"""\
+{o.LYELLOW}The store database must be upgraded:{o.NORM} version\
+ {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
+Would you like to perform the upgrade (y/n)? """)
+                o.flush()
+                resp = input().lower()
+                o.write("\n")
+                if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+                    raise Exception("Store version mismatch "
+                                    f"(current: {version}, want: {latest})")
+                st.upgrade()
+        yield st
+
+
 def comma_separated(s):
     if s is None: return []
     return s.split(',')
@@ -200,16 +229,14 @@ def add_group_commands(parser):
 
 
 def cmd_group_add(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         store.modify_groups(db, cfg.origin, cfg.group,
                             add_users=comma_separated(cfg.users),
                             add_groups=comma_separated(cfg.groups))
 
 
 def cmd_group_list(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         groups = store.groups(db, cfg.groups)
     groups.sort()
     o = cfg.stdout
@@ -217,8 +244,7 @@ def cmd_group_list(cfg):
 
 
 def cmd_group_members(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         members = store.group_members(db, cfg.origin, cfg.groups,
                                       transitive=cfg.transitive)
     members.sort()
@@ -239,8 +265,7 @@ def cmd_group_members(cfg):
 
 
 def cmd_group_memberships(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         memberships = store.group_memberships(db, cfg.origin, cfg.groups)
     memberships.sort()
     wmember = max((len(m[0]) for m in memberships), default=0)
@@ -254,8 +279,7 @@ def cmd_group_memberships(cfg):
 
 
 def cmd_group_remove(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         store.modify_groups(db, cfg.origin, cfg.group,
                             remove_users=comma_separated(cfg.users),
                             remove_groups=comma_separated(cfg.groups))
@@ -274,7 +298,8 @@ def cmd_serve(cfg):
         address_family = family
 
     with Server(addr, RequestHandler) as srv, \
-            Application(cfg, addr, srv) as app:
+            get_store(cfg, allow_mem=True) as store, \
+            Application(cfg, addr, srv, store) as app:
         srv.set_app(app)
         try:
             srv.serve_forever()
@@ -313,36 +338,26 @@ def add_store_commands(parser):
     add_options(p)
 
 
-def add_store_option(arg):
-    arg('--store', metavar='PATH', type='path', dest='store',
-        default=os.environ.get('TDOC_STORE'),
-        help="The path to the store database.")
-
-
-def get_store(cfg):
-    if not cfg.store: raise Exception("--store: No path specified")
-    return store.Store(cfg.store)
-
-
 def cmd_store_create(cfg):
     if cfg.store is None and cfg.dev and (ds := dev_store.resolve()).exists():
         cfg.store = ds
-    store = get_store(cfg)
-    store.path.parent.mkdir(parents=True, exist_ok=True)
-    version = store.create(version=cfg.version, dev=cfg.dev)
+    with get_store(cfg, check_latest=False) as store:
+        store.path.parent.mkdir(parents=True, exist_ok=True)
+        version = store.create(version=cfg.version, dev=cfg.dev)
     cfg.stdout.write(f"Store created (version: {version})\n")
 
 
 def cmd_store_upgrade(cfg):
     if cfg.store is None and (ds := dev_store.resolve()).exists():
         cfg.store = ds
-    store = get_store(cfg)
-    from_version, to_version = store.upgrade(version=cfg.version)
-    if from_version != to_version:
-        cfg.stdout.write(
-            f"Store upgraded (version: {from_version} => {to_version})\n")
-    else:
-        cfg.stdout.write(f"Store already up-to-date (version: {to_version})\n")
+    with get_store(cfg, check_latest=False) as store:
+        from_version, to_version = store.upgrade(version=cfg.version)
+        if from_version != to_version:
+            cfg.stdout.write(
+                f"Store upgraded (version: {from_version} => {to_version})\n")
+        else:
+            cfg.stdout.write(
+                f"Store already up-to-date (version: {to_version})\n")
 
 
 def add_token_commands(parser):
@@ -389,8 +404,7 @@ def add_origin_option(arg):
 
 
 def cmd_token_create(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         tokens = store.create_tokens(db, cfg.user, cfg.expire)
     width = max((len(u) for u in cfg.user), default=0)
     o = cfg.stdout
@@ -401,14 +415,12 @@ def cmd_token_create(cfg):
 
 
 def cmd_token_expire(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         store.expire_tokens(db, cfg.token, cfg.time)
 
 
 def cmd_token_list(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         tokens = store.tokens(db, cfg.users, expired=cfg.expired)
     epoch = datetime.datetime.fromtimestamp(0)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
@@ -461,8 +473,7 @@ def add_user_commands(parser):
 
 
 def cmd_user_create(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         uids = store.create_users(db, cfg.user)
         tokens = store.create_tokens(db, cfg.user, cfg.token_expire)
     wuser = max((len(u) for u in cfg.user), default=0)
@@ -473,8 +484,7 @@ def cmd_user_create(cfg):
 
 
 def cmd_user_list(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         users = store.users(db, cfg.users)
     users.sort(key=lambda r: r[0])
     wuser = max((len(u[0]) for u in users), default=0)
@@ -486,8 +496,7 @@ def cmd_user_list(cfg):
 
 
 def cmd_user_memberships(cfg):
-    store = get_store(cfg)
-    with contextlib.closing(store.connect()) as db, db:
+    with get_store(cfg) as store, contextlib.closing(store.connect()) as db, db:
         memberships = store.user_memberships(db, cfg.origin, cfg.users,
                                              transitive=cfg.transitive)
     memberships.sort()
@@ -545,7 +554,7 @@ def try_stat(path):
 
 
 class Application:
-    def __init__(self, cfg, addr, server):
+    def __init__(self, cfg, addr, server, store):
         self.cfg = cfg
         self.addr = addr
         self.server = server
@@ -554,7 +563,7 @@ class Application:
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.api = api.Api(cfg.store, stderr=cfg.stderr)
+        self.api = api.Api(store, stderr=cfg.stderr)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.build_mtime = None
@@ -688,9 +697,9 @@ class Application:
             o.write(f"""\
 {o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
  {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
-Release notes: <https://common.t-doc.org/release-notes.html\
-#release-{new.replace('.', '-')}>
-{o.BOLD}Restart the server to upgrade.{o.NORM}
+Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
+#release-{new.replace('.', '-')}{o.NORM}>
+{o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
 
     def __call__(self, env, respond):

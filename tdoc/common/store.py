@@ -49,10 +49,15 @@ class Store:
     def __init__(self, path, timeout=10):
         self.path = pathlib.Path(path).resolve() if path is not None else None
         self.timeout = timeout
+
+    def __enter__(self):
         if self.path is None:  # Create an in-memory database
             self._mem_db = self.connect()  # Keep at least one connection alive
             self.create(dev=True)
-        # TODO: Check database version, as separate method
+        return self
+
+    def __exit__(self, typ, value, tb):
+        if self.path is None: self._mem_db.close()
 
     def connect(self, params='mode=rw', check_same_thread=True):
         uri = f'{self.path.as_uri()}?{params}' if self.path is not None \
@@ -70,6 +75,9 @@ class Store:
             'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
             deterministic=True)
         return db
+
+    def pool(self, **kwargs):
+        return ConnectionPool(self, **kwargs)
 
     def meta(self, db, key, default=None):
         for value, in db.execute(
@@ -94,7 +102,7 @@ class Store:
             from_version = self.meta(db, 'version')
             to_version = self._upgrade(db, from_version=from_version,
                                        to_version=version, dev=self.dev(db))
-            return from_version, to_version
+        return from_version, to_version
 
     def _check_version(self, version):
         if version is None: return
@@ -122,6 +130,12 @@ class Store:
                 return
             yield version, fn
             version += 1
+
+    def version(self):
+        with contextlib.closing(self.connect()) as db:
+            version = self.meta(db, 'version')
+            latest = max(v for v, _ in self.versions())
+        return version, latest
 
     def users(self, db, users=''):
         return [(name, uid, to_datetime(created))
