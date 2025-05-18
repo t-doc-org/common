@@ -10,6 +10,8 @@ import sqlite3
 import threading
 import time
 
+# TODO: Move all Store methods taking a db to Connection
+
 
 def to_datetime(nsec):
     if nsec is None: return
@@ -59,8 +61,9 @@ class Store:
     def __exit__(self, typ, value, tb):
         if self.path is None: self._mem_db.close()
 
-    def connect(self, params='mode=rw', check_same_thread=True):
-        uri = f'{self.path.as_uri()}?{params}' if self.path is not None \
+    def connect(self, *, path=False, params='mode=rw', check_same_thread=True):
+        if path is False: path = self.path
+        uri = f'{path.as_uri()}?{params}' if path is not None \
               else 'file:store?mode=memory&cache=shared'
         # Some pragmas cannot be used or are ineffective within a transaction,
         # and autocommit=False always has a transaction open. Open the
@@ -79,6 +82,13 @@ class Store:
     def pool(self, **kwargs):
         return ConnectionPool(self, **kwargs)
 
+    def backup(self, db, dest):
+        if dest.exists():
+            raise Exception("Backup destination already exists")
+        with contextlib.closing(
+                self.connect(path=dest, params='mode=rwc')) as ddb:
+            db.backup(ddb)
+
     def meta(self, db, key, default=None):
         for value, in db.execute(
                 "select value from meta where key = ?", (key,)):
@@ -92,16 +102,16 @@ class Store:
         self._check_version(version)
         if self.path is not None and self.path.exists():
             raise Exception("Store database already exists")
-        with contextlib.closing(self.connect('mode=rwc')) as db:
+        with contextlib.closing(self.connect(params='mode=rwc')) as db:
             return self._upgrade(db, from_version=0, to_version=version,
                                  dev=dev)
 
-    def upgrade(self, version=None):
+    def upgrade(self, db, version=None, on_version=None):
         self._check_version(version)
-        with contextlib.closing(self.connect()) as db:
-            from_version = self.meta(db, 'version')
-            to_version = self._upgrade(db, from_version=from_version,
-                                       to_version=version, dev=self.dev(db))
+        from_version = self.meta(db, 'version')
+        to_version = self._upgrade(db, from_version=from_version,
+                                   to_version=version, dev=self.dev(db),
+                                   on_version=on_version)
         return from_version, to_version
 
     def _check_version(self, version):
@@ -110,11 +120,12 @@ class Store:
             if v == version: return
         raise Exception(f"Invalid store version: {version}")
 
-    def _upgrade(self, db, from_version, to_version, dev):
+    def _upgrade(self, db, from_version, to_version, dev, on_version=None):
         now = time.time_ns()
         version = from_version
         for v, fn in self.versions(from_version + 1):
             if to_version is not None and v > to_version: break
+            if on_version is not None: on_version(v)
             with db:
                 fn(db, dev, now)
                 db.execute("""
@@ -131,10 +142,9 @@ class Store:
             yield version, fn
             version += 1
 
-    def version(self):
-        with contextlib.closing(self.connect()) as db:
-            version = self.meta(db, 'version')
-            latest = max(v for v, _ in self.versions())
+    def version(self, db):
+        version = self.meta(db, 'version')
+        latest = max(v for v, _ in self.versions())
         return version, latest
 
     def users(self, db, users=''):

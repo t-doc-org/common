@@ -119,8 +119,11 @@ def run_tests(tests, repo, label, url, port, wheel, write):
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
+    # TODO: Create at version n > 1, then upgrade
     write(f"{label}Creating store\n")
     vrun('tdoc', 'store', 'create', '--debug', '--dev')
+
+    # TODO: Run various commands that access the store
 
     # Run the local server, wait for it to serve or exit.
     write(f"{label}Running local server\n")

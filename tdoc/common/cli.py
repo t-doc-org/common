@@ -131,21 +131,38 @@ def get_store(cfg, allow_mem=False, check_latest=True):
         raise Exception("--store: No path specified")
     with store.Store(cfg.store) as st:
         if check_latest:
-            version, latest = st.version()
-            if version != latest:
-                o = cfg.stdout
-                o.write(f"""\
+            with contextlib.closing(st.connect()) as db:
+                version, latest = st.version(db)
+                if version != latest:
+                    o = cfg.stdout
+                    o.write(f"""\
 {o.LYELLOW}The store database must be upgraded:{o.NORM} version\
  {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
 Would you like to perform the upgrade (y/n)? """)
-                o.flush()
-                resp = input().lower()
-                o.write("\n")
-                if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-                    raise Exception("Store version mismatch "
-                                    f"(current: {version}, want: {latest})")
-                st.upgrade()
+                    o.flush()
+                    resp = input().lower()
+                    o.write("\n")
+                    if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+                        raise Exception("Store version mismatch "
+                                        f"(current: {version}, want: {latest})")
+                    upgrade_store(cfg, st, db, version, latest)
         yield st
+
+
+def store_backup_path(cfg):
+    suffix = datetime.datetime.now() \
+                .isoformat('.', 'seconds').replace(':', '-')
+    return cfg.store.with_name(f'{cfg.store.name}.{suffix}')
+
+
+def upgrade_store(cfg, store, db, version, to_version):
+    o = cfg.stdout
+    backup = store_backup_path(cfg)
+    o.write(f"Backing up store to {backup}\n")
+    store.backup(db, backup)
+    def on_version(v): o.write(f"Upgrading store to version {v}\n")
+    store.upgrade(db, version=to_version, on_version=on_version)
+    o.write("Store upgraded successfully\n")
 
 
 def comma_separated(s):
@@ -319,6 +336,15 @@ def add_store_commands(parser):
     sp = p.add_subparsers(title="Sub-commands")
     sp.required = True
 
+    p = sp.add_parser('backup', help="Backup the store database.")
+    p.set_defaults(handler=cmd_store_backup)
+    arg = p.add_argument
+    add_store_option(arg)
+    arg('destination', metavar='PATH', type='path', nargs='?', default=None,
+        help="The path to the backup copy. Defaults to the source database "
+             "file with a date + time suffix.")
+    add_options(p)
+
     p = sp.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument
@@ -338,9 +364,17 @@ def add_store_commands(parser):
     add_options(p)
 
 
-def cmd_store_create(cfg):
-    if cfg.store is None and cfg.dev and (ds := dev_store.resolve()).exists():
+def cmd_store_backup(cfg):
+    if cfg.store is None and (ds := dev_store.resolve()).exists():
         cfg.store = ds
+    if cfg.destination is None: cfg.destination = store_backup_path(cfg)
+    with get_store(cfg, check_latest=False) as store, \
+            contextlib.closing(store.connect(params='mode=ro')) as db:
+        store.backup(db, cfg.destination)
+
+
+def cmd_store_create(cfg):
+    if cfg.store is None and cfg.dev: cfg.store = dev_store.resolve()
     with get_store(cfg, check_latest=False) as store:
         store.path.parent.mkdir(parents=True, exist_ok=True)
         version = store.create(version=cfg.version, dev=cfg.dev)
@@ -350,14 +384,15 @@ def cmd_store_create(cfg):
 def cmd_store_upgrade(cfg):
     if cfg.store is None and (ds := dev_store.resolve()).exists():
         cfg.store = ds
-    with get_store(cfg, check_latest=False) as store:
-        from_version, to_version = store.upgrade(version=cfg.version)
-        if from_version != to_version:
-            cfg.stdout.write(
-                f"Store upgraded (version: {from_version} => {to_version})\n")
-        else:
-            cfg.stdout.write(
-                f"Store already up-to-date (version: {to_version})\n")
+    o = cfg.stdout
+    with get_store(cfg, check_latest=False) as store, \
+            contextlib.closing(store.connect()) as db:
+        version, latest = store.version(db)
+        if version == latest:
+            o.write(f"Store is already up-to-date (version: {version})\n")
+            return
+        upgrade_store(cfg, store, db, version,
+                      cfg.version if cfg.version is not None else latest)
 
 
 def add_token_commands(parser):
