@@ -18,6 +18,7 @@ def setup(app):
     app.connect('config-inited', update_numfig_format)
     app.connect('builder-inited', NumCollector.init)
     app.add_env_collector(NumCollector)
+    app.connect('env-get-updated', number_per_namespace, priority=999)
     app.connect('doctree-resolved', update_num_nodes)
     return {
         'version': __version__,
@@ -69,6 +70,19 @@ class Num(docutils.ReferenceRole):
 
 class num(nodes.Inline, nodes.TextElement): pass
 
+# Numbering is global per enumerable node type, and we want per-namespace
+# numbering. We cannot modify the values contained in env.toc_fignumbers,
+# because documents are invalidated based on the old and new contents of
+# env.toc_fignumbers comparing unequal. So we replace the global numbers there
+# with instances of Cnt, a subclass of int, having the same value (and therefore
+# comparing equal). We set the per-namespace value in the _str attribute, and
+# return it from __str__(), so that formatting a number outputs the
+# per-namespace value.
+
+class Cnt(int):
+    def __str__(self): return self._str
+    def __repr__(self): return f"Cnt({int(self)}, {self._str})"
+
 
 class NumCollector(collectors.EnvironmentCollector):
     @staticmethod
@@ -88,24 +102,26 @@ class NumCollector(collectors.EnvironmentCollector):
         for node in doctree.findall(num):
             nums[node['ids'][0]] = node['target']
 
-    def get_updated_docs(self, app, env):
-        # Convert the global numbering to per-namespace numbering.
-        per_ns = {}
-        for doc, fignums in env.toc_fignumbers.items():
-            if (fignums := fignums.get('num')) is None: continue
-            nums = env.tdoc_nums[doc]
-            for nid, n in fignums.items():
-                ns = nums[nid].split(':', 1)[0]
-                *sect, cnt = n
-                per_ns.setdefault(ns, {}).setdefault(tuple(sect), []) \
-                    .append((cnt, doc, nid))
-        env.tdoc_num_numbers = {}
-        for ns, sects in per_ns.items():
-            for sect, cnt_nids in sects.items():
-                cnt_nids.sort()
-                for i, (_, doc, nid) in enumerate(cnt_nids, 1):
-                    env.tdoc_num_numbers.setdefault(doc, {})[nid] = [*sect, i]
-        return []
+
+def number_per_namespace(app, env):
+    # Convert the global numbering to per-namespace numbering.
+    per_ns = {}
+    for doc, fignums in env.toc_fignumbers.items():
+        if (fignums := fignums.get('num')) is None: continue
+        nums = env.tdoc_nums[doc]
+        for nid, n in fignums.items():
+            ns = nums[nid].split(':', 1)[0]
+            *sect, cnt = n
+            per_ns.setdefault(ns, {}).setdefault(tuple(sect), []) \
+                .append((cnt, doc, nid))
+    for ns, sects in per_ns.items():
+        for sect, cnt_nids in sects.items():
+            cnt_nids.sort()
+            for i, (cnt, doc, nid) in enumerate(cnt_nids, 1):
+                if not isinstance(cnt, Cnt): cnt = Cnt(cnt)
+                cnt._str = str(i)
+                env.toc_fignumbers[doc]['num'][nid] = (*sect, cnt)
+    return []
 
 
 def update_num_nodes(app, doctree, docname):
@@ -129,7 +145,7 @@ def iter_num(env, doctree, docname):
     for node in doctree.findall(num):
         if fail: raise errors.ConfigError("{num}: numfig is disabled")
         try:
-            n = env.tdoc_num_numbers[docname][node['ids'][0]]
+            n = env.toc_fignumbers[docname]['num'][node['ids'][0]]
         except KeyError:
             _log.warning("The {num} role cannot be used in orphaned documents",
                          location=node)

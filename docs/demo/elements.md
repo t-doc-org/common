@@ -163,7 +163,7 @@ Read these quotes, then move on to exercises {numref}`ex:second` &
 ### Exercise {num}`ex:second`
 
 You've already read the quotes from {numref}`exercise %s<ex:first>`. Read this
-one as well, the move to {numref}`exercise %s<ex:third>`.
+one as well, then go to {numref}`exercise %s<ex:third>`.
 
 {attribution="Douglas Adams, The Hitchhiker’s Guide to the Galaxy"}
 > **Quote {num}`quote`:** For a moment, nothing happened. Then, after a second
