@@ -338,6 +338,13 @@ class Store:
         latest = max(v for v, _ in self.versions())
         return version, latest
 
+    def check_version(self):
+        with contextlib.closing(self.connect()) as db:
+            version, latest = self.version(db)
+        if version != latest:
+            raise Exception("Store version mismatch "
+                            f"(current: {version}, want: {latest})")
+
     def version_1(self, db, dev, now):
         db.executescript("""
 create table meta (
