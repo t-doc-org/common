@@ -38,19 +38,16 @@ class Defaults(docutils.SphinxDirective):
         cls, msgs = directives.directive(name, self.state.memo.language,
                                          self.state.document)
         if cls is None:
-            return [self.state.document.reporter.error(
-                f":defaults: Unknown directive: {name}", line=self.lineno)]
+            raise Exception(f"{{defaults}}: Unknown directive: {name}")
         if isinstance(cls, (types.FunctionType, types.MethodType)):
-            return [self.state.document.reporter.error(
-                f":defaults: Unsupported function-type directive: {name}",
-                line=self.lineno)]
+            raise Exception(
+                f"{{defaults}}: Unsupported function-type directive: {name}")
 
         # Check option names.
         if unknown := set(self.options) - set(cls.option_spec):
-            return [self.state.document.reporter.error(
-                f":defaults: Unknown options for :{name}: directive: "
-                f"{", ".join(sorted(unknown))}",
-                line=self.lineno)]
+            raise Exception(
+                f"{{defaults}}: Unknown options for {{{name}}} directive: "
+                f"{", ".join(sorted(unknown))}")
 
         # Monkey-patch the directive's run() method to set default option
         # values before running the directive.

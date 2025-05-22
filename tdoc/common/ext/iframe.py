@@ -21,7 +21,7 @@ def setup(app):
     }
 
 
-class iframe(nodes.Element): pass
+class iframe(nodes.Body, nodes.Element): pass
 
 
 _attr_names = ['allow', 'referrerpolicy', 'sandbox', 'style', 'title']

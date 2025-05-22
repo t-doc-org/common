@@ -59,7 +59,7 @@ def set_html_page_config(app, page, config, doctree):
     md = app.env.metadata[page]
     v = md.get('solutions', app.config.tdoc_solutions)
     if not app.config.values['tdoc_solutions'].valid_types.match(v):
-        _log.warning(f"Invalid 'solutions' value in {{metadata}}: {v}")
+        _log.warning(f"{{metadata}}: Invalid 'solutions' value: {v}")
         v = md['solutions'] = 'show'
     if v != 'show':
         config['html_data']['tdocSolutions'] = v
