@@ -173,6 +173,9 @@ button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
     width: 1.8rem;
     height: 1.8rem;
     font: var(--fa-font-solid);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Inputs */
