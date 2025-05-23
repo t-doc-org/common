@@ -103,6 +103,13 @@ export function log(session, data, options) {
     });
 }
 
+export async function poll(req) {
+    return await fetchJson(`${url}/poll`, {
+        headers: bearerAuthorization(await user.token()),
+        body: req,
+    });
+}
+
 export async function solutions(show) {
     return await fetchJson(`${url}/solutions`, {
         headers: bearerAuthorization(await user.token()),

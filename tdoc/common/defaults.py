@@ -30,6 +30,7 @@ extensions = [
     'tdoc.common.ext.iframe',
     'tdoc.common.ext.metadata',
     'tdoc.common.ext.num',
+    'tdoc.common.ext.poll',
     'tdoc.common.ext.solution',
 ]
 

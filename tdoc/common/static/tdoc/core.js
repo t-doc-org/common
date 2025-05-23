@@ -409,6 +409,14 @@ export class StoredJson extends Stored {
     decode(v) { return JSON.parse(v); }
 }
 
+// Manage an immutable, globally-unique client ID in local store.
+const clientIdStore = new Stored('tdoc:clientId');
+if (clientIdStore.value === undefined) {
+    clientIdStore.value = await toBase64(
+        crypto.getRandomValues(new Uint8Array(33)));
+}
+export const clientId = clientIdStore.value;
+
 // Return an exponential backoff delay.
 export function backoff(min, max, retries) {
     let delay = min * 1.3 ** retries;

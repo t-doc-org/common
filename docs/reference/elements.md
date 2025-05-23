@@ -107,10 +107,12 @@ solutions are displayed.
 
 - `show` (default): Solutions are shown on the page.
 - `hide`: Solutions are hidden when the page loads. They can be shown or hidden
-  by clicking the "Toggle solutions" (<span class="tdoc-icon fa-eye"></span> /
-  <span class="tdoc-icon fa-eye-slash"></span>) button in the navbar.
-- `remove`: Solutions are hidden and cannot be shown, except when using the
-  local server.
+  with the <span class="tdoc fa-eye"></span> /
+  <span class="tdoc fa-eye-slash"></span> button in the navbar.
+- `dynamic`: Solutions are hidden by default, but can be made visible to
+  everyone in real-time by members of the group `solutions:show` using the
+  <span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>
+  button.
 
 {.rubric}
 Options
@@ -132,7 +134,7 @@ removed.
 ```
 ````
 
-## IFrames
+## IFrame
 
 ````{rst:directive} .. youtube:: id
 This directive adds an
@@ -211,5 +213,42 @@ As an introduction to ...
 ## Exercise {num}`ex`
 
 After completing {numref}`exercise %s<ex:intro>`, ...
+```
+````
+
+## Poll
+
+````{rst:directive} .. poll::
+This directive adds a live poll. The content of the directive is composed of the
+question, which can contain arbitrary markup, followed by a bullet list, where
+each list item becomes an answer.
+
+Polls can be controlled by members of the group `polls:control`, using the icons
+in the toolbar.
+
+- <span class="tdoc fa-play"></span> / <span class="tdoc fa-stop"></span>: Open
+  and close the poll. Closed polls don't accept votes.
+- <span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>:
+  Show or hide the poll results.
+- <span class="tdoc fa-trash"></span>: Clear the poll results.
+
+Voting on polls is open to everyone and doesn't require any permissions. Polls
+are single-choice by default: selecting a different answer de-select a
+previously selected one, and re-selecting the selected answer un-selects it.
+ The {rst:dir}`:multi: <poll:multi>` option enables voters to select multiple
+answers.
+
+{.rubric}
+Options
+```{rst:directive:option} id: id
+:type: ID
+The identifier of the poll. Poll IDs must be unique across the site.
+```
+```{rst:directive:option} multi
+When set, the poll is a multiple-answer voters can select more than one answer.
+```
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the outer container.
 ```
 ````

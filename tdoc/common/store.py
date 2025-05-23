@@ -426,3 +426,24 @@ insert into user_tokens (token, user, created) values ('admin', 1, ?)
 insert into user_memberships (origin, user, group_, transitive)
     values ('', 1, '*', false)
 """)
+
+    def version_3(self, db, dev, now):
+        db.executescript("""
+create table polls (
+    origin text not null,
+    id text not null,
+    mode text,
+    expires integer,
+    answers integer not null default 0,
+    show integer not null default 0,
+    primary key (origin, id)
+) strict;
+create table poll_votes (
+    origin text not null,
+    poll text not null,
+    voter text not null,
+    answer integer not null,
+    primary key (origin, poll, voter, answer),
+    foreign key (origin, poll) references polls(origin, id)
+) strict;
+""")

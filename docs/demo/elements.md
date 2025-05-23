@@ -15,10 +15,9 @@ solutions: hide
 ## Solutions
 
 This section has several {rst:dir}`solution` blocks, and the page is
-configured to hide solutions by default. Click the "Toggle solutions"
-(<span class="tdoc-icon fa-eye"></span> /
-<span class="tdoc-icon fa-eye-slash"></span>) button in the navbar to show or
-hide them.
+configured to hide solutions by default. Click the
+<span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>
+button in the navbar to show or hide them.
 
 ```{solution}
 This solution follows the per-page setting.
@@ -175,3 +174,34 @@ This is the last quote.
 {attribution="Iain M. Banks, Consider Phlebas"}
 > **Quote {num}`quote`:** I had nightmares I thought were really horrible until
 > I woke up and remembered what reality was at the moment.
+
+## Polls
+
+The first {rst:dir}`poll` allows only one answer.
+
+```{poll}
+:id: aeb57180-a5c8-4532-ad15-94b3dd9f3013
+What is the equation of a line in a plane?
+
+- $ax^2 + bx + c = 0$
+- $ax + by + cz + d = 0$
+- $(x-x_0)^2 + (y-y_0)^2 - r^2 = 0$
+- $ax + by + c = 0$
+- $y = at^2 + v_0t + y_0$
+- I don't know
+```
+
+The next poll allows multiple selections.
+
+```{poll}
+:id: 4a790949-1246-49e8-841e-fb7922b98e45
+:multi:
+Which of the following animals are mammals?
+
+- Spiders
+- Crocodiles
+- Dolphins
+- Sharks
+- Platypuses
+- Tasmanian devils
+```

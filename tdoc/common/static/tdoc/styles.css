@@ -343,6 +343,68 @@ div.tdoc-quizz > .hint.hide {
     background-color: var(--pst-color-danger-bg);
 }
 
+/* Polls */
+.tdoc-poll {
+    margin: 1rem auto;
+    border: 1px solid var(--pst-color-border);
+    border-left: 0.3rem solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),
+                0 0 0.0625rem var(--pst-color-shadow);
+    background-color: var(--pst-color-on-background);
+    padding: 1rem;
+}
+.tdoc-poll.open {
+    border-left-color: var(--pst-color-warning);
+}
+.tdoc-poll-header > div {
+    display: flex;
+    white-space: nowrap;
+    justify-content: space-between;
+}
+.tdoc-poll-header > div > div {
+    display: flex;
+    column-gap: 1.3rem;
+}
+.tdoc-poll-header :is(.voters, .votes) > :last-child {
+    margin-left: 0.4rem;
+}
+.tdoc-poll.open .tdoc-poll-header .closed {
+    display: none;
+}
+.tdoc-poll-header .controls {
+    display: none;
+    column-gap: 0.3rem;
+}
+html[data-tdoc-poll-control] .tdoc-poll-header .controls {
+    display: flex;
+}
+.tdoc-poll-header .controls > .tdoc-clear {
+    margin-left: 0.5rem;
+}
+.tdoc-poll-ans {
+    width: 100%;
+}
+tr[style*="--tdoc-value"] > td.tdoc-poll-ans {
+    background: linear-gradient(to right,
+        var(--pst-color-attention-bg) var(--tdoc-value),
+        var(--bs-table-bg) var(--tdoc-value));
+}
+.tdoc-poll-sel > span {
+    visibility: hidden;
+}
+.tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
+    visibility: visible;
+}
+.tdoc-poll-cnt, .tdoc-poll-pct {
+    text-align: right;
+    white-space: nowrap;
+}
+.tdoc-poll-answers:not(:has(.tdoc-poll-cnt:not(:empty))) .tdoc-poll-cnt,
+.tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty))) .tdoc-poll-pct {
+    display: none;
+}
+
 /* Auto-sizing text area */
 .tdoc-autosize {
     display: grid;
