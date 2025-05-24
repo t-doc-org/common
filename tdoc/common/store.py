@@ -51,6 +51,9 @@ class Connection(sqlite3.Connection):
     def groups(self): return Groups(self)
 
     @functools.cached_property
+    def solutions(self): return Solutions(self)
+
+    @functools.cached_property
     def polls(self): return Polls(self)
 
 
@@ -229,6 +232,19 @@ class Groups(DbNamespace):
                 user_memberships (origin, user, group_, transitive)
                 values (?, ?, ?, true)
         """, [(origin, uid, group) for uid, group in trans])
+
+
+class Solutions(DbNamespace):
+    def set_show(self, origin, page, show):
+        self.execute("""
+            insert or replace into solutions (origin, page, show)
+                values (?, ?, ?)
+        """, (origin, page, show))
+
+    def get_show(self, origin, page):
+        return self.row("""
+            select show from solutions where (origin, page) = (?, ?)
+        """, (origin, page), default=(None,))[0]
 
 
 class Polls(DbNamespace):

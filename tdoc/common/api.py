@@ -17,8 +17,6 @@ from . import wsgi
 
 missing = object()
 
-# TODO: Move all SQL to store.py
-
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
@@ -154,10 +152,7 @@ class Api:
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
         with self.db(env) as db:
             check(self.member_of(env, db, 'solutions:write'))
-            db.execute("""
-                insert or replace into solutions (origin, page, show)
-                    values (?, ?, ?)
-            """, (origin, page, show))
+            db.solutions.set_show(origin, page, show)
         return wsgi.respond_json(respond, {})
 
     def handle_user(self, env, respond):
@@ -431,10 +426,7 @@ class SolutionsObservable(DbObservable):
 
     def query(self, db):
         with db:
-            show, = db.row("""
-                select show from solutions where (origin, page) = (?, ?)
-            """, (self._origin, self._page), default=(None,))
-        return {'show': show}
+            return {'show': db.solutions.get_show(self._origin, self._page)}
 
 
 class PollObservable(DbObservable):
