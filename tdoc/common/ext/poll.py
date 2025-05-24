@@ -84,7 +84,8 @@ def visit_answers(self, node):
 </div><div class="controls">\
 <button class="tdoc-open fa-play"></button>\
 <button class="tdoc-show fa-eye"></button>\
-<button class="tdoc-clear fa-trash" title="Clear votes"></button>\
+<button class="tdoc-clear fa-trash"\
+ title="Clear votes (Ctrl+click to clear all)"></button>\
 </div></div></th></thead><tbody>\
 """)
 

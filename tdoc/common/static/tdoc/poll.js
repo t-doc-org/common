@@ -4,8 +4,6 @@
 import * as api from './api.js';
 import {clientId, domLoaded, htmlData, on, qs, qsa} from './core.js';
 
-// TODO: Ctrl+click to open/close or show/hide all polls
-
 class Poll {
     constructor(node) {
         this.node = node;
@@ -20,12 +18,13 @@ class Poll {
         this.open = false;
         this.show = false;
         for (const el of this.answers) on(el).click(() => this.onVote(el));
-        on(qs(this.header, '.tdoc-open')).click(() => this.onOpen());
-        on(qs(this.header, '.tdoc-show')).click(() => this.onShow());
-        on(qs(this.header, '.tdoc-clear')).click(() => this.onClear());
+        on(qs(this.header, '.tdoc-open')).click(e => this.onOpen(e));
+        on(qs(this.header, '.tdoc-show')).click(e => this.onShow(e));
+        on(qs(this.header, '.tdoc-clear')).click(e => this.onClear(e));
     }
 
     get id() { return this.node.dataset.id; }
+    ids(all) { return all ? polls.map(p => p.id) : [this.id]; }
 
     get open() { return this._open; }
 
@@ -36,7 +35,9 @@ class Poll {
         const btn = qs(this.node, '.tdoc-open');
         btn.classList.toggle('fa-play', !value);
         btn.classList.toggle('fa-stop', value);
-        btn.setAttribute('title', value ? "Close poll" : "Open poll");
+        btn.setAttribute('title',
+                         value ? "Close poll (Ctrl+click to close all)"
+                               : "Open poll (Ctrl+click to open all)");
     }
 
     get show() { return this._show; }
@@ -47,18 +48,30 @@ class Poll {
         const btn = qs(this.node, '.tdoc-show');
         btn.classList.toggle('fa-eye', !value);
         btn.classList.toggle('fa-eye-slash', value);
-        btn.setAttribute('title', value ? "Hide results" : "Show results");
+        btn.setAttribute('title',
+                         value ? "Hide results (Ctrl+click to hide all)"
+                               : "Show results (Ctrl+click to show all)");
     }
 
-    async onOpen() {
-        await api.poll(this.open ? {id: this.id, open: null} : {
-            id: this.id, open: this.mode, exp: this.closeAfter,
-            answers: this.answers.length,
-        });
+    async onOpen(e) {
+        if (!this.open) {
+            const ps = e.ctrlKey ? polls : [this];
+            await api.poll({open: ps.map(p => ({
+                id: p.id, mode: p.mode, answers: p.answers.length,
+                exp: p.closeAfter,
+            }))});
+        } else {
+            await api.poll({close: this.ids(e.ctrlKey)});
+        }
     }
 
-    async onShow() { await api.poll({id: this.id, show: !this.show}); }
-    async onClear() { await api.poll({id: this.id, clear: true}); }
+    async onShow(e) {
+        await api.poll({show: this.ids(e.ctrlKey), value: !this.show});
+    }
+
+    async onClear(e) {
+        await api.poll({clear: this.ids(e.ctrlKey)});
+    }
 
     async onVote(tr) {
         if (!this.open) return;

@@ -118,28 +118,27 @@ class Api:
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         origin = wsgi.origin(env)
         req = wsgi.read_json(env)
-        pid = arg(req, 'id')
         with self.db(env) as db:
-            if 'open' in req:
+            if polls := req.get('open'):
                 check(self.member_of(env, db, 'polls:control'))
-                mode = arg(req, 'open',
-                           lambda v: v in (None, 'single', 'multi'))
-                if mode is not None:
-                    expires = None if (exp := req.get('exp')) is None \
+                for poll in polls:
+                    mode = arg(poll, 'mode', lambda v: v in ('single', 'multi'))
+                    expires = None if (exp := poll.get('exp')) is None \
                               else time.time_ns() + exp * 1_000_000
-                    db.polls.open(origin, pid, mode, arg(req, 'answers'),
-                                  expires)
-                else:
-                    db.polls.close(origin, pid)
-            if 'show' in req:
+                    db.polls.open(origin, arg(poll, 'id'), mode,
+                                  arg(poll, 'answers'), expires)
+            if ids := req.get('close'):
                 check(self.member_of(env, db, 'polls:control'))
-                db.polls.show(origin, pid, arg(req, 'show'))
-            if req.get('clear'):
+                db.polls.close(origin, ids)
+            if ids := req.get('show'):
                 check(self.member_of(env, db, 'polls:control'))
-                db.polls.clear(origin, pid)
+                db.polls.show(origin, ids, arg(req, 'value'))
+            if ids := req.get('clear'):
+                check(self.member_of(env, db, 'polls:control'))
+                db.polls.clear(origin, ids)
             if 'vote' in req:
-                if not db.polls.vote(origin, pid,
-                                     *args(req, 'voter', 'answer', 'vote')):
+                if not db.polls.vote(
+                        origin, *args(req, 'id', 'voter', 'answer', 'vote')):
                     raise wsgi.Error(HTTPStatus.FORBIDDEN)
         return wsgi.respond_json(respond, {})
 

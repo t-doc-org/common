@@ -248,37 +248,39 @@ class Solutions(DbNamespace):
 
 
 class Polls(DbNamespace):
-    def open(self, origin, pid, mode, answers, expires=None):
+    def open(self, origin, poll, mode, answers, expires=None):
         self.execute("""
             insert into polls (origin, id, mode, answers, expires)
                 values (:origin, :poll, :mode, :answers, :expires)
             on conflict do update set (mode, answers, expires)
                 = (:mode, :answers, :expires)
-        """, {'origin': origin, 'poll': pid, 'mode': mode,
-              'answers': answers, 'expires': expires})
+        """, {'origin': origin, 'poll': poll, 'mode': mode,
+             'answers': answers, 'expires': expires})
 
-    def close(self, origin, pid):
-        self.execute("""
+    def close(self, origin, ids):
+        self.executemany("""
             insert into polls (origin, id, mode) values (?, ?, null)
             on conflict do update set mode = null
-        """, (origin, pid))
+        """, [(origin, p) for p in ids])
 
-    def show(self, origin, pid, show):
-        self.execute("""
+    def show(self, origin, ids, show):
+        show = bool(show)
+        self.executemany("""
             insert into polls (origin, id, show) values (:origin, :poll, :show)
             on conflict do update set show = :show
-        """, {'origin': origin, 'poll': pid, 'show': bool(show)})
+        """, [{'origin': origin, 'poll': p, 'show': show} for p in ids])
 
-    def clear(self, origin, pid):
-        self.execute("""
-            delete from poll_votes where (origin, poll) = (?, ?)
-        """, (origin, pid))
+    def clear(self, origin, ids):
+        self.execute(f"""
+            delete from poll_votes
+            where origin = ? and poll in ({', '.join('?' * len(ids))})
+        """, (origin, *ids))
 
-    def vote(self, origin, pid, voter, answer, vote):
+    def vote(self, origin, poll, voter, answer, vote):
         mode, exp, answers, show = self.row("""
             select mode, expires, answers, show from polls
             where (origin, id) = (?, ?)
-        """, (origin, pid), default=(None, None, 0, False))
+        """, (origin, poll), default=(None, None, 0, False))
         if (mode is None or (exp is not None and time.time_ns() >= exp)
                 or answer < 0 or answer >= answers):
             return False
@@ -286,17 +288,17 @@ class Polls(DbNamespace):
             self.execute("""
                 delete from poll_votes
                 where (origin, poll, voter, answer) = (?, ?, ?, ?)
-            """, (origin, pid, voter, answer))
+            """, (origin, poll, voter, answer))
             return True
         if mode != 'multi':
             self.execute("""
                 delete from poll_votes
                 where (origin, poll, voter) = (?, ?, ?) and answer != ?
-            """, (origin, pid, voter, answer))
+            """, (origin, poll, voter, answer))
         self.execute("""
             insert or replace into poll_votes
                 (origin, poll, voter, answer) values (?, ?, ?, ?)
-        """, (origin, pid, voter, answer))
+        """, (origin, poll, voter, answer))
         return True
 
     def poll_data(self, origin, pid, force_show=False):
