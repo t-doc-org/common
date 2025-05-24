@@ -1,11 +1,13 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import datetime
 from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
 from . import __version__, report_exceptions
+from .. import util
 
 _log = logging.getLogger(__name__)
 
@@ -23,13 +25,13 @@ def setup(app):
     }
 
 
-# TODO: Auto-close polls after N minutes of inactivity
 # TODO: Check for duplicate poll IDs
 
 class Poll(docutils.SphinxDirective):
     option_spec = {
         'id': directives.unchanged,
         'mode': lambda c: directives.choice(c, ('single', 'multi')),
+        'close-after': directives.unchanged,
         'class': directives.class_option,
     }
     has_content = True
@@ -46,6 +48,8 @@ class Poll(docutils.SphinxDirective):
             raise Exception("{poll}: Missing :id:")
         node['id'] = v
         node['mode'] = self.options.get('mode', 'single')
+        if (v := self.options.get('close-after', '15m')) != 'never':
+            node['close-after'] = util.parse_duration(v)
         node['classes'] += self.options.get('class', [])
         return [node]
 
@@ -56,9 +60,11 @@ class answer(nodes.Part, nodes.Element): pass
 
 
 def visit_poll(self, node):
+    kwargs = {'data-id': node['id'], 'data-mode': node['mode']}
+    if (v := node.get('close-after')) is not None:
+        kwargs['data-close-after'] = v // datetime.timedelta(milliseconds=1)
     self.body.append(self.starttag(
-        node, 'div', suffix='', classes=['tdoc-poll'],
-        **{'data-id': node['id'], 'data-mode': node['mode']}))
+        node, 'div', suffix='', classes=['tdoc-poll'], **kwargs))
 
 
 def depart_poll(self, node):

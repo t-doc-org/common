@@ -121,16 +121,22 @@ class Api:
                 check(self.member_of(env, db, 'polls:control'))
                 mode = arg(req, 'open',
                            lambda v: v in (None, 'single', 'multi'))
-                expires = None if not mode or (exp := req.get('exp')) is None \
-                          else time.time_ns() + exp * 1_000_000
-                answers = arg(req, 'answers')
-                db.execute("""
-                    insert into polls (origin, id, mode, expires, answers)
-                        values (:origin, :poll, :mode, :expires, :answers)
-                    on conflict do update set
-                        (mode, expires, answers) = (:mode, :expires, :answers)
-                """, {'origin': origin, 'poll': poll, 'mode': mode,
-                      'expires': expires, 'answers': answers})
+                if mode is None:
+                    db.execute("""
+                        insert into polls (origin, id, mode) values (?, ?, null)
+                        on conflict do update set mode = null
+                    """, (origin, poll))
+                else:
+                    expires = None if (exp := req.get('exp')) is None \
+                              else time.time_ns() + exp * 1_000_000
+                    answers = arg(req, 'answers')
+                    db.execute("""
+                        insert into polls (origin, id, mode, expires, answers)
+                            values (:origin, :poll, :mode, :expires, :answers)
+                        on conflict do update set (mode, expires, answers)
+                            = (:mode, :expires, :answers)
+                    """, {'origin': origin, 'poll': poll, 'mode': mode,
+                          'expires': expires, 'answers': answers})
             if 'show' in req:
                 check(self.member_of(env, db, 'polls:control'))
                 show = bool(arg(req, 'show'))
