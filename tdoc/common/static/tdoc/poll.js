@@ -64,10 +64,8 @@ class Poll {
         if (!this.open) return;
         const answer = this.answers.indexOf(tr);
         if (answer < 0) return;
-        await api.poll({
-            id: this.id, voter: clientId, answer,
-            vote: !tr.classList.contains('selected'),
-        });
+        await api.poll({id: this.id, voter: clientId, answer,
+                        vote: !tr.classList.contains('selected')});
     }
 
     onUpdate(data) {
@@ -109,7 +107,9 @@ if (polls.length > 0) {
     const watch = new api.Watch(
         {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
         data => {
-            for (const poll of polls) poll.onVotesUpdate(data.votes[poll.id]);
+            for (const poll of polls) {
+                poll.onVotesUpdate(data.votes[poll.id] ?? []);
+            }
         });
     api.events.sub({add: [...polls.map(p => p.watch), watch]});  // Background
     api.user.onChange(async () => {

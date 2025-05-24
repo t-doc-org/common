@@ -17,6 +17,8 @@ from . import wsgi
 
 missing = object()
 
+# TODO: Move all SQL to store.py
+
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
@@ -24,6 +26,10 @@ def arg(data, name, validate=None):
     if validate is not None and not validate(v):
         raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Invalid argument '{name}'")
     return v
+
+
+def args(data, *names):
+    return tuple(arg(data, n) for n in names)
 
 
 def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
@@ -114,69 +120,29 @@ class Api:
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         origin = wsgi.origin(env)
         req = wsgi.read_json(env)
-        poll = arg(req, 'id')
+        pid = arg(req, 'id')
         with self.db(env) as db:
-            # TODO: Move SQL to store.py
             if 'open' in req:
                 check(self.member_of(env, db, 'polls:control'))
                 mode = arg(req, 'open',
                            lambda v: v in (None, 'single', 'multi'))
-                if mode is None:
-                    db.execute("""
-                        insert into polls (origin, id, mode) values (?, ?, null)
-                        on conflict do update set mode = null
-                    """, (origin, poll))
-                else:
+                if mode is not None:
                     expires = None if (exp := req.get('exp')) is None \
                               else time.time_ns() + exp * 1_000_000
-                    answers = arg(req, 'answers')
-                    db.execute("""
-                        insert into polls (origin, id, mode, expires, answers)
-                            values (:origin, :poll, :mode, :expires, :answers)
-                        on conflict do update set (mode, expires, answers)
-                            = (:mode, :expires, :answers)
-                    """, {'origin': origin, 'poll': poll, 'mode': mode,
-                          'expires': expires, 'answers': answers})
+                    db.polls.open(origin, pid, mode, arg(req, 'answers'),
+                                  expires)
+                else:
+                    db.polls.close(origin, pid)
             if 'show' in req:
                 check(self.member_of(env, db, 'polls:control'))
-                show = bool(arg(req, 'show'))
-                db.execute("""
-                    insert into polls (origin, id, show)
-                        values (:origin, :poll, :show)
-                    on conflict do update set show = :show
-                """, {'origin': origin, 'poll': poll, 'show': show})
+                db.polls.show(origin, pid, arg(req, 'show'))
             if req.get('clear'):
                 check(self.member_of(env, db, 'polls:control'))
-                db.execute("""
-                    delete from poll_votes where (origin, poll) = (?, ?)
-                """, (origin, poll))
+                db.polls.clear(origin, pid)
             if 'vote' in req:
-                vote = arg(req, 'vote')
-                voter = arg(req, 'voter')
-                answer = arg(req, 'answer')
-                mode, exp, answers, show = db.row("""
-                    select mode, expires, answers, show from polls
-                    where (origin, id) = (?, ?)
-                """, (origin, poll), default=(None, None, 0, False))
-                if (mode is None or (exp is not None and time.time_ns() >= exp)
-                        or answer < 0 or answer >= answers):
+                if not db.polls.vote(origin, pid,
+                                     *args(req, 'voter', 'answer', 'vote')):
                     raise wsgi.Error(HTTPStatus.FORBIDDEN)
-                if vote:
-                    if mode != 'multi':
-                        db.execute("""
-                            delete from poll_votes
-                            where (origin, poll, voter) = (?, ?, ?)
-                              and answer != ?
-                        """, (origin, poll, voter, answer))
-                    db.execute("""
-                        insert or replace into poll_votes
-                            (origin, poll, voter, answer) values (?, ?, ?, ?)
-                    """, (origin, poll, voter, answer))
-                else:
-                    db.execute("""
-                        delete from poll_votes
-                        where (origin, poll, voter, answer) = (?, ?, ?, ?)
-                    """, (origin, poll, voter, answer))
         return wsgi.respond_json(respond, {})
 
     def handle_solutions(self, env, respond):
@@ -482,43 +448,17 @@ class PollObservable(DbObservable):
 
     def query(self, db):
         with db:
-            mode, exp, show = db.row("""
-                select mode, expires, show from polls
-                where (origin, id) = (?, ?)
-            """, (self._origin, self._id), default=(None, None, False))
-            if exp is not None and time.time_ns() >= exp: mode = None
-            voters, votes = db.row("""
-                select count(distinct voter), count(*)
-                from poll_votes
-                where (origin, poll) = (?, ?)
-            """, (self._origin, self._id))
-            data = {'open': mode is not None, 'show': bool(show),
-                    'voters': voters, 'votes': votes}
-            if show or self._controller:
-                data['answers'] = dict(db.execute("""
-                    select answer, count(*) from poll_votes
-                    where (origin, poll) = (?, ?)
-                    group by answer order by answer
-                """, (self._origin, self._id)))
-        return data
+            return db.polls.poll_data(self._origin, self._id,
+                                      force_show=self._controller)
 
 
 class PollVotesObservable(DbObservable):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
-        self._voter = arg(req, 'voter')
-        self._ids = arg(req, 'ids')
+        self._voter, self._ids = args(req, 'voter', 'ids')
         self._ids.sort()
         super().__init__(req, events)
 
     def query(self, db):
         with db:
-            votes = {}
-            for p, a in db.execute(f"""
-                        select poll, answer from poll_votes
-                        where (origin, voter) = (?, ?)
-                          and poll in ({', '.join('?' * len(self._ids))})
-                        order by poll, answer
-                    """, (self._origin, self._voter, *self._ids)):
-                votes.setdefault(p, []).append(a)
-        return {'votes': votes}
+            return db.polls.votes_data(self._origin, self._voter, self._ids)

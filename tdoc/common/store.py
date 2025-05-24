@@ -50,6 +50,9 @@ class Connection(sqlite3.Connection):
     @functools.cached_property
     def groups(self): return Groups(self)
 
+    @functools.cached_property
+    def polls(self): return Polls(self)
+
 
 class DbNamespace:
     def __init__(self, db): self.db = db
@@ -226,6 +229,89 @@ class Groups(DbNamespace):
                 user_memberships (origin, user, group_, transitive)
                 values (?, ?, ?, true)
         """, [(origin, uid, group) for uid, group in trans])
+
+
+class Polls(DbNamespace):
+    def open(self, origin, pid, mode, answers, expires=None):
+        self.execute("""
+            insert into polls (origin, id, mode, answers, expires)
+                values (:origin, :poll, :mode, :answers, :expires)
+            on conflict do update set (mode, answers, expires)
+                = (:mode, :answers, :expires)
+        """, {'origin': origin, 'poll': pid, 'mode': mode,
+              'answers': answers, 'expires': expires})
+
+    def close(self, origin, pid):
+        self.execute("""
+            insert into polls (origin, id, mode) values (?, ?, null)
+            on conflict do update set mode = null
+        """, (origin, pid))
+
+    def show(self, origin, pid, show):
+        self.execute("""
+            insert into polls (origin, id, show) values (:origin, :poll, :show)
+            on conflict do update set show = :show
+        """, {'origin': origin, 'poll': pid, 'show': bool(show)})
+
+    def clear(self, origin, pid):
+        self.execute("""
+            delete from poll_votes where (origin, poll) = (?, ?)
+        """, (origin, pid))
+
+    def vote(self, origin, pid, voter, answer, vote):
+        mode, exp, answers, show = self.row("""
+            select mode, expires, answers, show from polls
+            where (origin, id) = (?, ?)
+        """, (origin, pid), default=(None, None, 0, False))
+        if (mode is None or (exp is not None and time.time_ns() >= exp)
+                or answer < 0 or answer >= answers):
+            return False
+        if not vote:
+            self.execute("""
+                delete from poll_votes
+                where (origin, poll, voter, answer) = (?, ?, ?, ?)
+            """, (origin, pid, voter, answer))
+            return True
+        if mode != 'multi':
+            self.execute("""
+                delete from poll_votes
+                where (origin, poll, voter) = (?, ?, ?) and answer != ?
+            """, (origin, pid, voter, answer))
+        self.execute("""
+            insert or replace into poll_votes
+                (origin, poll, voter, answer) values (?, ?, ?, ?)
+        """, (origin, pid, voter, answer))
+        return True
+
+    def poll_data(self, origin, pid, force_show=False):
+        mode, exp, show = self.row("""
+            select mode, expires, show from polls where (origin, id) = (?, ?)
+        """, (origin, pid), default=(None, None, False))
+        if exp is not None and time.time_ns() >= exp: mode = None
+        voters, votes = self.row("""
+            select count(distinct voter), count(*) from poll_votes
+            where (origin, poll) = (?, ?)
+        """, (origin, pid))
+        data = {'open': mode is not None, 'show': bool(show), 'voters': voters,
+                'votes': votes}
+        if show or force_show:
+            data['answers'] = dict(self.execute("""
+                select answer, count(*) from poll_votes
+                where (origin, poll) = (?, ?)
+                group by answer order by answer
+            """, (origin, pid)))
+        return data
+
+    def votes_data(self, origin, voter, pids):
+        votes = {}
+        for p, a in self.execute(f"""
+                    select poll, answer from poll_votes
+                    where (origin, voter) = (?, ?)
+                      and poll in ({', '.join('?' * len(pids))})
+                    order by poll, answer
+                """, (origin, voter, *pids)):
+            votes.setdefault(p, []).append(a)
+        return {'votes': votes}
 
 
 class ConnectionPool:
@@ -432,8 +518,8 @@ create table polls (
     origin text not null,
     id text not null,
     mode text,
-    expires integer,
     answers integer not null default 0,
+    expires integer,
     show integer not null default 0,
     primary key (origin, id)
 ) strict;

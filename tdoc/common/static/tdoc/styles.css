@@ -388,7 +388,7 @@ html[data-tdoc-poll-control] .tdoc-poll-header .controls {
 .tdoc-poll-ans {
     width: 100%;
 }
-tr[style*="--tdoc-value"] > td.tdoc-poll-ans {
+tr[style*="--tdoc-value:"] > td.tdoc-poll-ans {
     background: linear-gradient(to right,
         var(--pst-color-attention-bg) var(--tdoc-value),
         var(--bs-table-bg) var(--tdoc-value));
