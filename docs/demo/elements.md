@@ -195,7 +195,7 @@ The next poll allows multiple selections.
 
 ```{poll}
 :id: 4a790949-1246-49e8-841e-fb7922b98e45
-:multi:
+:mode: multi
 Which of the following animals are mammals?
 
 - Spiders

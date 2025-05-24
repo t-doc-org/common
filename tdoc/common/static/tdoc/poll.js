@@ -9,7 +9,7 @@ import {clientId, domLoaded, htmlData, on, qs, qsa} from './core.js';
 class Poll {
     constructor(node) {
         this.node = node;
-        this.multi = node.classList.contains('multi');
+        this.mode = node.dataset.mode;
         this.header = qs(node, '.tdoc-poll-header');
         this.answers = [...qsa(node, '.tdoc-poll-answers > tbody > tr')];
         this.watch = new api.Watch({name: 'poll', id: this.id},
@@ -48,11 +48,8 @@ class Poll {
     }
 
     async onOpen() {
-        await api.poll({
-            id: this.id,
-            open: this.open ? null : this.multi ? 'multi' : 'single',
-            answers: this.answers.length,
-        });
+        await api.poll({id: this.id, open: this.open ? null : this.mode,
+                        answers: this.answers.length});
     }
 
     async onShow() { await api.poll({id: this.id, show: !this.show}); }

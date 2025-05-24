@@ -233,10 +233,10 @@ in the toolbar.
 - <span class="tdoc fa-trash"></span>: Clear the poll results.
 
 Voting on polls is open to everyone and doesn't require any permissions. Polls
-are single-choice by default: selecting a different answer de-select a
-previously selected one, and re-selecting the selected answer un-selects it.
- The {rst:dir}`:multi: <poll:multi>` option enables voters to select multiple
-answers.
+are single-choice by default ({rst:dir}`:mode: single <poll:mode>`): selecting a
+different answer de-select a previously selected one, and re-selecting the
+selected answer un-selects it. Setting {rst:dir}`:mode: multi <poll:mode>`
+enables voters to select multiple answers.
 
 {.rubric}
 Options
@@ -244,8 +244,10 @@ Options
 :type: ID
 The identifier of the poll. Poll IDs must be unique across the site.
 ```
-```{rst:directive:option} multi
-When set, the poll is a multiple-answer voters can select more than one answer.
+```{rst:directive:option} mode: value
+:type: single | multi
+The poll mode: single answer (`single`, the default) or allow multiple answers
+(`multi`).
 ```
 ```{rst:directive:option} class: name [name...]
 :type: IDs

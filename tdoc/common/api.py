@@ -116,6 +116,7 @@ class Api:
         req = wsgi.read_json(env)
         poll = arg(req, 'id')
         with self.db(env) as db:
+            # TODO: Move SQL to store.py
             if 'open' in req:
                 check(self.member_of(env, db, 'polls:control'))
                 mode = arg(req, 'open',

@@ -23,15 +23,13 @@ def setup(app):
     }
 
 
-# TODO: Change :multi: into "":mode: single", ":mode: multi"
-# TODO: Hide the vote count for non-:multi: polls
 # TODO: Auto-close polls after N minutes of inactivity
 # TODO: Check for duplicate poll IDs
 
 class Poll(docutils.SphinxDirective):
     option_spec = {
         'id': directives.unchanged,
-        'multi': directives.flag,
+        'mode': lambda c: directives.choice(c, ('single', 'multi')),
         'class': directives.class_option,
     }
     has_content = True
@@ -47,9 +45,8 @@ class Poll(docutils.SphinxDirective):
         if (v := self.options.get('id')) is None:
             raise Exception("{poll}: Missing :id:")
         node['id'] = v
-        cls = node['classes']
-        if 'multi' in self.options: cls += ['multi']
-        cls += self.options.get('class', [])
+        node['mode'] = self.options.get('mode', 'single')
+        node['classes'] += self.options.get('class', [])
         return [node]
 
 
@@ -61,7 +58,7 @@ class answer(nodes.Part, nodes.Element): pass
 def visit_poll(self, node):
     self.body.append(self.starttag(
         node, 'div', suffix='', classes=['tdoc-poll'],
-        **{'data-id': node['id']}))
+        **{'data-id': node['id'], 'data-mode': node['mode']}))
 
 
 def depart_poll(self, node):
@@ -71,7 +68,7 @@ def depart_poll(self, node):
 def visit_answers(self, node):
     self.body.append("""
 <table class="tdoc-poll-answers table">\
-<thead><tr><th class="tdoc-poll-header" colspan="4"><div><div>\
+<thead><tr><th class="tdoc-poll-header" colspan="4"><div><div class="stats">\
 <div class="voters" title="Voters">\
 <span class="tdoc fa-user"></span><span></span></div>\
 <div class="votes" title="Votes">\

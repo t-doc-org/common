@@ -362,12 +362,15 @@ div.tdoc-quizz > .hint.hide {
     white-space: nowrap;
     justify-content: space-between;
 }
-.tdoc-poll-header > div > div {
+.tdoc-poll-header .stats {
     display: flex;
     column-gap: 1.3rem;
 }
 .tdoc-poll-header :is(.voters, .votes) > :last-child {
     margin-left: 0.4rem;
+}
+.tdoc-poll[data-mode=single] .tdoc-poll-header .votes {
+    display: none;
 }
 .tdoc-poll.open .tdoc-poll-header .closed {
     display: none;
