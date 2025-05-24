@@ -131,13 +131,13 @@ They also enable creating randomized drill exercises.
 The [YouTube](https://youtube.com/) video below is embedded with the
 {rst:dir}`youtube` directive.
 
-```{youtube} aVwxzDHniEw
+<!-- ```{youtube} aVwxzDHniEw
 ```
 
 The presentation below is embedded with the {rst:dir}`iframe` directive.
 
 ```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
-```
+``` -->
 
 ## Numbering
 

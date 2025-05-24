@@ -6,7 +6,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions
+from . import __version__, report_exceptions, UniqueChecker
 from .. import util
 
 _log = logging.getLogger(__name__)
@@ -17,6 +17,9 @@ def setup(app):
     app.add_node(poll, html=(visit_poll, depart_poll))
     app.add_node(answers, html=(visit_answers, depart_answers))
     app.add_node(answer, html=(visit_answer, depart_answer))
+    app.add_env_collector(UniqueChecker('poll-id',
+        lambda doctree: ((n, n['id']) for n in doctree.findall(poll)),
+        "{poll}: Duplicate poll ID"))
     app.connect('html-page-context', add_js)
     return {
         'version': __version__,
@@ -24,8 +27,6 @@ def setup(app):
         'parallel_write_safe': True,
     }
 
-
-# TODO: Check for duplicate poll IDs
 
 class Poll(docutils.SphinxDirective):
     option_spec = {

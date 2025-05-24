@@ -7,6 +7,7 @@ import pathlib
 
 from docutils import nodes
 from sphinx import config, locale
+from sphinx.environment import collectors
 from sphinx.util import fileutil, logging
 
 from .. import __version__
@@ -149,3 +150,48 @@ def write_static_files(app, builder):
     # of the service worker to _static.
     fileutil.copy_asset_file(_base / 'scripts' / 'tdoc-worker.js',
                              builder.outdir, force=True)
+
+
+class UniqueChecker(collectors.EnvironmentCollector):
+    def __init__(self, name, iter_nodes, err):
+        self.name = name
+        self.iter_nodes = iter_nodes
+        self.err = err
+
+    def __repr__(self): return f'UniqueChecker({self.name})'
+    def __call__(self): return self
+
+    def enable(self, app):
+        def init(app):
+            if not hasattr(app.env, 'tdoc_unique'): app.env.tdoc_unique = {}
+            # ID => (docname, location)
+            app.env.tdoc_unique.setdefault(self.name, {})
+        self.init_listener = app.connect('builder-inited', init)
+        super().enable(app)
+
+    def disable(self, app):
+        super().disable(app)
+        app.disconnect(self.init_listener)
+
+    def clear_doc(self, app, env, docname):
+        ids = env.tdoc_unique[self.name]
+        for v in list(ids):
+            if ids[v][0] == docname: del ids[v]
+
+    def merge_other(self, app, env, docnames, other):
+        ids = env.tdoc_unique[self.name]
+        for v, (dn, loc) in other.tdoc_unique.get(self.name, {}).items():
+            if dn not in docnames: continue
+            if v not in ids:
+                ids[v] = (dn, loc)
+            else:
+                _log.error(f"{self.err}: {v}", location=loc)
+
+    def process_doc(self, app, doctree):
+        ids = app.env.tdoc_unique[self.name]
+        for node, v in self.iter_nodes(doctree):
+            if not v: continue
+            if v not in ids:
+                ids[v] = (app.env.docname, (node.source, node.line))
+            else:
+                doctree.reporter.error(f"{self.err}: {v}", base_node=node)

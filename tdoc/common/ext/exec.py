@@ -8,11 +8,10 @@ import zipfile
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from sphinx.directives import code
-from sphinx.environment import collectors
 from sphinx.util import display, logging, osutil
 
 from . import __version__, format_attrs, format_data_attrs, names_option, \
-    report_exceptions
+    report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -21,8 +20,9 @@ _base = pathlib.Path(__file__).parent.resolve().parent
 def setup(app):
     app.add_directive('exec', Exec)
     app.add_node(exec, html=(visit_exec, depart_exec))
-    app.connect('builder-inited', ExecCollector.init)
-    app.add_env_collector(ExecCollector)
+    app.add_env_collector(UniqueChecker('exec-editor',
+        lambda doctree: ((n, n.get('editor')) for n in doctree.findall(exec)),
+        "{exec}: Duplicate :editor: ID"))
     app.connect('doctree-resolved', check_references)
     app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_js)
@@ -96,38 +96,6 @@ class Exec(code.CodeBlock):
 
 
 class exec(nodes.literal_block): pass
-
-
-class ExecCollector(collectors.EnvironmentCollector):
-    @staticmethod
-    def init(app):
-        if not hasattr(app.env, 'tdoc_editors'):
-            app.env.tdoc_editors = {}  # ID => (docname, location)
-
-    def clear_doc(self, app, env, docname):
-        editors = env.tdoc_editors
-        for eid in list(editors):
-            if editors[eid][0] == docname: del editors[eid]
-
-    def merge_other(self, app, env, docnames, other):
-        editors = env.tdoc_editors
-        for eid, (dn, loc) in other.tdoc_editors.items():
-            if dn not in docnames: continue
-            if eid not in editors:
-                editors[eid] = (dn, loc)
-            else:
-                _log.error(f"{{exec}}: Duplicate :editor: ID: {eid}",
-                           location=loc)
-
-    def process_doc(self, app, doctree):
-        editors = app.env.tdoc_editors
-        for node in doctree.findall(exec):
-            if not (eid := node.get('editor')): continue
-            if eid not in editors:
-                editors[eid] = (app.env.docname, (node.source, node.line))
-            else:
-                doctree.reporter.error(
-                    f"{{exec}}: Duplicate :editor: ID: {eid}", base_node=node)
 
 
 def check_references(app, doctree, docname):
