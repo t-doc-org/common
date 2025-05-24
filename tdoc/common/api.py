@@ -141,7 +141,7 @@ class Api:
             if req.get('clear'):
                 check(self.member_of(env, db, 'polls:control'))
                 db.execute("""
-                    delete from poll_votes where origin = ? and poll = ?
+                    delete from poll_votes where (origin, poll) = (?, ?)
                 """, (origin, poll))
             if 'vote' in req:
                 vote = arg(req, 'vote')
@@ -149,7 +149,7 @@ class Api:
                 answer = arg(req, 'answer')
                 mode, exp, answers, show = db.row("""
                     select mode, expires, answers, show from polls
-                    where origin = ? and id = ?
+                    where (origin, id) = (?, ?)
                 """, (origin, poll), default=(None, None, 0, False))
                 if (mode is None or (exp is not None and time.time_ns() >= exp)
                         or answer < 0 or answer >= answers):
@@ -158,7 +158,7 @@ class Api:
                     if mode != 'multi':
                         db.execute("""
                             delete from poll_votes
-                            where origin = ? and poll = ? and voter = ?
+                            where (origin, poll, voter) = (?, ?, ?)
                               and answer != ?
                         """, (origin, poll, voter, answer))
                     db.execute("""
@@ -168,8 +168,7 @@ class Api:
                 else:
                     db.execute("""
                         delete from poll_votes
-                        where origin = ? and poll = ? and voter = ?
-                          and answer = ?
+                        where (origin, poll, voter, answer) = (?, ?, ?, ?)
                     """, (origin, poll, voter, answer))
         return wsgi.respond_json(respond, {})
 
@@ -460,7 +459,7 @@ class SolutionsObservable(DbObservable):
     def query(self, db):
         with db:
             show, = db.row("""
-                select show from solutions where origin = ? and page = ?
+                select show from solutions where (origin, page) = (?, ?)
             """, (self._origin, self._page), default=(None,))
         return {'show': show}
 
@@ -478,21 +477,21 @@ class PollObservable(DbObservable):
         with db:
             mode, exp, show = db.row("""
                 select mode, expires, show from polls
-                where origin = ? and id = ?
+                where (origin, id) = (?, ?)
             """, (self._origin, self._id), default=(None, None, False))
             if exp is not None and time.time_ns() >= exp: mode = None
             voters, votes = db.row("""
                 select count(distinct voter), count(*)
                 from poll_votes
-                where origin = ? and poll = ?
+                where (origin, poll) = (?, ?)
             """, (self._origin, self._id))
             data = {'open': mode is not None, 'show': bool(show),
                     'voters': voters, 'votes': votes}
             if show or self._controller:
                 data['answers'] = dict(db.execute("""
                     select answer, count(*) from poll_votes
-                    where origin = ? and poll = ?
-                    group by answer
+                    where (origin, poll) = (?, ?)
+                    group by answer order by answer
                 """, (self._origin, self._id)))
         return data
 
@@ -500,14 +499,19 @@ class PollObservable(DbObservable):
 class PollVotesObservable(DbObservable):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
-        self._id = arg(req, 'id')
         self._voter = arg(req, 'voter')
+        self._ids = arg(req, 'ids')
+        self._ids.sort()
         super().__init__(req, events)
 
     def query(self, db):
         with db:
-            votes = [a for a, in db.execute("""
-                select answer from poll_votes
-                where origin = ? and poll = ? and voter = ?
-            """, (self._origin, self._id, self._voter))]
+            votes = {}
+            for p, a in db.execute(f"""
+                        select poll, answer from poll_votes
+                        where (origin, voter) = (?, ?)
+                          and poll in ({', '.join('?' * len(self._ids))})
+                        order by poll, answer
+                    """, (self._origin, self._voter, *self._ids)):
+                votes.setdefault(p, []).append(a)
         return {'votes': votes}

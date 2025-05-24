@@ -23,10 +23,10 @@ def setup(app):
     }
 
 
-# TODO: Auto-close polls after N minutes of inactivity
 # TODO: Change :multi: into "":mode: single", ":mode: multi"
-# TODO: Check for duplicate poll IDs
 # TODO: Hide the vote count for non-:multi: polls
+# TODO: Auto-close polls after N minutes of inactivity
+# TODO: Check for duplicate poll IDs
 
 class Poll(docutils.SphinxDirective):
     option_spec = {
@@ -81,7 +81,7 @@ def visit_answers(self, node):
 </div><div class="controls">\
 <button class="tdoc-open fa-play"></button>\
 <button class="tdoc-show fa-eye"></button>\
-<button class="tdoc-clear fa-trash"></button>\
+<button class="tdoc-clear fa-trash" title="Clear votes"></button>\
 </div></div></th></thead><tbody>\
 """)
 

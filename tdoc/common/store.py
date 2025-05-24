@@ -62,15 +62,14 @@ class Users(DbNamespace):
         return bool(self.row("""
             select exists(
                 select 1 from user_memberships
-                where origin = ? and user = ? and (group_ = ? or group_ = '*')
+                where (origin, user) = (?, ?) and (group_ = ? or group_ = '*')
             )
         """, (origin, user, group))[0])
 
     def info(self, origin, user):
         name, = self.row("select name from users where id = ?", (user,))
         groups = [g for g, in self.execute("""
-            select group_ from user_memberships
-            where origin = ? and user = ?
+            select group_ from user_memberships where (origin, user) = (?, ?)
         """, (origin, user))]
         return {'name': name, 'groups': groups}
 
@@ -197,7 +196,7 @@ class Groups(DbNamespace):
         if remove_groups:
             self.executemany("""
                 delete from group_memberships
-                where origin = ? and member = ? and group_ = ?
+                where (origin, member, group_) = (?, ?, ?)
             """, [(origin, name, group) for name in remove_groups
                   for group in groups])
         self.compute_transitive_memberships(origin)

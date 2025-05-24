@@ -4,6 +4,8 @@
 import * as api from './api.js';
 import {clientId, domLoaded, htmlData, on, qs, qsa} from './core.js';
 
+// TODO: Ctrl+click to open/close or show/hide all polls
+
 class Poll {
     constructor(node) {
         this.node = node;
@@ -12,11 +14,6 @@ class Poll {
         this.answers = [...qsa(node, '.tdoc-poll-answers > tbody > tr')];
         this.watch = new api.Watch({name: 'poll', id: this.id},
                                    data => this.onUpdate(data));
-        // TODO: Use a single watch for all polls on the page
-        // TODO: Re-sub when list of open polls changes. Or just always sub.
-        this.watchVotes = new api.Watch(
-            {name: 'poll/votes', id: this.id, voter: clientId},
-            data => this.onVotesUpdate(data));
         this.open = false;
         this.show = false;
         for (const el of this.answers) on(el).click(() => this.onVote(el));
@@ -37,11 +34,6 @@ class Poll {
         btn.classList.toggle('fa-play', !value);
         btn.classList.toggle('fa-stop', value);
         btn.setAttribute('title', value ? "Close poll" : "Open poll");
-        if (value) {
-            api.events.sub({add: [this.watchVotes]});  // Background
-        } else {
-            api.events.sub({remove: [this.watchVotes]});  // Background
-        }
     }
 
     get show() { return this._show; }
@@ -101,9 +93,9 @@ class Poll {
         }
     }
 
-    onVotesUpdate(data) {
+    onVotesUpdate(votes) {
         for (const [i, tr] of this.answers.entries()) {
-            tr.classList.toggle('selected', data.votes.includes(i));
+            tr.classList.toggle('selected', votes.includes(i));
         }
     }
 }
@@ -112,7 +104,12 @@ await domLoaded;
 const polls = [];
 for (const el of qsa(document, '.tdoc-poll')) polls.push(new Poll(el));
 if (polls.length > 0) {
-    api.events.sub({add: polls.map(p => p.watch)});  // Background
+    const watch = new api.Watch(
+        {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
+        data => {
+            for (const poll of polls) poll.onVotesUpdate(data.votes[poll.id]);
+        });
+    api.events.sub({add: [...polls.map(p => p.watch), watch]});  // Background
     api.user.onChange(async () => {
         if (await api.user.member_of('polls:control')) {
             htmlData.tdocPollControl = '';
