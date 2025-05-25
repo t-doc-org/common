@@ -380,8 +380,10 @@ div.tdoc-quizz > .hint.hide {
     display: none;
     column-gap: 0.3rem;
 }
-html[data-tdoc-poll-control] .tdoc-poll-header .controls {
-    display: flex;
+@media not print {
+    html[data-tdoc-poll-control] .tdoc-poll-header .controls {
+        display: flex;
+    }
 }
 .tdoc-poll-answers:not(:has(.tdoc-poll-sel.s)) .tdoc-poll-header .controls
         > .tdoc-solutions {
