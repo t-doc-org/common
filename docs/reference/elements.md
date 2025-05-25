@@ -230,7 +230,7 @@ Polls can be controlled by members of the group `polls:control`, using the icons
 in the toolbar.
 
 - <button class="tdoc fa-play"></button> /
-  <button class="tdoc fa-stop"></button>: Open and close the poll. Closed polls
+  <button class="tdoc fa-stop"></button>: Open or close the poll. Closed polls
   don't accept votes.
 - <button class="tdoc fa-eye"></button> /
   <button class="tdoc fa-eye-slash"></button>: Show or hide the poll results.
