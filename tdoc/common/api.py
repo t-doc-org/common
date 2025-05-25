@@ -432,15 +432,11 @@ class PollObservable(DbObservable):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
         self._id = arg(req, 'id')
-        with events.api.db(env) as db, db:
-            self._controller = req['controller'] = \
-                events.api.member_of(env, db, 'polls:control')
         super().__init__(req, events)
 
     def query(self, db):
         with db:
-            return db.polls.poll_data(self._origin, self._id,
-                                      force_show=self._controller)
+            return db.polls.poll_data(self._origin, self._id)
 
 
 class PollVotesObservable(DbObservable):
