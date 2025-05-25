@@ -219,9 +219,10 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 ## Poll
 
 ````{rst:directive} .. poll::
-This directive adds a live poll. The content of the directive is composed of the
-question, which can contain arbitrary markup, followed by a bullet list, where
-each list item becomes an answer.
+This directive adds a live audience poll. The content of the directive is
+composed of the question, followed by a bullet list, where each list item
+becomes an answer. Both the question and the answers can contain arbitrary
+markup.
 
 Polls can be controlled by members of the group `polls:control`, using the icons
 in the toolbar.
@@ -242,12 +243,19 @@ enables voters to select multiple answers.
 Options
 ```{rst:directive:option} id: id
 :type: ID
-The identifier of the poll. Poll IDs must be unique across the site.
+The identifier of the poll. This option is required and the value must be unique
+across the site.
 ```
 ```{rst:directive:option} mode: value
 :type: single | multi
 The poll mode: single answer (`single`, the default) or allow multiple answers
 (`multi`).
+```
+```{rst:directive:option} number: value
+:type: none | decimal | lower-alpha | upper-alpha
+The answer numbering: no numbering (`none`), using decimal numbers (`decimal`),
+using lowercase letters (`lower-alpha`) or using uppercase letters
+(`upper-alpha`, the default).
 ```
 ```{rst:directive:option} close-after: value
 :type: duration | never

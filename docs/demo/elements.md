@@ -191,11 +191,13 @@ What is the equation of a line in a plane?
 - I don't know
 ```
 
-The next poll allows multiple selections, and auto-closes after 10 seconds.
+The next poll allows multiple selections, doesn't number the answers, and
+auto-closes after 30 seconds.
 
 ```{poll}
 :id: 4a790949-1246-49e8-841e-fb7922b98e45
 :mode: multi
+:number: none
 :close-after: 10s
 Which of the following animals are mammals?
 

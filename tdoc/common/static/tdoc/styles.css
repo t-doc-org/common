@@ -353,6 +353,7 @@ div.tdoc-quizz > .hint.hide {
                 0 0 0.0625rem var(--pst-color-shadow);
     background-color: var(--pst-color-on-background);
     padding: 1rem;
+    counter-reset: answerNum;
 }
 .tdoc-poll.open {
     border-left-color: var(--pst-color-warning);
@@ -384,6 +385,18 @@ html[data-tdoc-poll-control] .tdoc-poll-header .controls {
 }
 .tdoc-poll-header .controls > .tdoc-clear {
     margin-left: 0.5rem;
+}
+.tdoc-poll-num {
+    counter-increment: answerNum;
+}
+.tdoc-poll.num-decimal .tdoc-poll-num::before {
+    content: counter(answerNum, decimal);
+}
+.tdoc-poll.num-lower-alpha .tdoc-poll-num::before {
+    content: counter(answerNum, lower-alpha);
+}
+.tdoc-poll.num-upper-alpha .tdoc-poll-num::before {
+    content: counter(answerNum, upper-alpha);
 }
 .tdoc-poll-ans {
     width: 100%;

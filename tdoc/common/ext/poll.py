@@ -11,6 +11,7 @@ from .. import util
 
 _log = logging.getLogger(__name__)
 
+# TODO: Put the ID on the first line
 
 def setup(app):
     app.add_directive('poll', Poll)
@@ -32,6 +33,8 @@ class Poll(docutils.SphinxDirective):
     option_spec = {
         'id': directives.unchanged,
         'mode': lambda c: directives.choice(c, ('single', 'multi')),
+        'number': lambda c: directives.choice(c,
+            ('none', 'decimal', 'lower-alpha', 'upper-alpha')),
         'close-after': directives.unchanged,
         'class': directives.class_option,
     }
@@ -51,6 +54,7 @@ class Poll(docutils.SphinxDirective):
         node['mode'] = self.options.get('mode', 'single')
         if (v := self.options.get('close-after', '15m')) != 'never':
             node['close-after'] = util.parse_duration(v)
+        node['number'] = self.options.get('number', 'upper-alpha')
         node['classes'] += self.options.get('class', [])
         return [node]
 
@@ -65,7 +69,8 @@ def visit_poll(self, node):
     if (v := node.get('close-after')) is not None:
         kwargs['data-close-after'] = v // datetime.timedelta(milliseconds=1)
     self.body.append(self.starttag(
-        node, 'div', suffix='', classes=['tdoc-poll'], **kwargs))
+        node, 'div', suffix='', classes=['tdoc-poll', f'num-{node['number']}'],
+        **kwargs))
 
 
 def depart_poll(self, node):
@@ -75,7 +80,7 @@ def depart_poll(self, node):
 def visit_answers(self, node):
     self.body.append("""
 <table class="tdoc-poll-answers table">\
-<thead><tr><th class="tdoc-poll-header" colspan="4"><div><div class="stats">\
+<thead><tr><th class="tdoc-poll-header" colspan="5"><div><div class="stats">\
 <div class="voters" title="Voters">\
 <span class="tdoc fa-user"></span><span></span></div>\
 <div class="votes" title="Votes">\
@@ -96,13 +101,18 @@ def depart_answers(self, node):
 
 
 def visit_answer(self, node):
-    self.body.append('<tr><td class="tdoc-poll-ans">')
+    num = '<td class="tdoc-poll-num"></td>' \
+          if node.parent.parent['number'] != 'none' else ''
+    self.body.append(f"""\
+<tr>{num}\
+<td class="tdoc-poll-sel"><span class="tdoc fa-circle-check"></span></td>\
+<td class="tdoc-poll-ans">\
+""")
 
 
 def depart_answer(self, node):
     self.body.append("""\
-</td><td class="tdoc-poll-sel"><span class="tdoc fa-circle-check"></span></td>\
-<td class="tdoc-poll-cnt"></td><td class="tdoc-poll-pct"></td></tr>\
+</td><td class="tdoc-poll-cnt"></td><td class="tdoc-poll-pct"></td></tr>\
 """)
 
 
