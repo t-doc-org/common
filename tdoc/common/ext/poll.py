@@ -45,6 +45,18 @@ class Poll(docutils.SphinxDirective):
         if not children or not isinstance(children[-1], nodes.bullet_list):
             raise Exception("{poll}: Must end with a bullet list")
         ans = answers('', *(answer('', *a) for a in children[-1]))
+        # Find and remove ':' prefixes that tag solutions.
+        for a in ans:
+            for n in a.findall(nodes.Text):
+                if n.startswith(':'):
+                    a['solution'] = True
+                    p = n.parent
+                    if len(n) > 1:
+                        p.replace(n, n.__class__(n[1:]))
+                    else:
+                        p.remove(n)
+                        if not p.children: p.parent.remove(p)
+                break
         node = poll('', *children[:-1], ans)
         self.set_source_info(node)
         node['id'] = self.arguments[0]
@@ -75,9 +87,11 @@ def depart_poll(self, node):
 
 
 def visit_answers(self, node):
-    self.body.append("""
+    cols = 5 if node.parent['number'] != 'none' else 4
+    self.body.append(f"""
 <table class="tdoc-poll-answers table">\
-<thead><tr><th class="tdoc-poll-header" colspan="5"><div><div class="stats">\
+<thead><tr><th class="tdoc-poll-header" colspan="{cols}"><div>\
+<div class="stats">\
 <div class="voters" title="Voters">\
 <span class="tdoc fa-user"></span><span></span></div>\
 <div class="votes" title="Votes">\
@@ -86,7 +100,8 @@ def visit_answers(self, node):
 <span class="tdoc fa-lock"></span></div>\
 </div><div class="controls">\
 <button class="tdoc-open fa-play"></button>\
-<button class="tdoc-show fa-eye"></button>\
+<button class="tdoc-results fa-eye"></button>\
+<button class="tdoc-solutions fa-check"></button>\
 <button class="tdoc-clear fa-trash"\
  title="Clear votes (Ctrl+click to clear all)"></button>\
 </div></div></th></thead><tbody>\
@@ -100,9 +115,10 @@ def depart_answers(self, node):
 def visit_answer(self, node):
     num = '<td class="tdoc-poll-num"></td>' \
           if node.parent.parent['number'] != 'none' else ''
+    s = ' s' if node.get('solution') else ''
     self.body.append(f"""\
 <tr>{num}\
-<td class="tdoc-poll-sel"><span class="tdoc fa-circle-check"></span></td>\
+<td class="tdoc-poll-sel{s}"><span class="tdoc fa-circle-check"></span></td>\
 <td class="tdoc-poll-ans">\
 """)
 

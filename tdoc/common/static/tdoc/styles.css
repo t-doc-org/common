@@ -383,6 +383,10 @@ div.tdoc-quizz > .hint.hide {
 html[data-tdoc-poll-control] .tdoc-poll-header .controls {
     display: flex;
 }
+.tdoc-poll-answers:not(:has(.tdoc-poll-sel.s)) .tdoc-poll-header .controls
+        > .tdoc-solutions {
+    display: none;
+}
 .tdoc-poll-header .controls > .tdoc-clear {
     margin-left: 0.5rem;
 }
@@ -398,6 +402,15 @@ html[data-tdoc-poll-control] .tdoc-poll-header .controls {
 .tdoc-poll.num-upper-alpha .tdoc-poll-num::before {
     content: counter(answerNum, upper-alpha);
 }
+.tdoc-poll.solutions .tdoc-poll-sel.s {
+    background-color: var(--pst-color-success-bg);
+}
+.tdoc-poll-sel > span {
+    visibility: hidden;
+}
+.tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
+    visibility: visible;
+}
 .tdoc-poll-ans {
     width: 100%;
 }
@@ -405,12 +418,6 @@ tr[style*="--tdoc-value:"] > td.tdoc-poll-ans {
     background: linear-gradient(to right,
         var(--pst-color-attention-bg) var(--tdoc-value),
         var(--bs-table-bg) var(--tdoc-value));
-}
-.tdoc-poll-sel > span {
-    visibility: hidden;
-}
-.tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
-    visibility: visible;
 }
 .tdoc-poll-cnt, .tdoc-poll-pct {
     text-align: right;

@@ -130,9 +130,12 @@ class Api:
             if ids := req.get('close'):
                 check(self.member_of(env, db, 'polls:control'))
                 db.polls.close(origin, ids)
-            if ids := req.get('show'):
+            if ids := req.get('results'):
                 check(self.member_of(env, db, 'polls:control'))
-                db.polls.show(origin, ids, arg(req, 'value'))
+                db.polls.results(origin, ids, arg(req, 'value'))
+            if ids := req.get('solutions'):
+                check(self.member_of(env, db, 'polls:control'))
+                db.polls.solutions(origin, ids, arg(req, 'value'))
             if ids := req.get('clear'):
                 check(self.member_of(env, db, 'polls:control'))
                 db.polls.clear(origin, ids)

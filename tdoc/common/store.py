@@ -263,12 +263,21 @@ class Polls(DbNamespace):
             on conflict do update set mode = null
         """, [(origin, p) for p in ids])
 
-    def show(self, origin, ids, show):
-        show = bool(show)
+    def results(self, origin, ids, value):
+        value = bool(value)
         self.executemany("""
-            insert into polls (origin, id, show) values (:origin, :poll, :show)
-            on conflict do update set show = :show
-        """, [{'origin': origin, 'poll': p, 'show': show} for p in ids])
+            insert into polls (origin, id, results)
+                values (:origin, :poll, :results)
+            on conflict do update set results = :results
+        """, [{'origin': origin, 'poll': p, 'results': value} for p in ids])
+
+    def solutions(self, origin, ids, value):
+        value = bool(value)
+        self.executemany("""
+            insert into polls (origin, id, solutions)
+                values (:origin, :poll, :solutions)
+            on conflict do update set solutions = :solutions
+        """, [{'origin': origin, 'poll': p, 'solutions': value} for p in ids])
 
     def clear(self, origin, ids):
         self.execute(f"""
@@ -277,10 +286,10 @@ class Polls(DbNamespace):
         """, (origin, *ids))
 
     def vote(self, origin, poll, voter, answer, vote):
-        mode, exp, answers, show = self.row("""
-            select mode, expires, answers, show from polls
+        mode, exp, answers = self.row("""
+            select mode, expires, answers from polls
             where (origin, id) = (?, ?)
-        """, (origin, poll), default=(None, None, 0, False))
+        """, (origin, poll), default=(None, None, 0))
         if (mode is None or (exp is not None and time.time_ns() >= exp)
                 or answer < 0 or answer >= answers):
             return False
@@ -301,18 +310,19 @@ class Polls(DbNamespace):
         """, (origin, poll, voter, answer))
         return True
 
-    def poll_data(self, origin, pid, force_show=False):
-        mode, exp, show = self.row("""
-            select mode, expires, show from polls where (origin, id) = (?, ?)
-        """, (origin, pid), default=(None, None, False))
+    def poll_data(self, origin, pid, force_results=False):
+        mode, exp, results, solutions = self.row("""
+            select mode, expires, results, solutions from polls
+            where (origin, id) = (?, ?)
+        """, (origin, pid), default=(None, None, False, False))
         if exp is not None and time.time_ns() >= exp: mode = None
         voters, votes = self.row("""
             select count(distinct voter), count(*) from poll_votes
             where (origin, poll) = (?, ?)
         """, (origin, pid))
-        data = {'open': mode is not None, 'show': bool(show), 'voters': voters,
-                'votes': votes}
-        if show or force_show:
+        data = {'open': mode is not None, 'results': bool(results),
+                'solutions': bool(solutions), 'voters': voters, 'votes': votes}
+        if results or force_results:
             data['answers'] = dict(self.execute("""
                 select answer, count(*) from poll_votes
                 where (origin, poll) = (?, ?)
@@ -538,7 +548,8 @@ create table polls (
     mode text,
     answers integer not null default 0,
     expires integer,
-    show integer not null default 0,
+    results integer not null default 0,
+    solutions integer not null default 0,
     primary key (origin, id)
 ) strict;
 create table poll_votes (

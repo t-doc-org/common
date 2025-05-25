@@ -185,19 +185,19 @@ What is the equation of a line in a plane?
 - $ax^2 + bx + c = 0$
 - $ax + by + cz + d = 0$
 - $(x-x_0)^2 + (y-y_0)^2 - r^2 = 0$
-- $ax + by + c = 0$
+- :$ax + by + c = 0$
 - $y = at^2 + v_0t + y_0$
 - I don't know
 ```
 
-The next poll allows multiple selections, doesn't number the answers, and
-auto-closes after 30 seconds.
+The next poll allows multiple selections, doesn't number the answers, has no
+solutions to show, and auto-closes after 30 seconds.
 
 ```{poll} 4a790949-1246-49e8-841e-fb7922b98e45
 :mode: multi
 :number: none
 :close-after: 10s
-Which of the following animals are mammals?
+Which animals do you like?
 
 - Spiders
 - Crocodiles

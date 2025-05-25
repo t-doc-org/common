@@ -16,10 +16,12 @@ class Poll {
         this.watch = new api.Watch({name: 'poll', id: this.id},
                                    data => this.onUpdate(data));
         this.open = false;
-        this.show = false;
+        this.results = false;
+        this.solutions = false;
         for (const el of this.answers) on(el).click(() => this.onVote(el));
         on(qs(this.header, '.tdoc-open')).click(e => this.onOpen(e));
-        on(qs(this.header, '.tdoc-show')).click(e => this.onShow(e));
+        on(qs(this.header, '.tdoc-results')).click(e => this.onResults(e));
+        on(qs(this.header, '.tdoc-solutions')).click(e => this.onSolutions(e));
         on(qs(this.header, '.tdoc-clear')).click(e => this.onClear(e));
     }
 
@@ -40,17 +42,31 @@ class Poll {
                                : "Open poll (Ctrl+click to open all)");
     }
 
-    get show() { return this._show; }
+    get results() { return this._results; }
 
-    set show(value) {
-        if (value === this._show) return;
-        this._show = value;
-        const btn = qs(this.node, '.tdoc-show');
+    set results(value) {
+        if (value === this._results) return;
+        this._results = value;
+        const btn = qs(this.node, '.tdoc-results');
         btn.classList.toggle('fa-eye', !value);
         btn.classList.toggle('fa-eye-slash', value);
         btn.setAttribute('title',
                          value ? "Hide results (Ctrl+click to hide all)"
                                : "Show results (Ctrl+click to show all)");
+    }
+
+    get solutions() { return this._solutions; }
+
+    set solutions(value) {
+        if (value === this._solutions) return;
+        this._solutions = value;
+        this.node.classList.toggle('solutions', value);
+        const btn = qs(this.node, '.tdoc-solutions');
+        btn.classList.toggle('fa-check', !value);
+        btn.classList.toggle('fa-xmark', value);
+        btn.setAttribute('title',
+                         value ? "Hide solutions (Ctrl+click to hide all)"
+                               : "Show solutions (Ctrl+click to show all)");
     }
 
     async onOpen(e) {
@@ -65,8 +81,13 @@ class Poll {
         }
     }
 
-    async onShow(e) {
-        await api.poll({show: this.ids(e.ctrlKey), value: !this.show});
+    async onResults(e) {
+        await api.poll({results: this.ids(e.ctrlKey), value: !this.results});
+    }
+
+    async onSolutions(e) {
+        await api.poll({solutions: this.ids(e.ctrlKey),
+                        value: !this.solutions});
     }
 
     async onClear(e) {
@@ -83,7 +104,8 @@ class Poll {
 
     onUpdate(data) {
         this.open = data.open;
-        this.show = data.show;
+        this.results = data.results;
+        this.solutions = data.solutions;
         qs(this.header, '.voters').lastChild.textContent = `${data.voters}`;
         qs(this.header, '.votes').lastChild.textContent = `${data.votes}`;
         let max = 0;
