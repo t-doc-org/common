@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-47)=
+## 0.47 *(2025-05-25)*
+
+- Added the {rst:dir}`poll` directive to perform live audience polls.
+- Improved the performance of incremental rebuilds.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.46...0.47)
+
 (release-0-46)=
 ## 0.46 *(2025-05-20)*
 
