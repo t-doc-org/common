@@ -64,7 +64,8 @@ class Api:
     def authenticate(self, env):
         user = None
         if token := wsgi.authorization(env):
-            with self.db(env) as db: user = db.tokens.authenticate(token)
+            with self.db(env) as db:
+                user = db.tokens.authenticate(token)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         env['tdoc.user'] = user
 
@@ -161,7 +162,8 @@ class Api:
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         user = self.user(env, anon=False)
-        with self.db(env) as db: info = db.users.info(wsgi.origin(env), user)
+        with self.db(env) as db:
+            info = db.users.info(wsgi.origin(env), user)
         return wsgi.respond_json(respond, info)
 
 

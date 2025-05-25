@@ -359,7 +359,10 @@ class ConnectionPool:
     def release(self, db):
         with self.lock:
             if self.size is None or len(self.connections) < self.size:
+                db.rollback()
                 self.connections.append(db)
+            else:
+                db.close()
 
 
 class Store:
@@ -454,7 +457,7 @@ class Store:
         return version, latest
 
     def check_version(self):
-        with contextlib.closing(self.connect()) as db:
+        with contextlib.closing(self.connect()) as db, db:
             version, latest = self.version(db)
         if version != latest:
             raise Exception("Store version mismatch "
