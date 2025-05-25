@@ -11,7 +11,6 @@ from .. import util
 
 _log = logging.getLogger(__name__)
 
-# TODO: Put the ID on the first line
 
 def setup(app):
     app.add_directive('poll', Poll)
@@ -30,8 +29,8 @@ def setup(app):
 
 
 class Poll(docutils.SphinxDirective):
+    required_arguments = 1
     option_spec = {
-        'id': directives.unchanged,
         'mode': lambda c: directives.choice(c, ('single', 'multi')),
         'number': lambda c: directives.choice(c,
             ('none', 'decimal', 'lower-alpha', 'upper-alpha')),
@@ -48,9 +47,7 @@ class Poll(docutils.SphinxDirective):
         ans = answers('', *(answer('', *a) for a in children[-1]))
         node = poll('', *children[:-1], ans)
         self.set_source_info(node)
-        if (v := self.options.get('id')) is None:
-            raise Exception("{poll}: Missing :id:")
-        node['id'] = v
+        node['id'] = self.arguments[0]
         node['mode'] = self.options.get('mode', 'single')
         if (v := self.options.get('close-after', '15m')) != 'never':
             node['close-after'] = util.parse_duration(v)

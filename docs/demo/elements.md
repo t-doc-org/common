@@ -179,8 +179,7 @@ This is the last quote.
 
 The first {rst:dir}`poll` allows only one answer.
 
-```{poll}
-:id: aeb57180-a5c8-4532-ad15-94b3dd9f3013
+```{poll} aeb57180-a5c8-4532-ad15-94b3dd9f3013
 What is the equation of a line in a plane?
 
 - $ax^2 + bx + c = 0$
@@ -194,8 +193,7 @@ What is the equation of a line in a plane?
 The next poll allows multiple selections, doesn't number the answers, and
 auto-closes after 30 seconds.
 
-```{poll}
-:id: 4a790949-1246-49e8-841e-fb7922b98e45
+```{poll} 4a790949-1246-49e8-841e-fb7922b98e45
 :mode: multi
 :number: none
 :close-after: 10s

@@ -107,12 +107,12 @@ solutions are displayed.
 
 - `show` (default): Solutions are shown on the page.
 - `hide`: Solutions are hidden when the page loads. They can be shown or hidden
-  with the <span class="tdoc fa-eye"></span> /
-  <span class="tdoc fa-eye-slash"></span> button in the navbar.
+  with the <button class="tdoc fa-eye"></button> /
+  <button class="tdoc fa-eye-slash"></button> button in the navbar.
 - `dynamic`: Solutions are hidden by default, but can be made visible to
   everyone in real-time by members of the group `solutions:show` using the
-  <span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>
-  button.
+  <button class="tdoc fa-eye"></button> /
+  <button class="tdoc fa-eye-slash"></button> button.
 
 {.rubric}
 Options
@@ -218,8 +218,9 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 
 ## Poll
 
-````{rst:directive} .. poll::
-This directive adds a live audience poll. The content of the directive is
+````{rst:directive} .. poll:: id
+This directive adds a live audience poll. The poll identifier `id` is required
+and its value must be unique across the site. The content of the directive is
 composed of the question, followed by a bullet list, where each list item
 becomes an answer. Both the question and the answers can contain arbitrary
 markup.
@@ -227,11 +228,12 @@ markup.
 Polls can be controlled by members of the group `polls:control`, using the icons
 in the toolbar.
 
-- <span class="tdoc fa-play"></span> / <span class="tdoc fa-stop"></span>: Open
-  and close the poll. Closed polls don't accept votes.
-- <span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>:
-  Show or hide the poll results.
-- <span class="tdoc fa-trash"></span>: Clear the poll results.
+- <button class="tdoc fa-play"></button> /
+  <button class="tdoc fa-stop"></button>: Open and close the poll. Closed polls
+  don't accept votes.
+- <button class="tdoc fa-eye"></button> /
+  <button class="tdoc fa-eye-slash"></button>: Show or hide the poll results.
+- <button class="tdoc fa-trash"></button>: Clear the poll results.
 
 Voting on polls is open to everyone and doesn't require any permissions. Polls
 are single-choice by default ({rst:dir}`:mode: single <poll:mode>`): selecting a
@@ -241,11 +243,6 @@ enables voters to select multiple answers.
 
 {.rubric}
 Options
-```{rst:directive:option} id: id
-:type: ID
-The identifier of the poll. This option is required and the value must be unique
-across the site.
-```
 ```{rst:directive:option} mode: value
 :type: single | multi
 The poll mode: single answer (`single`, the default) or allow multiple answers
