@@ -250,10 +250,12 @@ class Solutions(DbNamespace):
 class Polls(DbNamespace):
     def open(self, origin, poll, mode, answers, expires=None):
         self.execute("""
-            insert into polls (origin, id, mode, answers, expires)
-                values (:origin, :poll, :mode, :answers, :expires)
-            on conflict do update set (mode, answers, expires)
-                = (:mode, :answers, :expires)
+            insert into polls
+                (origin, id, mode, answers, results, solutions, expires)
+                values (:origin, :poll, :mode, :answers, 0, 0, :expires)
+            on conflict do update
+                set (mode, answers, results, solutions, expires)
+                = (:mode, :answers, 0, 0, :expires)
         """, {'origin': origin, 'poll': poll, 'mode': mode,
              'answers': answers, 'expires': expires})
 
