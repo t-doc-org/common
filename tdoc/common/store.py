@@ -251,11 +251,11 @@ class Polls(DbNamespace):
     def open(self, origin, poll, mode, answers, expires=None):
         self.execute("""
             insert into polls
-                (origin, id, mode, answers, results, solutions, expires)
-                values (:origin, :poll, :mode, :answers, 0, 0, :expires)
+                (origin, id, mode, answers, expires, results, solutions)
+                values (:origin, :poll, :mode, :answers, :expires, 0, 0)
             on conflict do update
-                set (mode, answers, results, solutions, expires)
-                = (:mode, :answers, 0, 0, :expires)
+                set (mode, answers, expires, results, solutions)
+                = (:mode, :answers, :expires, 0, 0)
         """, {'origin': origin, 'poll': poll, 'mode': mode,
              'answers': answers, 'expires': expires})
 
