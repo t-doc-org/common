@@ -22,7 +22,42 @@ def to_nsec(dt, default=None):
     return int(dt.timestamp() * 1e9)
 
 
+class Seqs(dict):
+    __slots__ = ()
+    mask = (1 << 32) - 1
+    mask2 = mask >> 1
+
+    def merge(self, it, diff=None):
+        for key, seq in it:
+            if (s := self.get(key)) is None \
+                    or 0 < ((seq - s) & self.mask) <= self.mask2:
+                self[key] = seq
+                if diff is not None: diff[key] = seq
+
+
 class Connection(sqlite3.Connection):
+    def __enter__(self):
+        self._notify = Seqs()
+        return super().__enter__()
+
+    def __exit__(self, typ, value, tb):
+        res = super().__exit__(typ, value, tb)
+        if typ is None and self._notify:
+            self._store.notify(self._notify)
+        del self._notify
+        return res
+
+    def notify(self, *keys):
+        for key in keys:
+            self._notify[key], = self.row("""
+                insert into notifications (key, seq) values (?, 1)
+                on conflict do update set seq = (seq + 1) & ?
+                returning seq
+            """, (key, Seqs.mask))
+
+    def notifications(self, seqs, diff=None):
+        seqs.merge(self.execute("select key, seq from notifications"), diff)
+
     def row(self, sql, params=(), default=None):
         for row in self.execute(sql, params): return row
         return default
@@ -235,11 +270,16 @@ class Groups(DbNamespace):
 
 
 class Solutions(DbNamespace):
+    @staticmethod
+    def show_key(origin, page):
+        return f'solutions:{origin}:{page}'
+
     def set_show(self, origin, page, show):
         self.execute("""
             insert or replace into solutions (origin, page, show)
                 values (?, ?, ?)
         """, (origin, page, show))
+        self.notify(self.show_key(origin, page))
 
     def get_show(self, origin, page):
         return self.row("""
@@ -248,6 +288,14 @@ class Solutions(DbNamespace):
 
 
 class Polls(DbNamespace):
+    @staticmethod
+    def poll_key(origin, poll):
+        return f'polls:{origin}:{poll}'
+
+    @staticmethod
+    def voter_key(origin, poll, voter):
+        return f'polls:{origin}:{poll}:{voter}'
+
     def open(self, origin, poll, mode, answers, expires=None):
         self.execute("""
             insert into polls
@@ -258,12 +306,14 @@ class Polls(DbNamespace):
                 = (:mode, :answers, :expires, 0, 0)
         """, {'origin': origin, 'poll': poll, 'mode': mode,
              'answers': answers, 'expires': expires})
+        self.notify(self.poll_key(origin, poll))
 
     def close(self, origin, ids):
         self.executemany("""
             insert into polls (origin, id, mode) values (?, ?, null)
             on conflict do update set mode = null
         """, [(origin, p) for p in ids])
+        self.notify(*(self.poll_key(origin, p) for p in ids))
 
     def results(self, origin, ids, value):
         value = bool(value)
@@ -272,6 +322,7 @@ class Polls(DbNamespace):
                 values (:origin, :poll, :results)
             on conflict do update set results = :results
         """, [{'origin': origin, 'poll': p, 'results': value} for p in ids])
+        self.notify(*(self.poll_key(origin, p) for p in ids))
 
     def solutions(self, origin, ids, value):
         value = bool(value)
@@ -280,12 +331,20 @@ class Polls(DbNamespace):
                 values (:origin, :poll, :solutions)
             on conflict do update set solutions = :solutions
         """, [{'origin': origin, 'poll': p, 'solutions': value} for p in ids])
+        self.notify(*(self.poll_key(origin, p) for p in ids))
 
     def clear(self, origin, ids):
+        placeholders = ', '.join('?' * len(ids))
+        args = (origin, *ids)
+        voters = list(self.execute(f"""
+            select distinct poll, voter from poll_votes
+            where origin = ? and poll in ({placeholders})
+        """, args))
         self.execute(f"""
-            delete from poll_votes
-            where origin = ? and poll in ({', '.join('?' * len(ids))})
-        """, (origin, *ids))
+            delete from poll_votes where origin = ? and poll in ({placeholders})
+        """, args)
+        self.notify(*(self.poll_key(origin, p) for p in ids),
+                    *(self.voter_key(origin, p, v) for p, v in voters))
 
     def vote(self, origin, poll, voter, answer, vote):
         mode, exp, answers = self.row("""
@@ -295,6 +354,8 @@ class Polls(DbNamespace):
         if (mode is None or (exp is not None and time.time_ns() >= exp)
                 or answer < 0 or answer >= answers):
             return False
+        self.notify(self.poll_key(origin, poll),
+                    self.voter_key(origin, poll, voter))
         if not vote:
             self.execute("""
                 delete from poll_votes
@@ -312,24 +373,25 @@ class Polls(DbNamespace):
         """, (origin, poll, voter, answer))
         return True
 
-    def poll_data(self, origin, pid, force_results=False):
+    def poll_data(self, origin, poll, force_results=False):
         mode, exp, results, solutions = self.row("""
             select mode, expires, results, solutions from polls
             where (origin, id) = (?, ?)
-        """, (origin, pid), default=(None, None, False, False))
+        """, (origin, poll), default=(None, None, False, False))
         if exp is not None and time.time_ns() >= exp: mode = None
         voters, votes = self.row("""
             select count(distinct voter), count(*) from poll_votes
             where (origin, poll) = (?, ?)
-        """, (origin, pid))
+        """, (origin, poll))
         data = {'open': mode is not None, 'results': bool(results),
-                'solutions': bool(solutions), 'voters': voters, 'votes': votes}
+                'solutions': bool(solutions), 'voters': voters, 'votes': votes,
+                'exp': exp}
         if results or force_results:
             data['answers'] = dict(self.execute("""
                 select answer, count(*) from poll_votes
                 where (origin, poll) = (?, ?)
                 group by answer order by answer
-            """, (origin, pid)))
+            """, (origin, poll)))
         return data
 
     def votes_data(self, origin, voter, pids):
@@ -365,19 +427,58 @@ class ConnectionPool:
                 db.close()
 
 
+class Waker:
+    def __init__(self, cv, interval):
+        self.cv = cv
+        self.interval = interval
+        self._wake = False
+
+    def wait(self, cond, until=None):
+        # TODO: Rate-limit but allow bursts
+        if self.interval is not None \
+                and self.cv.wait_for(cond, self.interval):
+            return
+        timeout = None
+        if until is not None:
+            timeout = until - time.time_ns()
+            if timeout <= 0: return
+            timeout /= 1_000_000_000
+        self.cv.wait_for(lambda: self._wake or cond(), timeout=timeout)
+        self._wake = False
+
+    def wake(self):
+        with self.cv:
+            self._wake = True
+            self.cv.notify()
+
+
 class Store:
-    def __init__(self, path, timeout=10):
+    def __init__(self, path, timeout=10, poll_interval=1):
         self.path = pathlib.Path(path).resolve() if path is not None else None
         self.timeout = timeout
+        self.poll_interval = poll_interval
+        self.lock = threading.Condition(threading.Lock())
+        self.wakers = {}
+        self._wake = Seqs()
+
+    def start(self):
+        self.poker_db = self.connect(params='mode=ro', check_same_thread=False)
+        if self.path is None: self.create(dev=True)  # Create in-memory DB
+        self.poker = threading.Thread(target=self.dispatch_wakes, daemon=True)
+        with self.lock: self._stop = False
+        self.poker.start()
+
+    def stop(self):
+        with self.lock: self._stop = True
+        self.poker.join()
+        self.poker_db.close()
 
     def __enter__(self):
-        if self.path is None:  # Create an in-memory database
-            self._mem_db = self.connect()  # Keep at least one connection alive
-            self.create(dev=True)
+        self.start()
         return self
 
     def __exit__(self, typ, value, tb):
-        if self.path is None: self._mem_db.close()
+        self.stop()
 
     def connect(self, *, path=False, params='mode=rw', check_same_thread=True):
         if path is False: path = self.path
@@ -395,10 +496,61 @@ class Store:
         db.create_function(
             'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
             deterministic=True)
+        db._store = self
         return db
 
     def pool(self, **kwargs):
         return ConnectionPool(self, **kwargs)
+
+    @contextlib.contextmanager
+    def waker(self, cv, keys, interval=None):
+        w = Waker(cv, interval)
+        with self.lock:
+            for key in keys:
+                ws = self.wakers.get(key)
+                if ws is None: ws = self.wakers[key] = set()
+                ws.add(w)
+        try:
+            yield w
+        finally:
+            with self.lock:
+                for key in keys:
+                    ws = self.wakers[key]
+                    ws.remove(w)
+                    if not ws: del self.wakers[key]
+
+    def notify(self, seqs):
+        with self.lock:
+            self._wake.merge(seqs.items())
+            self.lock.notify()
+
+    def dispatch_wakes(self):
+        poll_interval = self.poll_interval * 1_000_000_000 \
+                        if self.poll_interval is not None else None
+        next_poll = time.monotonic_ns()
+        db = self.poker_db
+        seqs = Seqs()
+        # TODO: Perform the initial fetch when registering a waker
+        with db: db.notifications(seqs)
+        while True:
+            with self.lock:
+                timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000
+                self.lock.wait_for(lambda: self._stop or self._wake,
+                                   timeout=timeout)
+                if self._stop: break
+                wake, self._wake = self._wake, Seqs()
+            seqs.merge(wake.items())
+            if time.monotonic_ns() >= next_poll:
+                # TODO: Get only notifications for registered wakers
+                with db: db.notifications(seqs, wake)
+                next_poll = time.monotonic_ns() + poll_interval
+            if not wake: continue
+            with self.lock:
+                wakers = set()
+                for key, seq in wake.items():
+                    if (ns := self.wakers.get(key)) is not None:
+                        wakers.update(ns)
+            for w in wakers: w.wake()
 
     def backup(self, db, dest):
         if dest.exists():
@@ -506,7 +658,7 @@ create table user_tokens (
     user integer not null,
     created integer not null,
     expires integer,
-    foreign key (user) references users(id)
+    foreign key (user) references users (id)
 ) strict, without rowid;
 
 -- Create tables for group management.
@@ -516,7 +668,7 @@ create table user_memberships (
     group_ text not null,
     transitive integer not null,
     primary key (origin, user, group_),
-    foreign key (user) references users(id)
+    foreign key (user) references users (id)
 ) strict, without rowid;
 create table group_memberships (
     origin text not null,
@@ -547,6 +699,7 @@ insert into user_memberships (origin, user, group_, transitive)
 
     def version_3(self, db, dev, now):
         db.executescript("""
+-- Create tables for poll state.
 create table polls (
     origin text not null,
     id text not null,
@@ -563,6 +716,14 @@ create table poll_votes (
     voter text not null,
     answer integer not null,
     primary key (origin, poll, voter, answer),
-    foreign key (origin, poll) references polls(origin, id)
+    foreign key (origin, poll) references polls (origin, id)
 ) strict;
+""")
+
+    def version_4(self, db, dev, now):
+        db.executescript("""
+create table notifications (
+    key text primary key,
+    seq integer not null
+) strict, without rowid;
 """)

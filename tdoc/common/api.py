@@ -396,23 +396,27 @@ class DbObservable(DynObservable):
         self._stop = True
         self.lock.notify()
 
+    def wake_keys(self, db): return None
+
     def poll(self):
         try:
-            with contextlib.closing(self.events.api.store.connect()) as db:
+            store = self.events.api.store
+            with contextlib.closing(store.connect(params='mode=ro')) as db, \
+                    store.waker(self.lock, self.wake_keys(db),
+                                self._interval) as waker:
                 while True:
-                    error = False
+                    queried = False
                     try:
-                        data = self.query(db)
+                        with db: data, until = self.query(db)
+                        queried = True
                     except Exception:
-                        error = True
                         self.print_exception()
                     with self.lock:
-                        if not error and data != self._data:
+                        if queried and data != self._data:
                             self._data = data
                             self.send_locked(self._msg())
-                        if self.lock.wait_for(lambda: self._stop,
-                                              self._interval):
-                            break
+                        waker.wait(lambda: self._stop, until)
+                        if self._stop: break
         except Exception:
             with self.lock: self._stop = True
             self.remove()
@@ -428,9 +432,11 @@ class SolutionsObservable(DbObservable):
         self._page = arg(req, 'page')
         super().__init__(req, events)
 
+    def wake_keys(self, db):
+        return [db.solutions.show_key(self._origin, self._page)]
+
     def query(self, db):
-        with db:
-            return {'show': db.solutions.get_show(self._origin, self._page)}
+        return {'show': db.solutions.get_show(self._origin, self._page)}, None
 
 
 class PollObservable(DbObservable):
@@ -439,9 +445,14 @@ class PollObservable(DbObservable):
         self._id = arg(req, 'id')
         super().__init__(req, events)
 
+    def wake_keys(self, db):
+        return [db.polls.poll_key(self._origin, self._id)]
+
     def query(self, db):
-        with db:
-            return db.polls.poll_data(self._origin, self._id)
+        data = db.polls.poll_data(self._origin, self._id)
+        if (exp := data.pop('exp')) is not None and exp <= time.time_ns():
+            exp = None
+        return data, exp
 
 
 class PollVotesObservable(DbObservable):
@@ -451,6 +462,9 @@ class PollVotesObservable(DbObservable):
         self._ids.sort()
         super().__init__(req, events)
 
+    def wake_keys(self, db):
+        return [db.polls.voter_key(self._origin, poll, self._voter)
+                for poll in self._ids]
+
     def query(self, db):
-        with db:
-            return db.polls.votes_data(self._origin, self._voter, self._ids)
+        return db.polls.votes_data(self._origin, self._voter, self._ids), None

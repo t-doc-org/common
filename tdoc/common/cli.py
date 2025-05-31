@@ -622,6 +622,7 @@ class Application:
         idle = self.cfg.exit_on_idle * 1_000_000_000
         prev, prev_mtime, build_mtime = 0, 0, None
         build_next = self.build_dir('next')
+        # TODO: Use monotonic clock for delays
         while True:
             if prev != 0: time.sleep(0.1)
             with self.lock:
