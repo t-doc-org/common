@@ -371,10 +371,11 @@ export class FifoBuffer {
 
 // A value that is stored as a string in local storage.
 export class Stored {
-    constructor(key, def) {
+    constructor(key, def, storage = localStorage) {
         this.key = key;
         this._value = def;
-        const v = localStorage.getItem(key);
+        this._storage = storage;
+        const v = this._storage.getItem(key);
         if (v !== null) {
             try { this._value = this.decode(v); } catch (e) {}
         }
@@ -389,13 +390,13 @@ export class Stored {
         return this._value;
     }
 
-    del() { localStorage.removeItem(this.key); }
+    del() { this._storage.removeItem(this.key); }
 
     store() {
         if (this._value !== undefined && this._value !== null) {
-            localStorage.setItem(this.key, this.encode(this._value));
+            this._storage.setItem(this.key, this.encode(this._value));
         } else {
-            localStorage.removeItem(this.key);
+            this._storage.removeItem(this.key);
         }
     }
 

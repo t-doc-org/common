@@ -3,15 +3,31 @@
 
 import {
     backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, on, page, sleep,
-    StoredJson,
+    Stored, StoredJson,
 } from './core.js';
+
+function handleApiBackend() {
+    const params = page.hashParams;
+    if (!params) return;
+    const api = params.get('api');
+    if (api === null) return;
+    backend.value = api;
+    params.delete('api');
+    page.hashParams = params;
+    location.reload();
+}
+
+const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
+handleApiBackend();
+on(window).hashchange(() => handleApiBackend());
 
 export const url = (() => {
     if (tdoc.dev) return '/*api';
     if (tdoc.api_url) return tdoc.api_url;
     const loc = new URL(location);
     if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
-        return `${loc.protocol}//api.t-doc.org`;
+        const suffix = backend.value ? '-' + backend.value : '';
+        return `${loc.protocol}//api${suffix}.t-doc.org`;
     }
     return null;
 })();
@@ -74,7 +90,7 @@ class User extends EventTarget {
 
     handleLogin() {
         const params = page.hashParams
-        if (!page.hashParams) return;
+        if (!params) return;
         if (params.get('logout') !== null) {
             params.delete('logout');
             page.hashParams = params;
