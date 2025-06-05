@@ -475,16 +475,19 @@ class Store:
         self._wake = Seqs()
 
     def start(self):
-        self.poker_db = self.connect(params='mode=ro', check_same_thread=False)
+        self.dispatcher_db = self.connect(params='mode=ro',
+                                          check_same_thread=False)
         if self.path is None: self.create(dev=True)  # Create in-memory DB
-        self.poker = threading.Thread(target=self.dispatch_wakes, daemon=True)
+        self.dispatcher = threading.Thread(target=self.dispatch)
         with self.lock: self._stop = False
-        self.poker.start()
+        self.dispatcher.start()
 
     def stop(self):
-        with self.lock: self._stop = True
-        self.poker.join()
-        self.poker_db.close()
+        with self.lock:
+            self._stop = True
+            self.lock.notify()
+        self.dispatcher.join()
+        self.dispatcher_db.close()
 
     def __enter__(self):
         self.start()
@@ -544,11 +547,11 @@ class Store:
             self._wake.merge(seqs.items())
             self.lock.notify()
 
-    def dispatch_wakes(self):
+    def dispatch(self):
         poll_interval = self.poll_interval * 1_000_000_000 \
                         if self.poll_interval is not None else None
         next_poll = time.monotonic_ns() + poll_interval
-        db = self.poker_db
+        db = self.dispatcher_db
         while True:
             with self.lock:
                 timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000
