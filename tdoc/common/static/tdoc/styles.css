@@ -701,6 +701,9 @@ code.literal.literal.literal {
 
 /* Fix the gap left by pydata_sphinx_theme between the table and the
    scrollbar. */
+.pst-scrollable-table-container {
+    margin-bottom: 1rem;
+}
 .table {
     margin-bottom: 0;
 }
