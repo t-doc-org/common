@@ -22,17 +22,21 @@ def to_nsec(dt, default=None):
     return int(dt.timestamp() * 1e9)
 
 
+def placeholders(args): return ', '.join('?' * len(args))
+
+
 class Seqs(dict):
     __slots__ = ()
     mask = (1 << 32) - 1
     mask2 = mask >> 1
 
-    def merge(self, it, diff=None):
+    @classmethod
+    def newer_than(cls, a, b):
+        return b is None or 0 < ((a - b) & cls.mask) <= cls.mask2
+
+    def merge(self, it):
         for key, seq in it:
-            if (s := self.get(key)) is None \
-                    or 0 < ((seq - s) & self.mask) <= self.mask2:
-                self[key] = seq
-                if diff is not None: diff[key] = seq
+            if self.newer_than(seq, self.get(key)): self[key] = seq
 
 
 class Connection(sqlite3.Connection):
@@ -55,8 +59,11 @@ class Connection(sqlite3.Connection):
                 returning seq
             """, (key, Seqs.mask))
 
-    def notifications(self, seqs, diff=None):
-        seqs.merge(self.execute("select key, seq from notifications"), diff)
+    def notifications(self, keys):
+        return Seqs(self.execute(f"""
+            select key, seq from notifications
+            where key in ({placeholders(keys)})
+        """, keys))
 
     def row(self, sql, params=(), default=None):
         for row in self.execute(sql, params): return row
@@ -334,14 +341,14 @@ class Polls(DbNamespace):
         self.notify(*(self.poll_key(origin, p) for p in ids))
 
     def clear(self, origin, ids):
-        placeholders = ', '.join('?' * len(ids))
+        phs = placeholders(ids)
         args = (origin, *ids)
         voters = list(self.execute(f"""
             select distinct poll, voter from poll_votes
-            where origin = ? and poll in ({placeholders})
+            where origin = ? and poll in ({phs})
         """, args))
         self.execute(f"""
-            delete from poll_votes where origin = ? and poll in ({placeholders})
+            delete from poll_votes where origin = ? and poll in ({phs})
         """, args)
         self.notify(*(self.poll_key(origin, p) for p in ids),
                     *(self.voter_key(origin, p, v) for p, v in voters))
@@ -399,7 +406,7 @@ class Polls(DbNamespace):
         for p, a in self.execute(f"""
                     select poll, answer from poll_votes
                     where (origin, voter) = (?, ?)
-                      and poll in ({', '.join('?' * len(pids))})
+                      and poll in ({placeholders(pids)})
                     order by poll, answer
                 """, (origin, voter, *pids)):
             votes.setdefault(p, []).append(a)
@@ -450,6 +457,14 @@ class Waker:
         with self.cv:
             self._wake = True
             self.cv.notify()
+
+
+class WakerSet(set):
+    __slots__ = ('seq',)
+
+    def __init__(self):
+        super().__init__()
+        self.seq = None
 
 
 class Store:
@@ -503,13 +518,20 @@ class Store:
         return ConnectionPool(self, **kwargs)
 
     @contextlib.contextmanager
-    def waker(self, cv, keys, interval=None):
+    def waker(self, cv, keys, db, interval=None):
         w = Waker(cv, interval)
         with self.lock:
+            seq_keys = []
             for key in keys:
                 ws = self.wakers.get(key)
-                if ws is None: ws = self.wakers[key] = set()
+                if ws is None:
+                    ws = self.wakers[key] = WakerSet()
+                    seq_keys.append(key)
                 ws.add(w)
+            if seq_keys:
+                with db: seqs = db.notifications(seq_keys)
+                for key, seq in seqs.items():
+                    self.wakers[key].seq = seq
         try:
             yield w
         finally:
@@ -527,30 +549,30 @@ class Store:
     def dispatch_wakes(self):
         poll_interval = self.poll_interval * 1_000_000_000 \
                         if self.poll_interval is not None else None
-        next_poll = time.monotonic_ns()
+        next_poll = time.monotonic_ns() + poll_interval
         db = self.poker_db
-        seqs = Seqs()
-        # TODO: Perform the initial fetch when registering a waker
-        with db: db.notifications(seqs)
         while True:
             with self.lock:
                 timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000
                 self.lock.wait_for(lambda: self._stop or self._wake,
                                    timeout=timeout)
                 if self._stop: break
-                wake, self._wake = self._wake, Seqs()
-            seqs.merge(wake.items())
-            if time.monotonic_ns() >= next_poll:
-                # TODO: Get only notifications for registered wakers
-                with db: db.notifications(seqs, wake)
-                next_poll = time.monotonic_ns() + poll_interval
-            if not wake: continue
-            with self.lock:
                 wakers = set()
-                for key, seq in wake.items():
-                    if (ns := self.wakers.get(key)) is not None:
-                        wakers.update(ns)
+                self._update_waker_seqs(self._wake, wakers)
+                self._wake.clear()
+                if time.monotonic_ns() >= next_poll:
+                    if self.wakers:
+                        with db: seqs = db.notifications(list(self.wakers))
+                        self._update_waker_seqs(seqs, wakers)
+                    next_poll = time.monotonic_ns() + poll_interval
             for w in wakers: w.wake()
+
+    def _update_waker_seqs(self, seqs, updated):
+        for key, seq in seqs.items():
+            if (ws := self.wakers[key]) is not None \
+                    and Seqs.newer_than(seq, ws.seq):
+                ws.seq = seq
+                updated.update(ws)
 
     def backup(self, db, dest):
         if dest.exists():

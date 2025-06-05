@@ -402,7 +402,7 @@ class DbObservable(DynObservable):
         try:
             store = self.events.api.store
             with contextlib.closing(store.connect(params='mode=ro')) as db, \
-                    store.waker(self.lock, self.wake_keys(db),
+                    store.waker(self.lock, self.wake_keys(db), db,
                                 self._interval) as waker:
                 while True:
                     queried = False
