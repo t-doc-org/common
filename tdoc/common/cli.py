@@ -126,9 +126,8 @@ def add_store_option(arg):
 
 
 @contextlib.contextmanager
-def get_store(cfg, allow_mem=False, default_dev=True, check_latest=True):
-    if default_dev and cfg.store is None \
-            and (ds := dev_store.resolve()).exists():
+def get_store(cfg, allow_mem=False, check_latest=True):
+    if cfg.store is None and (ds := dev_store.resolve()).exists():
         cfg.store = ds
     if not allow_mem and not cfg.store:
         raise Exception("--store: No path specified")
@@ -379,9 +378,10 @@ def cmd_store_backup(cfg):
 
 def cmd_store_create(cfg):
     if cfg.store is None and cfg.dev: cfg.store = dev_store.resolve()
-    with get_store(cfg, default_dev=False, check_latest=False) as store:
-        store.path.parent.mkdir(parents=True, exist_ok=True)
-        version = store.create(version=cfg.version, dev=cfg.dev)
+    if not cfg.store: raise Exception("--store: No path specified")
+    st = store.Store(cfg.store)
+    st.path.parent.mkdir(parents=True, exist_ok=True)
+    version = st.create(version=cfg.version, dev=cfg.dev)
     cfg.stdout.write(f"Store created (version: {version})\n")
 
 
