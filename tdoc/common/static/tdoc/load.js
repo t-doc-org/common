@@ -49,7 +49,10 @@ if (toggleSolutionsBtn) {
     if (htmlData.tdocSolutions === 'dynamic') {
         api.events.sub({add: [new api.Watch(
             {name: 'solutions', page: page.path},
-            data => { htmlData.tdocSolutionsState = data.show ?? 'hide'; })]});
+            data => {
+                htmlData.tdocSolutionsState = data.show ?? 'hide';
+                updateSolutionsTooltip();
+            })]});
         api.user.onChange(async () => {
             if (await api.user.member_of('solutions:write')) {
                 htmlData.tdocSolutionsCtrl = '';
@@ -61,12 +64,13 @@ if (toggleSolutionsBtn) {
 }
 
 tdoc.toggleSolutions = () => {
-    htmlData.tdocSolutionsState =
-        (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ? 'show' : 'hide';
-    updateSolutionsTooltip();
-    if (htmlData.tdocSolutions === 'dynamic'
-            && htmlData.tdocSolutionsCtrl !== undefined) {
-        api.solutions(htmlData.tdocSolutionsState);
+    const show = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ? 'show'
+                 : 'hide'
+    if (htmlData.tdocSolutions === 'dynamic') {
+        if (htmlData.tdocSolutionsCtrl !== undefined) api.solutions(show);
+    } else {
+        htmlData.tdocSolutionsState = show;
+        updateSolutionsTooltip();
     }
 };
 
