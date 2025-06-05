@@ -375,6 +375,7 @@ class DynObservable(Observable):
 
 def limit_interval(interval, burst=0):
     interval = int(interval * 1_000_000_000)
+    burst += 1
     history = []
 
     def limit():
