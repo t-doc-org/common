@@ -373,22 +373,20 @@ class DynObservable(Observable):
         self.events.api.print_exception(e)
 
 
-def limit_interval(interval, burst=0):
+def limit_interval(interval, burst=1):
     interval = int(interval * 1_000_000_000)
-    burst += 1
-    history = []
+    count, prev = 0, time.monotonic_ns()
 
     def limit():
-        nonlocal history
+        nonlocal count, prev
         now = time.monotonic_ns()
-        start = now - burst * interval
-        history = [t for t in history if t > start]
-        if len(history) < burst:
-            history.append(now)
+        count = count - min(count, (now - prev) // interval) + 1
+        if count < burst:
+            prev = now
             return 0
-        t = history[-1] + interval
-        history.append(t)
-        return (t - now) / 1_000_000_000
+        count = burst
+        prev = now + interval
+        return interval / 1_000_000_000
 
     return limit
 
