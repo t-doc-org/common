@@ -595,7 +595,7 @@ class Application:
         self.cfg = cfg
         self.addr = addr
         self.server = server
-        self.lock = threading.Lock()
+        self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
         self.stop = False
         self.min_mtime = time.time_ns()
@@ -612,7 +612,9 @@ class Application:
     def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
-        with self.lock: self.stop = True
+        with self.lock:
+            self.stop = True
+            self.lock.notify()
         self.builder.join()
 
     def watch_and_build(self):
@@ -623,9 +625,10 @@ class Application:
         prev, prev_mtime, build_mtime = 0, 0, None
         build_next = self.build_dir('next')
         # TODO: Use monotonic clock for delays
+        # TODO: Avoid looping at 10Hz
         while True:
-            if prev != 0: time.sleep(0.1)
             with self.lock:
+                if prev != 0: self.lock.wait_for(lambda: self.stop, timeout=0.1)
                 if self.stop: break
             now = time.time_ns()
             if (idle > 0 and (lw := self.api.event.last_watcher) is not None
