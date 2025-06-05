@@ -474,11 +474,11 @@ class Store:
         self.wakers = {}
         self._wake = Seqs()
 
-    def start(self, daemon=True):
+    def start(self):
         self.dispatcher_db = self.connect(params='mode=ro',
                                           check_same_thread=False)
         if self.path is None: self.create(dev=True)  # Create in-memory DB
-        self.dispatcher = threading.Thread(target=self.dispatch, daemon=daemon)
+        self.dispatcher = threading.Thread(target=self.dispatch)
         with self.lock: self._stop = False
         self.dispatcher.start()
 
@@ -490,7 +490,7 @@ class Store:
         self.dispatcher_db.close()
 
     def __enter__(self):
-        self.start(daemon=False)
+        self.start()
         return self
 
     def __exit__(self, typ, value, tb):
