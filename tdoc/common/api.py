@@ -213,13 +213,16 @@ class EventApi:
             self._stop_watchers = True
             for w in self.watchers.values(): w.stop()
 
+    def watchers_must_stop(self):
+        with self.lock: return self._stop_watchers
+
     @property
     def last_watcher(self):
         with self.lock: return self._last_watcher
 
     @contextlib.contextmanager
     def watcher(self):
-        with Watcher() as watcher:
+        with Watcher(self.watchers_must_stop) as watcher:
             sid = secrets.token_urlsafe(8)
             with self.lock:
                 if self._stop_watchers:
@@ -278,19 +281,22 @@ class EventApi:
 
 
 class Watcher:
-    def __init__(self):
+    def __init__(self, must_stop):
+        self.must_stop = must_stop
         self.queue = queue.Queue()
         self.lock = threading.Lock()
         self.watches = {}
 
     def stop(self):
-        self.queue.shutdown(True)
+        # TODO: Once on Python 3.13, remove must_stop and this conditional
+        if hasattr(self.queue, 'shutdown'):
+            self.queue.shutdown(True)
 
     def send(self, wid, msg):
         self.queue.put((wid, msg))
 
     def __iter__(self):
-        while True:
+        while not self.must_stop():
             try:
                 wid, msg = self.queue.get(timeout=1)
                 yield b'{"wid":%d,"data":' % wid
