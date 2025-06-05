@@ -373,11 +373,30 @@ class DynObservable(Observable):
         self.events.api.print_exception(e)
 
 
+def limit_interval(interval, burst=0):
+    interval = int(interval * 1_000_000_000)
+    history = []
+
+    def limit():
+        nonlocal history
+        now = time.monotonic_ns()
+        start = now - burst * interval
+        history = [t for t in history if t > start]
+        if len(history) < burst:
+            history.append(now)
+            return 0
+        t = history[-1] + interval
+        history.append(t)
+        return (t - now) / 1_000_000_000
+
+    return limit
+
+
 class DbObservable(DynObservable):
-    def __init__(self, req, events, data=None, interval=1):
+    def __init__(self, req, events, data=None, limit=None):
         super().__init__(req, events)
         self._data = data
-        self._interval = interval
+        self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stop = False
         self._poller = threading.Thread(target=self.poll)
         self._poller.start()
@@ -403,7 +422,7 @@ class DbObservable(DynObservable):
             store = self.events.api.store
             with contextlib.closing(store.connect(params='mode=ro')) as db, \
                     store.waker(self.lock, self.wake_keys(db), db,
-                                self._interval) as waker:
+                                self._limit) as waker:
                 while True:
                     queried = False
                     try:

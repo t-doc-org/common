@@ -435,16 +435,14 @@ class ConnectionPool:
 
 
 class Waker:
-    def __init__(self, cv, interval):
+    def __init__(self, cv, limit):
         self.cv = cv
-        self.interval = interval
+        self.limit = limit
         self._wake = False
 
     def wait(self, cond, until=None):
-        # TODO: Rate-limit but allow bursts
-        if self.interval is not None \
-                and self.cv.wait_for(cond, self.interval):
-            return
+        if self.limit is not None and (d := self.limit()) > 0:
+            if self.cv.wait_for(cond, d): return
         timeout = None
         if until is not None:
             timeout = until - time.time_ns()
@@ -518,8 +516,8 @@ class Store:
         return ConnectionPool(self, **kwargs)
 
     @contextlib.contextmanager
-    def waker(self, cv, keys, db, interval=None):
-        w = Waker(cv, interval)
+    def waker(self, cv, keys, db, limit=None):
+        w = Waker(cv, limit)
         with self.lock:
             seq_keys = []
             for key in keys:
@@ -569,7 +567,7 @@ class Store:
 
     def _update_waker_seqs(self, seqs, updated):
         for key, seq in seqs.items():
-            if (ws := self.wakers[key]) is not None \
+            if (ws := self.wakers.get(key)) is not None \
                     and Seqs.newer_than(seq, ws.seq):
                 ws.seq = seq
                 updated.update(ws)
