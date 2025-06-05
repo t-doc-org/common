@@ -548,20 +548,22 @@ class Store:
             self.lock.notify()
 
     def dispatch(self):
-        poll_interval = self.poll_interval * 1_000_000_000 \
-                        if self.poll_interval is not None else None
-        next_poll = time.monotonic_ns() + poll_interval
+        next_poll = None
+        if self.poll_interval is not None:
+            poll_interval = int(self.poll_interval * 1_000_000_000)
+            next_poll = time.monotonic_ns() + poll_interval
         db = self.dispatcher_db
         while True:
             with self.lock:
-                timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000
+                timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000 \
+                          if next_poll is not None else None
                 self.lock.wait_for(lambda: self._stop or self._wake,
                                    timeout=timeout)
                 if self._stop: break
                 wakers = set()
                 self._update_waker_seqs(self._wake, wakers)
                 self._wake.clear()
-                if time.monotonic_ns() >= next_poll:
+                if next_poll is not None and time.monotonic_ns() >= next_poll:
                     if self.wakers:
                         with db: seqs = db.notifications(list(self.wakers))
                         self._update_waker_seqs(seqs, wakers)
