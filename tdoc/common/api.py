@@ -182,6 +182,7 @@ class EventApi:
             'poll/votes': PollVotesObservable,
         }
         self.watchers = {}
+        self._stop_watchers = False
         self._last_watcher = None
 
     def __call__(self, env, respond):
@@ -207,6 +208,11 @@ class EventApi:
                 return obs
         raise Exception("Observable not found")
 
+    def stop_watchers(self):
+        with self.lock:
+            self._stop_watchers = True
+            for w in self.watchers.values(): w.stop()
+
     @property
     def last_watcher(self):
         with self.lock: return self._last_watcher
@@ -216,6 +222,8 @@ class EventApi:
         with Watcher() as watcher:
             sid = secrets.token_urlsafe(8)
             with self.lock:
+                if self._stop_watchers:
+                    raise wsgi.Error(HTTPStatus.REQUEST_TIMEOUT)
                 while sid in self.watchers:
                     sid = secrets.token_urlsafe(8)
                 watcher.sid = sid
@@ -271,9 +279,12 @@ class EventApi:
 
 class Watcher:
     def __init__(self):
-        self.queue = queue.SimpleQueue()
+        self.queue = queue.Queue()
         self.lock = threading.Lock()
         self.watches = {}
+
+    def stop(self):
+        self.queue.shutdown(True)
 
     def send(self, wid, msg):
         self.queue.put((wid, msg))
@@ -287,6 +298,8 @@ class Watcher:
                 yield b'}\n'
             except queue.Empty:
                 yield b'\n'
+            except queue.Shutdown:
+                return
 
     def __enter__(self): return self
 
