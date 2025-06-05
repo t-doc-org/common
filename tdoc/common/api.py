@@ -371,19 +371,19 @@ class ValueObservable(Observable):
 
 
 class DynObservable(Observable):
-    def __init__(self, req, events):
+    def __init__(self, req, event):
         super().__init__(req)
-        self.events = events
+        self.event = event
 
     def unwatch(self, watcher, wid):
         super().unwatch(watcher, wid)
         if self.stopping: self.remove()
 
     def remove(self):
-        self.events.remove_observable(self)
+        self.event.remove_observable(self)
 
     def print_exception(self, e=None):
-        self.events.api.print_exception(e)
+        self.event.api.print_exception(e)
 
 
 def limit_interval(interval, burst=1):
@@ -405,8 +405,8 @@ def limit_interval(interval, burst=1):
 
 
 class DbObservable(DynObservable):
-    def __init__(self, req, events, data=None, limit=None):
-        super().__init__(req, events)
+    def __init__(self, req, event, data=None, limit=None):
+        super().__init__(req, event)
         self._data = data
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stop = False
@@ -431,7 +431,7 @@ class DbObservable(DynObservable):
 
     def poll(self):
         try:
-            store = self.events.api.store
+            store = self.event.api.store
             with contextlib.closing(store.connect(params='mode=ro')) as db, \
                     store.waker(self.lock, self.wake_keys(db), db,
                                 self._limit) as waker:
@@ -458,10 +458,10 @@ class DbObservable(DynObservable):
 
 
 class SolutionsObservable(DbObservable):
-    def __init__(self, req, events, env):
+    def __init__(self, req, event, env):
         self._origin = wsgi.origin(env)
         self._page = arg(req, 'page')
-        super().__init__(req, events)
+        super().__init__(req, event)
 
     def wake_keys(self, db):
         return [db.solutions.show_key(self._origin, self._page)]
@@ -471,10 +471,10 @@ class SolutionsObservable(DbObservable):
 
 
 class PollObservable(DbObservable):
-    def __init__(self, req, events, env):
+    def __init__(self, req, event, env):
         self._origin = wsgi.origin(env)
         self._id = arg(req, 'id')
-        super().__init__(req, events)
+        super().__init__(req, event)
 
     def wake_keys(self, db):
         return [db.polls.poll_key(self._origin, self._id)]
@@ -487,11 +487,11 @@ class PollObservable(DbObservable):
 
 
 class PollVotesObservable(DbObservable):
-    def __init__(self, req, events, env):
+    def __init__(self, req, event, env):
         self._origin = wsgi.origin(env)
         self._voter, self._ids = args(req, 'voter', 'ids')
         self._ids.sort()
-        super().__init__(req, events)
+        super().__init__(req, event)
 
     def wake_keys(self, db):
         return [db.polls.voter_key(self._origin, poll, self._voter)
