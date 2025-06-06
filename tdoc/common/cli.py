@@ -605,7 +605,7 @@ class Application:
         self.opened = False
         self.build_mtime = None
         self.build_obs = api.ValueObservable('build', self.build_mtime)
-        self.api.event.add_observable(self.build_obs)
+        self.api.events.add_observable(self.build_obs)
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
 
@@ -631,7 +631,7 @@ class Application:
                 if prev != 0: self.lock.wait_for(lambda: self.stop, timeout=0.1)
                 if self.stop: break
             now = time.time_ns()
-            if (idle > 0 and (lw := self.api.event.last_watcher) is not None
+            if (idle > 0 and (lw := self.api.events.last_watcher) is not None
                     and now > lw + idle):
                 self.server.shutdown()
                 break

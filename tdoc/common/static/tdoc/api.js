@@ -173,7 +173,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await fetchJson(`${url}/event/sub`, {
+            const resp = await fetchJson(`${url}/events/sub`, {
                 headers: bearerAuthorization(await user.token()),
                 body: req,
             });
@@ -214,7 +214,7 @@ class EventsApi {
         this.token = await user.token();
         this.abort = new AbortController();
         try {
-            const resp = await fetch(`${url}/event/watch`, {
+            const resp = await fetch(`${url}/events/watch`, {
                 method: 'POST', cache: 'no-cache', referrer: '',
                 headers: {
                     'Content-Type': 'application/json',
