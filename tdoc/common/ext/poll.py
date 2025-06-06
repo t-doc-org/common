@@ -42,6 +42,8 @@ class Poll(docutils.SphinxDirective):
     @report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
+        if any(True for c in children for n in c.findall(poll)):
+            raise Exception("{poll}: Must not contain {poll}")
         if not children or not isinstance(children[-1], nodes.bullet_list):
             raise Exception("{poll}: Must end with a bullet list")
         ans = answers('', *(answer('', *a) for a in children[-1]))
