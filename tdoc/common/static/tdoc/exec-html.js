@@ -62,4 +62,4 @@ class HtmlExecutor extends Executor {
     async stop(run_id) {}
 }
 
-Executor.apply(HtmlExecutor);
+Executor.apply(HtmlExecutor);  // Background

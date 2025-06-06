@@ -135,10 +135,10 @@ class Poll {
     }
 }
 
-await domLoaded;
 const polls = [];
-for (const el of qsa(document, '.tdoc-poll')) polls.push(new Poll(el));
-if (polls.length > 0) {
+domLoaded.then(() => {
+    for (const el of qsa(document, '.tdoc-poll')) polls.push(new Poll(el));
+    if (polls.length === 0) return;
     const watch = new api.Watch(
         {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
         data => {
@@ -154,5 +154,4 @@ if (polls.length > 0) {
             delete htmlData.tdocPollControl;
         }
     });
-}
-
+});

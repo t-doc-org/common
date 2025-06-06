@@ -1,7 +1,9 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {elmt, focusIfVisible, html, on, qs, qsa, text, typesetMath} from './core.js';
+import {
+    elmt, focusIfVisible, html, on, qs, qsa, text, typesetMath,
+} from './core.js';
 
 function find(node, next) {
     const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
