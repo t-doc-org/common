@@ -268,6 +268,7 @@ div.tdoc-quizz > .controls {
 }
 div.tdoc-quizz.good > .controls > button.tdoc-check {
     color: var(--pst-color-success);
+    border-color: var(--pst-color-success-bg);
     background-color: var(--pst-color-success-bg);
 }
 input.tdoc-quizz-field.right {
@@ -370,8 +371,10 @@ div.tdoc-jsquizz > .hint.hide {
 .tdoc-quizz-row td:last-child {
     width: 0;
 }
-.tdoc-quizz-row .tdoc-color-good {
+.tdoc-quizz-row button.tdoc-check:disabled {
     color: var(--pst-color-success);
+    border-color: var(--pst-color-success-bg);
+    background-color: var(--pst-color-success-bg);
 }
 .tdoc-quizz-row .tdoc-bg-bad {
     background-color: var(--pst-color-danger-bg);

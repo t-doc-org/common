@@ -103,14 +103,13 @@ export function genTable(node, addCells) {
 
     function addRow() {
         const row = elmt`<tr class="tdoc-quizz-row text-center"></tr>`;
-        const button = elmt`<button class="tdoc fa-check"></button>`;
+        const button = elmt`<button class="tdoc-check fa-check"></button>`;
         const {verify, focus} = addCells(table, row, button);
         if (!verify) return;
         row.appendChild(elmt`<td></td>`).appendChild(button);
         on(button).click(() => {
             if (!verify()) return;
-            button.replaceWith(
-                elmt`<span class="tdoc-color-good fa-check"></span>`);
+            enable(false, button);
             const focus = addRow();
             if (focus) focus.focus();
         });
