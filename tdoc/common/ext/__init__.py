@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import functools
 import json
 import pathlib
 
-from docutils import nodes
+from docutils import nodes, statemachine
+from myst_parser import mocking
 from sphinx import config, locale
 from sphinx.environment import collectors
 from sphinx.util import fileutil, logging
@@ -28,6 +30,20 @@ _license_urls = {
     'MIT': 'https://opensource.org/license/mit',
 }
 
+# BUG(myst_parser): MockState.parse_directive_block() [myst_parser] returns the
+# content as a StringList, whereas Body.parse_directive_block() [docutils]
+# returns a list. The StringList is constructed with source=content.source,
+# which is a bound method and clearly wrong. Patch the method to unwrap the
+# list.
+def _parse_directive_block(self, *args, **kwargs):
+    arguments, options, content, content_offset = \
+        MockState_parse_directive_block(self, *args, **kwargs)
+    if isinstance(content, statemachine.StringList): content = content.data
+    return arguments, options, content, content_offset
+
+MockState_parse_directive_block = mocking.MockState.parse_directive_block
+mocking.MockState.parse_directive_block = _parse_directive_block
+
 
 def names_option(arg):
     if arg is None: raise ValueError('no argument provided')
@@ -35,6 +51,7 @@ def names_option(arg):
 
 
 def report_exceptions(fn):
+    @functools.wraps(fn)
     def wrapper(self, /, *args, **kwargs):
         try:
             return fn(self, *args, **kwargs)
