@@ -42,7 +42,94 @@ This solution is expanded by default.
 This solution has a different color, and no drop-down.
 ```
 
+## IFrames
+
+The [YouTube](https://youtube.com/) video below is embedded with the
+{rst:dir}`youtube` directive.
+
+```{youtube} aVwxzDHniEw
+```
+
+The presentation below is embedded with the {rst:dir}`iframe` directive.
+
+```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
+```
+
+## Numbering
+
+This sections uses the {rst:role}`num` role to create numbered sub-sections that
+reference each other with the {rst:role}`numref` role, and separately numbered
+unreferenced quotes.
+
+### Exercise {num}`ex:first`
+
+Read these quotes, then move on to exercises {numref}`ex:second` &
+{numref}`ex:third`.
+
+{attribution="Terry Pratchett, Mort"}
+> **Quote {num}`quote`:** "It would seem that you have no useful skill or talent
+> whatsoever," he said. "Have you thought of going into teaching?""
+
+{attribution="Terry Pratchett, Hogfather"}
+> **Quote {num}`quote`:** Real stupidity beats artificial intelligence every
+> time.
+
+### Exercise {num}`ex:second`
+
+You've already read the quotes from {numref}`exercise %s<ex:first>`. Read this
+one as well, then go to {numref}`exercise %s<ex:third>`.
+
+{attribution="Douglas Adams, The Hitchhiker’s Guide to the Galaxy"}
+> **Quote {num}`quote`:** For a moment, nothing happened. Then, after a second
+> or so, nothing continued to happen.
+
+### Exercise {num}`ex:third`
+
+This is the last quote.
+
+{attribution="Iain M. Banks, Consider Phlebas"}
+> **Quote {num}`quote`:** I had nightmares I thought were really horrible until
+> I woke up and remembered what reality was at the moment.
+
 ## Quizzes
+
+This section demonstrates interactive quizzes with the {rst:dir}`quizz`
+directive and the {rst:role}`quizz-input` role.
+
+### Table
+
+```{role} field(quizz-input)
+:style: width: 3rem; text-align: center;
+```
+
+```{quizz}
+| $a$ | $b$ | $a + b$ |
+| :-: | :-: | :-----: |
+| 1 | 2 | {field}`3` |
+| 7 | 11 | {field}`18` |
+| 15 | 27 | {field}`42` |
+```
+
+### List
+
+```{role} field(quizz-input)
+:right: width: 35%
+```
+```{role} field100(quizz-input)
+:style: width: 100%;
+```
+
+```{quizz}
+1.  {field}`42`Calculate $6 \cdot 7 $.
+2.  {field}`42`Convert $00101010_2$ to decimal.
+3.  {field}`42`What is the answer to the ultimate question of life, the
+    universe, and everything? Explain your reasoning in full detail, provide
+    references, and indicate plausible alternatives.
+4.  This input field uses the whole line. Guess what the answer is.
+    {field100}`42`
+```
+
+### JavaScript-based
 
 The helpers in the
 [`quizz.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quizz.js)
@@ -125,55 +212,6 @@ They also enable creating randomized drill exercises.
 | :---: | :--------: | :------: |
 
 <script>tdoc.tableQuizz(99);</script>
-
-## IFrames
-
-The [YouTube](https://youtube.com/) video below is embedded with the
-{rst:dir}`youtube` directive.
-
-```{youtube} aVwxzDHniEw
-```
-
-The presentation below is embedded with the {rst:dir}`iframe` directive.
-
-```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
-```
-
-## Numbering
-
-This sections uses the {rst:role}`num` role to create numbered sub-sections that
-reference each other with the {rst:role}`numref` role, and separately numbered
-unreferenced quotes.
-
-### Exercise {num}`ex:first`
-
-Read these quotes, then move on to exercises {numref}`ex:second` &
-{numref}`ex:third`.
-
-{attribution="Terry Pratchett, Mort"}
-> **Quote {num}`quote`:** "It would seem that you have no useful skill or talent
-> whatsoever," he said. "Have you thought of going into teaching?""
-
-{attribution="Terry Pratchett, Hogfather"}
-> **Quote {num}`quote`:** Real stupidity beats artificial intelligence every
-> time.
-
-### Exercise {num}`ex:second`
-
-You've already read the quotes from {numref}`exercise %s<ex:first>`. Read this
-one as well, then go to {numref}`exercise %s<ex:third>`.
-
-{attribution="Douglas Adams, The Hitchhiker’s Guide to the Galaxy"}
-> **Quote {num}`quote`:** For a moment, nothing happened. Then, after a second
-> or so, nothing continued to happen.
-
-### Exercise {num}`ex:third`
-
-This is the last quote.
-
-{attribution="Iain M. Banks, Consider Phlebas"}
-> **Quote {num}`quote`:** I had nightmares I thought were really horrible until
-> I woke up and remembered what reality was at the moment.
 
 ## Polls
 

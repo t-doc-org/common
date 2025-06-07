@@ -64,10 +64,10 @@ class QuizzInput(Role):
     options = {
         'right': directives.unchanged,
         'style': directives.unchanged,
-        # TODO: Filter to apply to answer before comparing
-        # TODO: Solution separator
-        # TODO: JS function to apply to role content to compute answer
-        # TODO: JS function to check answer
+        # TODO: calc: JS function to apply to role content to compute answer
+        # TODO: check: JS function to check answer
+        # TODO: hint: JS function to provide a hint
+        # TODO: separator: Solution separator
     }
     content = True
 

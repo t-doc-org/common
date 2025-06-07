@@ -180,7 +180,7 @@ Control the restrictions applied to the content embedded in the `<iframe>`
 ([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
 ```
 ```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the `<iframe>`, e.g. `width: 80%`.
+CSS styles to apply to the `<iframe>`, e.g. `width: 80%;`.
 ```
 ```{rst:directive:option} title: text
 A concise description of the content of the `<iframe>`, typically used by
@@ -216,6 +216,65 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 ```
 ````
 
+## Quizz
+
+````{rst:directive} .. quizz::
+This directive adds an interactive quizz. It can contain arbitrary text and
+markup, as well as {rst:role}`quizz-input` roles to indicate where input fields
+should be placed and what the correct answers are. The toolbar on the right
+allows controlling the quizz.
+
+- <button class="tdoc fa-check"></button>: Check the provided answers. When all
+  the answer fileds are correct, the quizz is locked.
+- <button class="tdoc fa-rotate-left"></button>: Clear the answer fields and
+  unlock the quizz.
+
+{.rubric}
+Options
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the outer container.
+```
+````
+
+`````{rst:role} quizz-input
+This role defines an `<input>` field and its correct answer(s). The role
+normally isn't used as-is; instead, new roles are derived from it with
+[`role`](https://docutils.sourceforge.io/docs/ref/rst/directives.html#role)
+directives, which allows setting the options below and controlling the
+appearance and behavior of the fields.
+
+For example, the following block defines a `field` role that places quizz inputs
+having a width of `3rem` and aligning their text centered. The `field` role can
+then be used in {rst:dir}`quizz` directives that follow its definition.
+
+````{code-block} md
+```{role} field(quizz-input)
+:style: width: 3rem; text-align: center;
+```
+
+```{quizz}
+| $a$ | $b$ | $a + b$    |
+| :-: | :-: | :--------: |
+|  1  |  2  | {field}`3` |
+```
+````
+
+Note that such custom roles only apply to the document in which they are
+defined, and can be redefined multiple times in the same document.
+
+{.rubric}
+Options
+```{rst:directive:option} right: [property: value; ...]
+Applies a `float: right;` style to the `<input>`, so that it moves to the right
+of the text. Additional styles can optionally be provided as the value of the
+option, e.g. `width: 35%;`.
+```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the `<input>`, e.g. `width: 35%;`.
+```
+`````
+
 ## Poll
 
 ````{rst:directive} .. poll:: id
@@ -226,8 +285,8 @@ becomes an answer. Both the question and the answers can contain arbitrary
 markup. Answers can optionally be marked as solutions by prefixing them with `:`
 (the prefix is removed).
 
-Polls can be controlled by members of the group `polls:control`, using the icons
-in the toolbar.
+Polls can be controlled by members of the group `polls:control`, using the
+buttons in the toolbar.
 
 - <button class="tdoc fa-play"></button> /
   <button class="tdoc fa-stop"></button>: Open or close the poll. Closed polls
