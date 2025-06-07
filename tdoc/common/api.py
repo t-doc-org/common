@@ -44,6 +44,7 @@ class Api:
         self.endpoints = {
             'event': self.events,  # TODO: Remove after 0.48 release
             'events': self.events,
+            'health': self.handle_health,
             'log': self.handle_log,
             'poll': self.handle_poll,
             'solutions': self.handle_solutions,
@@ -100,6 +101,11 @@ class Api:
                                               exc_info=sys.exc_info()))
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
+
+    def handle_health(self, env, respond):
+        wsgi.method(env, HTTPMethod.GET)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        return wsgi.respond_json(respond, {})
 
     def handle_log(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
