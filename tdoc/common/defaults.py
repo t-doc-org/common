@@ -31,6 +31,7 @@ extensions = [
     'tdoc.common.ext.metadata',
     'tdoc.common.ext.num',
     'tdoc.common.ext.poll',
+    'tdoc.common.ext.quizz',
     'tdoc.common.ext.solution',
 ]
 
@@ -75,6 +76,9 @@ html_theme = 't-doc'
 mathjax_path = 'mathjax/tex-chtml-full.js'
 mathjax3_config = {
     'loader': {'load': ['input/mml']},
+    'options': {
+        'menuOptions': {'settings': {'inTabOrder': False}},
+    },
 }
 
 # LaTeX rendering options.

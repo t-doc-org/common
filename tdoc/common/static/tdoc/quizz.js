@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    elmt, focusIfVisible, html, on, qs, qsa, text, typesetMath,
+    dec, domLoaded, elmt, enable, focusIfVisible, fromBase64, html, on, qs, qsa,
+    text, typesetMath,
 } from './core.js';
 
 function find(node, next) {
     const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
                         Node.DOCUMENT_POSITION_PRECEDING;
     let found;
-    for (const el of qsa(node.closest('ol, ul'), '.tdoc-quizz')) {
+    for (const el of qsa(node.closest('ol, ul'), '.tdoc-jsquizz')) {
         if (node.compareDocumentPosition(el) & mask) {
             if (next) return el;
             found = el;
@@ -24,7 +25,7 @@ function find(node, next) {
 // the quizz question container element.
 export function question(node, opts, check) {
     const div = elmt`\
-<div class="tdoc-quizz">\
+<div class="tdoc-jsquizz">\
 <div class="prompt"></div>\
 <div class="input">\
 <input type="text" autocapitalize="off" autocomplete="off" autocorrect="off"\
@@ -119,3 +120,70 @@ export function genTable(node, addCells) {
 
     addRow();
 }
+
+function setup(quizz) {
+    const fields = qsa(quizz, '.tdoc-quizz-field');
+    const check = qs(quizz, 'button.tdoc-check');
+    for (const field of fields) {
+        focusIfVisible(field);
+        on(field).keydown(e => {
+            if (e.altKey || e.ctrlKey || e.metaKey) return;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                (nextField(fields, field) || check).focus()
+            } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+                e.preventDefault();
+                prevField(fields, field)?.focus?.()
+            } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+                e.preventDefault();
+                nextField(fields, field)?.focus?.()
+            }
+        });
+    }
+    on(check).click(async () => {
+        let res = true;
+        for (const field of fields) {
+            const ok = await checkAnswer(quizz, field);
+            res = res & ok;
+            field.classList.toggle('bad', !ok);
+        }
+        quizz.classList.toggle('good', res);
+        if (res) enable(false, check, ...fields);
+    });
+    on(qs(quizz, 'button.tdoc-reset')).click(() => {
+        quizz.classList.toggle('good', false);
+        enable(true, check, ...fields);
+        for (const field of fields) field.value = '';
+         fields[0].focus();
+    });
+}
+
+function prevField(fields, field) {
+    let prev;
+    for (const f of fields) {
+        if (f === field) return prev;
+        prev = f;
+    }
+}
+
+function nextField(fields, field) {
+    let found = false;
+    for (const f of fields) {
+        if (found) return f;
+        if (f === field) found = true;
+    }
+}
+
+async function checkAnswer(quizz, field) {
+    const value = field.value.trim();
+    const ans = dec.decode(await fromBase64(field.dataset.text));
+    for (const a of ans.split(',')) {
+        if (value === a.trim()) return true;
+    }
+    return false;
+}
+
+// Set up quizzes.
+domLoaded.then(() => {
+    for (const quizz of qsa(document, '.tdoc-quizz')) setup(quizz);
+});

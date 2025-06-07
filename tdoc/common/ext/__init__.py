@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import base64
 import copy
 import functools
 import json
@@ -10,7 +11,7 @@ from docutils import nodes, statemachine
 from myst_parser import mocking
 from sphinx import config, locale
 from sphinx.environment import collectors
-from sphinx.util import fileutil, logging
+from sphinx.util import docutils, fileutil, logging
 
 from .. import __version__
 
@@ -43,6 +44,10 @@ def _parse_directive_block(self, *args, **kwargs):
 
 MockState_parse_directive_block = mocking.MockState.parse_directive_block
 mocking.MockState.parse_directive_block = _parse_directive_block
+
+
+def to_base64(s):
+    return base64.b64encode(s.encode('utf-8')).decode('utf-8').rstrip('=')
 
 
 def names_option(arg):
@@ -167,6 +172,12 @@ def write_static_files(app, builder):
     # of the service worker to _static.
     fileutil.copy_asset_file(_base / 'scripts' / 'tdoc-worker.js',
                              builder.outdir, force=True)
+
+
+class Role(docutils.SphinxRole):
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls)
+        return self(*args, **kwargs)
 
 
 class UniqueChecker(collectors.EnvironmentCollector):
