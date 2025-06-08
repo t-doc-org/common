@@ -17,13 +17,32 @@
 
     const script = document.currentScript;
     const staticUrl = new URL('..', script.src).toString();
+    const importMap = {};
 
-    // Import a module specified relative to the _static directory.
-    tdoc.import = module => import(new URL(module, staticUrl));
+    // Import a module specified relative to the _static directory. Check if the
+    // module was already imported via a <script type="module"> tag with a
+    // cache-busting src, and use that to avoid importing the module multiple
+    // times.
+    tdoc.import = module => {
+        let url = new URL(module, staticUrl).toString();
+        const m = importMap[url];
+        if (m !== undefined) {
+            url = m;
+        } else {
+            importMap[url] = url;
+            for (const el of document.querySelectorAll('script[type=module]')) {
+                if (el.src.startsWith(url + '?')) {
+                    url = importMap[url] = el.src;
+                    break;
+                }
+            }
+        }
+        return import(url);
+    };
 
     // Import multiple modules specified relative to the _static directory.
     tdoc.imports = (...modules) => Promise.all(
-        modules.map(m => import(new URL(m, staticUrl))));
+        modules.map(m => tdoc.import(m)));
 
     // Return a function that waits for a set of promises before invoking a
     // function. The current script is passed as the first argument.

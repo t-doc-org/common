@@ -143,8 +143,9 @@ function setup(quizz) {
         let res = true;
         for (const field of fields) {
             const ok = await checkAnswer(quizz, field);
-            res = res & ok;
-            field.classList.toggle('bad', !ok);
+            res = res && ok === true;
+            field.classList.toggle('bad', ok !== true);
+            field.classList.toggle('invalid', ok === undefined);
         }
         quizz.classList.toggle('good', res);
         if (res) enable(false, check, ...fields);
@@ -173,13 +174,44 @@ function nextField(fields, field) {
     }
 }
 
+export function apply(value, fn) {
+    if (value instanceof Array) return value.map(v => apply(v, fn));
+    return fn(value);
+}
+
+// TODO: Add optional check arguments, e.g. split(,)
+
+export const checks = {
+    default(field, ...args) {
+        return checks.equal(field, ...checks.trim(field, ...args));
+    },
+    split(field, answer, solution) { return [answer, solution.split(',')]; },
+    trim(field, ...args) { return apply(args, v => v.trim()); },
+    lowercase(field, ...args) { return apply(args, v => v.toLowerCase()); },
+    uppercase(field, ...args) { return apply(args, v => v.toUpperCase()); },
+    equal(field, answer, solution) {
+        if (solution instanceof Array) return solution.includes(answer);
+        return answer === solution;
+    },
+    json(field, answer, solution) { return [answer, JSON.parse(solution)]; },
+    map(field, answer, solution) {
+        return solution[answer] ?? solution[''] ?? false;
+    },
+};
+
+function checkFns(field) {
+    return (field.dataset.check || 'default').trim()
+        .split(/\s+/).filter(c => c).map(c => checks[c]);
+}
+
 async function checkAnswer(quizz, field) {
-    const value = field.value.trim();
-    const ans = dec.decode(await fromBase64(field.dataset.text));
-    for (const a of ans.split(',')) {
-        if (value === a.trim()) return true;
+    const fns = checkFns(field);
+    let args = [field.value, dec.decode(await fromBase64(field.dataset.text))];
+    for (const fn of fns) {
+        if (!fn) return;
+        args = fn(field, ...args);
     }
-    return false;
+    return args;
 }
 
 // Set up quizzes.

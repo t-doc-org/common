@@ -98,16 +98,27 @@ directive and the {rst:role}`quizz-input` role.
 
 ### Table
 
+<script type="module">
+const core = await tdoc.import('tdoc/core.js');
+const quizz = await tdoc.import('tdoc/quizz.js');
+
+quizz.checks.sum = (field, answer) => {
+    const tds = core.qsa(field.closest('tr'), 'td');
+    return +answer === +tds[0].textContent + (+tds[1].textContent);
+};
+</script>
+
 ```{role} field(quizz-input)
 :style: width: 3rem; text-align: center;
+:check: sum
 ```
 
 ```{quizz}
-| $a$ | $b$ | $a + b$ |
-| :-: | :-: | :-----: |
-| 1 | 2 | {field}`3` |
-| 7 | 11 | {field}`18` |
-| 15 | 27 | {field}`42` |
+| $a$ | $b$ | $a + b$    |
+| :-: | :-: | :--------: |
+|   1 |   2 | {field}`?` |
+|   7 |  11 | {field}`?` |
+|  15 |  27 | {field}`?` |
 ```
 
 ### List
@@ -116,7 +127,7 @@ directive and the {rst:role}`quizz-input` role.
 :right: width: 35%
 ```
 ```{role} field100(quizz-input)
-:style: width: 100%;
+:style: width: 100%; margin-top: 0.3rem;
 ```
 
 ```{quizz}
@@ -180,7 +191,7 @@ The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
                 sel.classList.toggle('tdoc-bg-bad', !res);
                 const ok = input.value.trim() === (-value).toString();
                 input.classList.toggle('tdoc-bg-bad', !ok);
-                res = res & ok;
+                res = res && ok;
                 if (res) core.enable(false, sel, input);
                 return res;
             }
@@ -206,7 +217,7 @@ The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
 3.  The input field of quizz questions without a prompt uses the whole line.
     <script>tdoc.question(undefined, "cool");</script>
 
-They also enable creating randomized drill exercises.
+### Randomized drill
 
 | Value | Odd / even | Opposite |
 | :---: | :--------: | :------: |

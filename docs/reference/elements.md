@@ -238,8 +238,9 @@ A space-separated list of CSS classes to add to the outer container.
 ````
 
 `````{rst:role} quizz-input
-This role defines an `<input>` field and its correct answer(s). The role
-normally isn't used as-is; instead, new roles are derived from it with
+This role defines an `<input>` field. The text of the role is the solution for
+this field. The role normally isn't used as-is; instead, new roles are derived
+from it with
 [`role`](https://docutils.sourceforge.io/docs/ref/rst/directives.html#role)
 directives, which allows setting the options below and controlling the
 appearance and behavior of the fields.
@@ -265,6 +266,37 @@ defined, and can be redefined multiple times in the same document.
 
 {.rubric}
 Options
+````{rst:directive:option} check: name [name ...]
+:type: IDs
+A list of checks to apply to answers and / or solutions to check if they match.
+The user's answer and the solution are passed to each check in turn, and it
+returns a potentially modified answer and solution. The final check should
+return a boolean indicating if the answer and solution match. The following
+checks are available:
+
+- `default`: The default check. Equivalent to `trim equal`.
+- `split`: Split the solution at commas (`,`). This changes the solution to an
+  `Array` of strings.
+- `trim`: Trim whitespace at the beginning and end of the answer and solution.
+- `lowercase`: Convert the answer and solution to lowercase.
+- `uppercase`: Convert the answer and solution to uppercase.
+- `equal`: Return `true` iff the answer and solution compare equal, or if the
+  solution is an `Array` and includes the answer.
+
+Custom checks can be implemented by importing the `tdoc/quizz.js` module and
+extending the `checks` object. Check functions take as arguments the field being
+checked (an `HTMLElement`), the user's answer and the solution, and return the
+modified answer and solution or a boolean.
+
+```{code-block} html
+<script type="module">
+const quizz = await tdoc.import('tdoc/quizz.js');
+quizz.checks.nowhitespace = (field, answer, solution) => {
+    return [answer.replace(/\s+/g, ''), solution];
+};
+</script>
+```
+````
 ```{rst:directive:option} right: [property: value; ...]
 Applies a `float: right;` style to the `<input>`, so that it moves to the right
 of the text. Additional styles can optionally be provided as the value of the

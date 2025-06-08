@@ -9,6 +9,11 @@ from . import __version__, report_exceptions, Role, to_base64
 
 _log = logging.getLogger(__name__)
 
+# TODO: Allow including a hint in the role text; display for first bad answer
+# TODO: Hint could be a separate role, following the {quizz-input}
+# TODO: Display invalid check as a red hint
+# TODO: Add {quizz-select}
+# TODO: Allow creating questions randomly
 
 def setup(app):
     app.add_directive('quizz', Quizz)
@@ -62,12 +67,9 @@ def depart_quizz(self, node):
 
 class QuizzInput(Role):
     options = {
+        'check': directives.unchanged,
         'right': directives.unchanged,
         'style': directives.unchanged,
-        # TODO: calc: JS function to apply to role content to compute answer
-        # TODO: check: JS function to check answer
-        # TODO: hint: JS function to provide a hint
-        # TODO: separator: Solution separator
     }
     content = True
 
@@ -76,6 +78,7 @@ class QuizzInput(Role):
         self.set_source_info(node)
         node['text'] = self.text
         node['classes'] = self.options['classes'][:]
+        if v := self.options.get('check'): node['check'] = v
         style = []
         if (v := self.options.get('right')) is not None:
             node['classes'].append('right')
@@ -95,6 +98,7 @@ class quizz_input(nodes.Inline, nodes.Element): pass
 def visit_quizz_input(self, node):
     kwargs = {'data-text': to_base64(node['text'])}
     if v := node.get('style'): kwargs['style'] = v
+    if v := node.get('check'): kwargs['data-check'] = v
     self.body.append(self.starttag(
         node, 'input', suffix='', type='text', classes=['tdoc-quizz-field'],
         autocapitalize="off", autocomplete="off", autocorrect="off",

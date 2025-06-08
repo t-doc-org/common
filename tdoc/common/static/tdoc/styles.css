@@ -1,6 +1,8 @@
 /* Copyright 2024 Remy Blank <remy@c-space.org> */
 /* SPDX-License-Identifier: MIT */
 
+/* TODO: Fix .admonition :last-child { margin-bottom: 0 } */
+
 .hidden:not(#¶) {
     display: none;
 }
@@ -268,7 +270,7 @@ div.tdoc-quizz > .controls {
 }
 div.tdoc-quizz.good > .controls > button.tdoc-check {
     color: var(--pst-color-success);
-    border-color: var(--pst-color-success-bg);
+    border: none;
     background-color: var(--pst-color-success-bg);
 }
 input.tdoc-quizz-field.right {
@@ -285,6 +287,9 @@ p:has(input.tdoc-quizz-field.right)::after {
 }
 input.tdoc-quizz-field.bad {
     background-color: var(--pst-color-danger-bg);
+}
+input.tdoc-quizz-field.invalid {
+    background-color: var(--pst-color-attention);
 }
 
 /* JavaScript-based quizz questions */
@@ -373,7 +378,7 @@ div.tdoc-jsquizz > .hint.hide {
 }
 .tdoc-quizz-row button.tdoc-check:disabled {
     color: var(--pst-color-success);
-    border-color: var(--pst-color-success-bg);
+    border: none;
     background-color: var(--pst-color-success-bg);
 }
 .tdoc-quizz-row .tdoc-bg-bad {
