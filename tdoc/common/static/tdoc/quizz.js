@@ -142,10 +142,10 @@ function setup(quizz) {
     on(check).click(async () => {
         let res = true;
         for (const field of fields) {
-            const ok = await checkAnswer(quizz, field);
-            res = res && ok === true;
-            field.classList.toggle('bad', ok !== true);
-            field.classList.toggle('invalid', ok === undefined);
+            const args = await checkAnswer(quizz, field);
+            res = res && args.ok;
+            field.classList.toggle('bad', !args.ok);
+            field.classList.toggle('invalid', !!args.invalid);
         }
         quizz.classList.toggle('good', res);
         if (res) enable(false, check, ...fields);
@@ -174,43 +174,78 @@ function nextField(fields, field) {
     }
 }
 
-export function apply(value, fn) {
-    if (value instanceof Array) return value.map(v => apply(v, fn));
-    return fn(value);
-}
-
 // TODO: Add optional check arguments, e.g. split(,)
 
 export const checks = {
-    default(field, ...args) {
-        return checks.equal(field, ...checks.trim(field, ...args));
+    default(args) {
+        checks.trim(args);
+        checks.equal(args);
     },
-    split(field, answer, solution) { return [answer, solution.split(',')]; },
-    trim(field, ...args) { return apply(args, v => v.trim()); },
-    lowercase(field, ...args) { return apply(args, v => v.toLowerCase()); },
-    uppercase(field, ...args) { return apply(args, v => v.toUpperCase()); },
-    equal(field, answer, solution) {
-        if (solution instanceof Array) return solution.includes(answer);
-        return answer === solution;
+    split(args) {
+        args.solution = args.solution.split(',');
     },
-    json(field, answer, solution) { return [answer, JSON.parse(solution)]; },
-    map(field, answer, solution) {
-        return solution[answer] ?? solution[''] ?? false;
+    trim(args) {
+        args.applyAnsSol(v => v.trim());
     },
+    lowercase(args) {
+        args.applyAnsSol(v => v.toLowerCase());
+    },
+    uppercase(args) {
+        args.applyAnsSol(v => v.toUpperCase());
+    },
+    equal(args) {
+        args.ok = args.solution instanceof Array ?
+                  args.solution.includes(answer) :
+                  args.answer === args.solution;
+    },
+    json(args) {
+        args.solution = JSON.parse(solution);
+    },
+    map(args) {
+        const s = args.solution[answer] ?? args.solution[''] ?? false;
+        const ts = typeof s;
+        if (ts === 'boolean') {
+            args.ok = s;
+        } else if (ts === string) {
+            args.hint = s;
+        }
+    },
+    indirect(args) {
+        args.apply(checkFns(args.solution));
+    }
 };
 
-function checkFns(field) {
-    return (field.dataset.check || 'default').trim()
-        .split(/\s+/).filter(c => c).map(c => checks[c]);
+function checkFns(spec) {
+    return spec.trim().split(/\s+/).filter(c => c).map(c => checks[c]);
 }
 
 async function checkAnswer(quizz, field) {
-    const fns = checkFns(field);
-    let args = [field.value, dec.decode(await fromBase64(field.dataset.text))];
-    for (const fn of fns) {
-        if (!fn) return;
-        args = fn(field, ...args);
-    }
+    const args = {
+        field,
+        answer: field.value,
+        solution: dec.decode(await fromBase64(field.dataset.text)),
+
+        apply(fns) {
+            for (const fn of fns) {
+                if (!fn) this.invalid = true;
+                if (this.invalid || this.ok !== undefined) break;
+                fn(this);
+            }
+        },
+
+        applyAnsSol(fn) {
+            for (const name of ['answer', 'solution']) {
+                const v = this[name];
+                if (v === undefined) continue;
+                if (v instanceof Array) {
+                    this[name] = v.map(v => fn(v));
+                } else {
+                    this[name] = fn(v);
+                }
+            }
+        }
+    };
+    args.apply(checkFns(field.dataset.check || 'default'));
     return args;
 }
 

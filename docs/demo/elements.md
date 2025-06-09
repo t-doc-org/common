@@ -102,15 +102,16 @@ directive and the {rst:role}`quizz-input` role.
 const core = await tdoc.import('tdoc/core.js');
 const quizz = await tdoc.import('tdoc/quizz.js');
 
-quizz.checks.sum = (field, answer) => {
-    const tds = core.qsa(field.closest('tr'), 'td');
-    return +answer === +tds[0].textContent + (+tds[1].textContent);
+quizz.checks.sum = (args) => {
+    const tds = core.qsa(args.field.closest('tr'), 'td');
+    const solution = +tds[0].textContent + (+tds[1].textContent)
+    args.ok = args.answer === solution.toString();
 };
 </script>
 
 ```{role} field(quizz-input)
 :style: width: 3rem; text-align: center;
-:check: sum
+:check: trim sum
 ```
 
 ```{quizz}
