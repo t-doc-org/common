@@ -226,9 +226,7 @@ indicate where input fields should be placed and what the solutions are. The
 toolbar on the right allows controlling the quizz.
 
 - <button class="tdoc fa-check"></button>: Check the provided answers. When all
-  the answer fileds are correct, the quizz is locked.
-- <button class="tdoc fa-rotate-left"></button>: Clear the answer fields and
-  unlock the quizz.
+  the answers are correct, the button turns green and the quizz is locked.
 
 {.rubric}
 Options

@@ -179,13 +179,6 @@ function setup(quizz) {
     }).blur(e => {
         if (e.relatedTarget !== hintField) hint.classList.remove('show');
     });
-
-    on(qs(quizz, 'button.tdoc-reset')).click(() => {
-        quizz.classList.toggle('good', false);
-        enable(true, check, ...fields);
-        for (const field of fields) field.value = '';
-         fields[0].focus();
-    });
 }
 
 function prevField(fields, field) {

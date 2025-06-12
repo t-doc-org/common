@@ -11,8 +11,8 @@ from . import __version__, report_exceptions, Role, to_base64
 
 _log = logging.getLogger(__name__)
 
-# TODO: Remove the "Reset answers" button?
 # TODO: Add optional check arguments, e.g. split(,)
+# TODO: Add support for table-based drill quizzes
 # TODO: Allow creating questions randomly
 
 def setup(app):
@@ -98,7 +98,6 @@ def depart_quizz(self, node):
     self.body.append("""\
 </div><div class="controls">\
 <button class="tdoc-check fa-check" title="Check answers"></button>\
-<button class="tdoc-reset fa-rotate-left" title="Reset answers"></button>\
 </div></div>\
 """)
 
