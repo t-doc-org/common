@@ -61,6 +61,9 @@ def report_exceptions(fn):
         try:
             return fn(self, *args, **kwargs)
         except Exception as e:
+            if isinstance(self, Role):
+                err = self.inliner.document.reporter.error(e, line=self.lineno)
+                return [], [err]
             return [self.state.document.reporter.error(e, line=self.lineno)]
     return wrapper
 

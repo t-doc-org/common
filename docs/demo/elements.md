@@ -94,7 +94,7 @@ This is the last quote.
 ## Quizzes
 
 This section demonstrates interactive quizzes with the {rst:dir}`quizz`
-directive and the {rst:role}`quizz-input` role.
+directive and the {rst:role}`quizz-input` and {rst:role}`quizz-select` roles.
 
 ### Table
 
@@ -126,7 +126,13 @@ quizz.checks.sum = (args) => {
 ### List
 
 ```{role} field(quizz-input)
-:right: width: 35%
+:right: width: 35%;
+```
+```{role} yes-no(quizz-select)
+:right:
+:options: |
+: Yes
+: No
 ```
 ```{role} field100(quizz-input)
 :style: width: 100%; margin-top: 0.3rem;
@@ -143,6 +149,8 @@ quizz.checks.sum = (args) => {
     references, and indicate plausible alternatives.
 4.  This input field uses the whole line. Guess what the answer is.
     {field100}`42`{quizz-hint}`You've seen this before.`
+5.  {yes-no}`Yes`{quizz-hint}`It's rather positive.`
+    Do you agree with this?
 ```
 
 ### JavaScript-based

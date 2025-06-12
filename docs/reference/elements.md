@@ -24,11 +24,11 @@ interpreted.
   ```
 
 `scripts`
-: A list of scripts to reference from the page header through `<script>`
+: A list of scripts to reference from the page header through `<script>`{l=html}
   elements. The list items can be either strings (the URL of the script) or
   maps. For maps, the `src` key specifies the URL of the script, and other keys
-  are added to the `<script>` element. Relative URLs are resolved relative to
-  the `_static` directory.
+  are added to the `<script>`{l=html} element. Relative URLs are resolved
+  relative to the `_static` directory.
 
   ```{code-block} yaml
   scripts:
@@ -39,11 +39,11 @@ interpreted.
   ```
 
 `styles`
-: A list of CSS stylesheets to reference from the page header through `<link>`
-  elements. The list items can be either strings (the URL of the stylesheet) or
-  maps. For maps, the `src` key specifies the URL of the stylesheet, and other
-  keys are added to the `<link>` element. Relative URLs are resolved relative to
-  the `_static` directory.
+: A list of CSS stylesheets to reference from the page header through
+  `<link>`{l=html} elements. The list items can be either strings (the URL of
+  the stylesheet) or maps. For maps, the `src` key specifies the URL of the
+  stylesheet, and other keys are added to the `<link>`{l=html} element. Relative
+  URLs are resolved relative to the `_static` directory.
 
   ```{code-block} yaml
   styles:
@@ -153,7 +153,7 @@ Options
 ````{rst:directive:option} allow: directive; [directive; ...]
 The
 [permission policy](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#allow)
-for the `<iframe>`
+for the `<iframe>`{l=html}
 ([supported directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy#directives)).
 The default is:
 
@@ -165,26 +165,27 @@ autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
 
 ```{rst:directive:option} class: name [name...]
 :type: IDs
-A space-separated list of CSS classes to add to the `<iframe>`.
+A space-separated list of CSS classes to add to the `<iframe>`{l=html}.
 ```
 ```{rst:directive:option} credentialful
-Indicate that the `<iframe>` should **not** be loaded in
+Indicate that the `<iframe>`{l=html} should **not** be loaded in
 [credentialless](https://developer.mozilla.org/en-US/docs/Web/Security/IFrame_credentialless) mode. The default is credentialless mode.
 ```
 ```{rst:directive:option} referrerpolicy: value
-Indicate the referrer to send when fetching the `<iframe>` source
+Indicate the referrer to send when fetching the `<iframe>`{l=html} source
 ([supported values](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#referrerpolicy)).
 ```
 ```{rst:directive:option} sandbox: token [token ...]
-Control the restrictions applied to the content embedded in the `<iframe>`
+Control the restrictions applied to the content embedded in the
+`<iframe>`{l=html}
 ([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
 ```
 ```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the `<iframe>`, e.g. `width: 80%;`.
+CSS styles to apply to the `<iframe>`{l=html}, e.g. `width: 80%;`.
 ```
 ```{rst:directive:option} title: text
-A concise description of the content of the `<iframe>`, typically used by
-assistive technologies.
+A concise description of the content of the `<iframe>`{l=html}, typically used
+by assistive technologies.
 ```
 `````
 
@@ -205,7 +206,7 @@ separated by `:`. Distinct identifiers are numbered separately, and the counters
 persist across pages. Instances with a target (e.g. `` {num}`ex:target` ``) can
 be referenced with the {rst:role}`numref` role (e.g. `` {numref}`ex:target` ``).
 
-```{code-block} md
+```{code-block}
 ## Exercise {num}`ex:intro`
 
 As an introduction to ...
@@ -220,9 +221,9 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 
 ````{rst:directive} .. quizz::
 This directive adds an interactive quizz. It can contain arbitrary text and
-markup, as well as {rst:role}`quizz-input` roles to indicate where input fields
-should be placed and what the correct answers are. The toolbar on the right
-allows controlling the quizz.
+markup, as well as {rst:role}`quizz-input` and {rst:role}`quizz-select` roles to
+indicate where input fields should be placed and what the solutions are. The
+toolbar on the right allows controlling the quizz.
 
 - <button class="tdoc fa-check"></button>: Check the provided answers. When all
   the answer fileds are correct, the quizz is locked.
@@ -235,29 +236,51 @@ Options
 :type: IDs
 A space-separated list of CSS classes to add to the outer container.
 ```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the outer container, e.g. `max-width: 30rem;`.
+```
 ````
 
+`````{rst:role} quizz-hint
+This role defines a hint to display when the answer for a field is wrong. It
+must be placed **immediately after** the field for which it provides a hint,
+with only whitespace between them.
+
+````{code-block}
+```{role} input(quizz-input)
+:right: width: 5rem;
+```
+
+```{quizz}
+1.  {input}`42`{quizz-hint}`It's a number between 40 and 50.`
+    What is the answer to the ultimate question of life, the universe, and
+    everything?
+```
+````
+`````
+
+### Field roles
+
 `````{rst:role} quizz-input
-This role defines an `<input>` field. The text of the role is the solution for
-this field. The role normally isn't used as-is; instead, new roles are derived
-from it with
+This role defines an `<input type="text">`{l=html} field. The text of the role
+is the solution for the field. The role normally isn't used as-is; instead,
+custom roles are derived from it with the
 [`role`](https://docutils.sourceforge.io/docs/ref/rst/directives.html#role)
-directives, which allows setting the options below and controlling the
-appearance and behavior of the fields.
+directive, which allows controlling the appearance and behavior of the fields.
 
-For example, the following block defines a `field` role that places quizz inputs
-having a width of `3rem` and aligning their text centered. The `field` role can
-then be used in {rst:dir}`quizz` directives that follow its definition.
+For example, the following block defines an `input` role that places quizz
+inputs having a width of `3rem` and aligning their text centered. The `input`
+role can then be used in {rst:dir}`quizz` directives that follow its definition.
 
-````{code-block} md
-```{role} field(quizz-input)
+````{code-block}
+```{role} input(quizz-input)
 :style: width: 3rem; text-align: center;
 ```
 
 ```{quizz}
 | $a$ | $b$ | $a + b$    |
 | :-: | :-: | :--------: |
-|  1  |  2  | {field}`3` |
+|  1  |  2  | {input}`3` |
 ```
 ````
 
@@ -266,46 +289,117 @@ defined, and can be redefined multiple times in the same document.
 
 {.rubric}
 Options
+
+See the [common field options](#quizz-common) below.
+`````
+
+`````{rst:role} quizz-select
+This role defines a `<select>`{l=html} field. The text of the role is the
+solution for the field. The role cannot be used as-is; custom roles must be
+derived from it with the
+[`role`](https://docutils.sourceforge.io/docs/ref/rst/directives.html#role)
+directive, to set the selectable options wih `:options:`, and optionally to
+control the appearance and behavior of the fields.
+
+For example, the following block defines a `select` role that provides two
+options `false` and `true`. The `select` role can then be used in
+{rst:dir}`quizz` directives that follow its definition.
+
+````{code-block}
+```{role} select(quizz-select)
+:options: |
+: false
+: true
+```
+
+```{quizz}
+| a    | b     | a or b         | a and b         |
+| :--: | :---: | :------------: | :-------------: |
+| true | false | {select}`true` | {select}`false` |
+```
+````
+
+Note that such custom roles only apply to the document in which they are
+defined, and can be redefined multiple times in the same document.
+
+{.rubric}
+Options
+
+See the [common field options](#quizz-common) below.
+
+````{rst:directive:option} options: option [option ...]
+:type: one line per option
+Defines the selectable options, one option per line. This requires using
+[multi-line options](https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html#parameterizing-directives-options), by starting the
+value with `|` to preserve newlines.
+````
+`````
+
+{#quizz-common}
+#### Common field options
+
 ````{rst:directive:option} check: name [name ...]
 :type: IDs
 A list of checks to apply to answers and / or solutions to check if they match.
-The user's answer and the solution are passed to each check in turn, and it
-returns a potentially modified answer and solution. The final check should
-return a boolean indicating if the answer and solution match. The following
-checks are available:
+The following built-in checks are available:
 
-- `default`: The default check. Equivalent to `trim equal`.
+- `default`: The default check. Equivalent to `trim`.
 - `split`: Split the solution at commas (`,`). This changes the solution to an
   `Array` of strings.
 - `trim`: Trim whitespace at the beginning and end of the answer and solution.
+- `remove-whitespace`: Remove all whitespace from the answer and solution.
 - `lowercase`: Convert the answer and solution to lowercase.
 - `uppercase`: Convert the answer and solution to uppercase.
-- `equal`: Return `true` iff the answer and solution compare equal, or if the
-  solution is an `Array` and includes the answer.
+- `json`: Parse the solution as JSON, and set the result as the new solution.
+
+- `equal`: Compare the answer to the solution. This check is evaluated after all
+  other checks if none of them has set the `ok` or `invalid` attributes, so it
+  usually doesn't need to be specified.
+  - If the solution is a string, `ok` is set to `true` iff the answer and
+    solution compare equal.
+  - If the solution is an `Array`, `ok` is set to `true` iff the array includes
+    the answer.
+  - If the solution is an object, the answer is looked up in the object, and
+    `ok` is set to `true` iff the result is `true`. Moreover, if the result is a
+    string, it is assigned to `hint`.
 
 Custom checks can be implemented by importing the `tdoc/quizz.js` module and
-extending the `checks` object. Check functions take as arguments the field being
-checked (an `HTMLElement`), the user's answer and the solution, and return the
-modified answer and solution or a boolean.
+extending the `checks` object. Check functions take a single argument, an object
+that they can inspect and modify as necessary. The following attributes are set
+and / or evaluated:
+
+- `answer` (string): Pre-populated with the answer provided by the user.
+- `solution` (string): Pre-populated with the solution for the field.
+- `field`: The DOM object for the field.
+- `ok` (boolean): Whether the answer matches the solution. Checking terminates
+  once this field is set.
+- `hint` (string): A hint to display to the user if the answer isn't correct.
+- `invalid` (string): An error message to display, indicating an error in the
+  check.
+
+The example below defines a check named `no-whitespace` that removes whitespace
+from the answer.
 
 ```{code-block} html
 <script type="module">
 const quizz = await tdoc.import('tdoc/quizz.js');
-quizz.checks.nowhitespace = (field, answer, solution) => {
-    return [answer.replace(/\s+/g, ''), solution];
+quizz.checks['no-whitespace'] = args => {
+    args.answer = args.answer.replace(/\s+/g, '');
 };
 </script>
 ```
 ````
 ```{rst:directive:option} right: [property: value; ...]
-Applies a `float: right;` style to the `<input>`, so that it moves to the right
-of the text. Additional styles can optionally be provided as the value of the
-option, e.g. `width: 35%;`.
+Moves the field to the right of the question text, by applying a `float: right;`
+style. When using this option, **the role must be placed before the question
+text**, otherwise it may be vertically misaligned.
+
+Additional styles can optionally be provided as the value of the option, e.g.
+`width: 10rem;`.
 ```
 ```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the `<input>`, e.g. `width: 35%;`.
+CSS styles to apply to the field, e.g. `width: 10rem;`.
 ```
-`````
 
 ## Poll
 

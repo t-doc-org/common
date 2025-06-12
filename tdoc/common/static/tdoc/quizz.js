@@ -139,19 +139,22 @@ function setup(quizz) {
     const check = qs(quizz, 'button.tdoc-check');
     for (const field of fields) {
         focusIfVisible(field);
-        on(field).keydown(e => {
-            if (e.altKey || e.ctrlKey || e.metaKey) return;
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                (nextField(fields, field) || check).focus()
-            } else if (e.key === 'ArrowUp' && !e.shiftKey) {
-                e.preventDefault();
-                prevField(fields, field)?.focus?.()
-            } else if (e.key === 'ArrowDown' && !e.shiftKey) {
-                e.preventDefault();
-                nextField(fields, field)?.focus?.()
-            }
-        }).blur(e => hint.classList.remove('show'));
+        on(field).blur(e => hint.classList.remove('show'));
+        if (field instanceof HTMLInputElement && field.type === 'text') {
+            on(field).keydown(e => {
+                if (e.altKey || e.ctrlKey || e.metaKey) return;
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    (nextField(fields, field) || check).focus()
+                } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+                    e.preventDefault();
+                    prevField(fields, field)?.focus?.()
+                } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+                    e.preventDefault();
+                    nextField(fields, field)?.focus?.()
+                }
+            })
+        }
     }
 
     on(check).click(async () => {
@@ -160,6 +163,7 @@ function setup(quizz) {
         for (const field of fields) {
             const args = await checkAnswer(quizz, field);
             const ok = !args.invalid && args.ok;
+            if (res && !ok) field.focus();
             res = res && ok;
             field.classList.toggle('bad', !ok);
             if (!hint.classList.contains('show')) {
@@ -200,33 +204,17 @@ function nextField(fields, field) {
     }
 }
 
-// TODO: Add optional check arguments, e.g. split(,)
-
 export const checks = {
-    default(args) {
-        checks.trim(args);
+    default(args) { checks.trim(args); },
+    split(args) { args.solution = args.solution.split(','); },
+    trim(args) { args.applyAS(v => v.trim()); },
+    'remove-whitespace': (args) => {
+        args.applyAS(v => v.replaceAll(/\s+/g, ''));
     },
-    split(args) {
-        args.solution = args.solution.split(',');
-    },
-    trim(args) {
-        args.applyAnsSol(v => v.trim());
-    },
-    'remove-spaces': (args) => {
-        args.applyAnsSol(v => v.replaceAll(' ', ''));
-    },
-    lowercase(args) {
-        args.applyAnsSol(v => v.toLowerCase());
-    },
-    uppercase(args) {
-        args.applyAnsSol(v => v.toUpperCase());
-    },
-    json(args) {
-        args.solution = JSON.parse(args.solution);
-    },
-    indirect(args) {
-        args.apply(checkFns(args.solution));
-    },
+    lowercase(args) { args.applyAS(v => v.toLowerCase()); },
+    uppercase(args) { args.applyAS(v => v.toUpperCase()); },
+    json(args) { args.solution = JSON.parse(args.solution); },
+    indirect(args) { args.apply(checkFns(args.solution)); },
     equal(args) {
         if (args.solution instanceof Array) {
             args.ok = args.solution.includes(args.answer);
@@ -259,7 +247,7 @@ async function checkAnswer(quizz, field) {
             }
         },
 
-        applyAnsSol(fn) {
+        applyAS(fn) {
             for (const name of ['answer', 'solution']) {
                 const v = this[name];
                 if (v === undefined) continue;
