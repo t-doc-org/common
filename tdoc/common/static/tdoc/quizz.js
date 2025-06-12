@@ -194,13 +194,15 @@ function nextField(fields, field) {
 export const checks = {
     default(args) {
         checks.trim(args);
-        checks.equal(args);
     },
     split(args) {
         args.solution = args.solution.split(',');
     },
     trim(args) {
         args.applyAnsSol(v => v.trim());
+    },
+    'remove-spaces': (args) => {
+        args.applyAnsSol(v => v.replaceAll(' ', ''));
     },
     lowercase(args) {
         args.applyAnsSol(v => v.toLowerCase());
@@ -209,21 +211,18 @@ export const checks = {
         args.applyAnsSol(v => v.toUpperCase());
     },
     equal(args) {
-        args.ok = args.solution instanceof Array ?
-                  args.solution.includes(answer) :
-                  args.answer === args.solution;
+        if (args.solution instanceof Array) {
+            args.ok = args.solution.includes(args.answer);
+        } else if (typeof args.solution === 'object') {
+            const res = args.solution[args.answer] ?? false;
+            args.ok = res === true;
+            if (typeof res === 'string') args.hint = res;
+        } else {
+            args.ok = args.answer === args.solution;
+        }
     },
     json(args) {
-        args.solution = JSON.parse(solution);
-    },
-    map(args) {
-        const s = args.solution[answer] ?? args.solution[0] ?? false;
-        const ts = typeof s;
-        if (ts === 'boolean') {
-            args.ok = s;
-        } else if (ts === 'string') {
-            args.hint = s;
-        }
+        args.solution = JSON.parse(args.solution);
     },
     indirect(args) {
         args.apply(checkFns(args.solution));
@@ -255,13 +254,14 @@ async function checkAnswer(quizz, field) {
                 if (v === undefined) continue;
                 if (v instanceof Array) {
                     this[name] = v.map(v => fn(v));
-                } else {
+                } else if (typeof v === 'string') {
                     this[name] = fn(v);
                 }
             }
         }
     };
     args.apply(checkFns(field.dataset.check || 'default'));
+    if (args.ok === undefined) args.apply([checks.equal]);
     return args;
 }
 

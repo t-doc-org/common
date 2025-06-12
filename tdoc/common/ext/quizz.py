@@ -11,6 +11,7 @@ _log = logging.getLogger(__name__)
 
 # TODO: Display invalid check as a red hint
 # TODO: Add {quizz-select}
+# TODO: Remove the "Reset answers" button?
 # TODO: Allow creating questions randomly
 
 def setup(app):
