@@ -126,7 +126,7 @@ quizz.checks.sum = (args) => {
 ### List
 
 ```{role} field(quizz-input)
-:right: width: 35%;
+:right: width: 8rem;
 ```
 ```{role} yes-no(quizz-select)
 :right:
@@ -147,10 +147,10 @@ quizz.checks.sum = (args) => {
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
+5.  {yes-no}`Yes`{quizz-hint}`Be positive.`
+    Are you sure about your previous answer?
 4.  This input field uses the whole line. Guess what the answer is.
     {field100}`42`{quizz-hint}`You've seen this before.`
-5.  {yes-no}`Yes`{quizz-hint}`It's rather positive.`
-    Do you agree with this?
 ```
 
 ### JavaScript-based
