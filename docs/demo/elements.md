@@ -106,6 +106,7 @@ quizz.checks.sum = (args) => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
+    args.hint = `The answer might be ${solution}.`;
 };
 </script>
 
@@ -132,13 +133,16 @@ quizz.checks.sum = (args) => {
 ```
 
 ```{quizz}
-1.  {field}`42`Calculate $6 \cdot 7 $.
-2.  {field}`42`Convert $00101010_2$ to decimal.
-3.  {field}`42`What is the answer to the ultimate question of life, the
+1.  {field}`42`{quizz-hint}`It's a positive integer.`
+    Calculate $6 \cdot 7 $.
+2.  {field}`42`{quizz-hint}`It's composed of digits from 0 to 9.`
+    Convert $00101010_2$ to decimal.
+3.  {field}`42`{quizz-hint}`It's a number.`
+    What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
 4.  This input field uses the whole line. Guess what the answer is.
-    {field100}`42`
+    {field100}`42`{quizz-hint}`You've seen this before.`
 ```
 
 ### JavaScript-based

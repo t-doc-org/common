@@ -261,6 +261,7 @@ div.tdoc-quizz {
     column-gap: 0.3rem;
 }
 div.tdoc-quizz > .content {
+    position: relative;
     flex-basis: 100%;
 }
 div.tdoc-quizz > .controls {
@@ -273,22 +274,43 @@ div.tdoc-quizz.good > .controls > button.tdoc-check {
     border: none;
     background-color: var(--pst-color-success-bg);
 }
-input.tdoc-quizz-field.right {
+.tdoc-quizz-hint {
+    float: right;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+    max-width: 60%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border-left: 0.2rem solid var(--pst-color-success);
+    background-color: var(--pst-color-success-bg);
+    box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),
+                0 0 0.0625rem var(--pst-color-shadow);
+    z-index: 100;
+    visibility: hidden;
+    opacity: 0;
+    transition: 0.3s visibility, 0.3s opacity;
+}
+.tdoc-quizz-hint.show {
+    visibility: visible;
+    opacity: unset;
+}
+.tdoc-quizz-field.right {
     float: right;
     margin-left: 1rem;
     margin-bottom: 0.1rem;
 }
-p:has(input.tdoc-quizz-field.right)::after {
+p:has(.tdoc-quizz-field.right)::after {
     content: ".";
     visibility: hidden;
     display: block;
     height: 0;
     clear: both;
 }
-input.tdoc-quizz-field.bad {
+.tdoc-quizz-field.bad {
     background-color: var(--pst-color-danger-bg);
 }
-input.tdoc-quizz-field.invalid {
+.tdoc-quizz-field.invalid {
     background-color: var(--pst-color-attention);
 }
 
@@ -345,8 +367,8 @@ div.tdoc-jsquizz > .hint {
     right: 0;
     max-width: 60%;
     padding: 0.25rem 0.5rem;
-    border-left: 0.2rem solid var(--pst-color-success);
     border-radius: 0.25rem;
+    border-left: 0.2rem solid var(--pst-color-success);
     background-color: var(--pst-color-success-bg);
     box-shadow: 0 0.2rem 0.5rem var(--pst-color-shadow),
                 0 0 0.0625rem var(--pst-color-shadow);

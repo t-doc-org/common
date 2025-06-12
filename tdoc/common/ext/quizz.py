@@ -9,16 +9,16 @@ from . import __version__, report_exceptions, Role, to_base64
 
 _log = logging.getLogger(__name__)
 
-# TODO: Allow including a hint in the role text; display for first bad answer
-# TODO: Hint could be a separate role, following the {quizz-input}
 # TODO: Display invalid check as a red hint
 # TODO: Add {quizz-select}
 # TODO: Allow creating questions randomly
 
 def setup(app):
     app.add_directive('quizz', Quizz)
+    app.add_role('quizz-hint', QuizzHint)
     app.add_role('quizz-input', QuizzInput)
     app.add_node(quizz, html=(visit_quizz, depart_quizz))
+    app.add_node(quizz_hint)
     app.add_node(quizz_input, html=(visit_quizz_input, None))
     app.connect('html-page-context', add_js)
     return {
@@ -41,6 +41,23 @@ class Quizz(docutils.SphinxDirective):
             raise Exception("{quizz}: Must not contain {quizz}")
         if not any(True for c in children for n in c.findall(quizz_input)):
             raise Exception("{quizz}: Must contain at least one field")
+
+        # Associate hints with fields.
+        for child in children:
+            for field in child.findall(quizz_input):
+                for n in field.findall(include_self=False, descend=False,
+                                       siblings=True):
+                    if isinstance(n, nodes.Text) and not n.strip(): continue
+                    if not isinstance(n, quizz_hint): break
+                    field['hint'] = n['text']
+                    n.parent.remove(n)
+                    break
+        for child in children:
+            for n in child.findall(quizz_hint):
+                _log.error("{quizz-hint}: must immediately follow a field",
+                           location=n)
+                n.parent.remove(n)
+
         node = quizz('', *children)
         self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
@@ -53,7 +70,8 @@ class quizz(nodes.Body, nodes.Element): pass
 def visit_quizz(self, node):
     self.body.append(self.starttag(
         node, 'div', suffix='', classes=['tdoc-quizz']))
-    self.body.append('<div class="content">')
+    self.body.append(
+        '<div class="content"><span class="tdoc-quizz-hint"></span>')
 
 
 def depart_quizz(self, node):
@@ -63,6 +81,17 @@ def depart_quizz(self, node):
 <button class="tdoc-reset fa-rotate-left" title="Reset answers"></button>\
 </div></div>\
 """)
+
+
+class QuizzHint(Role):
+    def run(self):
+        node = quizz_hint()
+        self.set_source_info(node)
+        node['text'] = self.text
+        return [node], []
+
+
+class quizz_hint(nodes.Inline, nodes.Element): pass
 
 
 class QuizzInput(Role):
@@ -99,6 +128,7 @@ def visit_quizz_input(self, node):
     kwargs = {'data-text': to_base64(node['text'])}
     if v := node.get('style'): kwargs['style'] = v
     if v := node.get('check'): kwargs['data-check'] = v
+    if v := node.get('hint'): kwargs['data-hint'] = v
     self.body.append(self.starttag(
         node, 'input', suffix='', type='text', classes=['tdoc-quizz-field'],
         autocapitalize="off", autocomplete="off", autocorrect="off",

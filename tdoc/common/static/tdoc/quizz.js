@@ -121,6 +121,7 @@ export function genTable(node, addCells) {
 }
 
 function setup(quizz) {
+    const hint = qs(quizz, '.tdoc-quizz-hint');
     const fields = qsa(quizz, '.tdoc-quizz-field');
     const check = qs(quizz, 'button.tdoc-check');
     for (const field of fields) {
@@ -137,18 +138,32 @@ function setup(quizz) {
                 e.preventDefault();
                 nextField(fields, field)?.focus?.()
             }
-        });
+        }).blur(e => hint.classList.remove('show'));
     }
+    let hintField;
     on(check).click(async () => {
+        hint.classList.remove('show');
         let res = true;
         for (const field of fields) {
             const args = await checkAnswer(quizz, field);
             res = res && args.ok;
             field.classList.toggle('bad', !args.ok);
             field.classList.toggle('invalid', !!args.invalid);
+            if (!args.ok && args.hint && !hint.classList.contains('show')) {
+                hintField = field;
+                hint.textContent = args.hint;
+                const qr = quizz.getBoundingClientRect();
+                const fr = field.getBoundingClientRect();
+                const hr = hint.getBoundingClientRect();
+                hint.style.top =
+                    `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
+                hint.classList.add('show');
+            }
         }
         quizz.classList.toggle('good', res);
         if (res) enable(false, check, ...fields);
+    }).blur(e => {
+        if (e.relatedTarget !== hintField) hint.classList.remove('show');
     });
     on(qs(quizz, 'button.tdoc-reset')).click(() => {
         quizz.classList.toggle('good', false);
@@ -202,11 +217,11 @@ export const checks = {
         args.solution = JSON.parse(solution);
     },
     map(args) {
-        const s = args.solution[answer] ?? args.solution[''] ?? false;
+        const s = args.solution[answer] ?? args.solution[0] ?? false;
         const ts = typeof s;
         if (ts === 'boolean') {
             args.ok = s;
-        } else if (ts === string) {
+        } else if (ts === 'string') {
             args.hint = s;
         }
     },
@@ -224,6 +239,7 @@ async function checkAnswer(quizz, field) {
         field,
         answer: field.value,
         solution: dec.decode(await fromBase64(field.dataset.text)),
+        hint: field.dataset.hint,
 
         apply(fns) {
             for (const fn of fns) {
