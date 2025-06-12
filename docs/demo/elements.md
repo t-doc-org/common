@@ -106,7 +106,7 @@ quizz.checks.sum = (args) => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
-    args.hint = `The answer might be ${solution}.`;
+    args.hint = `The answer is probably ${solution}.`;
 };
 </script>
 

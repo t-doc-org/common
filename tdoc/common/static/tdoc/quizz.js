@@ -122,6 +122,19 @@ export function genTable(node, addCells) {
 
 function setup(quizz) {
     const hint = qs(quizz, '.tdoc-quizz-hint');
+    let hintField;
+
+    function showHint(field, text, invalid = false) {
+        hintField = field;
+        hint.textContent = text;
+        const qr = quizz.getBoundingClientRect();
+        const fr = field.getBoundingClientRect();
+        const hr = hint.getBoundingClientRect();
+        hint.style.top = `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
+        hint.classList.toggle('invalid', invalid);
+        hint.classList.add('show');
+    }
+
     const fields = qsa(quizz, '.tdoc-quizz-field');
     const check = qs(quizz, 'button.tdoc-check');
     for (const field of fields) {
@@ -140,24 +153,21 @@ function setup(quizz) {
             }
         }).blur(e => hint.classList.remove('show'));
     }
-    let hintField;
+
     on(check).click(async () => {
         hint.classList.remove('show');
         let res = true;
         for (const field of fields) {
             const args = await checkAnswer(quizz, field);
-            res = res && args.ok;
-            field.classList.toggle('bad', !args.ok);
-            field.classList.toggle('invalid', !!args.invalid);
-            if (!args.ok && args.hint && !hint.classList.contains('show')) {
-                hintField = field;
-                hint.textContent = args.hint;
-                const qr = quizz.getBoundingClientRect();
-                const fr = field.getBoundingClientRect();
-                const hr = hint.getBoundingClientRect();
-                hint.style.top =
-                    `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
-                hint.classList.add('show');
+            const ok = !args.invalid && args.ok;
+            res = res && ok;
+            field.classList.toggle('bad', !ok);
+            if (!hint.classList.contains('show')) {
+                if (args.invalid) {
+                    showHint(field, args.invalid, true);
+                } else if (!args.ok && args.hint) {
+                    showHint(field, args.hint);
+                }
             }
         }
         quizz.classList.toggle('good', res);
@@ -165,6 +175,7 @@ function setup(quizz) {
     }).blur(e => {
         if (e.relatedTarget !== hintField) hint.classList.remove('show');
     });
+
     on(qs(quizz, 'button.tdoc-reset')).click(() => {
         quizz.classList.toggle('good', false);
         enable(true, check, ...fields);
@@ -210,6 +221,12 @@ export const checks = {
     uppercase(args) {
         args.applyAnsSol(v => v.toUpperCase());
     },
+    json(args) {
+        args.solution = JSON.parse(args.solution);
+    },
+    indirect(args) {
+        args.apply(checkFns(args.solution));
+    },
     equal(args) {
         if (args.solution instanceof Array) {
             args.ok = args.solution.includes(args.answer);
@@ -221,16 +238,10 @@ export const checks = {
             args.ok = args.answer === args.solution;
         }
     },
-    json(args) {
-        args.solution = JSON.parse(args.solution);
-    },
-    indirect(args) {
-        args.apply(checkFns(args.solution));
-    }
 };
 
 function checkFns(spec) {
-    return spec.trim().split(/\s+/).filter(c => c).map(c => checks[c]);
+    return spec.trim().split(/\s+/).filter(c => c).map(c => [checks[c], c]);
 }
 
 async function checkAnswer(quizz, field) {
@@ -241,8 +252,8 @@ async function checkAnswer(quizz, field) {
         hint: field.dataset.hint,
 
         apply(fns) {
-            for (const fn of fns) {
-                if (!fn) this.invalid = true;
+            for (const [fn, name] of fns) {
+                if (!fn) this.invalid = `Unknown check: ${name}`;
                 if (this.invalid || this.ok !== undefined) break;
                 fn(this);
             }
@@ -260,8 +271,7 @@ async function checkAnswer(quizz, field) {
             }
         }
     };
-    args.apply(checkFns(field.dataset.check || 'default'));
-    if (args.ok === undefined) args.apply([checks.equal]);
+    args.apply(checkFns((field.dataset.check || 'default') + ' equal'));
     return args;
 }
 

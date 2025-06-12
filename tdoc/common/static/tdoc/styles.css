@@ -295,6 +295,10 @@ div.tdoc-quizz.good > .controls > button.tdoc-check {
     visibility: visible;
     opacity: unset;
 }
+.tdoc-quizz-hint.invalid {
+    border-left: 0.2rem solid var(--pst-color-warning);
+    background-color: var(--pst-color-warning-bg);
+}
 .tdoc-quizz-field.right {
     float: right;
     margin-left: 1rem;
@@ -309,9 +313,6 @@ p:has(.tdoc-quizz-field.right)::after {
 }
 .tdoc-quizz-field.bad {
     background-color: var(--pst-color-danger-bg);
-}
-.tdoc-quizz-field.invalid {
-    background-color: var(--pst-color-attention);
 }
 
 /* JavaScript-based quizz questions */
