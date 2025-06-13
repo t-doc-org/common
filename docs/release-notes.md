@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-48)=
+## 0.48 *(2025-06-13)*
+
+- Added the {rst:dir}`quizz` directive and associated roles to create
+  interactive quizzes.
+- Reduced the latency of database change notifications, to make them practically
+  instantaneous.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.47...0.48)
+
 (release-0-47)=
 ## 0.47 *(2025-05-25)*
 
