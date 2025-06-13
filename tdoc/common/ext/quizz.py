@@ -125,6 +125,7 @@ class QuizzField(Role):
     def run(self):
         node = self.node_type()
         self.set_source_info(node)
+        node['role'] = self.name
         node['text'] = self.text
         node['classes'] = self.options['classes'][:]
         if v := self.options.get('check'): node['check'] = v
@@ -145,7 +146,7 @@ class QuizzField(Role):
 
 
 def attributes(node):
-    attrs = {'data-text': to_base64(node['text'])}
+    attrs = {'data-role': node['role'], 'data-text': to_base64(node['text'])}
     if v := node.get('style'): attrs['style'] = v
     if v := node.get('check'): attrs['data-check'] = v
     if v := node.get('hint'): attrs['data-hint'] = v

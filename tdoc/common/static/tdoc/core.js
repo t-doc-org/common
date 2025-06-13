@@ -204,7 +204,7 @@ const c0 = '0'.charCodeAt(0), cA = 'A'.charCodeAt(0);
 export function strToInt(s, radix = 10) {
     if (!(2 <= radix && radix <= 36)) return;
     s = s.toUpperCase();
-    let i = 0, sign = 1, res = 0;
+    let i = 0, sign = 1, res = 0, valid = false;
     while (i < s.length) {
         const c = s.charCodeAt(i++);
         if (i === 1) {
@@ -223,7 +223,9 @@ export function strToInt(s, radix = 10) {
         }
         if (d >= radix) return;
         res = res * radix + d;
+        valid = true;
     }
+    if (!valid) return;
     return sign * res;
 }
 

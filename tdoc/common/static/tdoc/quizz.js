@@ -146,6 +146,7 @@ function setup(quizz) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     (nextField(fields, field) || check).focus()
+                    if (e.shiftKey) check.click();
                 } else if (e.key === 'ArrowUp' && !e.shiftKey) {
                     e.preventDefault();
                     prevField(fields, field)?.focus?.()
@@ -228,6 +229,7 @@ function checkFns(spec) {
 async function checkAnswer(quizz, field) {
     const args = {
         field,
+        role: field.dataset.role,
         answer: field.value,
         solution: dec.decode(await fromBase64(field.dataset.text)),
         hint: field.dataset.hint,

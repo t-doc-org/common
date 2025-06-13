@@ -368,7 +368,8 @@ and / or evaluated:
 
 - `answer` (string): Pre-populated with the answer provided by the user.
 - `solution` (string): Pre-populated with the solution for the field.
-- `field`: The DOM object for the field.
+- `field`: The DOM object of the field.
+- `role` (string): The name of the role that created the field.
 - `ok` (boolean): Whether the answer matches the solution. Checking terminates
   once this field is set.
 - `hint` (string): A hint to display to the user if the answer isn't correct.

@@ -102,7 +102,7 @@ directive and the {rst:role}`quizz-input` and {rst:role}`quizz-select` roles.
 const core = await tdoc.import('tdoc/core.js');
 const quizz = await tdoc.import('tdoc/quizz.js');
 
-quizz.checks.sum = (args) => {
+quizz.checks.sum = args => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
@@ -110,7 +110,7 @@ quizz.checks.sum = (args) => {
 };
 </script>
 
-```{role} field(quizz-input)
+```{role} input(quizz-input)
 :style: width: 3rem; text-align: center;
 :check: trim sum
 ```
@@ -118,14 +118,14 @@ quizz.checks.sum = (args) => {
 ```{quizz}
 | $a$ | $b$ | $a + b$    |
 | :-: | :-: | :--------: |
-|   1 |   2 | {field}`?` |
-|   7 |  11 | {field}`?` |
-|  15 |  27 | {field}`?` |
+|   1 |   2 | {input}`?` |
+|   7 |  11 | {input}`?` |
+|  15 |  27 | {input}`?` |
 ```
 
 ### List
 
-```{role} field(quizz-input)
+```{role} input(quizz-input)
 :right: width: 8rem;
 ```
 ```{role} yes-no(quizz-select)
@@ -134,23 +134,23 @@ quizz.checks.sum = (args) => {
 : Yes
 : No
 ```
-```{role} field100(quizz-input)
+```{role} input100(quizz-input)
 :style: width: 100%; margin-top: 0.3rem;
 ```
 
 ```{quizz}
-1.  {field}`42`{quizz-hint}`It's a positive integer.`
+1.  {input}`42`{quizz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
-2.  {field}`42`{quizz-hint}`It's composed of digits from 0 to 9.`
+2.  {input}`42`{quizz-hint}`It's composed of digits from 0 to 9.`
     Convert $00101010_2$ to decimal.
-3.  {field}`42`{quizz-hint}`It's a number.`
+3.  {input}`42`{quizz-hint}`It's a number.`
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
 5.  {yes-no}`Yes`{quizz-hint}`Be positive.`
     Are you sure about your previous answer?
 4.  This input field uses the whole line. Guess what the answer is.
-    {field100}`42`{quizz-hint}`You've seen this before.`
+    {input100}`42`{quizz-hint}`You've seen this before.`
 ```
 
 ### JavaScript-based
