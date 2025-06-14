@@ -305,6 +305,7 @@ div.tdoc-quiz.good > .controls > button.tdoc-check {
 }
 .tdoc-quiz-field.right {
     float: right;
+    clear: right;
     margin-left: 1rem;
     margin-bottom: 0.1rem;
 }

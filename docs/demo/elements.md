@@ -126,6 +126,7 @@ quiz.checks.sum = args => {
 
 ```{role} input(quiz-input)
 :right: width: 8rem;
+:check: trim lowercase
 ```
 ```{role} yes-no(quiz-select)
 :right:
@@ -141,7 +142,8 @@ quiz.checks.sum = args => {
 1.  {input}`42`{quiz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
 2.  {input}`42`{quiz-hint}`It's composed of digits from 0 to 9.`
-    Convert $00101010_2$ to decimal.
+    {input}`2a`{quiz-hint}`It's composed of digits from 0 to f.`
+    Convert $00101010_2$ to decimal and hexadecimal.
 3.  {input}`42`{quiz-hint}`It's a number.`
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
