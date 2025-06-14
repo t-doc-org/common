@@ -20,11 +20,6 @@ def setup(app):
     app.add_role('quiz-hint', QuizHint)
     app.add_role('quiz-input', QuizInput)
     app.add_role('quiz-select', QuizSelect)
-    # TODO: Remove compatibility names after 0.49 release
-    app.add_directive('quizz', Quiz)
-    app.add_role('quizz-hint', QuizHint)
-    app.add_role('quizz-input', QuizInput)
-    app.add_role('quizz-select', QuizSelect)
     app.add_node(quiz, html=(visit_quiz, depart_quiz))
     app.add_node(quiz_hint)
     app.add_node(quiz_input, html=(visit_quiz_input, None))
