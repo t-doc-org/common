@@ -2,84 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    dec, domLoaded, elmt, enable, focusIfVisible, fromBase64, html, on, qs, qsa,
-    text, typesetMath,
+    dec, domLoaded, elmt, enable, focusIfVisible, fromBase64, on, qs, qsa,
 } from './core.js';
-
-function find(node, next) {
-    const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
-                        Node.DOCUMENT_POSITION_PRECEDING;
-    let found;
-    for (const el of qsa(node.closest('ol, ul'), '.tdoc-jsquiz')) {
-        if (node.compareDocumentPosition(el) & mask) {
-            if (next) return el;
-            found = el;
-        } else if (!next) {
-            break;
-        }
-    }
-    return found;
-}
-
-// Add a quiz question with a reply input field after the given node. Return
-// the quiz question container element.
-export function question(node, opts, check) {
-    const div = elmt`\
-<div class="tdoc-jsquiz">\
-<div class="prompt"></div>\
-<div class="input">\
-<input type="text" autocapitalize="off" autocomplete="off" autocorrect="off"\
- spellcheck="false"><button class="tdoc-check fa-check"></button></div>\
-<div class="hint hide"></div>\
-</div>`;
-    if (typeof opts === 'string') {
-        opts = {prompt: opts ? text(opts) : undefined, math: true};
-    }
-    let prompt, p = opts?.prompt;
-    if (p) {
-        prompt = qs(div, '.prompt');
-        prompt.appendChild(typeof p === 'string' ? text(p) : p);
-    }
-    const input = qs(div, 'input'), btn = qs(div, 'button');
-    const hint = qs(div, '.hint');
-    function checkResp(resp) {
-        input.parentNode.classList.remove('good', 'bad');
-        hint.classList.add('hide');
-        let res = check(resp);
-        input.parentNode.classList.add(res === true ? 'good' : 'bad');
-        if (typeof res === 'string' && res !== '') res = text(res);
-        if (res instanceof Node) {
-            hint.replaceChildren(res);
-            hint.classList.remove('hide');
-        }
-        return res === true;
-    }
-    on(input).input(() => {
-        input.parentNode.classList.remove('good', 'bad');
-        hint.classList.add('hide');
-    }).keydown(e => {
-        if (e.altKey || e.ctrlKey || e.metaKey) return;
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (!checkResp(input.value)) return;
-            qs(find(div, true), 'input')?.focus?.()
-        } else if (e.key === 'ArrowUp' && !e.shiftKey) {
-            e.preventDefault();
-            qs(find(div, false), 'input')?.focus?.()
-        } else if (e.key === 'ArrowDown' && !e.shiftKey) {
-            e.preventDefault();
-            qs(find(div, true), 'input')?.focus?.()
-        }
-    }).blur(() => hint.classList.add('hide'));
-    on(btn).click(() => checkResp(input.value))
-        .blur(e => {
-            if (e.relatedTarget !== input) hint.classList.add('hide');
-        });
-    node.after(div);
-    focusIfVisible(input);
-    if (prompt && opts.math) typesetMath(prompt);  // Typeset in the background
-    return div;
-}
 
 export function genTable(node, addCells) {
     // Find the first table that precedes `node`.
