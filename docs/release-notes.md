@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-49)=
+## 0.49 *(2025-06-14)*
+
+- Renamed "quizz" to "quiz" everywhere. English is hard.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.48...0.49)
+
 (release-0-48)=
 ## 0.48 *(2025-06-13)*
 
