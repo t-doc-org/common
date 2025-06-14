@@ -17,14 +17,18 @@
 
     const script = document.currentScript;
     const staticUrl = new URL('..', script.src).toString();
+    const importRenames = {
+        'tdoc/quizz.js': 'tdoc/quiz.js',  // TODO: Remove after 0.49 release
+    };
     const importMap = {};
 
     // Import a module specified relative to the _static directory. Check if the
     // module was already imported via a <script type="module"> tag with a
     // cache-busting src, and use that to avoid importing the module multiple
     // times.
-    tdoc.import = module => {
-        let url = new URL(module, staticUrl).toString();
+    tdoc.import = mod => {
+        mod = importRenames[mod] ?? mod;
+        let url = new URL(mod, staticUrl).toString();
         const m = importMap[url];
         if (m !== undefined) {
             url = m;

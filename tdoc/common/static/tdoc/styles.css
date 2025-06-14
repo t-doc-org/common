@@ -260,26 +260,26 @@ html[data-tdoc-draw] svg#tdoc-drawing {
 }
 
 /* Quizzes */
-div.tdoc-quizz {
+div.tdoc-quiz {
     display: flex;
     flex-direction: row;
     column-gap: 0.3rem;
 }
-div.tdoc-quizz > .content {
+div.tdoc-quiz > .content {
     position: relative;
     flex-basis: 100%;
 }
-div.tdoc-quizz > .controls {
+div.tdoc-quiz > .controls {
     display: flex;
     flex-direction: column;
     row-gap: 0.3rem;
 }
-div.tdoc-quizz.good > .controls > button.tdoc-check {
+div.tdoc-quiz.good > .controls > button.tdoc-check {
     color: var(--pst-color-success);
     border: none;
     background-color: var(--pst-color-success-bg);
 }
-.tdoc-quizz-hint {
+.tdoc-quiz-hint {
     float: right;
     display: inline-block;
     position: absolute;
@@ -295,78 +295,78 @@ div.tdoc-quizz.good > .controls > button.tdoc-check {
     opacity: 0;
     transition: 0.3s visibility, 0.3s opacity;
 }
-.tdoc-quizz-hint.show {
+.tdoc-quiz-hint.show {
     visibility: visible;
     opacity: unset;
 }
-.tdoc-quizz-hint.invalid {
+.tdoc-quiz-hint.invalid {
     border-left: 0.2rem solid var(--pst-color-warning);
     background-color: var(--pst-color-warning-bg);
 }
-.tdoc-quizz-field.right {
+.tdoc-quiz-field.right {
     float: right;
     margin-left: 1rem;
     margin-bottom: 0.1rem;
 }
-p:has(.tdoc-quizz-field.right)::after {
+p:has(.tdoc-quiz-field.right)::after {
     content: ".";
     visibility: hidden;
     display: block;
     height: 0;
     clear: both;
 }
-.tdoc-quizz-field.bad {
+.tdoc-quiz-field.bad {
     background-color: var(--pst-color-danger-bg);
 }
 
-/* JavaScript-based quizz questions */
-div.tdoc-jsquizz {
+/* JavaScript-based quiz questions */
+div.tdoc-jsquiz {
     display: flex;
     align-items: baseline;
     margin: 0.3rem 0;
     column-gap: 0.3rem;
     position: relative;
 }
-div.tdoc-jsquizz > .prompt {
+div.tdoc-jsquiz > .prompt {
     flex: 1 1 auto;
     white-space: pre-wrap;
     padding-right: 0.4rem;
 }
-div.tdoc-jsquizz > .prompt:empty {
+div.tdoc-jsquiz > .prompt:empty {
     display: none;
 }
-div.tdoc-jsquizz > .input {
+div.tdoc-jsquiz > .input {
     flex: 0 0 40%;
     position: relative;
     display: flex;
     align-items: center;
     column-gap: 0.3rem;
 }
-div.tdoc-jsquizz > .prompt:empty + .input {
+div.tdoc-jsquiz > .prompt:empty + .input {
     flex: 0 0 100%;
 }
-div.tdoc-jsquizz > .input > input[type=text] {
+div.tdoc-jsquiz > .input > input[type=text] {
     width: 100%;
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline-start: 2px;
     padding-inline-end: 2rem;
 }
-div.tdoc-jsquizz > .input::before {
+div.tdoc-jsquiz > .input::before {
     position: absolute;
     right: 2.4rem;
     font: var(--fa-font-solid);
     font-size: 1.5rem;
 }
-div.tdoc-jsquizz > .input.bad::before {
+div.tdoc-jsquiz > .input.bad::before {
     content: '\f00d';
     color: var(--pst-color-danger);
 }
-div.tdoc-jsquizz > .input.good::before {
+div.tdoc-jsquiz > .input.good::before {
     content: '\f00c';
     color: var(--pst-color-success);
 }
-div.tdoc-jsquizz > .hint {
+div.tdoc-jsquiz > .hint {
     position: absolute;
     bottom: calc(100% + 0.8rem);
     right: 0;
@@ -380,36 +380,36 @@ div.tdoc-jsquizz > .hint {
     z-index: 100;
     transition: 0.3s visibility, 0.3s opacity;
 }
-div.tdoc-jsquizz > .hint.hide {
+div.tdoc-jsquiz > .hint.hide {
     visibility: hidden;
     opacity: 0;
 }
 
 /* Table-based quizzes */
-.tdoc-quizz-row {
+.tdoc-quiz-row {
     vertical-align: middle;
 }
-.tdoc-quizz-row select {
+.tdoc-quiz-row select {
     background-color: field;
     border: 1px solid var(--pst-color-border);
     padding: 2px;
 }
-.tdoc-quizz-row input[type=text] {
+.tdoc-quiz-row input[type=text] {
     width: 100%;
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline-start: 2px;
     padding-inline-end: 2px;
 }
-.tdoc-quizz-row td:last-child {
+.tdoc-quiz-row td:last-child {
     width: 0;
 }
-.tdoc-quizz-row button.tdoc-check:disabled {
+.tdoc-quiz-row button.tdoc-check:disabled {
     color: var(--pst-color-success);
     border: none;
     background-color: var(--pst-color-success-bg);
 }
-.tdoc-quizz-row .tdoc-bg-bad {
+.tdoc-quiz-row .tdoc-bg-bad {
     background-color: var(--pst-color-danger-bg);
 }
 

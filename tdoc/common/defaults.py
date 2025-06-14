@@ -31,7 +31,7 @@ extensions = [
     'tdoc.common.ext.metadata',
     'tdoc.common.ext.num',
     'tdoc.common.ext.poll',
-    'tdoc.common.ext.quizz',
+    'tdoc.common.ext.quiz',
     'tdoc.common.ext.solution',
 ]
 

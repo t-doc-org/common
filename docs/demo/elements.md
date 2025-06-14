@@ -93,16 +93,15 @@ This is the last quote.
 
 ## Quizzes
 
-This section demonstrates interactive quizzes with the {rst:dir}`quizz`
-directive and the {rst:role}`quizz-input` and {rst:role}`quizz-select` roles.
+This section demonstrates interactive quizzes with the {rst:dir}`quiz`
+directive and the {rst:role}`quiz-input` and {rst:role}`quiz-select` roles.
 
 ### Table
 
 <script type="module">
-const core = await tdoc.import('tdoc/core.js');
-const quizz = await tdoc.import('tdoc/quizz.js');
+const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
 
-quizz.checks.sum = args => {
+quiz.checks.sum = args => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
@@ -110,12 +109,12 @@ quizz.checks.sum = args => {
 };
 </script>
 
-```{role} input(quizz-input)
+```{role} input(quiz-input)
 :style: width: 3rem; text-align: center;
 :check: trim sum
 ```
 
-```{quizz}
+```{quiz}
 | $a$ | $b$ | $a + b$    |
 | :-: | :-: | :--------: |
 |   1 |   2 | {input}`?` |
@@ -125,56 +124,56 @@ quizz.checks.sum = args => {
 
 ### List
 
-```{role} input(quizz-input)
+```{role} input(quiz-input)
 :right: width: 8rem;
 ```
-```{role} yes-no(quizz-select)
+```{role} yes-no(quiz-select)
 :right:
 :options: |
 : Yes
 : No
 ```
-```{role} input100(quizz-input)
+```{role} input100(quiz-input)
 :style: width: 100%; margin-top: 0.3rem;
 ```
 
-```{quizz}
-1.  {input}`42`{quizz-hint}`It's a positive integer.`
+```{quiz}
+1.  {input}`42`{quiz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
-2.  {input}`42`{quizz-hint}`It's composed of digits from 0 to 9.`
+2.  {input}`42`{quiz-hint}`It's composed of digits from 0 to 9.`
     Convert $00101010_2$ to decimal.
-3.  {input}`42`{quizz-hint}`It's a number.`
+3.  {input}`42`{quiz-hint}`It's a number.`
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
-5.  {yes-no}`Yes`{quizz-hint}`Be positive.`
+5.  {yes-no}`Yes`{quiz-hint}`Be positive.`
     Are you sure about your previous answer?
 4.  This input field uses the whole line. Guess what the answer is.
-    {input100}`42`{quizz-hint}`You've seen this before.`
+    {input100}`42`{quiz-hint}`You've seen this before.`
 ```
 
 ### JavaScript-based
 
 The helpers in the
-[`quizz.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quizz.js)
+[`quiz.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quiz.js)
 module enable the creation of quizzes as dynamic page elements.
 
 <script>
 'use strict';
 (() => {
     let core = tdoc.import('tdoc/core.js').then(m => { core = m; });
-    let quizz = tdoc.import('tdoc/quizz.js').then(m => { quizz = m; });
+    let quiz = tdoc.import('tdoc/quiz.js').then(m => { quiz = m; });
 
-    tdoc.question = tdoc.when(core, quizz, (script, prompt, want) => {
-        return quizz.question(script, prompt, resp => {
+    tdoc.question = tdoc.when(core, quiz, (script, prompt, want) => {
+        return quiz.question(script, prompt, resp => {
             if (resp === want) return true;
             return core.html`\
 The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
       });
     });
 
-    tdoc.tableQuizz = tdoc.when(core, quizz, (script, max) => {
-        quizz.genTable(script, (table, row, button) => {
+    tdoc.tableQuiz = tdoc.when(core, quiz, (script, max) => {
+        quiz.genTable(script, (table, row, button) => {
             // Generate a new random question.
             const value = Math.floor(Math.random() * (max + 1));
 
@@ -227,7 +226,7 @@ The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
     everything? Explain your reasoning in full detail, provide references, and \
     indicate plausible alternatives.`, '42');
     </script>
-3.  The input field of quizz questions without a prompt uses the whole line.
+3.  The input field of quiz questions without a prompt uses the whole line.
     <script>tdoc.question(undefined, "cool");</script>
 
 ### Randomized drill
@@ -235,7 +234,7 @@ The solution is <em>probably</em> "${want}". Maybe. I'm not sure.`;
 | Value | Odd / even | Opposite |
 | :---: | :--------: | :------: |
 
-<script>tdoc.tableQuizz(99);</script>
+<script>tdoc.tableQuiz(99);</script>
 
 ## Polls
 

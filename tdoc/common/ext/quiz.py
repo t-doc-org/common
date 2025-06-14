@@ -16,14 +16,19 @@ _log = logging.getLogger(__name__)
 # TODO: Allow creating questions randomly
 
 def setup(app):
-    app.add_directive('quizz', Quizz)
-    app.add_role('quizz-hint', QuizzHint)
-    app.add_role('quizz-input', QuizzInput)
-    app.add_role('quizz-select', QuizzSelect)
-    app.add_node(quizz, html=(visit_quizz, depart_quizz))
-    app.add_node(quizz_hint)
-    app.add_node(quizz_input, html=(visit_quizz_input, None))
-    app.add_node(quizz_select, html=(visit_quizz_select, None))
+    app.add_directive('quiz', Quiz)
+    app.add_role('quiz-hint', QuizHint)
+    app.add_role('quiz-input', QuizInput)
+    app.add_role('quiz-select', QuizSelect)
+    # TODO: Remove compatibility names after 0.49 release
+    app.add_directive('quizz', Quiz)
+    app.add_role('quizz-hint', QuizHint)
+    app.add_role('quizz-input', QuizInput)
+    app.add_role('quizz-select', QuizSelect)
+    app.add_node(quiz, html=(visit_quiz, depart_quiz))
+    app.add_node(quiz_hint)
+    app.add_node(quiz_input, html=(visit_quiz_input, None))
+    app.add_node(quiz_select, html=(visit_quiz_select, None))
     app.connect('html-page-context', add_js)
     return {
         'version': __version__,
@@ -33,17 +38,17 @@ def setup(app):
 
 
 def add_js(app, page, template, context, doctree):
-    if doctree and any(doctree.findall(quizz)):
-        app.add_js_file('tdoc/quizz.js', type='module')
+    if doctree and any(doctree.findall(quiz)):
+        app.add_js_file('tdoc/quiz.js', type='module')
 
 
-class quizz_input(nodes.Inline, nodes.Element): pass
-class quizz_select(nodes.Inline, nodes.Element): pass
+class quiz_input(nodes.Inline, nodes.Element): pass
+class quiz_select(nodes.Inline, nodes.Element): pass
 
-field_types = (quizz_input, quizz_select)
+field_types = (quiz_input, quiz_select)
 
 
-class Quizz(docutils.SphinxDirective):
+class Quiz(docutils.SphinxDirective):
     option_spec = {
         'class': directives.class_option,
         'style': directives.unchanged,
@@ -53,11 +58,11 @@ class Quizz(docutils.SphinxDirective):
     @report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
-        if any(True for c in children for n in c.findall(quizz)):
-            raise Exception("{quizz}: Must not contain {quizz}")
+        if any(True for c in children for n in c.findall(quiz)):
+            raise Exception("{quiz}: Must not contain {quiz}")
         if not any(True for c in children
                    for n in c.findall(lambda n: isinstance(n, field_types))):
-            raise Exception("{quizz}: Must contain at least one field")
+            raise Exception("{quiz}: Must contain at least one field")
 
         # Associate hints with fields.
         for child in children:
@@ -65,36 +70,36 @@ class Quizz(docutils.SphinxDirective):
                 for n in field.findall(include_self=False, descend=False,
                                        siblings=True):
                     if isinstance(n, nodes.Text) and not n.strip(): continue
-                    if not isinstance(n, quizz_hint): break
+                    if not isinstance(n, quiz_hint): break
                     field['hint'] = n['text']
                     n.parent.remove(n)
                     break
         for child in children:
-            for n in child.findall(quizz_hint):
-                _log.error("{quizz-hint}: must immediately follow a field",
+            for n in child.findall(quiz_hint):
+                _log.error("{quiz-hint}: must immediately follow a field",
                            location=n)
                 n.parent.remove(n)
 
-        node = quizz('', *children)
+        node = quiz('', *children)
         self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
         return [node]
 
 
-class quizz(nodes.Body, nodes.Element): pass
+class quiz(nodes.Body, nodes.Element): pass
 
 
-def visit_quizz(self, node):
+def visit_quiz(self, node):
     attrs = {}
     if v := node.get('style'): attrs['style'] = v
     self.body.append(self.starttag(
-        node, 'div', suffix='', classes=['tdoc-quizz'], **attrs))
+        node, 'div', suffix='', classes=['tdoc-quiz'], **attrs))
     self.body.append(
-        '<div class="content"><span class="tdoc-quizz-hint"></span>')
+        '<div class="content"><span class="tdoc-quiz-hint"></span>')
 
 
-def depart_quizz(self, node):
+def depart_quiz(self, node):
     self.body.append("""\
 </div><div class="controls">\
 <button class="tdoc-check fa-check" title="Check answers"></button>\
@@ -102,18 +107,18 @@ def depart_quizz(self, node):
 """)
 
 
-class QuizzHint(Role):
+class QuizHint(Role):
     def run(self):
-        node = quizz_hint()
+        node = quiz_hint()
         self.set_source_info(node)
         node['text'] = self.text
         return [node], []
 
 
-class quizz_hint(nodes.Inline, nodes.Element): pass
+class quiz_hint(nodes.Inline, nodes.Element): pass
 
 
-class QuizzField(Role):
+class QuizField(Role):
     options = {
         'check': directives.unchanged,
         'right': directives.unchanged,
@@ -153,36 +158,36 @@ def attributes(node):
     return attrs
 
 
-class QuizzInput(QuizzField):
-    node_type = quizz_input
+class QuizInput(QuizField):
+    node_type = quiz_input
 
 
-def visit_quizz_input(self, node):
+def visit_quiz_input(self, node):
     self.body.append(self.starttag(
-        node, 'input', suffix='', type='text', classes=['tdoc-quizz-field'],
+        node, 'input', suffix='', type='text', classes=['tdoc-quiz-field'],
         autocapitalize="off", autocomplete="off", autocorrect="off",
         spellcheck="false", **attributes(node)))
     raise nodes.SkipNode
 
 
-class QuizzSelect(QuizzField):
-    node_type = quizz_select
+class QuizSelect(QuizField):
+    node_type = quiz_select
     options = {
-        **QuizzField.options,
+        **QuizField.options,
         'options': directives.unchanged,
     }
 
     def update_node(self, node):
         if (opts := self.options.get('options')) is None:
-            raise Exception("{quizz-select}: No :options: specified")
+            raise Exception("{quiz-select}: No :options: specified")
         opts = node['options'] = [''] + opts.split('\n')
         if node.get('check') is None and node['text'] not in opts:
-            raise Exception("{quizz-select}: Solution is not in :options:")
+            raise Exception("{quiz-select}: Solution is not in :options:")
 
 
-def visit_quizz_select(self, node):
+def visit_quiz_select(self, node):
     self.body.append(self.starttag(
-        node, 'select', suffix='', classes=['tdoc-quizz-field'],
+        node, 'select', suffix='', classes=['tdoc-quiz-field'],
         **attributes(node)))
     for opt in node['options']:
         self.body.append(

@@ -6,8 +6,8 @@
 (release-0-48)=
 ## 0.48 *(2025-06-13)*
 
-- Added the {rst:dir}`quizz` directive and associated roles to create
-  interactive quizzes.
+- Added the {rst:dir}`quiz` directive and associated roles to create interactive
+  quizzes.
 - Reduced the latency of database change notifications, to make them practically
   instantaneous.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.47...0.48)
@@ -75,7 +75,7 @@
 (release-0-39)=
 ## 0.39 *(2025-03-20)*
 
-- Added table-based quizz generation functionality.
+- Added table-based quiz generation functionality.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.38...0.39)
 
 (release-0-38)=
@@ -83,7 +83,7 @@
 
 - Added a menu entry to read `main.py` in
   [`{exec} micropython`](/reference/exec.md#micropython).
-- Simplified math typesetting in quizz prompts.
+- Simplified math typesetting in quiz prompts.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.37...0.38)
 
 (release-0-37)=
@@ -170,7 +170,7 @@
 (release-0-26)=
 ## 0.26 *(2024-12-27)*
 
-- Added quizz functionality.
+- Added quiz functionality.
 - Fixed issues with non-ID characters in {rst:dir}`{exec} :after: <exec:after>`
   and {rst:dir}`{exec} :then: <exec:then>`.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.25...0.26)

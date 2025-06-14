@@ -10,7 +10,7 @@ function find(node, next) {
     const mask = next ? Node.DOCUMENT_POSITION_FOLLOWING :
                         Node.DOCUMENT_POSITION_PRECEDING;
     let found;
-    for (const el of qsa(node.closest('ol, ul'), '.tdoc-jsquizz')) {
+    for (const el of qsa(node.closest('ol, ul'), '.tdoc-jsquiz')) {
         if (node.compareDocumentPosition(el) & mask) {
             if (next) return el;
             found = el;
@@ -21,11 +21,11 @@ function find(node, next) {
     return found;
 }
 
-// Add a quizz question with a reply input field after the given node. Return
-// the quizz question container element.
+// Add a quiz question with a reply input field after the given node. Return
+// the quiz question container element.
 export function question(node, opts, check) {
     const div = elmt`\
-<div class="tdoc-jsquizz">\
+<div class="tdoc-jsquiz">\
 <div class="prompt"></div>\
 <div class="input">\
 <input type="text" autocapitalize="off" autocomplete="off" autocorrect="off"\
@@ -102,7 +102,7 @@ export function genTable(node, addCells) {
     }
 
     function addRow() {
-        const row = elmt`<tr class="tdoc-quizz-row text-center"></tr>`;
+        const row = elmt`<tr class="tdoc-quiz-row text-center"></tr>`;
         const button = elmt`<button class="tdoc-check fa-check"></button>`;
         const {verify, focus} = addCells(table, row, button);
         if (!verify) return;
@@ -120,14 +120,14 @@ export function genTable(node, addCells) {
     addRow();
 }
 
-function setup(quizz) {
-    const hint = qs(quizz, '.tdoc-quizz-hint');
+function setup(quiz) {
+    const hint = qs(quiz, '.tdoc-quiz-hint');
     let hintField;
 
     function showHint(field, text, invalid = false) {
         hintField = field;
         hint.textContent = text;
-        const qr = quizz.getBoundingClientRect();
+        const qr = quiz.getBoundingClientRect();
         const fr = field.getBoundingClientRect();
         const hr = hint.getBoundingClientRect();
         hint.style.top = `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
@@ -135,8 +135,8 @@ function setup(quizz) {
         hint.classList.add('show');
     }
 
-    const fields = qsa(quizz, '.tdoc-quizz-field');
-    const check = qs(quizz, 'button.tdoc-check');
+    const fields = qsa(quiz, '.tdoc-quiz-field');
+    const check = qs(quiz, 'button.tdoc-check');
     for (const field of fields) {
         focusIfVisible(field);
         on(field).blur(e => hint.classList.remove('show'));
@@ -162,7 +162,7 @@ function setup(quizz) {
         hint.classList.remove('show');
         let res = true;
         for (const field of fields) {
-            const args = await checkAnswer(quizz, field);
+            const args = await checkAnswer(quiz, field);
             const ok = !args.invalid && args.ok;
             if (res && !ok) field.focus();
             res = res && ok;
@@ -175,7 +175,7 @@ function setup(quizz) {
                 }
             }
         }
-        quizz.classList.toggle('good', res);
+        quiz.classList.toggle('good', res);
         if (res) enable(false, check, ...fields);
     }).blur(e => {
         if (e.relatedTarget !== hintField) hint.classList.remove('show');
@@ -226,7 +226,7 @@ function checkFns(spec) {
     return spec.trim().split(/\s+/).filter(c => c).map(c => [checks[c], c]);
 }
 
-async function checkAnswer(quizz, field) {
+async function checkAnswer(quiz, field) {
     const args = {
         field,
         role: field.dataset.role,
@@ -260,5 +260,5 @@ async function checkAnswer(quizz, field) {
 
 // Set up quizzes.
 domLoaded.then(() => {
-    for (const quizz of qsa(document, '.tdoc-quizz')) setup(quizz);
+    for (const quiz of qsa(document, '.tdoc-quiz')) setup(quiz);
 });

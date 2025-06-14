@@ -217,16 +217,16 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 ```
 ````
 
-## Quizz
+## Quiz
 
-````{rst:directive} .. quizz::
-This directive adds an interactive quizz. It can contain arbitrary text and
-markup, as well as {rst:role}`quizz-input` and {rst:role}`quizz-select` roles to
+````{rst:directive} .. quiz::
+This directive adds an interactive quiz. It can contain arbitrary text and
+markup, as well as {rst:role}`quiz-input` and {rst:role}`quiz-select` roles to
 indicate where input fields should be placed and what the solutions are. The
-toolbar on the right allows controlling the quizz.
+toolbar on the right allows controlling the quiz.
 
 - <button class="tdoc fa-check"></button>: Check the provided answers. When all
-  the answers are correct, the button turns green and the quizz is locked.
+  the answers are correct, the button turns green and the quiz is locked.
 
 {.rubric}
 Options
@@ -239,18 +239,18 @@ CSS styles to apply to the outer container, e.g. `max-width: 30rem;`.
 ```
 ````
 
-`````{rst:role} quizz-hint
+`````{rst:role} quiz-hint
 This role defines a hint to display when the answer for a field is wrong. It
 must be placed **immediately after** the field for which it provides a hint,
 with only whitespace between them.
 
 ````{code-block}
-```{role} input(quizz-input)
+```{role} input(quiz-input)
 :right: width: 5rem;
 ```
 
-```{quizz}
-1.  {input}`42`{quizz-hint}`It's a number between 40 and 50.`
+```{quiz}
+1.  {input}`42`{quiz-hint}`It's a number between 40 and 50.`
     What is the answer to the ultimate question of life, the universe, and
     everything?
 ```
@@ -259,23 +259,23 @@ with only whitespace between them.
 
 ### Field roles
 
-`````{rst:role} quizz-input
+`````{rst:role} quiz-input
 This role defines an `<input type="text">`{l=html} field. The text of the role
 is the solution for the field. The role normally isn't used as-is; instead,
 custom roles are derived from it with the
 [`role`](https://docutils.sourceforge.io/docs/ref/rst/directives.html#role)
 directive, which allows controlling the appearance and behavior of the fields.
 
-For example, the following block defines an `input` role that places quizz
-inputs having a width of `3rem` and aligning their text centered. The `input`
-role can then be used in {rst:dir}`quizz` directives that follow its definition.
+For example, the following block defines an `input` role that places quiz inputs
+having a width of `3rem` and aligning their text centered. The `input` role can
+then be used in {rst:dir}`quiz` directives that follow its definition.
 
 ````{code-block}
-```{role} input(quizz-input)
+```{role} input(quiz-input)
 :style: width: 3rem; text-align: center;
 ```
 
-```{quizz}
+```{quiz}
 | $a$ | $b$ | $a + b$    |
 | :-: | :-: | :--------: |
 |  1  |  2  | {input}`3` |
@@ -288,10 +288,10 @@ defined, and can be redefined multiple times in the same document.
 {.rubric}
 Options
 
-See the [common field options](#quizz-common) below.
+See the [common field options](#quiz-common) below.
 `````
 
-`````{rst:role} quizz-select
+`````{rst:role} quiz-select
 This role defines a `<select>`{l=html} field. The text of the role is the
 solution for the field. The role cannot be used as-is; custom roles must be
 derived from it with the
@@ -301,16 +301,16 @@ control the appearance and behavior of the fields.
 
 For example, the following block defines a `select` role that provides two
 options `false` and `true`. The `select` role can then be used in
-{rst:dir}`quizz` directives that follow its definition.
+{rst:dir}`quiz` directives that follow its definition.
 
 ````{code-block}
-```{role} select(quizz-select)
+```{role} select(quiz-select)
 :options: |
 : false
 : true
 ```
 
-```{quizz}
+```{quiz}
 | a    | b     | a or b         | a and b         |
 | :--: | :---: | :------------: | :-------------: |
 | true | false | {select}`true` | {select}`false` |
@@ -323,7 +323,7 @@ defined, and can be redefined multiple times in the same document.
 {.rubric}
 Options
 
-See the [common field options](#quizz-common) below.
+See the [common field options](#quiz-common) below.
 
 ````{rst:directive:option} options: option [option ...]
 :type: one line per option
@@ -333,7 +333,7 @@ value with `|` to preserve newlines.
 ````
 `````
 
-{#quizz-common}
+{#quiz-common}
 #### Common field options
 
 ````{rst:directive:option} check: name [name ...]
@@ -361,7 +361,7 @@ The following built-in checks are available:
     `ok` is set to `true` iff the result is `true`. Moreover, if the result is a
     string, it is assigned to `hint`.
 
-Custom checks can be implemented by importing the `tdoc/quizz.js` module and
+Custom checks can be implemented by importing the `tdoc/quiz.js` module and
 extending the `checks` object. Check functions take a single argument, an object
 that they can inspect and modify as necessary. The following attributes are set
 and / or evaluated:
@@ -381,8 +381,8 @@ from the answer.
 
 ```{code-block} html
 <script type="module">
-const quizz = await tdoc.import('tdoc/quizz.js');
-quizz.checks['no-whitespace'] = args => {
+const quiz = await tdoc.import('tdoc/quiz.js');
+quiz.checks['no-whitespace'] = args => {
     args.answer = args.answer.replace(/\s+/g, '');
 };
 </script>
