@@ -16,6 +16,8 @@ from wsgiref import util
 from . import wsgi
 
 missing = object()
+# TODO: Remove this once on Python 3.13
+Shutdown = getattr(queue, 'Shutdown', queue.Empty)
 
 
 def arg(data, name, validate=None):
@@ -311,7 +313,7 @@ class Watcher:
                 yield b'}\n'
             except queue.Empty:
                 yield b'\n'
-            except queue.Shutdown:
+            except Shutdown:
                 return
 
     def __enter__(self): return self
