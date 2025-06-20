@@ -151,6 +151,7 @@ class MicroPythonExecutor extends Executor {
     async doRun() {
         await this.rawRepl(async () => {
             await this.mp.softReboot();
+            // TODO: Execute each block separately, so line numbers are correct
             await this.mp.exec(this.getCode(), true);
         });
     }

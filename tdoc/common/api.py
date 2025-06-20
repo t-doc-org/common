@@ -15,6 +15,8 @@ from wsgiref import util
 
 from . import wsgi
 
+# TODO: Make Api a context manager; call events.stop_watchers() in __exit__()
+
 missing = object()
 # TODO: Remove this once on Python 3.13
 Shutdown = getattr(queue, 'Shutdown', queue.Empty)

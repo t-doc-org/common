@@ -44,66 +44,175 @@ export function genTable(node, addCells) {
     addRow();
 }
 
-function setup(quiz) {
-    const hint = qs(quiz, '.tdoc-quiz-hint');
-    let hintField;
-
-    function showHint(field, text, invalid = false) {
-        hintField = field;
-        hint.textContent = text;
-        const qr = quiz.getBoundingClientRect();
-        const fr = field.getBoundingClientRect();
-        const hr = hint.getBoundingClientRect();
-        hint.style.top = `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
-        hint.classList.toggle('invalid', invalid);
-        hint.classList.add('show');
+class Quiz {
+    constructor(quiz) {
+        this.quiz = quiz;
+        this.hint = qs(quiz, '.tdoc-quiz-hint');
     }
 
-    const fields = qsa(quiz, '.tdoc-quiz-field');
-    const check = qs(quiz, 'button.tdoc-check');
-    for (const field of fields) {
-        focusIfVisible(field);
-        on(field).blur(e => hint.classList.remove('show'));
-        if (field instanceof HTMLInputElement && field.type === 'text') {
-            on(field).keydown(e => {
-                if (e.altKey || e.ctrlKey || e.metaKey) return;
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    (nextField(fields, field) || check).focus()
-                    if (e.shiftKey) check.click();
-                } else if (e.key === 'ArrowUp' && !e.shiftKey) {
-                    e.preventDefault();
-                    prevField(fields, field)?.focus?.()
-                } else if (e.key === 'ArrowDown' && !e.shiftKey) {
-                    e.preventDefault();
-                    nextField(fields, field)?.focus?.()
+    showHint(field, text, invalid = false) {
+        this.hintField = field;
+        this.hint.textContent = text;
+        const qr = this.quiz.getBoundingClientRect();
+        const fr = field.getBoundingClientRect();
+        const hr = this.hint.getBoundingClientRect();
+        this.hint.style.top = `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
+        this.hint.classList.toggle('invalid', invalid);
+        this.hint.classList.add('show');
+    }
+
+    setupFields(container) {
+        this.fields = qsa(container, '.tdoc-quiz-field');
+        this.btn = qs(container, 'button.tdoc-check');
+        for (const field of this.fields) {
+            focusIfVisible(field);
+            on(field).blur(e => this.hint.classList.remove('show'));
+            if (field instanceof HTMLInputElement && field.type === 'text') {
+                on(field).keydown(e => this.onKeyDown(field, e))
+            }
+        }
+        on(this.btn)
+            .click(() => this.onClick())
+            .blur(e => {
+                if (e.relatedTarget !== this.hintField) {
+                    this.hint.classList.remove('show');
                 }
-            })
+            });
+    }
+
+    onKeyDown(field, e) {
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            (nextField(this.fields, field) || this.btn).focus()
+            if (e.shiftKey) this.btn.click();
+        } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+            e.preventDefault();
+            prevField(this.fields, field)?.focus?.()
+        } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+            e.preventDefault();
+            nextField(this.fields, field)?.focus?.()
         }
     }
 
-    on(check).click(async () => {
-        hint.classList.remove('show');
+    async onClick() {
+        this.hint.classList.remove('show');
         let res = true;
-        for (const field of fields) {
-            const args = await checkAnswer(quiz, field);
+        for (const field of this.fields) {
+            const args = await this.check(field);
             const ok = !args.invalid && args.ok;
             if (res && !ok) field.focus();
             res = res && ok;
             field.classList.toggle('bad', !ok);
-            if (!hint.classList.contains('show')) {
+            if (!this.hint.classList.contains('show')) {
                 if (args.invalid) {
-                    showHint(field, args.invalid, true);
+                    this.showHint(field, args.invalid, true);
                 } else if (!args.ok && args.hint) {
-                    showHint(field, args.hint);
+                    this.showHint(field, args.hint);
                 }
             }
         }
-        quiz.classList.toggle('good', res);
-        if (res) enable(false, check, ...fields);
-    }).blur(e => {
-        if (e.relatedTarget !== hintField) hint.classList.remove('show');
-    });
+        if (res) {
+            enable(false, ...this.fields, this.btn);
+            this.onSuccess();
+        }
+    }
+
+    onSuccess() {}
+}
+
+class BasicQuiz extends Quiz {
+    constructor(quiz) {
+        super(quiz);
+        this.setupFields(quiz);
+    }
+
+    async check(field) {
+        const args = await checkArgs(field);
+        args.apply(checkFns((field.dataset.check || 'default') + ' equal'));
+        return args;
+    }
+}
+
+// TODO: Rename DrillQuiz to something better
+
+class DrillQuiz extends Quiz {
+    constructor(quiz) {
+        super(quiz);
+        this.table = qs(quiz, 'table');
+        this.entries = [];
+
+        // Extract the rows starting at the first placeholder or field. Also,
+        // add a column to all existing rows for the check button.
+        qs(this.table, 'thead > tr').appendChild(elmt`<th></th>`);
+        const tbody = qs(this.table, 'tbody');
+        this.preCnt = this.tmplCnt = 0;
+        for (const tr of qsa(tbody, 'tr')) {
+            if (this.tbody !== undefined
+                    || qs(tr, '.tdoc-quiz-ph, .tdoc-quiz-field')) {
+                if (!this.tbody) {
+                    this.tbody = elmt`<tbody class="tdoc-quiz-entry"></tbody>`;
+                }
+                // TODO: Clone into tbody instead of moving
+                this.tbody.appendChild(tr);
+                ++this.tmplCnt;
+                tr.classList.remove('row-even', 'row-odd');
+            } else {
+                ++this.preCnt;
+            }
+            tr.appendChild(elmt`<td></td>`);
+        }
+        qs(this.tbody, 'tr:last-child > td:last-child')
+            .appendChild(elmt`<<button class="tdoc-check fa-check"></button>`)
+        if (this.preCnt === 0) tbody.remove();
+    }
+
+    setGenerator(fn) {
+        this.generate = fn;
+        this.addEntry();
+    }
+
+    addEntry(focus) {
+        // Compute if row highlighting needs to be inverted.
+        const inv = (this.preCnt + this.entries.length * this.tmplCnt) & 1 === 1;
+
+        // Generate a new entry.
+        // TODO: Avoid duplicates
+        const entry = this.generate(this.entries);
+        this.entries.push(entry);
+
+        // Set up the <tbody> for the new entry.
+        const tbody = this.tbody.cloneNode(true);
+        if (inv) tbody.classList.add('inv');
+        for (const ph of qsa(tbody, '.tdoc-quiz-ph')) {
+            entry[ph.dataset.name](ph);
+        }
+        this.table.appendChild(tbody);
+        this.setupFields(tbody);
+        if (focus) qs(tbody, '.tdoc-quiz-field')?.focus?.();
+    }
+
+    async check(field) {
+        const args = await checkArgs(field);
+        args.apply(checkFns(field.dataset.check));
+        this.entries[this.entries.length - 1][args.text](args);
+        return args;
+    }
+
+    onSuccess() { this.addEntry(true); }
+}
+
+export async function registerGenerator(name, fn) {
+    await setupDone;
+    for (const quiz of qsa(document, '.tdoc-quiz')) {
+        if (quiz.dataset.gen === name) quiz.tdocQuiz.setGenerator(fn);
+    }
+}
+
+const types = {'basic': BasicQuiz, 'drill': DrillQuiz};
+
+function setup(quiz) {
+    quiz.tdocQuiz = new types[quiz.dataset.type](quiz);
 }
 
 function prevField(fields, field) {
@@ -132,7 +241,7 @@ export const checks = {
     lowercase(args) { args.applyAS(v => v.toLowerCase()); },
     uppercase(args) { args.applyAS(v => v.toUpperCase()); },
     json(args) { args.solution = JSON.parse(args.solution); },
-    indirect(args) { args.apply(checkFns(args.solution)); },
+    indirect(args) { args.apply(checkFns(args.text)); },
     equal(args) {
         if (args.solution instanceof Array) {
             args.ok = args.solution.includes(args.answer);
@@ -147,15 +256,18 @@ export const checks = {
 };
 
 function checkFns(spec) {
+    if (!spec || !spec.trim()) return [];
     return spec.trim().split(/\s+/).filter(c => c).map(c => [checks[c], c]);
 }
 
-async function checkAnswer(quiz, field) {
-    const args = {
+async function checkArgs(field) {
+    const text = dec.decode(await fromBase64(field.dataset.text));
+    return {
         field,
+        text,
         role: field.dataset.role,
         answer: field.value,
-        solution: dec.decode(await fromBase64(field.dataset.text)),
+        solution: text,
         hint: field.dataset.hint,
 
         apply(fns) {
@@ -178,11 +290,9 @@ async function checkAnswer(quiz, field) {
             }
         }
     };
-    args.apply(checkFns((field.dataset.check || 'default') + ' equal'));
-    return args;
 }
 
 // Set up quizzes.
-domLoaded.then(() => {
+const setupDone = domLoaded.then(() => {
     for (const quiz of qsa(document, '.tdoc-quiz')) setup(quiz);
 });

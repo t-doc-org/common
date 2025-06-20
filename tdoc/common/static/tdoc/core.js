@@ -177,6 +177,11 @@ export function focusIfVisible(el) {
     if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
 }
 
+// Generate a random integer within an inclusive range.
+export function randomInt(min, max) {
+    return Math.floor(min + Math.random() * (max - min + 1));
+}
+
 // Convert a number to a given radix, optionally left-padding with zeroes.
 export function toRadix(value, radix, length) {
     let s = value.toString(radix);

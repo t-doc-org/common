@@ -17,10 +17,12 @@ _log = logging.getLogger(__name__)
 
 def setup(app):
     app.add_directive('quiz', Quiz)
+    app.add_role('quiz-ph', QuizPh)
     app.add_role('quiz-hint', QuizHint)
     app.add_role('quiz-input', QuizInput)
     app.add_role('quiz-select', QuizSelect)
     app.add_node(quiz, html=(visit_quiz, depart_quiz))
+    app.add_node(quiz_ph, html=(visit_quiz_ph, None))
     app.add_node(quiz_hint)
     app.add_node(quiz_input, html=(visit_quiz_input, None))
     app.add_node(quiz_select, html=(visit_quiz_select, None))
@@ -45,8 +47,10 @@ field_types = (quiz_input, quiz_select)
 
 class Quiz(docutils.SphinxDirective):
     option_spec = {
+        'gen': directives.unchanged,
         'class': directives.class_option,
         'style': directives.unchanged,
+        'type': lambda c: directives.choice(c, ('basic', 'drill')),
     }
     has_content = True
 
@@ -79,6 +83,11 @@ class Quiz(docutils.SphinxDirective):
         self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
+        typ = node['type'] = self.options.get('type', 'basic')
+        if typ == 'drill':
+            pass  # TODO: Check that there is a table, add a class?
+            # TODO: Check that placeholder and field names are unique
+        if (v := self.options.get('gen')) is not None: node['gen'] = v
         return [node]
 
 
@@ -86,8 +95,9 @@ class quiz(nodes.Body, nodes.Element): pass
 
 
 def visit_quiz(self, node):
-    attrs = {}
+    attrs = {'data-type': node['type']}
     if v := node.get('style'): attrs['style'] = v
+    if v := node.get('gen'): attrs['data-gen'] = v
     self.body.append(self.starttag(
         node, 'div', suffix='', classes=['tdoc-quiz'], **attrs))
     self.body.append(
@@ -95,11 +105,32 @@ def visit_quiz(self, node):
 
 
 def depart_quiz(self, node):
-    self.body.append("""\
-</div><div class="controls">\
+    self.body.append('</div>')
+    if node['type'] == 'basic':
+        self.body.append("""\
+<div class="controls">\
 <button class="tdoc-check fa-check" title="Check answers"></button>\
-</div></div>\
+</div>\
 """)
+    self.body.append('</div>')
+
+
+class QuizPh(Role):
+    def run(self):
+        node = quiz_ph()
+        self.set_source_info(node)
+        node['name'] = self.text
+        return [node], []
+
+
+class quiz_ph(nodes.Inline, nodes.Element): pass
+
+
+def visit_quiz_ph(self, node):
+    self.body.append(self.starttag(
+        node, 'span', suffix='', classes=['tdoc-quiz-ph'],
+        **{'data-name': node['name']}))
+    raise nodes.SkipNode
 
 
 class QuizHint(Role):
@@ -176,8 +207,9 @@ class QuizSelect(QuizField):
         if (opts := self.options.get('options')) is None:
             raise Exception("{quiz-select}: No :options: specified")
         opts = node['options'] = [''] + opts.split('\n')
-        if node.get('check') is None and node['text'] not in opts:
-            raise Exception("{quiz-select}: Solution is not in :options:")
+        # TODO: Move this check to a function, call it from Quiz
+        # if node.get('check') is None and node['text'] not in opts:
+        #     raise Exception("{quiz-select}: Solution is not in :options:")
 
 
 def visit_quiz_select(self, node):
@@ -187,5 +219,5 @@ def visit_quiz_select(self, node):
     for opt in node['options']:
         self.body.append(
             f'<option value="{self.attval(opt)}">{html.escape(opt)}</option>')
-    self.body.append('<select>')
+    self.body.append('</select>')
     raise nodes.SkipNode

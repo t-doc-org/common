@@ -154,12 +154,48 @@ quiz.checks.sum = args => {
     {input100}`42`{quiz-hint}`You've seen this before.`
 ```
 
-### Randomized drill
+### Drill
 
-| Value | Odd / even | Opposite |
-| :---: | :--------: | :------: |
+<script type="module">
+const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
 
-<script>tdoc.tableQuiz(99);</script>
+function numbers(max) {
+    return () => {
+        const v = Math.floor(Math.random() * (max + 1));
+        return {
+            v,
+            equal(other) { return v === other.v; },
+
+            value(ph) { ph.textContent = `${v}`; },
+            parity(args) {
+                args.ok = {'odd': 1, 'even': 0}[args.answer] === v % 2;
+            },
+            opposite(args) {
+                args.ok = args.answer.trim() === (-v).toString();
+            },
+        };
+    };
+}
+
+quiz.registerGenerator('numbers', numbers(99));
+</script>
+
+```{role} odd-even(quiz-select)
+:options: |
+: odd
+: even
+```
+```{role} input(quiz-input)
+:style: width: 5rem;
+```
+
+```{quiz}
+:type: drill
+:gen: numbers
+| Value            | Parity             | Opposite          |
+| :--------------: | :----------------: | :---------------: |
+| {quiz-ph}`value` | {odd-even}`parity` | {input}`opposite` |
+```
 
 ## Polls
 

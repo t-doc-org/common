@@ -27,6 +27,12 @@ div.sidebar, aside.sidebar {
 .table > tbody > tr:nth-child(odd) {
     background-color: var(--pst-color-table-row-zebra-high-bg);
 }
+.table > tbody.inv > tr:nth-child(even) {
+    background-color: var(--pst-color-table-row-zebra-high-bg);
+}
+.table > tbody.inv > tr:nth-child(odd) {
+    background-color: var(--pst-color-table-row-zebra-low-bg);
+}
 .table > tbody > tr:hover {
     background-color: var(--pst-color-table-row-hover-bg);
 }
@@ -262,6 +268,7 @@ html[data-tdoc-draw] svg#tdoc-drawing {
 /* Quizzes */
 div.tdoc-quiz {
     display: flex;
+    width: 100%;
     flex-direction: row;
     column-gap: 0.3rem;
 }
@@ -274,7 +281,7 @@ div.tdoc-quiz > .controls {
     flex-direction: column;
     row-gap: 0.3rem;
 }
-div.tdoc-quiz.good > .controls > button.tdoc-check {
+div.tdoc-quiz button.tdoc-check:disabled {
     color: var(--pst-color-success);
     border: none;
     background-color: var(--pst-color-success-bg);
@@ -318,6 +325,12 @@ p:has(.tdoc-quiz-field.right)::after {
 }
 .tdoc-quiz-field.bad {
     background-color: var(--pst-color-danger-bg);
+}
+.tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {
+    vertical-align: middle;
+}
+.tdoc-quiz-entry > tr > td:last-child {
+    width: 0;
 }
 
 /* Table-based quizzes */
