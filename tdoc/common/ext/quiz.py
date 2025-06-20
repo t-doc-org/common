@@ -11,8 +11,6 @@ from . import __version__, report_exceptions, Role, to_base64
 
 _log = logging.getLogger(__name__)
 
-# TODO: Add optional check arguments, e.g. split(,)
-# TODO: Allow creating questions randomly
 
 def setup(app):
     app.add_directive('quiz', Quiz)

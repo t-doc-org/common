@@ -202,8 +202,12 @@ function nextField(fields, field) {
 // TODO: Un-export after 0.50 release
 export const checks = {
     default(args) { checks.trim(args); },
-    split(args) { args.solution = args.solution.split(','); },
+    split(args, param = ',') { args.solution = args.solution.split(param); },
     trim(args) { args.applyAS(v => v.trim()); },
+    remove: (args, param = '\\s+') => {
+        args.applyAS(v => v.replaceAll(new RegExp(param, 'g'), ''));
+    },
+    // TODO: Remove after 0.50 release
     'remove-whitespace': (args) => {
         args.applyAS(v => v.replaceAll(/\s+/g, ''));
     },
@@ -230,7 +234,17 @@ export function check(name, fn) {
 
 function checkFns(spec) {
     if (!spec || !spec.trim()) return [];
-    return spec.trim().split(/\s+/).filter(c => c).map(c => [checks[c], c]);
+    return spec.trim().split(/\s+/).filter(c => c).map(c => {
+        const m = /([^(]+)\((.*)\)/.exec(c);
+        let fn;
+        if (m) {
+            const cfn = checks[m[1]];
+            if (cfn) fn = args => cfn(args, m[2]);
+        } else {
+            fn = checks[c];
+        }
+        return [fn, c];
+    });
 }
 
 async function checkArgs(field) {
