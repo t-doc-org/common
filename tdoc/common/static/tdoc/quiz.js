@@ -44,7 +44,7 @@ export function genTable(node, addCells) {
     addRow();
 }
 
-class Quiz {
+class QuizBase {
     constructor(quiz) {
         this.quiz = quiz;
         this.hint = qs(quiz, '.tdoc-quiz-hint');
@@ -121,7 +121,7 @@ class Quiz {
     onSuccess() {}
 }
 
-class BasicQuiz extends Quiz {
+class Quiz extends QuizBase {
     constructor(quiz) {
         super(quiz);
         this.setupFields(quiz);
@@ -134,9 +134,7 @@ class BasicQuiz extends Quiz {
     }
 }
 
-// TODO: Rename DrillQuiz to something better
-
-class DrillQuiz extends Quiz {
+class TableGenQuiz extends QuizBase {
     constructor(quiz) {
         super(quiz);
         this.table = qs(quiz, 'table');
@@ -185,7 +183,7 @@ class DrillQuiz extends Quiz {
         const tbody = this.tbody.cloneNode(true);
         if (inv) tbody.classList.add('inv');
         for (const ph of qsa(tbody, '.tdoc-quiz-ph')) {
-            entry[ph.dataset.name](ph);
+            entry[ph.dataset.text](ph);
         }
         this.table.appendChild(tbody);
         this.setupFields(tbody);
@@ -209,10 +207,10 @@ export async function registerGenerator(name, fn) {
     }
 }
 
-const types = {'basic': BasicQuiz, 'drill': DrillQuiz};
+const types = {'': Quiz, 'table': TableGenQuiz};
 
 function setup(quiz) {
-    quiz.tdocQuiz = new types[quiz.dataset.type](quiz);
+    quiz.tdocQuiz = new types[quiz.dataset.type || ''](quiz);
 }
 
 function prevField(fields, field) {

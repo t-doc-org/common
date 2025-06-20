@@ -189,9 +189,7 @@ quiz.registerGenerator('numbers', numbers(99));
 :style: width: 5rem;
 ```
 
-```{quiz}
-:type: drill
-:gen: numbers
+```{quiz} table numbers
 | Value            | Parity             | Opposite          |
 | :--------------: | :----------------: | :---------------: |
 | {quiz-ph}`value` | {odd-even}`parity` | {input}`opposite` |
