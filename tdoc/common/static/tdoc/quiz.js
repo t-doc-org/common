@@ -14,10 +14,16 @@ class QuizBase {
     showHint(field, text, invalid = false) {
         this.hintField = field;
         this.hint.textContent = text;
-        const qr = this.quiz.getBoundingClientRect();
+        this.hint.style.left = this.hint.style.right = '';
+        const cr = qs(this.quiz, '.content').getBoundingClientRect();
         const fr = field.getBoundingClientRect();
         const hr = this.hint.getBoundingClientRect();
-        this.hint.style.top = `calc(${fr.top - qr.top - hr.height}px - 0.5rem)`;
+        this.hint.style.top = `calc(${fr.top - cr.top - hr.height}px - 0.5rem)`;
+        if (fr.left + hr.width >= cr.left + cr.width) {
+            this.hint.style.right = '0';
+        } else {
+            this.hint.style.left = `${fr.left - cr.left}px`;
+        }
         this.hint.classList.toggle('invalid', invalid);
         this.hint.classList.add('show');
     }
@@ -133,9 +139,20 @@ class TableGenQuiz extends QuizBase {
         // Compute if row highlighting needs to be inverted.
         const inv = (this.preCnt + this.entries.length * this.tmplCnt) & 1 === 1;
 
-        // Generate a new entry.
-        // TODO: Avoid duplicates
-        const entry = this.generate(this.entries);
+        // Generate a new entry, and avoid duplicates if possible.
+        let entry;
+        for (let t = 0; t < 20; ++t) {
+            entry = this.generate();
+            if (!entry.equal || !entry.history) break;
+            let ok = true, end = Math.min(entry.history, this.entries.length);
+            for (let i = 0; i < end; ++i) {
+                if (entry.equal(this.entries[this.entries.length - 1 - i])) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) break;
+        }
         this.entries.push(entry);
 
         // Set up the <tbody> for the new entry.
@@ -159,17 +176,11 @@ class TableGenQuiz extends QuizBase {
     onSuccess() { this.addEntry(true); }
 }
 
-export async function registerGenerator(name, fn) {
+export async function generator(name, fn) {
     await setupDone;
     for (const quiz of qsa(document, '.tdoc-quiz')) {
         if (quiz.dataset.gen === name) quiz.tdocQuiz.setGenerator(fn);
     }
-}
-
-const types = {'': Quiz, 'table': TableGenQuiz};
-
-function setup(quiz) {
-    quiz.tdocQuiz = new types[quiz.dataset.type || ''](quiz);
 }
 
 function prevField(fields, field) {
@@ -188,6 +199,7 @@ function nextField(fields, field) {
     }
 }
 
+// TODO: Un-export after 0.50 release
 export const checks = {
     default(args) { checks.trim(args); },
     split(args) { args.solution = args.solution.split(','); },
@@ -211,6 +223,10 @@ export const checks = {
         }
     },
 };
+
+export function check(name, fn) {
+    checks[name] = fn;
+}
 
 function checkFns(spec) {
     if (!spec || !spec.trim()) return [];
@@ -249,7 +265,11 @@ async function checkArgs(field) {
     };
 }
 
+const types = {'': Quiz, 'table': TableGenQuiz};
+
 // Set up quizzes.
 const setupDone = domLoaded.then(() => {
-    for (const quiz of qsa(document, '.tdoc-quiz')) setup(quiz);
+    for (const quiz of qsa(document, '.tdoc-quiz')) {
+        quiz.tdocQuiz = new types[quiz.dataset.type || ''](quiz);
+    }
 });

@@ -33,7 +33,7 @@ div.sidebar, aside.sidebar {
 .table > tbody.inv > tr:nth-child(odd) {
     background-color: var(--pst-color-table-row-zebra-low-bg);
 }
-.table > tbody > tr:hover {
+.table > tbody > tr:hover:hover {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
@@ -287,10 +287,8 @@ div.tdoc-quiz button.tdoc-check:disabled {
     background-color: var(--pst-color-success-bg);
 }
 .tdoc-quiz-hint {
-    float: right;
     display: inline-block;
     position: absolute;
-    right: 0;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     border-left: 0.2rem solid var(--pst-color-success);

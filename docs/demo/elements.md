@@ -101,12 +101,12 @@ directive and the {rst:role}`quiz-input` and {rst:role}`quiz-select` roles.
 <script type="module">
 const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
 
-quiz.checks.sum = args => {
+quiz.check('sum', args => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
     args.hint = `The answer is probably ${solution}.`;
-};
+});
 </script>
 
 Static quizzes can be laid out in various formats, for example as tables.
@@ -167,19 +167,22 @@ function numbers(max) {
         return {
             v,
             equal(other) { return v === other.v; },
+            history: (max + 1) / 2,
 
             value(ph) { ph.textContent = `${v}`; },
             parity(args) {
                 args.ok = {'odd': 1, 'even': 0}[args.answer] === v % 2;
+                args.hint = "Look at the last digit.";
             },
             opposite(args) {
                 args.ok = args.answer.trim() === (-v).toString();
+                args.hint = "Put a \"-\" in front.";
             },
         };
     };
 }
 
-quiz.registerGenerator('numbers', numbers(99));
+quiz.generator('numbers', numbers(99));
 </script>
 
 Table-based quizzes can be generated dynamically, for drill exercises.
