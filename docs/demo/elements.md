@@ -96,7 +96,7 @@ This is the last quote.
 This section demonstrates interactive quizzes with the {rst:dir}`quiz`
 directive and the {rst:role}`quiz-input` and {rst:role}`quiz-select` roles.
 
-### Table
+### Static
 
 <script type="module">
 const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
@@ -108,6 +108,8 @@ quiz.checks.sum = args => {
     args.hint = `The answer is probably ${solution}.`;
 };
 </script>
+
+Static quizzes can be laid out in various formats, for example as tables.
 
 ```{role} input(quiz-input)
 :style: width: 3rem; text-align: center;
@@ -122,7 +124,7 @@ quiz.checks.sum = args => {
 |  15 |  27 | {input}`?` |
 ```
 
-### List
+They can also be laid out as lists, usually with right-aligned fields.
 
 ```{role} input(quiz-input)
 :right: width: 8rem;
@@ -154,7 +156,7 @@ quiz.checks.sum = args => {
     {input100}`42`{quiz-hint}`You've seen this before.`
 ```
 
-### Drill
+### Table
 
 <script type="module">
 const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
@@ -179,6 +181,8 @@ function numbers(max) {
 
 quiz.registerGenerator('numbers', numbers(99));
 </script>
+
+Table-based quizzes can be generated dynamically, for drill exercises.
 
 ```{role} odd-even(quiz-select)
 :options: |

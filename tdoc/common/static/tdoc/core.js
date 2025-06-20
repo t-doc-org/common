@@ -107,6 +107,8 @@ const onHandler = {
 export function on(node) { return new Proxy(node, onHandler); }
 
 // Return true iff the given element is within the root viewport.
+//
+// WARNING: This function may force a reflow, and may therefore be expensive.
 export function isVisible(el) {
     const rect = el.getBoundingClientRect();
     return rect.top >= 0 && rect.left >= 0 &&
@@ -172,6 +174,8 @@ export function typesetMath(...args) {
 }
 
 // Focus an element if it is visible and no other element has the focus.
+//
+// WARNING: This function may force a reflow, and may therefore be expensive.
 export function focusIfVisible(el) {
     const active = document.activeElement;
     if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();

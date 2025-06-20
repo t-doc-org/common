@@ -2,47 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    dec, domLoaded, elmt, enable, focusIfVisible, fromBase64, on, qs, qsa,
+    dec, domLoaded, elmt, enable, fromBase64, on, qs, qsa,
 } from './core.js';
-
-export function genTable(node, addCells) {
-    // Find the first table that precedes `node`.
-    let table;
-    while (!table) {
-        node = node.previousElementSibling;
-        if (!node) {
-            console.error("<table> not found");
-            return;
-        }
-        table = qs(node, 'table.table');
-    }
-
-    // Add a column to all existing rows for the check button.
-    qs(table, 'thead > tr').appendChild(elmt`<th></th>`);
-    let tbody = qs(table, 'tbody');
-    if (!tbody) tbody = table.appendChild(elmt`<tbody></tbody>`);
-    for (const tr of qsa(tbody, 'tr')) {
-        tr.appendChild(elmt`<td></td>`);
-    }
-
-    function addRow() {
-        const row = elmt`<tr class="tdoc-quiz-row text-center"></tr>`;
-        const button = elmt`<button class="tdoc-check fa-check"></button>`;
-        const {verify, focus} = addCells(table, row, button);
-        if (!verify) return;
-        row.appendChild(elmt`<td></td>`).appendChild(button);
-        on(button).click(() => {
-            if (!verify()) return;
-            enable(false, button);
-            const focus = addRow();
-            if (focus) focus.focus();
-        });
-        tbody.appendChild(row);
-        return focus;
-    }
-
-    addRow();
-}
 
 class QuizBase {
     constructor(quiz) {
@@ -65,7 +26,6 @@ class QuizBase {
         this.fields = qsa(container, '.tdoc-quiz-field');
         this.btn = qs(container, 'button.tdoc-check');
         for (const field of this.fields) {
-            focusIfVisible(field);
             on(field).blur(e => this.hint.classList.remove('show'));
             if (field instanceof HTMLInputElement && field.type === 'text') {
                 on(field).keydown(e => this.onKeyDown(field, e))
@@ -151,7 +111,6 @@ class TableGenQuiz extends QuizBase {
                 if (!this.tbody) {
                     this.tbody = elmt`<tbody class="tdoc-quiz-entry"></tbody>`;
                 }
-                // TODO: Clone into tbody instead of moving
                 this.tbody.appendChild(tr);
                 ++this.tmplCnt;
                 tr.classList.remove('row-even', 'row-odd');
