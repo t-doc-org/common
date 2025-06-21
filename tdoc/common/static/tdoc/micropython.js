@@ -152,7 +152,7 @@ export class MicroPython {
             const prompt = enc.encode('\r\n>>> ');
             const onRead = banner ? (...args) => this._onRead('', ...args)
                                   : undefined;
-            const out = await this.expect(prompt, {onRead});
+            await this.expect(prompt, {onRead});
             this.stopCapture();
             this.onRead(prompt);
         }
@@ -172,9 +172,9 @@ export class MicroPython {
         }
     }
 
-    async execWait(ms, onOut, onErr) {
-        const out = await this.expect('\x04', {ms, onRead: onOut});
-        const err = await this.expect('\x04', {onRead: onErr});
+    async execWait({ms = null, record = false, onOut, onErr} = {}) {
+        const out = await this.expect('\x04', {ms, record, onRead: onOut});
+        const err = await this.expect('\x04', {record, onRead: onErr});
         await this.expect('>');
         return {out, err};
     }
@@ -230,7 +230,7 @@ Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
 
     async run(code, ms = 1000) {
         await this.exec(code);
-        const {out, err} = await this.execWait(ms);
+        const {out, err} = await this.execWait({ms, record: true});
         if (err.length > 0) throw new RemoteError(dec.decode(err));
         return out;
     }
@@ -297,8 +297,7 @@ except OSError as e:
         return this.cap.read(count);
     }
 
-    async expect(want, {ms = 1000, onRead} = {}) {
-        // TODO: Don't capture the data if not required
+    async expect(want, {ms = 1000, record = false, onRead} = {}) {
         if (typeof want === 'string') want = enc.encode(want);
         const cancel = timeout(ms);
         let pos = 0;
@@ -306,7 +305,7 @@ except OSError as e:
             const i = this.cap.findData(want, pos);
             if (i >= 0) {
                 if (onRead) onRead(this.cap.peek(pos, i));
-                const data = this.cap.read(i);
+                const data = record ? this.cap.read(i) : this.cap.drop(i);
                 this.cap.drop(want.length);
                 cancel.catch(e => undefined);  // Prevent logging
                 return data;
@@ -315,6 +314,10 @@ except OSError as e:
             pos = this.cap.length - want.length + 1;
             if (pos < 0) pos = 0;
             if (onRead && pos > oldPos) onRead(this.cap.peek(oldPos, pos));
+            if (!record) {
+                this.cap.drop(pos);
+                pos = 0;
+            }
             await Promise.race([this.pAvail, cancel, this.pAbort]);
         }
     }

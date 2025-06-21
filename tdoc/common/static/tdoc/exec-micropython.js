@@ -160,12 +160,13 @@ class MicroPythonExecutor extends Executor {
                 await this.mp.exec(code);
                 this.inhibitInput = false;
                 let err = false;
-                await this.mp.execWait(null,
-                    (...args) =>  this.console.write('', ...args),
-                    (data, done) => {
+                await this.mp.execWait({
+                    onOut: (...args) =>  this.console.write('', ...args),
+                    onErr: (data, done) => {
                         this.console.write('err', data, done);
                         err ||= data.length > 0;
-                    });
+                    },
+                });
                 if (err) break;
                 this.inhibitInput = true;
             }
