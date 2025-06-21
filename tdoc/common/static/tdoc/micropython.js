@@ -100,7 +100,7 @@ export class MicroPython {
 
     onRelease(reason) {
         delete this.claim;
-        if (this.abort) this.abort(new Error("Connection lost"));
+        if (this.abort) this.abort();
         this._onRelease(reason);
     }
 

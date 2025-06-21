@@ -140,7 +140,7 @@ class MicroPythonExecutor extends Executor {
                 await fn();
             }, prompt);
         } catch (e) {
-            this.console.write('err', `${e.toString().trimEnd()}\n`);
+            if (e) this.console.write('err', `${e.toString().trimEnd()}\n`);
         } finally {
             this.inhibitInput = false;
         }
