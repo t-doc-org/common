@@ -137,7 +137,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 : No
 ```
 ```{role} input100(quiz-input)
-:style: width: 100%; margin-top: 0.3rem;
+:style: width: 100%; margin-top: 0.25rem;
 ```
 
 ```{quiz}

@@ -312,7 +312,9 @@ div.tdoc-quiz button.tdoc-check:disabled {
     float: right;
     clear: right;
     margin-left: 1rem;
-    margin-bottom: 0.1rem;
+}
+.tdoc-quiz-field.right + .tdoc-quiz-field.right {
+    margin-top: 0.25rem;
 }
 p:has(.tdoc-quiz-field.right)::after {
     content: ".";
