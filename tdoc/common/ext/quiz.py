@@ -52,9 +52,9 @@ class Quiz(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        typ = self.arguments[0] if len(self.arguments) > 0 else None
+        typ = self.arguments[0] if len(self.arguments) > 0 else 'static'
         gen = self.arguments[1] if len(self.arguments) > 1 else None
-        if typ is None:
+        if typ == 'static':
             pass
         elif typ == 'table':
             if gen is None:
@@ -98,7 +98,7 @@ class Quiz(docutils.SphinxDirective):
 
         node = quiz('', *children)
         self.set_source_info(node)
-        if typ is not None: node['type'] = typ
+        node['type'] = typ
         if gen is not None: node['gen'] = gen
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
@@ -109,8 +109,7 @@ class quiz(nodes.Body, nodes.Element): pass
 
 
 def visit_quiz(self, node):
-    attrs = {}
-    if v := node.get('type'): attrs['data-type'] = v
+    attrs = {'data-type': node['type']}
     if v := node.get('gen'): attrs['data-gen'] = v
     if v := node.get('style'): attrs['style'] = v
     self.body.append(self.starttag(
@@ -121,7 +120,7 @@ def visit_quiz(self, node):
 
 def depart_quiz(self, node):
     self.body.append('</div>')
-    if node.get('type') is None:
+    if node.get('type') == 'static':
         self.body.append("""\
 <div class="controls">\
 <button class="tdoc-check fa-check" title="Check answers"></button>\

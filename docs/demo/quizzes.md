@@ -3,8 +3,9 @@
 
 # Quizzes
 
-This section demonstrates interactive quizzes with the {rst:dir}`quiz`
-directive and the {rst:role}`quiz-input` and {rst:role}`quiz-select` roles.
+This page demonstrates interactive quizzes with the {rst:dir}`quiz` directive
+and the {rst:role}`quiz-ph`, {rst:role}`quiz-input`, {rst:role}`quiz-select` and
+{rst:role}`quiz-hint` roles.
 
 ## Static
 
@@ -43,8 +44,8 @@ They can also be laid out as lists, usually with right-aligned fields.
 ```{role} yes-no(quiz-select)
 :right:
 :options: |
-: Yes
-: No
+: yes
+: no
 ```
 ```{role} input100(quiz-input)
 :style: width: 100%; margin-top: 0.25rem;
@@ -60,7 +61,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
-5.  {yes-no}`Yes`{quiz-hint}`Be positive.`
+5.  {yes-no}`yes`{quiz-hint}`Be positive.`
     Are you sure about your previous answer?
 4.  This input field uses the whole line. Guess what the answer is.
     {input100}`42`{quiz-hint}`You've seen this before.`
@@ -71,43 +72,44 @@ They can also be laid out as lists, usually with right-aligned fields.
 <script type="module">
 const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
 
-function numbers(max) {
+function sumProduct(max) {
     return () => {
-        const v = Math.floor(Math.random() * (max + 1));
+        const va = core.randomInt(1, max), vb = core.randomInt(1, max);
+        const div = Number.isInteger(vb / va) ? "divides" : "doesn't divide";
         return {
-            v,
-            equal(other) { return v === other.v; },
-            history: (max + 1) / 2,
+            va, vb,
+            equal(other) { return va === other.va && vb === other.vb; },
+            history: max ** 2 / 2,
 
-            value(ph) { ph.textContent = `${v}`; },
-            parity(args) {
-                args.ok = {'odd': 1, 'even': 0}[args.answer] === v % 2;
-                args.hint = "Look at the last digit.";
+            a(ph) { ph.textContent = `${va}`; },
+            b(ph) { ph.textContent = `${vb}`; },
+            sum(args) {
+                args.ok = args.answer.trim() === (va + vb).toString();
             },
-            opposite(args) {
-                args.ok = args.answer.trim() === (-v).toString();
-                args.hint = "Put a \"-\" in front.";
+            product(args) {
+                args.ok = args.answer.trim() === (va * vb).toString();
             },
+            div(args) { args.ok = args.answer === div; }
         };
     };
 }
 
-quiz.generator('numbers', numbers(99));
+quiz.generator('sumProduct', sumProduct(12));
 </script>
 
 Table-based quizzes can be generated dynamically, for drill exercises.
 
-```{role} odd-even(quiz-select)
-:options: |
-: odd
-: even
-```
 ```{role} input(quiz-input)
-:style: width: 5rem;
+:style: width: 3rem; text-align: center;
+```
+```{role} divides(quiz-select)
+:options: |
+: divides
+: doesn't divide
 ```
 
-```{quiz} table numbers
-| Value            | Parity             | Opposite          |
-| :--------------: | :----------------: | :---------------: |
-| {quiz-ph}`value` | {odd-even}`parity` | {input}`opposite` |
+```{quiz} table sumProduct
+| $a$          | $b$          | $a + b$      | $a \cdot b$      | $a \| b$       |
+| :----------: | :----------: | :----------: | :--------------: | :------------: |
+| {quiz-ph}`a` | {quiz-ph}`b` | {input}`sum` | {input}`product` | {divides}`div` |
 ```

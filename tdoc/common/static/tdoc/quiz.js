@@ -143,8 +143,10 @@ class TableGenQuiz extends QuizBase {
         let entry;
         for (let t = 0; t < 20; ++t) {
             entry = this.generate();
-            if (!entry.equal || !entry.history) break;
-            let ok = true, end = Math.min(entry.history, this.entries.length);
+            if (!entry.equal) break;
+            let end = this.entries.length;
+            if (entry.history && entry.history < end) end = entry.history;
+            let ok = true;
             for (let i = 0; i < end; ++i) {
                 if (entry.equal(this.entries[this.entries.length - 1 - i])) {
                     ok = false;
@@ -279,11 +281,11 @@ async function checkArgs(field) {
     };
 }
 
-const types = {'': Quiz, 'table': TableGenQuiz};
+const types = {'static': Quiz, 'table': TableGenQuiz};
 
 // Set up quizzes.
 const setupDone = domLoaded.then(() => {
     for (const quiz of qsa(document, '.tdoc-quiz')) {
-        quiz.tdocQuiz = new types[quiz.dataset.type || ''](quiz);
+        quiz.tdocQuiz = new types[quiz.dataset.type](quiz);
     }
 });
