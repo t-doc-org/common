@@ -91,6 +91,7 @@ export class MicroPython {
     async claimSerial(force = true) {
         if (this.claim || !this.serial) return;
         if (!force && this.serial.claimed) return;
+        ({promise: this.pAbort, reject: this.abort} = Promise.withResolvers());
         this.claim = await this.serial.claim(
             this.options.open, (...args) => this.onRead(...args),
             (...args) => this.onRelease(...args));
@@ -99,6 +100,7 @@ export class MicroPython {
 
     onRelease(reason) {
         delete this.claim;
+        if (this.abort) this.abort(new Error("Connection lost"));
         this._onRelease(reason);
     }
 
@@ -116,63 +118,43 @@ export class MicroPython {
     }
 
     notifyCapture() {
-        const notify = this.capNotify;
-        const {promise, resolve} = Promise.withResolvers();
-        this.capAvailable = promise;
-        this.capNotify = resolve;
-        if (notify) notify();
+        const avail = this.avail;
+        ({promise: this.pAvail, resolve: this.avail} = Promise.withResolvers());
+        if (avail) avail();
     }
 
     stopCapture(prompt) {
         if (!this.capturing) return;
         const cap = this.cap;
         delete this.cap;
-        delete this.capAvailable, this.capNotify;
-        this.stream = '';
-        if (cap.length > 0) this._onRead(this.stream, cap.read(cap.length));
+        delete this.pAvail, this.avail;
+        if (cap.length > 0) this.onRead(cap.read(cap.length));
     }
 
     onRead(data, done) {
-        if (this.capturing) {
-            if (data.length === 0) return;
-            this.cap.write(data);
-            this.notifyCapture();
-            return;
-        }
-        while (this.streaming) {
-            const i = data.indexOf(0x04);
-            if (i < 0) break;
-            this._onRead(this.stream, data.subarray(0, i), true);
-            data = data.subarray(i + 1);
-            if (this.stream === '') {
-                this.stream = 'err';
-            } else if (this.stream === 'err') {
-                this.streaming = false;
-                this.stream = '';
-                this.exitRawRepl();
-                break;
-            }
-        }
-        this._onRead(this.stream, data, done);
+        if (!this.capturing) return this._onRead('', data, done);
+        if (data.length === 0) return;
+        this.cap.write(data);
+        this.notifyCapture();
     }
 
-    async rawRepl(fn) {
+    async rawRepl(fn, banner = false) {
         try {
             await this.claimSerial();
             this.useRawPaste = true;
             this.startCapture();
-            this.streaming = false;
             await this.interrupt();
             await this.enterRawRepl();
             await this.expect('raw REPL; CTRL-B to exit\r\n>');
             await fn();
         } finally {
-            if (!this.streaming) {
-                this.stream = '';
-                await this.exitRawRepl();
-                await this.expect('\r\n>>> ');
-            }
+            await this.exitRawRepl();
+            const prompt = enc.encode('\r\n>>> ');
+            const onRead = banner ? (...args) => this._onRead('', ...args)
+                                  : undefined;
+            const out = await this.expect(prompt, {onRead});
             this.stopCapture();
+            this.onRead(prompt);
         }
     }
 
@@ -182,13 +164,19 @@ export class MicroPython {
         await this.expect('raw REPL; CTRL-B to exit\r\n>');
     }
 
-    async exec(code, streaming) {
+    async exec(code) {
         if (typeof code === 'string') code = enc.encode(code);
         if (!this.useRawPaste || !await this.sendRawPaste(code)) {
             this.useRawPaste = false;
             await this.sendChunked(code);
         }
-        if (streaming) this.streaming = true;
+    }
+
+    async execWait(ms, onOut, onErr) {
+        const out = await this.expect('\x04', {ms, onRead: onOut});
+        const err = await this.expect('\x04', {onRead: onErr});
+        await this.expect('>');
+        return {out, err};
     }
 
     async sendRawPaste(data) {
@@ -242,8 +230,7 @@ Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
 
     async run(code, ms = 1000) {
         await this.exec(code);
-        const out = await this.expect('\x04', ms);
-        const err = await this.expect('\x04>');
+        const {out, err} = await this.execWait(ms);
         if (err.length > 0) throw new RemoteError(dec.decode(err));
         return out;
     }
@@ -304,27 +291,31 @@ except OSError as e:
     async recv(count, ms = 1000) {
         const cancel = timeout(ms);
         while (this.cap.length < count) {
-            await Promise.race([this.capAvailable, cancel]);
+            await Promise.race([this.pAvail, cancel, this.pAbort]);
         }
         cancel.catch(e => undefined);  // Prevent logging
         return this.cap.read(count);
     }
 
-    async expect(want, ms = 1000) {
+    async expect(want, {ms = 1000, onRead} = {}) {
+        // TODO: Don't capture the data if not required
         if (typeof want === 'string') want = enc.encode(want);
         const cancel = timeout(ms);
         let pos = 0;
         for (;;) {
             const i = this.cap.findData(want, pos);
             if (i >= 0) {
+                if (onRead) onRead(this.cap.peek(pos, i));
                 const data = this.cap.read(i);
                 this.cap.drop(want.length);
                 cancel.catch(e => undefined);  // Prevent logging
                 return data;
             }
+            const oldPos = pos;
             pos = this.cap.length - want.length + 1;
             if (pos < 0) pos = 0;
-            await Promise.race([this.capAvailable, cancel]);
+            if (onRead && pos > oldPos) onRead(this.cap.peek(oldPos, pos));
+            await Promise.race([this.pAvail, cancel, this.pAbort]);
         }
     }
 }

@@ -66,6 +66,7 @@ class MicroPythonExecutor extends Executor {
 
     inputControl(onSend) {
         const {div} = this.output.lineInput('991', null, input => {
+            if (this.inhibitInput) return;
             const value = input.value;
             input.value = '';
             onSend(value);
@@ -130,34 +131,54 @@ class MicroPythonExecutor extends Executor {
         if (reason) this.console.write('err', `${reason}\n`);
     }
 
-    async rawRepl(fn) {
+    async rawRepl(fn, prompt) {
         this.console.clear();
-        this.enableInput(false);
+        this.inhibitInput = true;
         try {
-            await this.mp.rawRepl(fn);
+            await this.mp.rawRepl(async () => {
+                this.enableInput();
+                await fn();
+            }, prompt);
         } catch (e) {
             this.console.write('err', `${e.toString().trimEnd()}\n`);
         } finally {
-            this.enableInput();
+            this.inhibitInput = false;
         }
     }
 
     getCode() {
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
-        return blocks.join('');
+        return blocks;
     }
 
-    async doRun() {
+    async run() {
         await this.rawRepl(async () => {
             await this.mp.softReboot();
-            // TODO: Execute each block separately, so line numbers are correct
-            await this.mp.exec(this.getCode(), true);
-        });
+            const blocks = this.getCode();
+            for (const [i, code] of blocks.entries()) {
+                await this.mp.exec(code);
+                this.inhibitInput = false;
+                let err = false;
+                await this.mp.execWait(null,
+                    (...args) =>  this.console.write('', ...args),
+                    (data, done) => {
+                        this.console.write('err', data, done);
+                        err ||= data.length > 0;
+                    });
+                if (err) break;
+                this.inhibitInput = true;
+            }
+        }, true);
+    }
+
+    async stop() {
+        await this.mp.interrupt();
     }
 
     async doStop() {
-        await this.mp.interrupt();
+        if (!this.running) await this.mp.interrupt();
+        await super.doStop();
     }
 
     async reset() {
@@ -176,7 +197,8 @@ class MicroPythonExecutor extends Executor {
 
     async writeMain() {
         await this.rawRepl(async () => {
-            await this.mp.writeFile('main.py', enc.encode(this.getCode()));
+            await this.mp.writeFile('main.py',
+                                    enc.encode(this.getCode().join('\n')));
             this.console.write('', `Program written to main.py\n`);
         });
     }

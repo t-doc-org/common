@@ -319,6 +319,14 @@ export class FifoBuffer {
     // Return the number of bytes in the buffer.
     get length() { return this.end - this.begin; }
 
+    // Read data, but leave it in the buffer.
+    peek(begin, end) {
+        const len = this.length;
+        if (begin > len) begin = len;
+        if (end > len) end = len;
+        return this.data.slice(this.begin + begin, this.begin + end);
+    }
+
     // Read data from the head of the buffer.
     read(size) {
         const len = this.length;

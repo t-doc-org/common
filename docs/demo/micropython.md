@@ -16,6 +16,13 @@ uploading and executing Python code on an embedded system running
 ## Generic
 
 ```{exec} micropython
+:name: preamble
+:when: never
+print("(This line is printed from the preamble.)")
+```
+
+```{exec} micropython
+:after: preamble
 name = input("What's your name? ")
 print("Hello, %s!" % name)
 ```
