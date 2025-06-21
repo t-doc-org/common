@@ -6,6 +6,8 @@
 ```{toctree}
 :maxdepth: 1
 elements
+quiz
+poll
 exec
 python-libs
 ```

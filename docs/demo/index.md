@@ -6,6 +6,8 @@
 ```{toctree}
 :maxdepth: 1
 elements
+quizzes
+polls
 python
 micropython
 sql
