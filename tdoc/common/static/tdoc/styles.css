@@ -336,6 +336,35 @@ p:has(.tdoc-quiz-field.right)::after {
     width: 0;
 }
 
+/* Table-based quizzes */
+/* TODO(0.51): Remove */
+.tdoc-quiz-row {
+    vertical-align: middle;
+}
+.tdoc-quiz-row select {
+    background-color: field;
+    border: 1px solid var(--pst-color-border);
+    padding: 2px;
+}
+.tdoc-quiz-row input[type=text] {
+    width: 100%;
+    border: 1px solid var(--pst-color-border);
+    padding-block: 1px;
+    padding-inline-start: 2px;
+    padding-inline-end: 2px;
+}
+.tdoc-quiz-row td:last-child {
+    width: 0;
+}
+.tdoc-quiz-row button.tdoc-check:disabled {
+    color: var(--pst-color-success);
+    border: none;
+    background-color: var(--pst-color-success-bg);
+}
+.tdoc-quiz-row .tdoc-bg-bad {
+    background-color: var(--pst-color-danger-bg);
+}
+
 /* Polls */
 .tdoc-poll {
     margin: 1rem auto;
