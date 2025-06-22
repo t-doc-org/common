@@ -193,7 +193,7 @@ class HttpFile(io.RawIOBase):
                 if conn is not None: conn.close()
 
     def close(self):
-        self._conn.close()
+        if hasattr(self, '_conn'): self._conn.close()
 
     def __enter__(self): return self
     def __exit__(self, typ, value, tb): self.close()
