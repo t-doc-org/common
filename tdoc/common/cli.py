@@ -321,7 +321,8 @@ def cmd_serve(cfg):
 
     with Server(addr, RequestHandler) as srv, \
             get_store(cfg, allow_mem=True) as store, \
-            Application(cfg, addr, srv, store) as app:
+            api.Api(store, stderr=cfg.stderr) as api_, \
+            Application(cfg, addr, srv, api_) as app:
         srv.set_app(app)
         try:
             srv.serve_forever()
@@ -591,7 +592,7 @@ def try_stat(path):
 
 
 class Application:
-    def __init__(self, cfg, addr, server, store):
+    def __init__(self, cfg, addr, server, api_):
         self.cfg = cfg
         self.addr = addr
         self.server = server
@@ -600,7 +601,7 @@ class Application:
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.api = api.Api(store, stderr=cfg.stderr)
+        self.api = api_
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.build_mtime = None

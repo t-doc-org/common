@@ -23,15 +23,12 @@ class Database {
 
     async close() {
         if (this.dbId) {
-            // TODO: Check if "unlink" makes any difference
             await promiser('close', {dbId: this.dbId, unlink: true});
             delete this.dbId;
         }
     }
 
     async exec(sql, on_result) {
-        // TODO: Check if other args could be useful, e.g. for splitting a
-        // script into multiple statements
         if (!sql) sql = ' ';  // Avoid exception on empty statements
         await promiser('exec', {dbId: this.dbId, sql, callback: on_result});
     }

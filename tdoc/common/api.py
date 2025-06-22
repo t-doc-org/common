@@ -15,10 +15,8 @@ from wsgiref import util
 
 from . import wsgi
 
-# TODO: Make Api a context manager; call events.stop_watchers() in __exit__()
-
 missing = object()
-# TODO: Remove this once on Python 3.13
+# TODO(py-3.13): Remove Shutdown
 Shutdown = getattr(queue, 'Shutdown', queue.Empty)
 
 
@@ -44,9 +42,8 @@ class Api:
         self.stderr = stderr
         self.store = store
         self.pool = store.pool(size=db_pool_size)
-        self.events = EventApi(self)
+        self.events = EventsApi(self)
         self.endpoints = {
-            'event': self.events,  # TODO: Remove after 0.48 release
             'events': self.events,
             'health': self.handle_health,
             'log': self.handle_log,
@@ -54,6 +51,14 @@ class Api:
             'solutions': self.handle_solutions,
             'user': self.handle_user,
         }
+
+    def stop(self):
+        self.events.stop()
+
+    def __enter__(self): return self
+
+    def __exit__(self, typ, value, tb):
+        self.stop()
 
     def add_endpoint(self, name, handler):
         self.endpoints[name] = handler
@@ -178,7 +183,7 @@ class Api:
         return wsgi.respond_json(respond, info)
 
 
-class EventApi:
+class EventsApi:
     def __init__(self, api):
         self.api = api
         self.endpoints = {
@@ -195,6 +200,11 @@ class EventApi:
         self.watchers = {}
         self._stop_watchers = False
         self._last_watcher = None
+
+    def stop(self):
+        with self.lock:
+            self._stop_watchers = True
+            for w in self.watchers.values(): w.stop()
 
     def __call__(self, env, respond):
         name = util.shift_path_info(env)
@@ -218,11 +228,6 @@ class EventApi:
                 self.observables[obs.key] = obs
                 return obs
         raise Exception("Observable not found")
-
-    def stop_watchers(self):
-        with self.lock:
-            self._stop_watchers = True
-            for w in self.watchers.values(): w.stop()
 
     def watchers_must_stop(self):
         with self.lock: return self._stop_watchers
@@ -299,7 +304,7 @@ class Watcher:
         self.watches = {}
 
     def stop(self):
-        # TODO: Once on Python 3.13, remove must_stop and this conditional
+        # TODO(py-3.13): Remove must_stop and this conditional
         if hasattr(self.queue, 'shutdown'):
             self.queue.shutdown(True)
 
