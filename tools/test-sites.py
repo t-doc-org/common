@@ -24,11 +24,13 @@ def main(argv, stdin, stdout, stderr):
     os.chdir(base)
     tests = base / 'tmp' / 'tests'
 
-    # Find repository checkouts.
-    repos = {}
-    for d in base.parent.iterdir():
-        if (d / 'run.py').exists() and (d / 'docs' / 'conf.py').exists():
-            repos[d.name] = f'{github_org}/{d.name}'
+    # Find repository names and URLs.
+    names = argv[1:]
+    if not names:
+        names = [d.name for d in base.parent.iterdir()
+                 if (d / 'run.py').exists()
+                    and (d / 'docs' / 'conf.py').exists()]
+    repos = {n: f'{github_org}/{n}' for n in names}
     width = max(len(repo) for repo in repos)
     def label(repo): return f"{repo:{width}} | "
 
