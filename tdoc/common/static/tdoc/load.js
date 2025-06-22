@@ -30,11 +30,7 @@ domLoaded.then(() => {
 });
 
 // Handle the "terminate server" button.
-tdoc.terminateServer = async ret => {
-    // TODO: Move to api.js
-    await fetch(`/*api/terminate?r=${ret ?? 0}`,
-                {method: 'POST', cache: 'no-cache', referrer: ''});
-};
+tdoc.terminateServer = async () => await api.terminate();
 
 // Handle the "toggle solutions" button.
 const toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');

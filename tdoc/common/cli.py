@@ -801,17 +801,15 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 
     def handle_terminate(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
-        r = parse.parse_qs(env.get('QUERY_STRING', '')).get('r', ['0'])[0]
-        respond(wsgi.http_status(HTTPStatus.OK), [
-            ('Content-Type', 'text/plain; charset=utf-8'),
-            ('Content-Length', '0'),
-        ])
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        req = wsgi.read_json(env)
+        rc = req.get('rc', 0)
+        yield from wsgi.respond_json(respond, {})
         try:
-            self.returncode = int(r)
+            self.returncode = int(rc)
         except ValueError:
             self.returncode = 1
         self.server.shutdown()
-        return []
 
 
 if __name__ == '__main__':

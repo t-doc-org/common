@@ -201,7 +201,7 @@ function nextField(fields, field) {
     }
 }
 
-// TODO: Un-export after 0.50 release
+// TODO(0.51): Un-export
 export const checks = {
     default(args) { checks.trim(args); },
     split(args, param = ',') { args.solution = args.solution.split(param); },
@@ -209,7 +209,7 @@ export const checks = {
     remove: (args, param = '\\s+') => {
         args.applyAS(v => v.replaceAll(new RegExp(param, 'g'), ''));
     },
-    // TODO: Remove after 0.50 release
+    // TODO(0.51): Remove
     'remove-whitespace': (args) => {
         args.applyAS(v => v.replaceAll(/\s+/g, ''));
     },

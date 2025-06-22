@@ -15,7 +15,7 @@ components:
   [roles and directives](reference/elements.md).
 - A **[local server](edit.md#edit-documents)** that automatically rebuilds
   documents when their source changes.
-- A **[automatic deployment system](edit.md#deploy-documents).** that builds
+- An **[automatic deployment system](edit.md#deploy-documents)** that builds
   sites and deploys them to [GitHub Pages](https://pages.github.com/) on every
   version control push.
 

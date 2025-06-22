@@ -133,6 +133,10 @@ export async function solutions(show) {
     });
 }
 
+export async function terminate(rc = 0) {
+    return await fetchJson(`${url}/terminate`, {body: {rc}});
+}
+
 export class Watch {
     static lastId = 0;
 
