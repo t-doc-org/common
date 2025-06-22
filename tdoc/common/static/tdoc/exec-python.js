@@ -8,6 +8,7 @@ import {Executor} from './exec.js';
 let worker;
 const executors = {};
 const hooks = {
+    log: (...args) => { console.log(...args); },
     write: (run_id, ...args) => {
         const exec = executors[run_id];
         if (exec) return exec.onWrite(...args);

@@ -22,7 +22,7 @@ pyodide_rel = 'https://github.com/t-doc-org/pyodide-packages/releases/download'
 pyodide_packages = [
     r'micropip-\d+(?:\.\d+)+.*\.whl',
     r'packaging-\d+(?:\.\d+)+.*\.whl',
-    r'sqlite3-\d+(?:\.\d+)+.*\.zip',
+    r'sqlite3-\d+(?:\.\d+)+.*\.(?:whl|zip)',
 ]
 
 
