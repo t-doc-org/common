@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-50)=
+## 0.50 *(2025-06-22)*
+
+- Integrated table-based dynamic quizzes into the {rst:dir}`quiz` directive.
+- Fixed an issue with line numbers in tracebacks in
+  [`{exec} micropython`](/reference/exec.md#micropython).
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.49...0.50)
+
 (release-0-49)=
 ## 0.49 *(2025-06-14)*
 
