@@ -13,7 +13,7 @@ release-notes
 
 t-doc requires the following software to be installed:
 
-- [Python](https://www.python.org/) 3.12 or later
+- [Python](https://www.python.org/) 3.13
 - [Graphviz](https://graphviz.org/), for `graphviz` directives
 - [Mercurial](https://www.mercurial-scm.org/), for managing source files
 
@@ -22,7 +22,7 @@ t-doc requires the following software to be installed:
 - Install [Python](https://www.python.org/).
 
   ```{code-block} shell-session
-  winget install --id Python.Python.3.12
+  winget install --id Python.Python.3.13
   ```
 
   - Check that Python can be launched from the command-line, by running:
@@ -74,7 +74,7 @@ Available upgrades for these packages can be displayed and installed with
 
 ```{code-block} shell-session
 winget upgrade
-winget upgrade --id Python.Python.3.12
+winget upgrade --id Python.Python.3.13
 winget upgrade --id Graphviz.Graphviz
 winget upgrade --id TortoiseHg.TortoiseHg
 winget upgrade --id Microsoft.WindowsTerminal
