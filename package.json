@@ -17,9 +17,9 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@sqlite.org/sqlite-wasm": "^3.50.1-build1",
     "mathjax": "^3.2.2",
-    "polyscript": "^0.17.26",
+    "polyscript": "^0.17.27",
     "pyodide": "^0.26.4",
-    "rollup": "^4.44.0",
+    "rollup": "^4.44.1",
     "sabayon": "^0.9.6"
   },
   "name": "t-doc-common",
