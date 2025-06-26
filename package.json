@@ -18,7 +18,7 @@
     "@sqlite.org/sqlite-wasm": "^3.50.1-build1",
     "mathjax": "^3.2.2",
     "polyscript": "^0.17.27",
-    "pyodide": "^0.26.4",
+    "pyodide": "^0.27.7",
     "rollup": "^4.44.1",
     "sabayon": "^0.9.6"
   },
