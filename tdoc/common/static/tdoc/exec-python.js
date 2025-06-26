@@ -29,19 +29,41 @@ class PythonExecutor extends Executor {
 
     static async init(runable) {
         if (!runable) return;
+        const md = tdoc.exec?.metadata?.python ?? {};
+
+        // Extract files and resolve their URLs.
         const base = import.meta.resolve('../');
-        const md = tdoc.exec?.metadata?.python;
         const files = {}
-        for (const [k, v] of Object.entries(md?.files ?? {})) {
+        for (const [k, v] of Object.entries(md.files ?? {})) {
             files[(new URL(k, base)).toString()] = v;
         }
         files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
 
+        // We don't pass the packages as config.packages, because Polyscript
+        // intercepts them instead of passing them along to Pyodide, which
+        // causes issues:
+        //
+        //  - It loads them with micropip, then caches the frozen
+        //    pyodide-lock.json in IndexedDB by `packages` set.
+        //  - The cache isn't invalidated when Pyodide is updated.
+        //  - The lock file contains the Pyodide version.
+        //  - Pyodide checks the version during startup and fails on mismatch.
+        //
+        // BUG(polyscript): Should handle cache invalidation. Or provide a way
+        // to pass packages to Pyodide directly, without using micropip and
+        // freezing.
         worker = XWorker(import.meta.resolve('./exec-python.py'), {
             type: 'pyodide',
             version: import.meta.resolve('../pyodide/pyodide.mjs'),
+            async: true,
             // https://docs.pyscript.net/latest/user-guide/configuration/
-            config: {...md, files},
+            config: {
+                ...md,
+                files,
+                packages: null,
+                packages_cache: 'never',
+                tdoc: {packages: md.packages}
+            },
         });
         const {promise, resolve} = Promise.withResolvers();
         worker.sync.ready = msg => {

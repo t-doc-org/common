@@ -18,9 +18,12 @@ Python code in the browser.
 :when: load
 :class: hidden
 import platform
+import pyodide_js
+
 print(f"{platform.python_implementation()}"
       f" {'.'.join(platform.python_version_tuple())}"
-      f" on {platform.platform()}")
+      f" on {platform.platform()},"
+      f" using Pyodide {pyodide_js.version}")
 ```
 
 ## Module setup
