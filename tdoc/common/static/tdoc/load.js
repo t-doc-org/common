@@ -18,13 +18,15 @@ domLoaded.then(() => {
 
 // Handle login / logout.
 domLoaded.then(() => {
-    const menu = qs(document, '.dropdown-user > .dropdown-menu');
+    const dd = qs(document, '.dropdown-user');
+    const menu = qs(dd, '.dropdown-menu');
     const user = qs(menu, 'li > a.btn-user');
     user.classList.add('disabled');
     const login = qs(menu, 'li:has(.btn-login)');
     const logout = qs(menu, 'li:has(.btn-logout)');
     api.user.onChange(async () => {
         const name = await api.user.name();
+        dd.classList.toggle('signed-in', name !== undefined);
         login.classList.toggle('hidden', name !== undefined);
         logout.classList.toggle('hidden', name === undefined);
         qs(user, '.btn__text-container')

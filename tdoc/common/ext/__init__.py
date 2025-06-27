@@ -173,7 +173,6 @@ def add_user_button(app, page, template, context, doctree):
     if doctree is None: return
     context["header_buttons"].append({
         'type': 'group',
-        'icon': 'fa fa-user',
         'label': 'user',
         'buttons': [{
             'type': 'link',

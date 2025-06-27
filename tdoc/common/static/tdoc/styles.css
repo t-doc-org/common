@@ -46,11 +46,11 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* Server termination buttons. */
-.article-header-buttons button.btn-terminate::before {
+.article-header-buttons > button.btn-terminate::before {
     font: var(--fa-font-solid);
     content: '\f52a';
 }
-.article-header-buttons button.btn-terminate:hover::before {
+.article-header-buttons > button.btn-terminate:hover::before {
     content: '\f52b';
 }
 
@@ -106,20 +106,20 @@ html:is([data-tdoc-solutions]:not([data-tdoc-solutions-state]),
     ):not([data-tdoc-solutions-ctrl]) .admonition.solution:not(.always-show) {
     display: none;
 }
-.article-header-buttons button.btn-toggle-solutions {
+.article-header-buttons > button.btn-toggle-solutions {
     min-width: 2.7rem;
 }
-.article-header-buttons button.btn-toggle-solutions::before {
+.article-header-buttons > button.btn-toggle-solutions::before {
     font: var(--fa-font-solid);
     content: '\f070';
 }
 html:is([data-tdoc-solutions]:not([data-tdoc-solutions-state]),
         [data-tdoc-solutions-state=hide]
-    ) .article-header-buttons button.btn-toggle-solutions::before {
+    ) .article-header-buttons > button.btn-toggle-solutions::before {
     content: '\f06e';
 }
 html:not([data-tdoc-solutions=hide]):not([data-tdoc-solutions-ctrl])
-        .article-header-buttons button.btn-toggle-solutions {
+        .article-header-buttons > button.btn-toggle-solutions {
     display: none;
 }
 
@@ -202,11 +202,11 @@ select:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
 }
 
 /* Drawing */
-.article-header-buttons button.btn-draw::before {
+.article-header-buttons > button.btn-draw::before {
     font: var(--fa-font-solid);
     content: '\f304';
 }
-html[data-tdoc-draw] .article-header-buttons button.btn-draw {
+html[data-tdoc-draw] .article-header-buttons > button.btn-draw {
     background-color: var(--pst-color-border);
 }
 html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
@@ -672,7 +672,14 @@ div.tdoc-exec div.tdoc-exec-controls {
     text-indent: -3rem;
 }
 
-/* Login form. */
+/* Login functionality. */
+.article-header-buttons > .dropdown-user > button::before {
+    font: var(--fa-font-regular);
+    content: '\f007';
+}
+.article-header-buttons > .dropdown-user.signed-in > button::before {
+    font: var(--fa-font-solid);
+}
 #tdoc-login .message {
     margin-right: 1rem;
     color: var(--pst-color-danger);
@@ -700,7 +707,8 @@ div.tdoc-exec div.tdoc-exec-controls {
 }
 
 /* Fix the alignment of navbar icons. */
-.article-header-buttons > button {
+.article-header-buttons > button,
+.article-header-buttons > .dropdown > button {
     justify-content: center;
 }
 .article-header-buttons > button > .btn__icon-container {
