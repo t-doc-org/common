@@ -7,9 +7,6 @@ import sys
 from polyscript import config, xworker
 from pyodide_js import loadPackage, version
 
-if ps := getattr(config.tdoc, 'packages', None):
-    await loadPackage(ps)
-
 sys.path.append('/lib/tdoc.zip')
 import tdoc.core  # noqa
 
