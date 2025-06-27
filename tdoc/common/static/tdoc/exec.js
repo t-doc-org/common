@@ -125,8 +125,8 @@ export class Executor {
         let doc = preText;
         const editorId = this.editorId;
         if (editorId) {
-            this.editorStore = new Stored(editorPrefix + editorId, doc);
-            doc = this.editorStore.value;
+            this.editorStore = Stored.create(editorPrefix + editorId, doc);
+            doc = this.editorStore.get();
             this.editorStorer = new RateLimited(5000);
             extensions.push(
                 cmview.EditorView.domEventObservers({
@@ -169,11 +169,8 @@ export class Executor {
             if (tr.annotation(storeUpdate)) return;
         }
         this.editorStorer.schedule(() => {
-            if (isOrig ?? doc.eq(this.origText)) {
-                this.editorStore.del();
-            } else {
-                this.editorStore.value = doc.toString();
-            }
+            this.editorStore.set(isOrig ?? doc.eq(this.origText) ? undefined
+                                 : doc.toString());
         });
     }
 

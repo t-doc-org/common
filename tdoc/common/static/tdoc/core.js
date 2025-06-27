@@ -388,28 +388,31 @@ export class FifoBuffer {
     }
 }
 
-// A value that is stored as a string in local storage.
+// A value that is stored as a string in local or session storage.
 export class Stored {
-    constructor(key, def, storage = localStorage) {
+    static create(key, def, storage = localStorage) {
+        const self = new this(key, def, storage);
+        const v = self._storage.getItem(self.key);
+        if (v !== null) {
+            try { self._value = self.decode(v); } catch (e) {}
+        }
+        return self;
+    }
+
+    constructor(key, def, storage) {
         this.key = key;
         this._value = def;
         this._storage = storage;
-        const v = this._storage.getItem(key);
-        if (v !== null) {
-            try { this._value = this.decode(v); } catch (e) {}
-        }
     }
 
-    get value() { return this._value; }
-    set value(v) { this._value = v; this.store(); }
+    get() { return this._value; }
+    set(v) { this._value = v; this.store(); }
 
     update(fn) {
         fn(this._value);
         this.store();
         return this._value;
     }
-
-    del() { this._storage.removeItem(this.key); }
 
     store() {
         if (this._value !== undefined && this._value !== null) {
@@ -430,12 +433,12 @@ export class StoredJson extends Stored {
 }
 
 // Manage an immutable, globally-unique client ID in local store.
-const clientIdStore = new Stored('tdoc:clientId');
-if (clientIdStore.value === undefined) {
-    clientIdStore.value = await toBase64(
-        crypto.getRandomValues(new Uint8Array(33)));
+const clientIdStore = Stored.create('tdoc:clientId');
+if (clientIdStore.get() === undefined) {
+    clientIdStore.set(await toBase64(
+        crypto.getRandomValues(new Uint8Array(33))));
 }
-export const clientId = clientIdStore.value;
+export const clientId = clientIdStore.get();
 
 // Return an exponential backoff delay.
 export function backoff(min, max, retries) {

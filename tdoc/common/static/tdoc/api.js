@@ -11,13 +11,13 @@ function handleApiBackend() {
     if (!params) return;
     const api = params.get('api');
     if (api === null) return;
-    backend.value = api;
+    backend.set(api);
     params.delete('api');
     page.hashParams = params;
     location.reload();
 }
 
-const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
+const backend = Stored.create('tdoc:api:backend', undefined, sessionStorage);
 handleApiBackend();
 on(window).hashchange(() => handleApiBackend());
 
@@ -26,29 +26,30 @@ export const url = (() => {
     if (tdoc.api_url) return tdoc.api_url;
     const loc = new URL(location);
     if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
-        const suffix = backend.value ? '-' + backend.value : '';
+        const b = backend.get();
+        const suffix = b ? '-' + b : '';
         return `${loc.protocol}//api${suffix}.t-doc.org`;
     }
     return null;
 })();
 
 class User extends EventTarget {
-    static stored = new StoredJson('tdoc:api:user');
+    static stored = StoredJson.create('tdoc:api:user');
 
     constructor() {
         super();
-        this.ready = new Promise(res => { this.resolve = res; });
+        ({promise: this.pReady, resolve: this.ready} = Promise.withResolvers());
         this.handleLogin();
-        if (!this.initialized) this.login(this.constructor.stored.value?.token);
+        if (!this.initialized) this.login(this.constructor.stored.get()?.token);
     }
 
     async token() {
-        if (this.ready) await this.ready;
+        if (this.pReady) await this.pReady;
         return this.data?.token;
     }
 
     async member_of(group) {
-        if (this.ready) await this.ready;
+        if (this.pReady) await this.pReady;
         const groups = this.data?.groups ?? [];
         return groups.includes(group) || groups.includes('*');
     }
@@ -60,9 +61,9 @@ class User extends EventTarget {
 
     set(data) {
         this.data = data;
-        if (this.resolve) {
-            this.resolve();
-            delete this.ready, this.resolve;
+        if (this.ready) {
+            this.ready();
+            delete this.pReady, this.ready;
         }
         this.dispatchEvent(new CustomEvent('change'));
     }
@@ -75,16 +76,16 @@ class User extends EventTarget {
                 headers: bearerAuthorization(token),
             });
             data.token = token;
-            this.constructor.stored.value = data;
+            this.constructor.stored.set(data);
             this.set(data);
         } catch (e) {
-            if (this.resolve) this.set(this.constructor.stored.value);
+            if (this.resolve) this.set(this.constructor.stored.get());
         }
     }
 
     logout() {
         this.initialized = true;
-        this.constructor.stored.value = undefined;
+        this.constructor.stored.set(undefined);
         this.set(undefined);
     }
 
