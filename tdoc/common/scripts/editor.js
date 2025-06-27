@@ -27,7 +27,7 @@ const lightTheme = cmview.EditorView.theme({}, {dark: false});
 const darkTheme = oneDark;
 
 function currentTheme() {
-    return document.querySelector('html').dataset.theme === 'dark' ?
+    return document.documentElement.dataset.theme === 'dark' ?
            darkTheme : lightTheme;
 }
 
@@ -41,9 +41,8 @@ const obs = new MutationObserver((mutations) => {
         const editor = div.tdocEditor;
         editor.dispatch({effects: theme.reconfigure(curTheme)});
     }
-});
-obs.observe(document.documentElement,
-            {attributes: true, attributeFilter: ['data-theme']});
+}).observe(document.documentElement,
+           {attributes: true, attributeFilter: ['data-theme']});
 
 // The default extensions appended to the user-provided ones.
 const defaultExtensions = [

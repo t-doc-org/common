@@ -58,6 +58,14 @@
     // Set data-* attributes on the <html> tag.
     Object.assign(document.documentElement.dataset, tdoc.html_data);
 
+    // Copy the data-theme attribute of the document to data-bs-theme, to
+    // synchronize the Bootstrap theme.
+    new MutationObserver((mutations) => {
+        const ds = document.documentElement.dataset;
+        ds.bsTheme = ds.theme;
+    }).observe(document.documentElement,
+               {attributes: true, attributeFilter: ['data-theme']});
+
     // Disable undesired global keydown event listeners, as they can interfere
     // with per-element listeners.
     const doAddEventListener = window.addEventListener;
