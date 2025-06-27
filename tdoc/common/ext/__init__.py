@@ -95,9 +95,10 @@ def setup(app):
 
     app.connect('config-inited', on_config_inited)
     app.connect('html-page-context', on_html_page_context)
-    app.connect('html-page-context', add_draw_button, priority=500.6)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
+    app.connect('html-page-context', add_draw_button, priority=500.6)
+    app.connect('html-page-context', add_user_button, priority=500.7)
     app.connect('write-started', write_static_files)
 
     return {
@@ -148,6 +149,16 @@ def on_html_page_context(app, page, template, context, doctree):
     app.add_js_file('tdoc/load.js', type='module')
 
 
+def add_terminate_button(app, page, template, context, doctree):
+    if doctree is None: return
+    context["header_buttons"].append({
+        'type': 'javascript',
+        'javascript': 'tdoc.terminateServer()',
+        'tooltip': _("Terminate the local server"),
+        'label': 'terminate',
+    })
+
+
 def add_draw_button(app, page, template, context, doctree):
     if doctree is None: return
     context["header_buttons"].append({
@@ -158,13 +169,30 @@ def add_draw_button(app, page, template, context, doctree):
     })
 
 
-def add_terminate_button(app, page, template, context, doctree):
+def add_user_button(app, page, template, context, doctree):
     if doctree is None: return
     context["header_buttons"].append({
-        'type': 'javascript',
-        'javascript': 'tdoc.terminateServer()',
-        'tooltip': _("Terminate the local server"),
-        'label': 'terminate',
+        'type': 'group',
+        'icon': 'fa fa-user',
+        'label': 'user',
+        'buttons': [{
+            'type': 'link',
+            'text': "Not signed in",
+            'icon': 'fa fa-user',
+            'label': 'user',
+        }, {
+            'type': 'javascript',
+            'javascript': 'tdoc.login()',
+            'text': "Sign in",
+            'icon': 'fa fa-right-to-bracket',
+            'label': 'login',
+        }, {
+            'type': 'javascript',
+            'javascript': 'tdoc.logout()',
+            'text': "Sign out",
+            'icon': 'fa fa-right-from-bracket',
+            'label': 'logout',
+        }],
     })
 
 

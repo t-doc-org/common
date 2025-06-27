@@ -672,6 +672,12 @@ div.tdoc-exec div.tdoc-exec-controls {
     text-indent: -3rem;
 }
 
+/* Login form. */
+#tdoc-login .message {
+    margin-right: 1rem;
+    color: var(--pst-color-danger);
+}
+
 /* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
    if it's empty, as it causes the scrollbar to always appear. */
 .bd-sidebar-primary div#rtd-footer-container:empty {
@@ -704,6 +710,9 @@ div.tdoc-exec div.tdoc-exec-controls {
 
 /* Don't open dropdown menus on hover. */
 .bd-header-article .btn:hover + .dropdown-menu:not(.show) {
+    display: none;
+}
+.bd-header-article .dropdown-menu:hover:not(.show) {
     display: none;
 }
 
@@ -751,4 +760,9 @@ div.math, span.math {
 }
 div.math mjx-container {
     padding-top: 0.2rem;
+}
+
+/* Avoid that form controls change size on focus. */
+.form-control:focus, .form-control:focus-visible {
+    border: var(--bs-border-width) solid var(--bs-border-color);
 }

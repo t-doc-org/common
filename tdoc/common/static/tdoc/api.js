@@ -43,6 +43,11 @@ class User extends EventTarget {
         if (!this.initialized) this.login(this.constructor.stored.get()?.token);
     }
 
+    async name() {
+        if (this.pReady) await this.pReady;
+        return this.data?.name;
+    }
+
     async token() {
         if (this.pReady) await this.pReady;
         return this.data?.token;
@@ -80,13 +85,16 @@ class User extends EventTarget {
             this.set(data);
         } catch (e) {
             if (this.resolve) this.set(this.constructor.stored.get());
+            return false;
         }
+        return true;
     }
 
     logout() {
         this.initialized = true;
         this.constructor.stored.set(undefined);
         this.set(undefined);
+        return true;
     }
 
     handleLogin() {
