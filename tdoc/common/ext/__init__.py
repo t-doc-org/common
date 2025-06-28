@@ -89,11 +89,13 @@ def setup(app):
     app.add_config_value('tdoc_api', '', 'html', str)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
+    app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
+    app.connect('builder-inited', on_builder_inited)
     app.connect('html-page-context', on_html_page_context)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
@@ -129,24 +131,34 @@ def on_config_inited(app, config):
         opts.setdefault('use_source_button', True)
 
 
+def on_builder_inited(app):
+    app.config.html_context['tdoc'] = tdoc_config(app, None, None)
+
+
 def on_html_page_context(app, page, template, context, doctree):
     context['tdoc_version'] = __version__
     if v := app.config.license: context['license'] = v
     if v := app.config.license_url: context['license_url'] = v
 
     # Set up early and on-load JavaScript.
-    tdoc = {
-        'conf': copy.deepcopy(app.config.tdoc),
-        'enable_sab': app.config.tdoc_enable_sab, 'html_data': {},
-    }
-    if 'tdoc-dev' in app.tags: tdoc['dev'] = True
-    if v := app.config.tdoc_api: tdoc['api_url'] = v
-    app.emit('tdoc-html-page-config', page, tdoc, doctree)
-    tdoc = json.dumps(tdoc, separators=(',', ':'))
+    tdoc = tdoc_config(app, page, doctree)
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1,
                     scope=context['pathto']('', resource=True))
     app.add_js_file('tdoc/load.js', type='module')
+
+
+def tdoc_config(app, page, doctree):
+    tdoc = {
+        'conf': copy.deepcopy(app.config.tdoc),
+        'enable_sab': app.config.tdoc_enable_sab,
+        'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
+        'html_data': {},
+    }
+    if 'tdoc-dev' in app.tags: tdoc['dev'] = True
+    if v := app.config.tdoc_api: tdoc['api_url'] = v
+    app.emit('tdoc-html-page-config', page, tdoc, doctree)
+    return json.dumps(tdoc, separators=(',', ':'))
 
 
 def add_terminate_button(app, page, template, context, doctree):

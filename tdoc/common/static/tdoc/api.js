@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    backoff, bearerAuthorization, dec, fetchJson, FifoBuffer, on, page, sleep,
-    Stored, StoredJson,
+    AsyncStoredJson, backoff, bearerAuthorization, dec, fetchJson, FifoBuffer,
+    on, page, sleep, Stored,
 } from './core.js';
 
 function handleApiBackend() {
@@ -34,13 +34,18 @@ export const url = (() => {
 })();
 
 class User extends EventTarget {
-    static stored = StoredJson.create('tdoc:api:user');
+    static async create() {
+        return new this(await AsyncStoredJson.create('tdoc:api:user'));
+    }
 
-    constructor() {
+    constructor(stored) {
         super();
+        this.stored = stored;
         ({promise: this.pReady, resolve: this.ready} = Promise.withResolvers());
         this.handleLogin();
-        if (!this.initialized) this.login(this.constructor.stored.get()?.token);
+        if (!this.initialized) {
+            this.login(this.stored.get()?.token);  // Background
+        }
     }
 
     async name() {
@@ -75,24 +80,24 @@ class User extends EventTarget {
 
     async login(token) {
         this.initialized = true;
-        if (!token) return this.logout();
+        if (!token) return await this.logout();
         try {
             const data = await fetchJson(`${url}/user`, {
                 headers: bearerAuthorization(token),
             });
             data.token = token;
-            this.constructor.stored.set(data);
+            await this.stored.set(data);
             this.set(data);
         } catch (e) {
-            if (this.resolve) this.set(this.constructor.stored.get());
+            if (this.resolve) this.set(this.stored.get());
             return false;
         }
         return true;
     }
 
-    logout() {
+    async logout() {
         this.initialized = true;
-        this.constructor.stored.set(undefined);
+        await this.stored.set(undefined);
         this.set(undefined);
         return true;
     }
@@ -103,7 +108,7 @@ class User extends EventTarget {
         if (params.get('logout') !== null) {
             params.delete('logout');
             page.hashParams = params;
-            this.logout();
+            this.logout();  // Background
         }
         const token = params.get('login');
         if (token) {
@@ -114,7 +119,7 @@ class User extends EventTarget {
     }
 }
 
-export const user = new User();
+export const user = await User.create();
 on(window).hashchange(() => user.handleLogin());
 
 export function log(session, data, options) {

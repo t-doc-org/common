@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+<meta charset="utf-8">
+<script>const tdoc = {{ tdoc }};</script>
+<script>
+// Copyright 2025 Remy Blank <remy@c-space.org>
+// SPDX-License-Identifier: MIT
+
+'use strict';
+(async () => {
+    const ds = tdoc.domain_storage;
+    if (!tdoc.dev && !(ds.allowed_origins && ds.allowed_keys)) return;
+    const origins = new RegExp(ds.allowed_origins ?? '');
+    const keys = new RegExp(ds.allowed_keys ?? '');
+    const port = await new Promise(resolve => {
+        function onInit(e) {
+            if (!((tdoc.dev && e.origin === location.origin)
+                  || origins.test(e.origin))) {
+                return;
+            }
+            if (e.data !== 'init' || e.ports.length === 0) return;
+            console.info(`[t-doc] Domain storage connected from ${e.origin}`);
+            removeEventListener('message', onInit);
+            resolve(e.ports[0]);
+        };
+        addEventListener('message', onInit);
+    });
+
+    function check(key) {
+        if (!(tdoc.dev || keys.test(key))) throw new Error("Forbidden key");
+        return key;
+    }
+
+    port.addEventListener('message', e => {
+        const data = e.data;
+        const resp = {id: data.id};
+        try {
+            if (data.get !== undefined) {
+                resp.value = localStorage.getItem(check(data.get));
+            } else if (data.set != undefined) {
+                localStorage.setItem(check(data.set), data.value);
+            } else if (data.remove != undefined) {
+                localStorage.removeItem(check(data.remove));
+            } else {
+                throw new Error("Permission denied");
+            }
+        } catch (e) {
+            resp.err = e;
+        }
+        port.postMessage(resp);
+    });
+    port.start();
+})();
+</script>
+</head>
+<body></body>
+</html>

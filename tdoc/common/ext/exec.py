@@ -117,6 +117,7 @@ def check_refs(node, names, runner, typ, doctree):
 
 
 def set_html_page_config(app, page, config, doctree):
+    if page is None: return
     cfg = {}
     if (md := app.env.metadata[page].get('exec')) is not None:
         cfg['metadata'] = md

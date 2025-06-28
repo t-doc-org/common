@@ -5,6 +5,9 @@ from http import HTTPStatus
 import json
 import re
 
+# A regexp matching a hostname component.
+hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
+
 
 def http_status(status):
     return f'{status} {status.phrase}'

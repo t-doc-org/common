@@ -81,7 +81,7 @@ tdoc.login = async() => {
     }
     loginModal.show();
 };
-tdoc.logout = () => api.user.logout();
+tdoc.logout = async () => await api.user.logout();
 
 // Handle admonition expansion. The button is needed to enable keyboard focus.
 domLoaded.then(() => {

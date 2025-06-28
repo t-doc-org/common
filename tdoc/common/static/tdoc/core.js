@@ -388,8 +388,78 @@ export class FifoBuffer {
     }
 }
 
+// An async implementation of the subset of Storage used by AsyncStored that
+// manages the data in localStorage at the domain level, with the data shared
+// across all sites.
+class DomainStorage {
+    static async create() {
+        const {port1, port2} = new MessageChannel();
+        const self = new this(port1);
+        await domLoaded;
+        const iframe = document.body.appendChild(elmt`\
+<iframe class="tdoc-domain-storage"\
+ src="${tdoc.staticUrl}/tdoc/domain.html"></iframe>\
+`);
+        on(iframe).load(() => {
+            const origin = tdoc.dev ? location.origin
+                                    : tdoc.domain_storage.origin;
+            iframe.contentWindow.postMessage('init', origin, [port2]);
+        });
+        return self;
+    }
+
+    constructor(port) {
+        this.port = port;
+        this.id = 0;
+        this.msgs = new Map();
+        on(port).message(e => this.onMessage(e));
+        port.start();
+    }
+
+    async getItem(key) { return (await this.transaction({get: key})).value; }
+    async setItem(key, value) { await this.transaction({set: key, value}); }
+    async removeItem(key) { await this.transaction({remove: key}); }
+
+    async transaction(msg) {
+        msg.id = ++this.id;
+        const {promise, resolve, reject} = Promise.withResolvers();
+        this.msgs.set(msg.id, {resolve, reject});
+        this.port.postMessage(msg);
+        return await promise;
+    }
+
+    onMessage(e) {
+        const data = e.data;
+        const {resolve, reject} = this.msgs.get(data.id);
+        this.msgs.delete(data.id);
+        delete data.id;
+        if (data.err !== undefined) {
+            reject(data.err);
+        } else {
+            resolve(data);
+        }
+    }
+}
+
+const domainStorage = tdoc.dev || tdoc.domain_storage.origin ?
+                      await DomainStorage.create() : localStorage;
+
+// A base class for stored values.
+class StoredBase {
+    constructor(key, def, storage) {
+        this.key = key;
+        this._value = def;
+        this._storage = storage;
+    }
+
+    get() { return this._value; }
+
+    encode(v) { return v; }
+    decode(v) { return v; }
+}
+
 // A value that is stored as a string in local or session storage.
-export class Stored {
+export class Stored extends StoredBase {
     static create(key, def, storage = localStorage) {
         const self = new this(key, def, storage);
         const v = self._storage.getItem(self.key);
@@ -399,13 +469,6 @@ export class Stored {
         return self;
     }
 
-    constructor(key, def, storage) {
-        this.key = key;
-        this._value = def;
-        this._storage = storage;
-    }
-
-    get() { return this._value; }
     set(v) { this._value = v; this.store(); }
 
     update(fn) {
@@ -421,16 +484,44 @@ export class Stored {
             this._storage.removeItem(this.key);
         }
     }
-
-    encode(v) { return v; }
-    decode(v) { return v; }
 }
 
-// A value that is stored as JSON in local storage.
-export class StoredJson extends Stored {
+// A value that is stored as a string in an async storage.
+export class AsyncStored extends StoredBase {
+    static async create(key, def, storage = domainStorage) {
+        const self = new this(key, def, storage);
+        const v = await self._storage.getItem(self.key);
+        if (v !== null) {
+            try { self._value = self.decode(v); } catch (e) {}
+        }
+        return self;
+    }
+
+    async set(v) { this._value = v; await this.store(); }
+
+    async update(fn) {
+        fn(this._value);
+        await this.store();
+        return this._value;
+    }
+
+    async store() {
+        if (this._value !== undefined && this._value !== null) {
+            await this._storage.setItem(this.key, this.encode(this._value));
+        } else {
+            await this._storage.removeItem(this.key);
+        }
+    }
+}
+
+const JsonMixin = cls => class extends cls {
     encode(v) { return JSON.stringify(v); }
     decode(v) { return JSON.parse(v); }
-}
+};
+
+// A value that is stored as JSON.
+export const StoredJson = JsonMixin(Stored);
+export const AsyncStoredJson = JsonMixin(AsyncStored);
 
 // Manage an immutable, globally-unique client ID in local store.
 const clientIdStore = Stored.create('tdoc:clientId');

@@ -56,6 +56,7 @@ class Solution(admonitions.BaseAdmonition):
 
 
 def set_html_page_config(app, page, config, doctree):
+    if page is None: return
     md = app.env.metadata[page]
     v = md.get('solutions', app.config.tdoc_solutions)
     if not app.config.values['tdoc_solutions'].valid_types.match(v):

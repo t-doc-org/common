@@ -684,6 +684,11 @@ div.tdoc-exec div.tdoc-exec-controls {
     margin-right: 1rem;
     color: var(--pst-color-danger);
 }
+.tdoc-domain-storage {
+    position: absolute;
+    width: 0px;
+    height: 0px;
+}
 
 /* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
    if it's empty, as it causes the scrollbar to always appear. */

@@ -16,7 +16,7 @@
     }
 
     const script = document.currentScript;
-    const staticUrl = new URL('..', script.src).toString();
+    const staticUrl = tdoc.staticUrl = new URL('..', script.src);
     const importMap = {};
 
     // Import a module specified relative to the _static directory. Check if the

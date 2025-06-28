@@ -4,6 +4,8 @@
 import sys
 
 from tdoc.common.defaults import *
+from tdoc.common.wsgi import hostname_re
+
 
 project = "t-doc"
 copyright = "%Y Remy Blank"
@@ -19,6 +21,12 @@ html_theme_options = {
 tdoc_enable_sab = 'no'
 # tdoc_enable_sab = 'cross-origin-isolation'
 # tdoc_enable_sab = 'sabayon'
+
+tdoc_domain_storage = {
+    'origin': 'https://common.t-doc.org',
+    'allowed_origins': rf'^https://(?:{hostname_re}\.)?t-doc\.org$',
+    'allowed_keys': '^tdoc:(?:api:user)$',
+}
 
 intersphinx_mapping = {
     'python': (
