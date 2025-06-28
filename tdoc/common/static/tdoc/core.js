@@ -393,19 +393,19 @@ export class FifoBuffer {
 // across all sites.
 class DomainStorage {
     static async create() {
+        if (!(tdoc.dev || tdoc.domain_storage.origin)) return localStorage;
         const {port1, port2} = new MessageChannel();
-        const self = new this(port1);
+        const origin = tdoc.dev ? location.origin
+                                : tdoc.domain_storage.origin;
         await domLoaded;
         const iframe = document.body.appendChild(elmt`\
-<iframe class="tdoc-domain-storage"\
- src="${tdoc.staticUrl}/tdoc/domain.html"></iframe>\
+<iframe class="tdoc-domain-storage" src="${origin}/_static/tdoc/domain.html">\
+</iframe>\
 `);
         on(iframe).load(() => {
-            const origin = tdoc.dev ? location.origin
-                                    : tdoc.domain_storage.origin;
             iframe.contentWindow.postMessage('init', origin, [port2]);
         });
-        return self;
+        return new this(port1);
     }
 
     constructor(port) {
@@ -441,8 +441,7 @@ class DomainStorage {
     }
 }
 
-const domainStorage = tdoc.dev || tdoc.domain_storage.origin ?
-                      await DomainStorage.create() : localStorage;
+const domainStorage = await DomainStorage.create();
 
 // A base class for stored values.
 class StoredBase {

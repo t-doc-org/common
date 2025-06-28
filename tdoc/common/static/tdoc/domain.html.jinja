@@ -20,7 +20,8 @@
                 return;
             }
             if (e.data !== 'init' || e.ports.length === 0) return;
-            console.info(`[t-doc] Domain storage connected from ${e.origin}`);
+            console.info(`\
+[t-doc] Domain storage at ${location.origin} served to ${e.origin}`);
             removeEventListener('message', onInit);
             resolve(e.ports[0]);
         };
