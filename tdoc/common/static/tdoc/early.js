@@ -118,8 +118,7 @@ NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc1MzE0MjQwMH0=`);
         return;
     }
     (async () => {
-        const reg = await workers.register(
-            url, {type: 'module', scope: script.getAttribute('scope')});
+        const reg = await workers.register(url, {type: 'module'});
         reg.addEventListener('updatefound', () => {
             console.info('[t-doc] Service worker update');
             location.reload();

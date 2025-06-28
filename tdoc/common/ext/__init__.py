@@ -143,8 +143,7 @@ def on_html_page_context(app, page, template, context, doctree):
     # Set up early and on-load JavaScript.
     tdoc = tdoc_config(app, page, doctree)
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
-    app.add_js_file('tdoc/early.js', priority=1,
-                    scope=context['pathto']('', resource=True))
+    app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
 
 
