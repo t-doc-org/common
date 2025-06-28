@@ -83,3 +83,8 @@ mathjax3_config = {
 
 # LaTeX rendering options.
 latex_engine = 'xelatex'
+
+# Domain storage options.
+tdoc_domain_storage = {
+    'origin': 'https://t-doc.org',
+}
