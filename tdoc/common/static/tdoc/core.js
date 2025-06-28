@@ -522,11 +522,11 @@ const JsonMixin = cls => class extends cls {
 export const StoredJson = JsonMixin(Stored);
 export const AsyncStoredJson = JsonMixin(AsyncStored);
 
-// Manage an immutable, globally-unique client ID in local store.
-const clientIdStore = Stored.create('tdoc:clientId');
+// Manage an immutable, globally-unique client ID in domain storage.
+const clientIdStore = await AsyncStored.create('tdoc:clientId');
 if (clientIdStore.get() === undefined) {
     clientIdStore.set(await toBase64(
-        crypto.getRandomValues(new Uint8Array(33))));
+        crypto.getRandomValues(new Uint8Array(33))));  // Background
 }
 export const clientId = clientIdStore.get();
 
