@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-51)=
+## 0.51 *(2025-06-28)*
+
+- Added a UI for signing in and out. Signing in is domain-wide, so it needs to
+  be done only once to work across all sites.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.50...0.51)
+
 (release-0-50)=
 ## 0.50 *(2025-06-22)*
 
