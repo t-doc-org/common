@@ -14,6 +14,7 @@ language = 'en'
 
 html_theme_options = {
     'repository_url': 'https://github.com/t-doc-org/common',
+    'use_download_button': True,
 }
 
 tdoc_enable_sab = 'no'

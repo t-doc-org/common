@@ -129,6 +129,7 @@ def on_config_inited(app, config):
     if opts.get('repository_url'):
         opts.setdefault('use_repository_button', True)
         opts.setdefault('use_source_button', True)
+    opts.setdefault('use_download_button', False)
 
 
 def on_builder_inited(app):
