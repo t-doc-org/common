@@ -98,25 +98,24 @@ class Api:
         raise wsgi.Error(HTTPStatus.FORBIDDEN)
 
     def __call__(self, env, respond):
-        name = util.shift_path_info(env)
-        if (handler := self.endpoints.get(name)) is None:
-            return (yield from wsgi.error(respond, HTTPStatus.NOT_FOUND))
         try:
-            try:
-                self.authenticate(env)
-                yield from handler(env, respond)
-            except wsgi.Error as e:
-                return (yield from wsgi.error(respond, e.status, e.message,
-                                              exc_info=sys.exc_info()))
-            except store.client_errors:
-                self.print_exception(limit=-1, chain=False)
-                return (yield from wsgi.error(respond, HTTPStatus.BAD_REQUEST,
-                                              exc_info=sys.exc_info()))
-            except store.Error as e:
-                self.print_exception(limit=-1, chain=False)
-                msg = e.args[0] if e.args else None
-                return (yield from wsgi.error(respond, HTTPStatus.FORBIDDEN,
-                                              msg, exc_info=sys.exc_info()))
+            name = util.shift_path_info(env)
+            if (handler := self.endpoints.get(name)) is None:
+                raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            self.authenticate(env)
+            yield from handler(env, respond)
+        except wsgi.Error as e:
+            yield from wsgi.error(respond, e.status, e.message,
+                                  exc_info=sys.exc_info())
+        except store.client_errors:
+            self.print_exception(limit=-1, chain=False)
+            yield from wsgi.error(respond, HTTPStatus.BAD_REQUEST,
+                                  exc_info=sys.exc_info())
+        except store.Error as e:
+            self.print_exception(limit=-1, chain=False)
+            msg = e.args[0] if e.args else None
+            yield from wsgi.error(respond, HTTPStatus.FORBIDDEN,
+                                  msg, exc_info=sys.exc_info())
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 

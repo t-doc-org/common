@@ -17,9 +17,10 @@ import socketserver
 import stat
 import subprocess
 import sys
+import tempfile
 import threading
 import time
-from urllib import parse
+from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
@@ -56,6 +57,8 @@ def main(argv, stdin, stdout, stderr):
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
+    arg('--cache', metavar='PATH', type='path', dest='cache', default='_cache',
+        help="The path to the cache directory (default: %(default)s).")
     arg('--delay', metavar='DURATION', type=float, dest='delay', default=1.0,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
@@ -609,6 +612,10 @@ class Application:
         self.api.events.add_observable(self.build_obs)
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
+        self.endpoints = {
+            '*api': self.api,
+            '*cache': self.handle_cache,
+        }
 
     def __enter__(self): return self
 
@@ -745,25 +752,66 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 """)
 
     def __call__(self, env, respond):
-        env['tdoc.dev'] = True
+        try:
+            env['tdoc.dev'] = True
 
-        # Dispatch to API if this is an API call.
-        script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
-        if wsgiutil.shift_path_info(env) == '*api':
-            return self.api(env, respond)
-        env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
+            # Dispatch endpoints.
+            script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
+            part = wsgiutil.shift_path_info(env)
+            if (handler := self.endpoints.get(part)) is not None:
+                yield from handler(env, respond)
+                return
+            env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
 
-        # Handle a file request.
+            # Serve from the filesystem.
+            with self.lock: base = self.directory
+            yield from self.handle_file(env, respond, base)
+        except wsgi.Error as e:
+            yield from wsgi.error(respond, e.status, e.message,
+                                  exc_info=sys.exc_info())
+
+    def handle_cache(self, env, respond):
+        yield from self.handle_file(env, respond, self.cfg.cache,
+                                    self.on_cache_not_found)
+
+    def on_cache_not_found(self, path_info, path):
+        try:
+            parts = path_info.split('/', 2)
+            if parts[0] != '' or len(parts) < 3: return
+            if (h := getattr(self, f'cache_url_{parts[1]}', None)) is None:
+                return
+            url = h(parts[2])
+            self.cfg.stderr.write(f"Caching {url}\n")
+            with request.urlopen(url) as f: data = f.read()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                    dir=path.parent, prefix=path.name + '.',
+                    delete_on_close=False) as f:
+                f.write(data)
+                f.close()
+                pathlib.Path(f.name).replace(path)
+        except Exception as e:
+            self.cfg.stderr.write(f"Cache: {e}\n")
+
+    def cache_url_pyodide(self, path_info):
+        parts = path_info.split('/', 1)
+        if len(parts) < 2: return
+        return f'https://cdn.jsdelivr.net/pyodide/v{parts[0]}/full/{parts[1]}'
+
+    def handle_file(self, env, respond, base, on_not_found=None):
         env['wsgi.multithread'] = True
-        if (method := env['REQUEST_METHOD']) not in (HTTPMethod.HEAD,
-                                                     HTTPMethod.GET):
-            return wsgi.error(respond, HTTPStatus.NOT_IMPLEMENTED)
-        path = self.file_path(env['PATH_INFO'])
+        method = wsgi.method(env, HTTPMethod.HEAD, HTTPMethod.GET)
+        path_info = env['PATH_INFO']
+        path = self.file_path(path_info, base)
+        path.relative_to(base)  # Ensure we're below base
         if (st := try_stat(path)) is None:
-            return wsgi.error(respond, HTTPStatus.NOT_FOUND)
+            if on_not_found is None: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            on_not_found(path_info, path)
+            if (st := try_stat(path)) is None:
+                raise wsgi.Error(HTTPStatus.NOT_FOUND)
 
         if stat.S_ISDIR(st.st_mode):
-            parts = parse.urlsplit(env['PATH_INFO'])
+            parts = parse.urlsplit(path_info)
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
@@ -771,29 +819,29 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                     ('Location', location),
                     ('Content-Length', '0'),
                 ])
-                return []
+                return
             path = path / 'index.html'
             if (st := try_stat(path)) is None:
-                return wsgi.error(respond, HTTPStatus.NOT_FOUND)
+                raise wsgi.Error(HTTPStatus.NOT_FOUND)
 
         if not stat.S_ISREG(st.st_mode):
-            return wsgi.error(respond, HTTPStatus.NOT_FOUND)
+            raise wsgi.Error(HTTPStatus.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
         respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
         ])
-        if method == HTTPMethod.HEAD: return []
+        if method == HTTPMethod.HEAD: return
         wrapper = env.get('wsgi.file_wrapper', wsgiutil.FileWrapper)
-        return wrapper(open(path, 'rb'))
+        yield from wrapper(open(path, 'rb'))
 
-    def file_path(self, path):
+    def file_path(self, path, base):
         trailing = path.rstrip().endswith('/')
         try:
             path = parse.unquote(path, errors='surrogatepass')
         except UnicodeDecodeError:
             path = parse.unquote(path)
-        with self.lock: res = self.directory
+        res = base
         for part in filter(None, posixpath.normpath(path).split('/')):
             if pathlib.Path(part).parent.name or part in (os.curdir, os.pardir):
                 continue
