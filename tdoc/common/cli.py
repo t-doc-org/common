@@ -24,7 +24,7 @@ from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, store, util, wsgi
+from . import __project__, __version__, api, deps, store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
@@ -776,11 +776,10 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 
     def on_cache_not_found(self, path_info, path):
         try:
-            parts = path_info.split('/', 2)
-            if parts[0] != '' or len(parts) < 3: return
-            if (h := getattr(self, f'cache_url_{parts[1]}', None)) is None:
-                return
-            url = h(parts[2])
+            parts = path_info.split('/', 3)
+            if parts[0] != '' or len(parts) < 4: return
+            if (d := deps.info.get(parts[1])) is None: return
+            url = f'{d['url'](parts[2])}/{parts[3]}'
             self.cfg.stderr.write(f"Caching {url}\n")
             with request.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -792,11 +791,6 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
             self.cfg.stderr.write(f"Cache: {e}\n")
-
-    def cache_url_pyodide(self, path_info):
-        parts = path_info.split('/', 1)
-        if len(parts) < 2: return
-        return f'https://cdn.jsdelivr.net/pyodide/v{parts[0]}/full/{parts[1]}'
 
     def handle_file(self, env, respond, base, on_not_found=None):
         env['wsgi.multithread'] = True

@@ -87,9 +87,9 @@ def setup(app):
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
     app.add_config_value('tdoc', {}, 'html', dict)
     app.add_config_value('tdoc_api', '', 'html', str)
+    app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
-    app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
@@ -151,8 +151,8 @@ def on_html_page_context(app, page, template, context, doctree):
 def tdoc_config(app, page, doctree):
     tdoc = {
         'conf': copy.deepcopy(app.config.tdoc),
-        'enable_sab': app.config.tdoc_enable_sab,
         'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
+        'enable_sab': app.config.tdoc_enable_sab,
         'html_data': {},
     }
     if 'tdoc-dev' in app.tags: tdoc['dev'] = True
