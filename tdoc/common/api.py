@@ -13,7 +13,7 @@ import time
 import traceback
 from wsgiref import util
 
-from . import wsgi
+from . import store, wsgi
 
 missing = object()
 # TODO(py-3.13): Remove Shutdown
@@ -63,9 +63,9 @@ class Api:
     def add_endpoint(self, name, handler):
         self.endpoints[name] = handler
 
-    def print_exception(self, e=None):
+    def print_exception(self, e=None, limit=None, chain=True):
         if e is None: e = sys.exception()
-        traceback.print_exception(e, file=self.stderr)
+        traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
     def db(self, env):
         if (db := env.get('tdoc.db')) is not None: return db
@@ -81,7 +81,7 @@ class Api:
         env['tdoc.user'] = user
 
     def user(self, env, anon=True):
-        user = env['tdoc.user']
+        user = env.get('tdoc.user')
         if user is None and not anon: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         return user
 
@@ -108,6 +108,15 @@ class Api:
             except wsgi.Error as e:
                 return (yield from wsgi.error(respond, e.status, e.message,
                                               exc_info=sys.exc_info()))
+            except store.client_errors:
+                self.print_exception(limit=-1, chain=False)
+                return (yield from wsgi.error(respond, HTTPStatus.BAD_REQUEST,
+                                              exc_info=sys.exc_info()))
+            except store.Error as e:
+                self.print_exception(limit=-1, chain=False)
+                msg = e.args[0] if e.args else None
+                return (yield from wsgi.error(respond, HTTPStatus.FORBIDDEN,
+                                              msg, exc_info=sys.exc_info()))
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 
@@ -157,9 +166,8 @@ class Api:
                 check(self.member_of(env, db, 'polls:control'))
                 db.polls.clear(origin, ids)
             if 'vote' in req:
-                if not db.polls.vote(
-                        origin, *args(req, 'id', 'voter', 'answer', 'vote')):
-                    raise wsgi.Error(HTTPStatus.FORBIDDEN)
+                db.polls.vote(origin, *args(req, 'id', 'voter', 'answer',
+                                            'vote'))
         return wsgi.respond_json(respond, {})
 
     def handle_solutions(self, env, respond):
@@ -177,9 +185,10 @@ class Api:
     def handle_user(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        origin = wsgi.origin(env)
         user = self.user(env, anon=False)
         with self.db(env) as db:
-            info = db.users.info(wsgi.origin(env), user)
+            info = db.users.info(origin, user)
         return wsgi.respond_json(respond, info)
 
 
@@ -404,8 +413,8 @@ class DynObservable(Observable):
     def remove(self):
         self.events.remove_observable(self)
 
-    def print_exception(self, e=None):
-        self.events.api.print_exception(e)
+    def print_exception(self, e=None, limit=None, chain=True):
+        self.events.api.print_exception(e=e, limit=limit, chain=chain)
 
 
 def limit_interval(interval, burst=1):

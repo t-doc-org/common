@@ -11,6 +11,9 @@ import sqlite3
 import threading
 import time
 
+max_id_len = 64  # Maximum length of globally-unique identifiers
+max_voters_per_poll = 100  # Maximum number of voters per poll
+
 
 def to_datetime(nsec):
     if nsec is None: return
@@ -23,6 +26,10 @@ def to_nsec(dt, default=None):
 
 
 def placeholders(args): return ', '.join('?' * len(args))
+
+
+class Error(Exception): pass
+client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
 
 class Seqs(dict):
@@ -354,13 +361,14 @@ class Polls(DbNamespace):
                     *(self.voter_key(origin, p, v) for p, v in voters))
 
     def vote(self, origin, poll, voter, answer, vote):
+        if len(voter) > max_id_len: raise Error("Invalid voter ID")
         mode, exp, answers = self.row("""
             select mode, expires, answers from polls
             where (origin, id) = (?, ?)
         """, (origin, poll), default=(None, None, 0))
-        if (mode is None or (exp is not None and time.time_ns() >= exp)
-                or answer < 0 or answer >= answers):
-            return False
+        if mode is None or (exp is not None and time.time_ns() >= exp):
+            raise Error("Voting is closed")
+        if answer < 0 or answer >= answers: raise Error("Invalid answer")
         self.notify(self.poll_key(origin, poll),
                     self.voter_key(origin, poll, voter))
         if not vote:
@@ -368,7 +376,7 @@ class Polls(DbNamespace):
                 delete from poll_votes
                 where (origin, poll, voter, answer) = (?, ?, ?, ?)
             """, (origin, poll, voter, answer))
-            return True
+            return
         if mode != 'multi':
             self.execute("""
                 delete from poll_votes
@@ -378,7 +386,11 @@ class Polls(DbNamespace):
             insert or replace into poll_votes
                 (origin, poll, voter, answer) values (?, ?, ?, ?)
         """, (origin, poll, voter, answer))
-        return True
+        voters, = self.row("""
+            select count(distinct voter) from poll_votes
+            where (origin, poll) = (?, ?)
+        """, (origin, poll))
+        if voters > max_voters_per_poll: raise Error("Too many voters")
 
     def poll_data(self, origin, poll, force_results=False):
         mode, exp, results, solutions = self.row("""
