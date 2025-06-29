@@ -1,8 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {default as sqlite3_init} from '../sqlite/sqlite3-worker1-promiser.mjs';
-import {elmt, on, qs, text} from './core.js';
+import {dataUrl, elmt, on, qs, sameOrigin, text} from './core.js';
 import {Executor, UserError} from './exec.js';
 
 let promiser;
@@ -40,7 +39,22 @@ class SqlExecutor extends Executor {
 
     static async init(runable) {
         if (!runable) return;
+        const md = tdoc.exec.metadata.sql;
+
+        // Web worker URLs must be satisfy the same-origin policy. If the worker
+        // module is in a different origin, we start the worker on a data: URL
+        // that imports the worker module.
+        const url = import.meta.resolve(`\
+${md.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs`);
+        const worker = sameOrigin(url) ? undefined
+                       : new Worker(dataUrl('application/javascript',
+                                            `import(${JSON.stringify(url)});`),
+                                    {type: 'module'});
+
+        const {default: sqlite3_init} = await import(
+            `${md.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
         promiser = await sqlite3_init({
+            worker,
             // debug: console.debug,
         });
         const config = await Database.config();

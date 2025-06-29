@@ -238,6 +238,16 @@ export function strToInt(s, radix = 10) {
     return sign * res;
 }
 
+// Return true iff the given URL is in the same origin as the page.
+export function sameOrigin(url) {
+    return new URL(url).origin === location.origin;
+}
+
+// Create a data: URL containing the given data.
+export function dataUrl(type, data) {
+    return `data:${type},${encodeURIComponent(data)}`;
+}
+
 // Convert binary data to base64.
 export function toBase64(data) {
     return new Promise((resolve, reject) => {
