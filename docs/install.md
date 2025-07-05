@@ -9,6 +9,7 @@
 release-notes
 ```
 
+{#requirements}
 ## Requirements
 
 t-doc requires the following software to be installed:
@@ -17,6 +18,7 @@ t-doc requires the following software to be installed:
 - [Graphviz](https://graphviz.org/), for `graphviz` directives
 - [Mercurial](https://www.mercurial-scm.org/), for managing source files
 
+{#windows}
 ### Windows
 
 - Install [Python](https://www.python.org/).
@@ -80,24 +82,28 @@ winget upgrade --id TortoiseHg.TortoiseHg
 winget upgrade --id Microsoft.WindowsTerminal
 ```
 
+{#macos}
 ### macOS
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) either by hand or through a
   package manager like [Homebrew](https://brew.sh/).
 
+{#linux}
 ### Linux
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) through your system's package
   manager.
 
+{#install}
 ## Install
 
 - Install the [required packages](#requirements).
 - Everything else will be installed automatically when
   [starting the local server](edit.md#edit-documents).
 
+{#upgrade}
 ## Upgrade
 
 The [local server](edit.md#edit-documents) indicates when an upgrade is
@@ -107,6 +113,7 @@ available.
   [release notes](release-notes.md).
 - Restart the local server. When prompted, accept the upgrade.
 
+{#troubleshooting}
 ## Troubleshooting
 
 ### Force a clean install

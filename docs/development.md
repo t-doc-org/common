@@ -6,6 +6,7 @@
 This page describes how to set up t-doc for development. It isn't necessary for
 creating and editing documents.
 
+{#install}
 ## Install
 
 - Install the [required packages](install.md#requirements) for your system.
@@ -79,6 +80,7 @@ creating and editing documents.
   ````
   `````
 
+{#upgrade}
 ## Upgrade
 
 - Pull missing changesets from the `t-doc/common` repository.

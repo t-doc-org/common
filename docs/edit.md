@@ -3,6 +3,7 @@
 
 # Create & edit documents
 
+{#clone}
 ## Clone a repository
 
 Documents are grouped into **repositories**, which represent the unit of
@@ -49,6 +50,7 @@ are located below the `docs` directory.
 └── run.py                    An auto-installing wrapper for the tdoc command
 ```
 
+{#edit}
 ## Edit documents
 
 - **Run the local server.**
@@ -118,6 +120,7 @@ are located below the `docs` directory.
 
 - Don't forget to **commit changes frequently**.
 
+{#deploy}
 ## Deploy documents
 
 To deploy the repository to [`tdoc.org`](https://t-doc.org/), make sure that all
