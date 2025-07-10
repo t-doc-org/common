@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-52)=
+## 0.52 *(2025-07-10)*
+
+- Unbundled most JavaScript dependencies. They are now loaded from a CDN, and
+  cached locally when using the local server.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.51...0.52)
+
 (release-0-51)=
 ## 0.51 *(2025-06-28)*
 
