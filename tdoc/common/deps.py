@@ -4,6 +4,10 @@
 jsdelivr = 'https://cdn.jsdelivr.net'
 
 info = {
+    'drauu': {
+        'version': '0.4.3',
+        'url': lambda v: f'{jsdelivr}/npm/@drauu/core@{v}/dist',
+    },
     'polyscript': {
         'version': '0.17.30',
         'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',

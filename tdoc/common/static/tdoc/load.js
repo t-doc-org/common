@@ -6,7 +6,6 @@ import {
     addTooltip, domLoaded, elmt, enable, htmlData, on, page, qs, qsa, rgb2hex,
     StoredJson,
 } from './core.js';
-import {createDrauu} from '../drauu/index.mjs';
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
 // shortcuts are enabled.
@@ -141,7 +140,7 @@ tdoc.toggleSolutions = () => {
 let drawing, drawingSvg;
 const drawState = StoredJson.create('tdoc:drawState', {});
 drawState.get().eraser = false;
-tdoc.draw = () => {
+tdoc.draw = async () => {
     if (htmlData.tdocDraw !== undefined) {
         drawing.unmount();
         delete htmlData.tdocDraw;
@@ -163,6 +162,7 @@ tdoc.draw = () => {
         drawing.brush.color = st.color + (st.marker ? '40' : 'ff');
     }
 
+    const {createDrauu} = await import(`${tdoc.versions.drauu}/index.mjs`);
     drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
