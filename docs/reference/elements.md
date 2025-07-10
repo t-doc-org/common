@@ -52,6 +52,19 @@ interpreted.
       media: print
     - https://example.com/styles.css
   ```
+
+`versions`
+: A map overriding the versions of JavaScript dependencies on a page. The keys
+  are dependency identifiers and the values can be either version numbers or
+  full URLs. See
+  [`deps.py`](https://github.com/t-doc-org/common/blob/main/tdoc/common/deps.py)
+  for the list of dependencies and their default version. The versions can be overridden for a whole site via the `tdoc_versions` option in `conf.py`.
+
+  ```{code-block} yaml
+  versions:
+    polyscript: 0.17.30
+    pyodide: https://cdn.jsdelivr.net/pyodide/v0.27.7/full
+  ```
 ````
 
 ## Default directive options
