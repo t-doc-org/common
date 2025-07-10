@@ -3,11 +3,19 @@
 
 # Release notes
 
+(release-0-53)=
+## 0.53 *(2025-07-10)*
+
+- Fixed an issue that broke [`{exec} python`](/reference/exec.md#python).
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.52...0.53)
+
 (release-0-52)=
 ## 0.52 *(2025-07-10)*
 
 - Unbundled most JavaScript dependencies. They are now loaded from a CDN, and
   cached locally when using the local server.
+- **This release breaks [`{exec} python`](/reference/exec.md#python)
+  directives.**
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.51...0.52)
 
 (release-0-51)=
