@@ -73,7 +73,6 @@ html_show_sphinx = False
 html_theme = 't-doc'
 
 # MathJax options.
-mathjax_path = 'mathjax/tex-chtml-full.js'
 mathjax3_config = {
     'loader': {'load': ['input/mml']},
     'options': {

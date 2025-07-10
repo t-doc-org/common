@@ -97,7 +97,8 @@ def setup(app):
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
-    app.connect('html-page-context', on_html_page_context)
+    app.connect('html-page-context', on_html_page_context, priority=499.9)
+    app.connect('html-page-context', restore_mathjax, priority=500.1)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('html-page-context', add_draw_button, priority=500.6)
@@ -134,7 +135,9 @@ def on_config_inited(app, config):
 
 
 def on_builder_inited(app):
-    app.config.html_context['tdoc'] = tdoc_config(app, None, None)
+    # The config is used in domain.html.jinja.
+    tdoc = tdoc_config(app, None, None)
+    app.config.html_context['tdoc'] = json.dumps(tdoc, separators=(',', ':'))
 
 
 def on_html_page_context(app, page, template, context, doctree):
@@ -142,11 +145,22 @@ def on_html_page_context(app, page, template, context, doctree):
     if v := app.config.license: context['license'] = v
     if v := app.config.license_url: context['license_url'] = v
 
-    # Set up early and on-load JavaScript.
+    # Set up early and on-load JavaScript. Temporarily override mathjax_path
+    # as per version specification, then restore it after
+    # mathjax.install_mathjax() has run.
     tdoc = tdoc_config(app, page, doctree)
+    mathjax = tdoc['versions'].pop('mathjax')
+    context['tdoc_mathjax_path'] = app.config.mathjax_path
+    app.config.mathjax_path = f'{mathjax}/tex-chtml-full.js'
+    tdoc = json.dumps(tdoc, separators=(',', ':'))
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
+
+
+def restore_mathjax(app, page, template, context, doctree):
+    app.config.mathjax_path = context['tdoc_mathjax_path']
+    del context['tdoc_mathjax_path']
 
 
 def tdoc_config(app, page, doctree):
@@ -166,7 +180,7 @@ def tdoc_config(app, page, doctree):
             versions[name] = f'/*cache/{name}/{v}' if is_dev else info['url'](v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
-    return json.dumps(tdoc, separators=(',', ':'))
+    return tdoc
 
 
 def add_terminate_button(app, page, template, context, doctree):

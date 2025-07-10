@@ -97,7 +97,6 @@ class BuildHook(BuildHookInterface, HookMixin):
 
         self.app.display_info("Generating files")
         os.makedirs(self.static_gen, exist_ok=True)
-        self.copytree_node('mathjax/es5', 'mathjax')
         self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
         self.run([npm, 'run', 'build'])
 

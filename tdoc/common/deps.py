@@ -8,6 +8,10 @@ info = {
         'version': '0.4.3',
         'url': lambda v: f'{jsdelivr}/npm/@drauu/core@{v}/dist',
     },
+    'mathjax': {
+        'version': '3.2.2',
+        'url': lambda v: f'{jsdelivr}/npm/mathjax@{v}/es5',
+    },
     'polyscript': {
         'version': '0.17.30',
         'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',
