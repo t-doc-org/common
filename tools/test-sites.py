@@ -9,6 +9,7 @@ import pathlib
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import threading
@@ -40,7 +41,13 @@ def main(argv, stdin, stdout, stderr):
 
     def on_error(fn, path, e):
         if path == tests: return
-        stderr.write(f"ERROR: {fn}: {path}: {e}\n")
+        try:
+            # Git on Windows sets some files read-only. Remove the flag and
+            # try again.
+            os.chmod(path, stat.S_IREAD | stat.S_IWRITE, follow_symlinks=False)
+            fn(path)
+        except OSError:
+            stderr.write(f"ERROR: {fn.__name__}: {path}: {e}\n")
     shutil.rmtree(tests, onexc=on_error)
     tests.mkdir(parents=True, exist_ok=True)
     try:
@@ -98,7 +105,7 @@ def run_tests(tests, repo, label, url, port, wheel, write):
 
     def vrun(*args, wait=True, **kwargs):
         p = subprocess.Popen(
-            (repo_dir / 'run.py',) + args,
+            (sys.executable, '-P', repo_dir / 'run.py') + args,
             cwd=repo_dir, env={**os.environ, 'TDOC_VERSION': str(wheel)},
             text=True, bufsize=1, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
