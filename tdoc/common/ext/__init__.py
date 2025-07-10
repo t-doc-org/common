@@ -150,6 +150,7 @@ def on_html_page_context(app, page, template, context, doctree):
     # mathjax.install_mathjax() has run.
     tdoc = tdoc_config(app, page, doctree)
     mathjax = tdoc['versions'].pop('mathjax')
+    if mathjax.startswith('/'): mathjax = f'../{mathjax[1:]}'
     context['tdoc_mathjax_path'] = app.config.mathjax_path
     app.config.mathjax_path = f'{mathjax}/tex-chtml-full.js'
     tdoc = json.dumps(tdoc, separators=(',', ':'))
@@ -177,7 +178,7 @@ def tdoc_config(app, page, doctree):
         versions.setdefault(name, v)
     for name, info in deps.info.items():
         if '://' not in (v := versions.setdefault(name, info['version'])):
-            versions[name] = f'/*cache/{name}/{v}' if is_dev else info['url'](v)
+            versions[name] = f'/_cache/{name}/{v}' if is_dev else info['url'](v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return tdoc

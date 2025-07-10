@@ -613,8 +613,8 @@ class Application:
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
         self.endpoints = {
-            '*api': self.api,
-            '*cache': self.handle_cache,
+            '_api': self.api,
+            '_cache': self.handle_cache,
         }
 
     def __enter__(self): return self

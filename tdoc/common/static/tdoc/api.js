@@ -22,7 +22,7 @@ handleApiBackend();
 on(window).hashchange(() => handleApiBackend());
 
 export const url = (() => {
-    if (tdoc.dev) return '/*api';
+    if (tdoc.dev) return '/_api';
     if (tdoc.api_url) return tdoc.api_url;
     const loc = new URL(location);
     if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
