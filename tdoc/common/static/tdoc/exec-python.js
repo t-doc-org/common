@@ -28,7 +28,7 @@ class PythonExecutor extends Executor {
 
     static async init(runable) {
         if (!runable) return;
-        const md = tdoc.exec.metadata.python;
+        const md = tdoc.exec?.metadata?.python ?? {};
 
         // Extract files and resolve their URLs.
         const base = import.meta.resolve('../');
