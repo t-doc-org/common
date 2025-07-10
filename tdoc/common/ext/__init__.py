@@ -13,7 +13,7 @@ from sphinx import config, locale
 from sphinx.environment import collectors
 from sphinx.util import docutils, fileutil, logging
 
-from .. import __version__
+from .. import __version__, deps
 
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
@@ -90,6 +90,7 @@ def setup(app):
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
+    app.add_config_value('tdoc_versions', {}, 'html', dict)
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
@@ -155,7 +156,14 @@ def tdoc_config(app, page, doctree):
         'enable_sab': app.config.tdoc_enable_sab,
         'html_data': {},
     }
-    if 'tdoc-dev' in app.tags: tdoc['dev'] = True
+    if is_dev := 'tdoc-dev' in app.tags: tdoc['dev'] = True
+    versions = tdoc['versions'] = \
+        (app.env.metadata[page].get('versions') or {}).copy()
+    for name, v in app.config.tdoc_versions.items():
+        versions.setdefault(name, v)
+    for name, info in deps.info.items():
+        if '://' not in (v := versions.setdefault(name, info['version'])):
+            versions[name] = f'/*cache/{name}/{v}' if is_dev else info['url'](v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return json.dumps(tdoc, separators=(',', ':'))

@@ -39,11 +39,10 @@ class PythonExecutor extends Executor {
         }
         files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
 
-        const pyodide = md.pyodide;
-        delete md.pyodide;
         worker = XWorker(import.meta.resolve('./exec-python.py'), {
             type: 'pyodide',
-            version: import.meta.resolve(`${pyodide}/pyodide.mjs`),
+            version: import.meta.resolve(
+                `${tdoc.versions.pyodide}/pyodide.mjs`),
             async: true,
             // https://docs.pyscript.net/latest/user-guide/configuration/
             config: {

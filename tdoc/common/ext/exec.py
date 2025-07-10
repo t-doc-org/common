@@ -1,7 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import copy
 import pathlib
 import re
 import zipfile
@@ -13,15 +12,9 @@ from sphinx.util import display, logging, osutil
 
 from . import __version__, format_attrs, format_data_attrs, names_option, \
     report_exceptions, UniqueChecker
-from .. import deps
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
-
-_deps = {
-    'python': {'pyodide'},
-    'sql': {'sqlite'},
-}
 
 
 def setup(app):
@@ -126,23 +119,12 @@ def check_refs(node, names, runner, typ, doctree):
 def set_html_page_config(app, page, config, doctree):
     if page is None: return
     cfg = {}
-    md = copy.deepcopy(app.env.metadata[page].get('exec', {}))
+    if (md := app.env.metadata[page].get('exec')) is not None:
+        cfg['metadata'] = md
     if doctree:
         runable = {n['tdoc-runner']: True for n in doctree.findall(exec)
                    if n['when'] != 'never'}
-        for lang in runable:
-            m = md.setdefault(lang, {})
-            for dep in _deps.get(lang, ()):
-                if (info := deps.info.get(dep)) is None: continue
-                if (version := m.get(dep)) is None:
-                    version = m[dep] = info['version']
-                if '://' not in version:
-                    if 'tdoc-dev' in app.tags:
-                        m[dep] = f'/*cache/{dep}/{version}'
-                    else:
-                        m[dep] = info['url'](version)
         if runable: cfg['runable'] = runable
-    if md: cfg['metadata'] = md
     if cfg: config['exec'] = cfg
 
 
