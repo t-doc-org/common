@@ -4,6 +4,10 @@
 jsdelivr = 'https://cdn.jsdelivr.net'
 
 info = {
+    'polyscript': {
+        'version': '0.17.30',
+        'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',
+    },
     'pyodide': {
         'version': '0.27.7',
         'url': lambda v: f'{jsdelivr}/pyodide/v{v}/full',

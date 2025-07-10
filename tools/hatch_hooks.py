@@ -99,9 +99,6 @@ class BuildHook(BuildHookInterface, HookMixin):
         os.makedirs(self.static_gen, exist_ok=True)
         self.copytree_node('@drauu/core/dist', 'drauu', globs=['*.mjs'])
         self.copytree_node('mathjax/es5', 'mathjax')
-        self.copytree_node('polyscript/dist', 'polyscript', globs=[
-            '*.js', '*.js.map',
-        ])
         self.copy_node('sabayon/dist/sw-listeners.js', 'sabayon-listeners.js')
         self.run([npm, 'run', 'build'])
 

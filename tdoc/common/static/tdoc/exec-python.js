@@ -1,7 +1,6 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {XWorker} from '../polyscript/index.js';
 import {dec, elmt, focusIfVisible, on, text} from './core.js';
 import {Executor} from './exec.js';
 
@@ -39,6 +38,7 @@ class PythonExecutor extends Executor {
         }
         files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
 
+        const {XWorker} = await import(`${tdoc.versions.polyscript}/index.js`);
         worker = XWorker(import.meta.resolve('./exec-python.py'), {
             type: 'pyodide',
             version: import.meta.resolve(

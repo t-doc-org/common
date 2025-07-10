@@ -16,7 +16,6 @@
     "@drauu/core": "^0.4.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "mathjax": "^3.2.2",
-    "polyscript": "^0.17.30",
     "rollup": "^4.44.1",
     "sabayon": "^0.9.6"
   },
