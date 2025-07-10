@@ -3,10 +3,17 @@
 
 # Release notes
 
+(release-0-54)=
+## 0.54 *(2025-07-10)*
+
+- Fixed a build issue on Windows.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.53...0.54)
+
 (release-0-53)=
 ## 0.53 *(2025-07-10)*
 
 - Fixed an issue that broke [`{exec} python`](/reference/exec.md#python).
+- **This release breaks builds on Windows.**
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.52...0.53)
 
 (release-0-52)=
