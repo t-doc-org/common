@@ -4,8 +4,8 @@
 import platform
 import sys
 
-from polyscript import config, xworker
-from pyodide_js import loadPackage, version
+from polyscript import xworker
+from pyodide_js import version
 
 sys.path.append('/lib/tdoc.zip')
 import tdoc.core  # noqa

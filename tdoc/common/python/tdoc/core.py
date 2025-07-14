@@ -10,8 +10,13 @@ import io
 import sys
 import traceback
 
-from polyscript import xworker
+import js
 from pyodide.ffi import run_sync
+
+try:
+    from polyscript import xworker
+except ImportError:
+    xworker = None
 
 run_id_var = contextvars.ContextVar('run_id', default=None)
 run_id = run_id_var.get
@@ -19,9 +24,10 @@ run_id = run_id_var.get
 tasks = {}
 env = {'__name__': '__main__'}
 
-js_input = xworker.sync.input
-js_render = xworker.sync.render
-js_write = xworker.sync.write
+if xworker is not None:
+    js_input = xworker.sync.input
+    js_render = xworker.sync.render
+    js_write = xworker.sync.write
 
 
 def public(fn):
@@ -32,7 +38,7 @@ def public(fn):
 
 def export(fn):
     """Export a function to JavaScript."""
-    setattr(xworker.sync, fn.__name__, fn)
+    if xworker is not None: setattr(xworker.sync, fn.__name__, fn)
     return fn
 
 
@@ -112,6 +118,20 @@ def new_id():
 
 
 @public
+def sleep(sec):
+    """Sleep for the given number of seconds."""
+    run_sync(asyncio.sleep(sec))
+
+
+@public
+def animation_frame():
+    """Return a Promise that resolves at the next animation frame."""
+    p = js.Promise.withResolvers()
+    js.requestAnimationFrame(p.resolve)
+    return p.promise
+
+
+@public
 def render(html, name=''):
     """Render some HTML in an output block."""
     if not isinstance(html, str): html = ''.join(html)
@@ -150,7 +170,7 @@ def input(prompt=None):
 
 @export
 async def run(run_id, blocks):
-    """Run a block of client code."""
+    """Run blocks of client code."""
     run_id_var.set(run_id)
     tasks[run_id] = asyncio.current_task()
     try:
@@ -169,6 +189,7 @@ async def run(run_id, blocks):
                 break
         te.print()
     finally:
+        # TODO: Allow registering and running cleanup handlers
         del tasks[run_id]
 
 

@@ -35,7 +35,7 @@ domLoaded.then(() => {
 let loginModal;
 tdoc.login = async() => {
     if (!loginModal) {
-        const el = qs(document, 'body').appendChild(elmt`
+        const el = document.body.appendChild(elmt`
 <div class="modal fade" id="tdoc-login" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-login-title">\
 <div class="modal-dialog"><div class="modal-content">\

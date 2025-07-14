@@ -144,7 +144,6 @@ becomes unstoppable and the page must be reloaded.
 
 ```{exec} python
 :after: python-graphics
-import asyncio
 import random
 
 img = svg.Image(400, 100, style='width: 100%; height: 100%')
@@ -161,15 +160,13 @@ def saw(value, amplitude):
 def pose(t, vx, vy, va):
   return saw(t * vx, img.width), saw(t * vy, img.height), (t * va) % 360.0
 
-loop = asyncio.get_running_loop()
-start = loop.time()
+start = await animation_frame()
 while True:
-  t = loop.time() - start
+  t = (await animation_frame() - start) / 1000
   for heart, vx, vy, va in hearts:
     heart.x, heart.y, a = pose(t, vx, vy, va)
     heart.transform = svg.rotate(a, heart.x, heart.y)
   img.width, img.height = await render(img)
-  await asyncio.sleep(1 / 60)
 ```
 
 ## Program input
