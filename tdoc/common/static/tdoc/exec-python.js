@@ -80,7 +80,7 @@ class MainInterpreter extends Interpreter {
     async init() {
         const pyodide = await import(`${tdoc.versions.pyodide}/pyodide.mjs`);
         this.interp = await pyodide.loadPyodide();
-        this.interp.setDebug(true);
+        this.interp.setDebug(this.md.debug ?? false);
         this.canvas = document.body.appendChild(elmt`\
 <canvas id="canvas" class="hidden" width="0" height="0"></canvas>`);
         this.interp.canvas.setCanvas2D(this.canvas);

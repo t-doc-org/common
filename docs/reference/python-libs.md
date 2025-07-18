@@ -22,7 +22,21 @@ the global scope of  [`{exec} python`](exec.md#python) blocks.
 Generate a unique ID, usable in the `id=` attribute of an HTML element.
 ```
 
-```{py:function} render(html, name='') -> asyncio.Future
+```{py:function} animation_time() -> float
+Return the value of the animation timer.
+:returns: The current value of the animation timer in milliseconds.
+```
+
+```{py:function} animation_frame() -> asyncio.Future[float]
+:async:
+Wait for the next repaint. See
+[requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
+for details.
+:returns: A `Future` that resolves to the current value of the animation timer
+in milliseconds.
+```
+
+```{py:function} render(html, name='') -> asyncio.Future[int, int]
 Render an HTML snippet as an output block. Output blocks are displayed ordered
 by name. If an output block with the same name already exists, it is replaced
 with the new one.
@@ -32,15 +46,17 @@ with the new one.
 `(width, height)` tuple.
 ```
 
+```{py:function} setup_canvas()
+Set up a `<canvas>`{l=html} element for rendering by SDL-based packages (e.g.
+`pygame-ce`). This function can only be used in the `main` environment.
+```
+
 ```{py:function} input(prompt=None) -> str
 Request a single line of text from the user, and wait for them to submit a
 reply.
 
-**Note:** This function relies on an
-[experimental feature](https://github.com/WebAssembly/js-promise-integration)
-that is currently only implemented in Google Chrome and Microsoft Edge
-([details](../demo/python.md#call-async-functions-synchronously)). For a more
-portable alternative, use {py:func}`input_line`.
+**Note:** This function only works on [Chromium-based browsers](#run-sync). For
+a more portable alternative, use {py:func}`input_line`.
 :arg str prompt: An optional prompt to display before the input field.
 ```
 
@@ -74,6 +90,14 @@ Present a button, and wait for the user to click it.
 [Font Awesome](https://fontawesome.com/icons/categories) is used.
 ```
 
+```{py:function} sleep(delay)
+Block for `delay` seconds.
+
+**Note:** This function only works on [Chromium-based browsers](#run-sync). For
+a more portable alternative, use {py:func}`asyncio.sleep`.
+:arg int | float delay: The delay in seconds.
+```
+
 ````{py:function} redirect(stdout=None, stderr=None)
 Return a context manager that temporarily replaces {py:data}`sys.stdout` and /
 or {py:data}`sys.stderr` with the given stream(s). This function must be used
@@ -91,6 +115,22 @@ out = io.StringIO()
 with redirect(stdout=out):
     print("Hello, world!")
 print(f"Captured output: {out.getvalue().rstrip()}")
+```
+````
+
+## `tdoc.pygame`
+
+````{py:module} tdoc.pygame
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/pygame.py))
+monkey-patches the `pygame.time` module to make simple programs using Pygame run
+unchanged in the browser. It should be imported before `pygame`.
+
+```{note}
+**Note:** This module only works on [Chromium-based browsers](#run-sync). For a
+more portable alternative, convert uses of the `pygame.time` module, including
+`Clock` methods, to asynchronous calls to {py:func}`~tdoc.core.animation_frame`
+and {py:func}`asyncio.sleep()`.
 ```
 ````
 

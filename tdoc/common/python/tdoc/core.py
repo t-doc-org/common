@@ -128,17 +128,17 @@ def sleep(sec):
 
 
 @public
+def animation_time():
+    """Return the current value of the animation timer."""
+    return js.performance.now()
+
+
+@public
 def animation_frame():
     """Return a Promise that resolves at the next animation frame."""
     p = js.Promise.withResolvers()
     js.requestAnimationFrame(p.resolve)
     return p.promise
-
-
-@public
-def animation_time():
-    """Return the current value of the animation timer."""
-    return js.performance.now()
 
 
 @public

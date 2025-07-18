@@ -28,10 +28,15 @@ insert into countries values
 
 ## Directive
 
-````{rst:directive} .. exec:: runner (html | micropython | python | sql)
-This directive is a {rst:dir}`code-block` that allows executing code from the
+````{rst:directive} .. exec:: runner [env]
+This directive is a {rst:dir}`code-block` that allows executing code in the
 browser. It supports most of the options of {rst:dir}`code-block`, and a few
 more described below.
+
+`runner` is one of the supported code runners ([`html`](#html),
+[`micropython`](#micropython), [`python`](#python), [`sql`](#sql)). `env` is an
+optional environment name. Code executed in distinct environments is isolated
+from each other. The default environment name is the empty string.
 
 {.rubric}
 Options
@@ -217,32 +222,64 @@ in the "Tools" menu. The program can be removed again with
 ### Python
 
 The {rst:dir}`{exec} python <exec>` runner executes code through
-[Pyodide](https://pyodide.org/) and
-[Polyscript](https://pyscript.github.io/polyscript/). All Python blocks on a
-page are executed in a shared, single-threaded interpreter.
+[Pyodide](https://pyodide.org/). Each environment uses a distinct,
+single-threaded interpreter, and all Python blocks specifying the same
+environment execute on the same interpreter.
+
+The interpreter for the `main` environment runs on the main browser thread.
+Interpreter initialization, as well as blocking Python code, will therefore
+block the main thread and affect rendering, user input, etc. It should be used
+only when really necessary, e.g. for
+[code using Pygame](../demo/python/pygame.md). All other interpreters run in
+their own web worker, and don't block user interactions.
 
 Pyodide can be configured via the `exec:python:` {rst:dir}`metadata`. This
 enables the following functionality:
 
+- **[Load packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages):**
+  The `packages` key is a list of package references, either package names or
+  URLs referencing wheels.
 - **[Copy files](https://docs.pyscript.net/latest/user-guide/configuration/#files)
   to the filesystem:** The `files` key is a mapping of URL to target path.
   Relative URLs are resolved relative to the `_static` directory. Relative
   target paths are resolved relative to `$HOME` (`/home/pyodide`). If the target
   path ends with a `/`, the filename part of the URL is used as the target
   filename.
-- **[Load packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages):**
-  The `packages` key is a list of package references, either package names with
-  optional version constraints (`docutils`, `attrs>=23.2.0`) or URLs referencing
-  wheels.
 
 ```{code-block} yaml
 exec:
   python:
+    packages: [sqlite3]
     files:
       input.txt:                    # .../_static/input.txt => $HOME/input.txt
       db/init.sql: /tmp/            # .../_static/db/init.sql => /tmp/init.sql
       ../index.html: homepage.html  # .../index.html => $HOME/homepage.html
-    packages: [sqlite3]
+```
+
+{#run-sync}
+#### Synchronous calls to `async` functions
+
+`async` functions can be invoked synchronously with `pyodide.ffi.run_sync()`.
+This requires the experimental
+[WebAssembly JavaScript promise integration API](https://github.com/WebAssembly/js-promise-integration)
+(JSPI), which isn't widely supported yet.
+
+- **Chromium-based browsers (Google Chrome, Microsoft Edge):** The serving
+  domain must be registered for the
+  [origin trial](https://developer.chrome.com/origintrials/#/register_trial/1603844417297317889).
+  For local testing, the feature can be enabled with a flag
+  (`chrome://flags/#enable-experimental-webassembly-jspi`).
+- **Firefox:** Firefox doesn't have an
+  [origin trial](https://wiki.mozilla.org/Origin_Trials) yet, and is still
+  working on the [implementation](https://bugzilla.mozilla.org/show_bug.cgi?id=1897981).
+  For local testing, the feature can be enabled with a config
+  (`javascript.options.wasm_js_promise_integration`), but it doesn't work with
+  Pyodide yet.
+- **Safari:** Safari doesn't currently support JSPI.
+
+```{note}
+Using `pyodide.ffi.run_sync()` instead of `async` concurrency prevents
+interrupting running code via the <button class="tdoc fa-stop"></button> button.
 ```
 
 ### SQL
