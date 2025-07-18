@@ -29,6 +29,10 @@ if xworker is not None:
     js_render = xworker.sync.render
     js_write = xworker.sync.write
 
+    def js_setup_canvas():
+        raise Exception(
+            "setup_canvas() is only supported in the 'main' environment")
+
 
 def public(fn):
     """Make a function available in the client code environment."""
@@ -132,10 +136,22 @@ def animation_frame():
 
 
 @public
+def animation_time():
+    """Return the current value of the animation timer."""
+    return js.performance.now()
+
+
+@public
 def render(html, name=''):
     """Render some HTML in an output block."""
     if not isinstance(html, str): html = ''.join(html)
     return js_render(run_id(), html, name).then(lambda res: tuple(res))
+
+
+@public
+def setup_canvas():
+    """Set up a <canvas> element for rendering."""
+    return js_setup_canvas(run_id())
 
 
 @public

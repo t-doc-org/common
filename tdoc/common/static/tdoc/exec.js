@@ -65,7 +65,7 @@ export class Executor {
 
     // Apply an {exec} block handler class.
     static async apply(cls) {
-        cls.ready = cls.init(tdoc.exec?.runable?.[cls.runner] ?? false);
+        cls.ready = cls.init(tdoc.exec?.envs?.[cls.runner] ?? []);
         await domLoaded;
         for (const node of qsa(document,
                                `div.tdoc-exec-runner-${cls.runner}`)) {
@@ -93,14 +93,17 @@ export class Executor {
         return view ? view.state.doc.toString() : this.preText(node);
     }
 
-    // Initialize the runner. `runable` is true iff at least one of the {exec}
-    // blocks has `when != 'never'`.
-    static async init(runable) {}
+    // Initialize the runner. `envs` is the list of environments that are used
+    // on the page.
+    static async init(envs) {}
 
     constructor(node) {
         this.node = node;
         this.when = node.dataset.tdocWhen;
     }
+
+    // The interpreter environment to use.
+    get env() { return this.node.dataset.tdocEnv; }
 
     // True iff the {exec} block has an editor.
     get editable() { return this.node.dataset.tdocEditor !== undefined; }

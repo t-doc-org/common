@@ -44,6 +44,8 @@ class Exec(code.CodeBlock):
         'sql': 'sql',
     }
 
+    required_arguments = 1
+    optional_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
         'after': names_option,
         'editor': directives.unchanged,
@@ -58,7 +60,7 @@ class Exec(code.CodeBlock):
     def find_nodes(doctree):
         nodes = {}
         for node in doctree.findall(exec):
-            nodes.setdefault(node['tdoc-runner'], []).append(node)
+            nodes.setdefault(node['runner'], []).append(node)
         return nodes
 
     @report_exceptions
@@ -82,7 +84,8 @@ class Exec(code.CodeBlock):
     def _update_node(self, node):
         if (hl := self.languages.get(runner := node['language'])) is None:
             raise Exception(f"{{exec}}: Unsupported runner: {runner}")
-        node['tdoc-runner'] = runner
+        node['runner'] = runner
+        node['env'] = self.arguments[1] if len(self.arguments) >= 2 else ''
         node['language'] = hl
         node.__class__ = exec
         node.tagname = node.__class__.__name__
@@ -122,9 +125,11 @@ def set_html_page_config(app, page, config, doctree):
     if (md := app.env.metadata[page].get('exec')) is not None:
         cfg['metadata'] = md
     if doctree:
-        runable = {n['tdoc-runner']: True for n in doctree.findall(exec)
-                   if n['when'] != 'never'}
-        if runable: cfg['runable'] = runable
+        envs = {}
+        for n in doctree.findall(exec):
+            if n['when'] == 'never': continue
+            envs.setdefault(n['runner'], set()).add(n['env'])
+        if envs: cfg['envs'] = {k: sorted(v) for k, v in envs.items()}
     if cfg: config['exec'] = cfg
 
 
@@ -186,11 +191,12 @@ def visit_exec(self, node):
         then = [nameids[n] for n in node.get('then', ())]
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_data_attrs(self,
-            after=' '.join(after),
+            after=' '.join(after) or None,
             editor=node.get('editor'),
             output_style=node.get('output-style'),
-            then=' '.join(then),
-            when=node.get('when'))
+            then=' '.join(then) or None,
+            env=node['env'] if node['when'] != 'never' else None,
+            when=node['when'])
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
         if attrs := format_attrs(self, style=node.get('style')):

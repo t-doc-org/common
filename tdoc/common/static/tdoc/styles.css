@@ -513,6 +513,10 @@ div.tdoc-exec-output.tdoc-sectioned pre {
     border: none;
     border-radius: 0;
 }
+div.tdoc-exec-output.tdoc-sectioned > .canvas > canvas {
+    display: block;
+    margin: 0 auto;
+}
 div.tdoc-exec-output pre span.err {
     color: var(--pst-color-danger);
 }

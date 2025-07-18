@@ -37,8 +37,8 @@ class SqlExecutor extends Executor {
     static runner = 'sql';
     static highlight = 'sql';
 
-    static async init(runable) {
-        if (!runable) return;
+    static async init(envs) {
+        if (envs.length === 0) return;
 
         // Web worker URLs must be satisfy the same-origin policy. If the worker
         // module is in a different origin, we start the worker on a data: URL
