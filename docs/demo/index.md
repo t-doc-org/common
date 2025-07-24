@@ -8,7 +8,7 @@
 elements
 quizzes
 polls
-python/index
+python
 micropython
 sql
 html
