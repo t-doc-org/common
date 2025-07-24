@@ -14,8 +14,8 @@ versions:
   pyodide: 0.27.7
 ```
 
-`pygame-ce` can be used in [`{exec} python`](../../reference/exec.md#python)
-blocks by listing it in the
+[`pygame-ce`](https://github.com/pygame-community/pygame-ce) can be used in
+[`{exec} python`](../../reference/exec.md#python) blocks by listing it in the
 [`exec:python:packages:`](../../reference/exec.md#python) {rst:dir}`metadata`.
 
 ```
