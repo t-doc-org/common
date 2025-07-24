@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-55)=
+## 0.55 *(2025-07-24)*
+
+- Added support for running Python code on the main thread. This enables the use
+  of `pygame-ce` in [`{exec} python`](/reference/exec.md#python) blocks.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.54...0.55)
+
 (release-0-54)=
 ## 0.54 *(2025-07-10)*
 
