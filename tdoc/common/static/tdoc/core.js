@@ -305,10 +305,12 @@ export function sleep(ms) {
 
 // Return a promise that gets rejected after the given number of milliseconds.
 export function timeout(ms) {
-    return new Promise(
+    const p = new Promise(
         ms !== undefined && ms !== null ?
         ((res, rej) => setTimeout(() => rej(new Error("Timeout")), ms)) :
         (() => undefined));
+    p.catch(e => undefined);  // Prevent logging
+    return p;
 }
 
 // Canonicalize a document path, or the current document if missing.

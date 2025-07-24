@@ -293,7 +293,6 @@ except OSError as e:
         while (this.cap.length < count) {
             await Promise.race([this.pAvail, cancel, this.pAbort]);
         }
-        cancel.catch(e => undefined);  // Prevent logging
         return this.cap.read(count);
     }
 
@@ -307,7 +306,6 @@ except OSError as e:
                 if (onRead) onRead(this.cap.peek(pos, i));
                 const data = record ? this.cap.read(i) : this.cap.drop(i);
                 this.cap.drop(want.length);
-                cancel.catch(e => undefined);  // Prevent logging
                 return data;
             }
             const oldPos = pos;
