@@ -495,6 +495,9 @@ div.tdoc-exec-output:hover button.tdoc-remove {
     opacity: 1;
 }
 div.tdoc-exec-output.tdoc-sectioned {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     border: 1px solid var(--pst-color-border);
     border-top: 0.25rem solid var(--pst-color-border);
     border-radius: 0.25rem;
@@ -506,10 +509,10 @@ div.tdoc-exec-output.tdoc-sectioned:empty {
 div.tdoc-exec-output.tdoc-sectioned > :not(:last-child) {
     border-bottom: 1px solid var(--pst-color-border);
 }
-div.tdoc-exec-output.tdoc-sectioned div.highlight {
+div.tdoc-exec-output.tdoc-sectioned > div.highlight {
     border-radius: 0;
 }
-div.tdoc-exec-output.tdoc-sectioned pre {
+div.tdoc-exec-output.tdoc-sectioned > div.highlight > pre {
     border: none;
     border-radius: 0;
 }
@@ -520,7 +523,7 @@ div.tdoc-exec-output.tdoc-sectioned > .canvas > canvas {
 div.tdoc-exec-output pre span.err {
     color: var(--pst-color-danger);
 }
-div.tdoc-exec-output div.tdoc-input {
+div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input {
     display: flex;
     flex-direction: row;
     align-items: baseline;
@@ -528,15 +531,15 @@ div.tdoc-exec-output div.tdoc-input {
     padding: 0.3rem;
     column-gap: 0.3rem;
 }
-div.tdoc-exec-output div.tdoc-input .prompt {
+div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input > .prompt {
     white-space: pre;
     padding-left: 0.2rem;
     padding-right: 0.2rem;
 }
-div.tdoc-exec-output div.tdoc-input .input {
+div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input > .input {
     width: 100%;
 }
-div.tdoc-exec-output div.tdoc-input input[type=text] {
+div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input > input[type=text] {
     border: 1px solid var(--pst-color-border);
     padding-block: 1px;
     padding-inline: 2px;
