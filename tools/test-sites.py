@@ -105,9 +105,9 @@ def run_tests(tests, repo, label, url, port, wheel, write):
 
     def vrun(*args, wait=True, **kwargs):
         p = subprocess.Popen(
-            (sys.executable, '-P', repo_dir / 'run.py') + args,
-            cwd=repo_dir, env={**os.environ, 'TDOC_VERSION': str(wheel)},
-            text=True, bufsize=1, stdin=subprocess.DEVNULL,
+            (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
+             '--') + args,
+            cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if wait:
             out, _ = p.communicate()
