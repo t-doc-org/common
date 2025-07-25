@@ -28,9 +28,9 @@ def main(argv, stdin, stdout, stderr):
 
     # Parse command-line options.
     version = os.environ.get('TDOC_VERSION', VERSION)
-    for i in range(1, len(argv)):
-        arg = argv[i]
-        if not arg.startswith('--'):
+    i = 1
+    while True:
+        if i >= len(argv) or not (arg := argv[i]).startswith('--'):
             argv = argv[:1] + argv[i:]
             break
         elif arg == '--':
@@ -40,6 +40,7 @@ def main(argv, stdin, stdout, stderr):
             version = arg[10:]
         else:
             raise Exception(f"Unknown option: {arg}")
+        i += 1
 
     # Find a matching venv, or create one if there is none.
     builder = EnvBuilder(base, version, stderr, '--debug' in argv)
