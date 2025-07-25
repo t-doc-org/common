@@ -54,6 +54,93 @@ blockquote div > p:has(+ p.attribution) {
     content: '\f52b';
 }
 
+/* List styling */
+ol.space > li, ul.space > li {
+    padding-left: 0.5rem;
+}
+ol.space2 > li, ul.space2 > li {
+    padding-left: 1rem;
+}
+ol.disc, ul.disc {
+    list-style-type: disc;
+}
+ol.circle, ul.circle {
+    list-style-type: circle;
+}
+ol.square, ul.square {
+    list-style-type: square;
+}
+ol.decimal, ul.decimal {
+    list-style-type: decimal;
+}
+ol.decimal-leading-zero, ul.decimal-leading-zero {
+    list-style-type: decimal-leading-zero;
+}
+ol.lower-alpha, ul.lower-alpha {
+    list-style-type: lower-alpha;
+}
+ol.upper-alpha, ul.upper-alpha {
+    list-style-type: upper-alpha;
+}
+ol.lower-greek, ul.lower-greek {
+    list-style-type: lower-greek;
+}
+ol.lower-roman, ul.lower-roman {
+    list-style-type: lower-roman;
+}
+ol.upper-roman, ul.upper-roman {
+    list-style-type: upper-roman;
+}
+@counter-style decimal-paren {
+    system: extends decimal;
+    suffix: ') ';
+}
+@counter-style decimal-leading-zero-paren {
+    system: extends decimal-leading-zero;
+    suffix: ') ';
+}
+@counter-style lower-alpha-paren {
+    system: extends lower-alpha;
+    suffix: ') ';
+}
+@counter-style upper-alpha-paren {
+    system: extends upper-alpha;
+    suffix: ') ';
+}
+@counter-style lower-greek-paren {
+    system: extends lower-greek;
+    suffix: ') ';
+}
+@counter-style lower-roman-paren {
+    system: extends lower-roman;
+    suffix: ') ';
+}
+@counter-style upper-roman-paren {
+    system: extends upper-roman;
+    suffix: ') ';
+}
+ol.decimal-paren, ul.decimal-paren {
+    list-style-type: decimal-paren;
+}
+ol.decimal-leading-zero-paren, ul.decimal-leading-zero-paren {
+    list-style-type: decimal-leading-zero-paren;
+}
+ol.lower-alpha-paren, ul.lower-alpha-paren {
+    list-style-type: lower-alpha-paren;
+}
+ol.upper-alpha-paren, ul.upper-alpha-paren {
+    list-style-type: upper-alpha-paren;
+}
+ol.lower-greek-paren, ul.lower-greek-paren {
+    list-style-type: lower-greek-paren;
+}
+ol.lower-roman-paren, ul.lower-roman-paren {
+    list-style-type: lower-roman-paren;
+}
+ol.upper-roman-paren, ul.upper-roman-paren {
+    list-style-type: upper-roman-paren;
+}
+
 /* Admonitions */
 .admonition.dropdown .admonition-title {
     cursor: pointer;
