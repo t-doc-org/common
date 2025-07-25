@@ -86,14 +86,14 @@ winget upgrade --id Microsoft.WindowsTerminal
 ### macOS
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
-  and [Mercurial](https://www.mercurial-scm.org/) either by hand or through a
-  package manager like [Homebrew](https://brew.sh/).
+  and [Mercurial](https://www.mercurial-scm.org/) manually or via a package
+  manager like [Homebrew](https://brew.sh/).
 
 {#linux}
 ### Linux
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
-  and [Mercurial](https://www.mercurial-scm.org/) through your system's package
+  and [Mercurial](https://www.mercurial-scm.org/) via your system's package
   manager.
 
 {#install}
