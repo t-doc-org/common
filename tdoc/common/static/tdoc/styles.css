@@ -60,26 +60,21 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* List styling */
-ol.col2, ul.col2 {
+ol.columns-2, ul.columns-2 {
     column-count: 2;
+    column-gap: 2rem;
 }
-ol.col3, ul.col3 {
+ol.columns-3, ul.columns-3 {
     column-count: 3;
+    column-gap: 2rem;
 }
-ol.col4, ul.col4 {
+ol.columns-4, ul.columns-4 {
     column-count: 4;
+    column-gap: 2rem;
 }
-ol.col5, ul.col5 {
+ol.columns-5, ul.columns-5 {
     column-count: 5;
-}
-ol.col6, ul.col6 {
-    column-count: 6;
-}
-ol.col7, ul.col7 {
-    column-count: 7;
-}
-ol.col8, ul.col8 {
-    column-count: 8;
+    column-gap: 2rem;
 }
 ol.disc, ul.disc {
     list-style-type: disc;
@@ -160,16 +155,16 @@ ol.lower-roman-paren, ul.lower-roman-paren {
 ol.upper-roman-paren, ul.upper-roman-paren {
     list-style-type: upper-roman-paren;
 }
-ol.space > li, ul.space > li {
+ol.hsep > li, ul.hsep > li {
     padding-left: 0.5rem;
 }
-ol.space2 > li, ul.space2 > li {
+ol.hsep-2 > li, ul.hsep-2 > li {
     padding-left: 1rem;
 }
-ol.vspace > li:not(:first-child), ul.vspace > li:not(:first-child) {
+ol.vsep > li:not(:first-child), ul.vsep > li:not(:first-child) {
     margin-top: 0.5rem;
 }
-ol.vspace2 > li:not(:first-child), ul.vspace2 > li:not(:first-child) {
+ol.vsep-2 > li:not(:first-child), ul.vsep-2 > li:not(:first-child) {
     margin-top: 1rem;
 }
 
