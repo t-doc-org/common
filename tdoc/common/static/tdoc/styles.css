@@ -55,11 +55,26 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* List styling */
-ol.space > li, ul.space > li {
-    padding-left: 0.5rem;
+ol.col2, ul.col2 {
+    column-count: 2;
 }
-ol.space2 > li, ul.space2 > li {
-    padding-left: 1rem;
+ol.col3, ul.col3 {
+    column-count: 3;
+}
+ol.col4, ul.col4 {
+    column-count: 4;
+}
+ol.col5, ul.col5 {
+    column-count: 5;
+}
+ol.col6, ul.col6 {
+    column-count: 6;
+}
+ol.col7, ul.col7 {
+    column-count: 7;
+}
+ol.col8, ul.col8 {
+    column-count: 8;
 }
 ol.disc, ul.disc {
     list-style-type: disc;
@@ -139,6 +154,18 @@ ol.lower-roman-paren, ul.lower-roman-paren {
 }
 ol.upper-roman-paren, ul.upper-roman-paren {
     list-style-type: upper-roman-paren;
+}
+ol.space > li, ul.space > li {
+    padding-left: 0.5rem;
+}
+ol.space2 > li, ul.space2 > li {
+    padding-left: 1rem;
+}
+ol.vspace > li:not(:first-child), ul.vspace > li:not(:first-child) {
+    margin-top: 0.5rem;
+}
+ol.vspace2 > li:not(:first-child), ul.vspace2 > li:not(:first-child) {
+    margin-top: 1rem;
 }
 
 /* Admonitions */
