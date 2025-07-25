@@ -54,6 +54,11 @@ blockquote div > p:has(+ p.attribution) {
     content: '\f52b';
 }
 
+/* Page layout */
+.page-break {
+    page-break-before: always;
+}
+
 /* List styling */
 ol.col2, ul.col2 {
     column-count: 2;
