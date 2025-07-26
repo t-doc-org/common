@@ -54,56 +54,55 @@ blockquote div > p:has(+ p.attribution) {
     content: '\f52b';
 }
 
-/* Page layout */
+/* Layout */
 .page-break {
     page-break-before: always;
 }
+.columns-2 {
+    column-count: 2;
+}
+.columns-3 {
+    column-count: 3;
+}
+.columns-4 {
+    column-count: 4;
+}
+.columns-5 {
+    column-count: 5;
+}
 
 /* List styling */
-ol.columns-2, ul.columns-2 {
-    column-count: 2;
+:is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5) {
     column-gap: 2rem;
 }
-ol.columns-3, ul.columns-3 {
-    column-count: 3;
-    column-gap: 2rem;
-}
-ol.columns-4, ul.columns-4 {
-    column-count: 4;
-    column-gap: 2rem;
-}
-ol.columns-5, ul.columns-5 {
-    column-count: 5;
-    column-gap: 2rem;
-}
-ol.disc, ul.disc {
+:is(ol, ul).disc {
     list-style-type: disc;
 }
-ol.circle, ul.circle {
+:is(ol, ul).circle {
     list-style-type: circle;
 }
-ol.square, ul.square {
+:is(ol, ul).square {
     list-style-type: square;
 }
-ol.decimal, ul.decimal {
+:is(ol, ul).decimal {
     list-style-type: decimal;
 }
-ol.decimal-leading-zero, ul.decimal-leading-zero {
+:is(ol, ul).decimal-leading-zero {
     list-style-type: decimal-leading-zero;
 }
-ol.lower-alpha, ul.lower-alpha {
+:is(ol, ul).lower-alpha {
     list-style-type: lower-alpha;
 }
-ol.upper-alpha, ul.upper-alpha {
+:is(ol, ul).upper-alpha {
     list-style-type: upper-alpha;
 }
-ol.lower-greek, ul.lower-greek {
+:is(ol, ul).lower-greek {
     list-style-type: lower-greek;
 }
-ol.lower-roman, ul.lower-roman {
+:is(ol, ul).lower-roman {
     list-style-type: lower-roman;
 }
-ol.upper-roman, ul.upper-roman {
+:is(ol, ul).upper-roman {
     list-style-type: upper-roman;
 }
 @counter-style decimal-paren {
@@ -134,38 +133,50 @@ ol.upper-roman, ul.upper-roman {
     system: extends upper-roman;
     suffix: ') ';
 }
-ol.decimal-paren, ul.decimal-paren {
+:is(ol, ul).decimal-paren {
     list-style-type: decimal-paren;
 }
-ol.decimal-leading-zero-paren, ul.decimal-leading-zero-paren {
+:is(ol, ul).decimal-leading-zero-paren {
     list-style-type: decimal-leading-zero-paren;
 }
-ol.lower-alpha-paren, ul.lower-alpha-paren {
+:is(ol, ul).lower-alpha-paren {
     list-style-type: lower-alpha-paren;
 }
-ol.upper-alpha-paren, ul.upper-alpha-paren {
+:is(ol, ul).upper-alpha-paren {
     list-style-type: upper-alpha-paren;
 }
-ol.lower-greek-paren, ul.lower-greek-paren {
+:is(ol, ul).lower-greek-paren {
     list-style-type: lower-greek-paren;
 }
-ol.lower-roman-paren, ul.lower-roman-paren {
+:is(ol, ul).lower-roman-paren {
     list-style-type: lower-roman-paren;
 }
-ol.upper-roman-paren, ul.upper-roman-paren {
+:is(ol, ul).upper-roman-paren {
     list-style-type: upper-roman-paren;
 }
-ol.hsep > li, ul.hsep > li {
+:is(ol, ul).hsep > li {
     padding-left: 0.5rem;
 }
-ol.hsep-2 > li, ul.hsep-2 > li {
+:is(ol, ul).hsep-2 > li {
     padding-left: 1rem;
 }
-ol.vsep > li:not(:first-child), ul.vsep > li:not(:first-child) {
+:is(ol, ul).hsep-3 > li {
+    padding-left: 1.5rem;
+}
+:is(ol, ul).hsep-4 > li {
+    padding-left: 2rem;
+}
+:is(ol, ul).vsep > li:not(:first-child) {
     margin-top: 0.5rem;
 }
-ol.vsep-2 > li:not(:first-child), ul.vsep-2 > li:not(:first-child) {
+:is(ol, ul).vsep-2 > li:not(:first-child) {
     margin-top: 1rem;
+}
+:is(ol, ul).vsep-3 > li:not(:first-child) {
+    margin-top: 1.5rem;
+}
+:is(ol, ul).vsep-4 > li:not(:first-child) {
+    margin-top: 2rem;
 }
 
 /* Admonitions */
