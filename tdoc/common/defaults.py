@@ -28,6 +28,7 @@ extensions = [
     'tdoc.common.ext.defaults',
     'tdoc.common.ext.exec',
     'tdoc.common.ext.iframe',
+    'tdoc.common.ext.layout',
     'tdoc.common.ext.metadata',
     'tdoc.common.ext.num',
     'tdoc.common.ext.poll',

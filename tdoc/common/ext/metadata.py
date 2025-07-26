@@ -31,8 +31,8 @@ class Metadata(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        node = metadata(attrs=yaml.safe_load(
-                        ''.join(f'{line}\n' for line in self.content)))
+        node = metadata(
+            attrs=yaml.safe_load(''.join(f'{line}\n' for line in self.content)))
         self.set_source_info(node)
         return [node]
 

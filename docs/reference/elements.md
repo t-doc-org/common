@@ -23,6 +23,12 @@ interpreted.
       packages: [sqlite3]
   ```
 
+`layout`
+: A mapping of layout configuration.
+
+  `print-toc`
+  : Determines if the TOC is printed (`show`, the default) or not (`hide`).
+
 `scripts`
 : A list of scripts to reference from the page header through `<script>`{l=html}
   elements. The list items can be either strings (the URL of the script) or
