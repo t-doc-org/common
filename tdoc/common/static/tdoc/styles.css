@@ -59,7 +59,13 @@ html[data-tdoc-hide-toc] #jb-print-toc {
     display: none;
 }
 .page-break {
-    page-break-before: always;
+    break-before: page;
+}
+.column-break {
+    break-before: column;
+}
+.avoid-break {
+    break-inside: avoid;
 }
 .columns-2 {
     column-count: 2;
@@ -157,7 +163,7 @@ html[data-tdoc-hide-toc] #jb-print-toc {
 :is(ol, ul).upper-roman-paren {
     list-style-type: upper-roman-paren;
 }
-:is(ol, ul).hsep > li {
+:is(ol, ul).hsep-1 > li {
     padding-left: 0.5rem;
 }
 :is(ol, ul).hsep-2 > li {
@@ -169,7 +175,7 @@ html[data-tdoc-hide-toc] #jb-print-toc {
 :is(ol, ul).hsep-4 > li {
     padding-left: 2rem;
 }
-:is(ol, ul).vsep > li:not(:first-child) {
+:is(ol, ul).vsep-1 > li:not(:first-child) {
     margin-top: 0.5rem;
 }
 :is(ol, ul).vsep-2 > li:not(:first-child) {
