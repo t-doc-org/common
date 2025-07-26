@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import copy
 import yaml
 
 from docutils import nodes
@@ -12,6 +13,7 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
+    app.add_config_value('metadata', {}, 'html', dict)
     app.add_node(metadata)
     app.add_directive('metadata', Metadata)
     app.connect('doctree-read', extract_metadata)
@@ -39,14 +41,23 @@ class Metadata(docutils.SphinxDirective):
 
 def extract_metadata(app, doctree):
     md = app.env.metadata[app.env.docname]
+    merge(app.config.metadata, md)
     nodes = list(doctree.findall(metadata))
     for i, node in enumerate(nodes):
         if i == 0:
-            if (attrs := node['attrs']) is not None: md.update(attrs)
+            if (attrs := node['attrs']) is not None: merge(attrs, md)
         else:
             _log.warning("More than one {metadata} directive in the document",
                          location=node)
         node.parent.remove(node)
+
+
+def merge(src, dst):
+    for k, sv in src.items():
+        if isinstance(sv, dict) and k in dst and isinstance(dv := dst[k], dict):
+            merge(sv, dv)
+        else:
+            dst[k] = copy.deepcopy(sv)
 
 
 def add_head_elements(app, page, template, context, doctree):
