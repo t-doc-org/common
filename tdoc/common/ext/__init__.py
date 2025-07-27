@@ -124,6 +124,10 @@ def on_config_inited(app, config):
             and (app.confdir / '_static').exists():
         config.html_static_path.append('_static')
 
+    # Override config defaults.
+    if config.author and not config.copyright:
+        config.copyright = f'%Y {config.author}'
+
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
     opts.setdefault('use_sidenotes', True)
@@ -136,7 +140,7 @@ def on_config_inited(app, config):
 
 def on_builder_inited(app):
     # The config is used in domain.html.jinja.
-    tdoc = tdoc_config(app, None, None)
+    tdoc = tdoc_config(app)
     app.config.html_context['tdoc'] = json.dumps(tdoc, separators=(',', ':'))
 
 
@@ -148,7 +152,7 @@ def on_html_page_context(app, page, template, context, doctree):
     # Set up early and on-load JavaScript. Temporarily override mathjax_path
     # as per version specification, then restore it after
     # mathjax.install_mathjax() has run.
-    tdoc = tdoc_config(app, page, doctree)
+    tdoc = tdoc_config(app, page, doctree, context)
     mathjax = tdoc['versions'].pop('mathjax')
     if mathjax.startswith('/'): mathjax = f'../{mathjax[1:]}'
     context['tdoc_mathjax_path'] = app.config.mathjax_path
@@ -164,7 +168,7 @@ def restore_mathjax(app, page, template, context, doctree):
     del context['tdoc_mathjax_path']
 
 
-def tdoc_config(app, page, doctree):
+def tdoc_config(app, page=None, doctree=None, context=None):
     tdoc = {
         'conf': copy.deepcopy(app.config.tdoc),
         'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
@@ -180,7 +184,7 @@ def tdoc_config(app, page, doctree):
         if '://' not in (v := versions.setdefault(name, info['version'])):
             versions[name] = f'/_cache/{name}/{v}' if is_dev else info['url'](v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
-    app.emit('tdoc-html-page-config', page, tdoc, doctree)
+    app.emit('tdoc-html-page-config', page, tdoc, doctree, context)
     return tdoc
 
 

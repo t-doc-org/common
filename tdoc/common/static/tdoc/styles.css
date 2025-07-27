@@ -55,9 +55,6 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* Layout */
-html[data-tdoc-hide-toc] #jb-print-toc {
-    display: none;
-}
 .page-break {
     break-before: page;
 }

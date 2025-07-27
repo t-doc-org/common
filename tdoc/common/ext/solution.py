@@ -55,7 +55,7 @@ class Solution(admonitions.BaseAdmonition):
         return res
 
 
-def set_html_page_config(app, page, config, doctree):
+def set_html_page_config(app, page, config, doctree, context):
     if page is None: return
     md = app.env.metadata[page]
     v = md.get('solutions', app.config.tdoc_solutions)

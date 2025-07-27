@@ -23,11 +23,11 @@ interpreted.
       packages: [sqlite3]
   ```
 
-`layout`
-: A mapping of layout configuration.
+`print-styles`
+: A CSS stylesheet URL to use when printing. Relative URLs are resolved relative
+  to the `_static` directory. The following print stylesheets are provided:
 
-  `print-toc`
-  : Determines if the TOC is printed (`show`, the default) or not (`hide`).
+  - `tdoc/print.css`: A simple style with page headers and footers.
 
 `scripts`
 : A list of scripts to reference from the page header through `<script>`{l=html}
@@ -58,6 +58,10 @@ interpreted.
       media: print
     - https://example.com/styles.css
   ```
+
+`subject`
+: The subject covered by the document. This may be used by print stylesheets in
+  headers or footers.
 
 `versions`
 : A map overriding the versions of JavaScript dependencies on a page. The keys
