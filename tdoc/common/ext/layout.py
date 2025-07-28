@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
+import markupsafe
 
 from sphinx.util import logging
 
@@ -27,4 +28,5 @@ def set_html_context(app, page, template, context, doctree):
     if v := app.config.author: attrs['data-tdoc-author'] = v
     attrs['data-tdoc-date'] = datetime.datetime.now().strftime('%Y-%m-%d')
     if v := md.get('subject'): attrs['data-tdoc-subject'] = v
-    if context and (v := context.get('title')): attrs['data-tdoc-title'] = v
+    if context and (v := context.get('title')):
+        attrs['data-tdoc-title'] = markupsafe.Markup(v).striptags()
