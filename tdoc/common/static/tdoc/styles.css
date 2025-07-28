@@ -61,6 +61,9 @@ blockquote div > p:has(+ p.attribution) {
 .column-break {
     break-before: column;
 }
+.allow-break {
+    break-inside: auto;
+}
 .avoid-break {
     break-inside: avoid;
 }

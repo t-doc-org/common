@@ -23,6 +23,13 @@ interpreted.
       packages: [sqlite3]
   ```
 
+`page-break-avoid`
+: A level or list of levels of sections in which page breaks should be avoided.
+
+`page-break-force`
+: A level or list of levels of sections after which a page break should be
+  forced.
+
 `print-styles`
 : A CSS stylesheet URL to use when printing. Relative URLs are resolved relative
   to the `_static` directory. The following print stylesheets are provided:

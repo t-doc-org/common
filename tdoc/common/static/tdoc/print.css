@@ -67,8 +67,25 @@
     h1, h2, h3, h4, h5, h6 {
         margin: 1.5rem 0 0.75rem;
     }
-    section.page-break > :is(h1, h2, h3, h4, h5, h6):first-child {
+    section.page-break > :is(h2, h3, h4, h5, h6):first-child {
         margin-top: 0;
+    }
+    html[data-tdoc-page-break-force~=h2] section:has(> h2:first-child),
+    html[data-tdoc-page-break-force~=h3] section:has(> h3:first-child),
+    html[data-tdoc-page-break-force~=h4] section:has(> h4:first-child),
+    html[data-tdoc-page-break-force~=h5] section:has(> h5:first-child),
+    html[data-tdoc-page-break-force~=h6] section:has(> h6:first-child) {
+        break-after: page;
+        & > :is(h2, h3, h4, h5, h6):first-child {
+            margin-top: 0;
+        }
+    }
+    html[data-tdoc-page-break-avoid~=h2] section:has(> h2:first-child),
+    html[data-tdoc-page-break-avoid~=h3] section:has(> h3:first-child),
+    html[data-tdoc-page-break-avoid~=h4] section:has(> h4:first-child),
+    html[data-tdoc-page-break-avoid~=h5] section:has(> h5:first-child),
+    html[data-tdoc-page-break-avoid~=h6] section:has(> h6:first-child) {
+        break-inside: avoid-page;
     }
     #pst-back-to-top {
         display: none !important;
