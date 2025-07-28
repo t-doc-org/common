@@ -6,10 +6,11 @@ import copy
 import functools
 import json
 import pathlib
+import re
 
 from docutils import nodes, statemachine
 from myst_parser import mocking
-from sphinx import config, locale
+from sphinx import config, jinja2glue, locale
 from sphinx.environment import collectors
 from sphinx.util import docutils, fileutil, logging
 
@@ -31,7 +32,7 @@ _license_urls = {
     'MIT': 'https://opensource.org/license/mit',
 }
 
-# BUG(myst_parser): MockState.parse_directive_block() [myst_parser] returns the
+# BUG(myst-parser): MockState.parse_directive_block() [myst_parser] returns the
 # content as a StringList, whereas Body.parse_directive_block() [docutils]
 # returns a list. The StringList is constructed with source=content.source,
 # which is a bound method and clearly wrong. Patch the method to unwrap the
@@ -97,7 +98,8 @@ def setup(app):
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', on_builder_inited)
-    app.connect('html-page-context', on_html_page_context, priority=499.9)
+    app.connect('html-page-context', set_html_context, priority=0)
+    app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
     if 'tdoc-dev' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
@@ -144,11 +146,34 @@ def on_builder_inited(app):
     app.config.html_context['tdoc'] = json.dumps(tdoc, separators=(',', ':'))
 
 
-def on_html_page_context(app, page, template, context, doctree):
+def set_html_context(app, page, template, context, doctree):
     context['tdoc_version'] = __version__
+    context.setdefault('html_attrs', {})
     if v := app.config.license: context['license'] = v
     if v := app.config.license_url: context['license_url'] = v
 
+
+# BUG(pydata-sphinx-theme): The layout.html template doesn't allow overriding
+# the <html> tag. Patch the template source at load-time to add attributes from
+# the html_attrs context variable, by monkey-patching SphinxFileSystemLoader.
+html_re = re.compile(r'(?m)^(<html[^>]*)(>)$')
+
+def _get_source(self, env, template):
+    contents, filename, uptodate = \
+        SphinxFileSystemLoader_get_source(self, env, template)
+    if template == 'pydata_sphinx_theme/layout.html':
+        contents, n = html_re.subn(
+            r'\1{{ html_attrs | default({}) | xmlattr }}\2', contents)
+        if n != 1:
+            raise Exception(
+                "Patching of pydata_sphinx_theme/layout.html failed")
+    return contents, filename, uptodate
+
+SphinxFileSystemLoader_get_source = jinja2glue.SphinxFileSystemLoader.get_source
+jinja2glue.SphinxFileSystemLoader.get_source = _get_source
+
+
+def add_js(app, page, template, context, doctree):
     # Set up early and on-load JavaScript. Temporarily override mathjax_path
     # as per version specification, then restore it after
     # mathjax.install_mathjax() has run.
@@ -173,7 +198,6 @@ def tdoc_config(app, page=None, doctree=None, context=None):
         'conf': copy.deepcopy(app.config.tdoc),
         'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
         'enable_sab': app.config.tdoc_enable_sab,
-        'html_data': {},
     }
     if is_dev := 'tdoc-dev' in app.tags: tdoc['dev'] = True
     versions = tdoc['versions'] = \

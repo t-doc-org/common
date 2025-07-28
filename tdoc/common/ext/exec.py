@@ -198,9 +198,9 @@ def visit_exec(self, node):
             env=node['env'] if node['when'] != 'never' else None,
             when=node['when'])
         if attrs:
-            self.body[-1] = div_attrs_re.sub(subst, self.body[-1], 1)
+            self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)
         if attrs := format_attrs(self, style=node.get('style')):
-            self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], 1)
+            self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], count=1)
         raise
 
 

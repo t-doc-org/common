@@ -55,9 +55,6 @@
         };
     };
 
-    // Set data-* attributes on the <html> tag.
-    Object.assign(document.documentElement.dataset, tdoc.html_data);
-
     // Copy the data-theme attribute of the document to data-bs-theme, to
     // synchronize the Bootstrap theme.
     new MutationObserver((mutations) => {
