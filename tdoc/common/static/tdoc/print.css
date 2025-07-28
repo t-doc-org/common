@@ -2,11 +2,11 @@
 /* SPDX-License-Identifier: MIT */
 
 @page {
-    margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+    margin: 15mm 15mm 15mm 15mm;
     border-top: 1px solid black;
     border-bottom: 1px solid black;
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
+    padding-top: 5mm;
+    padding-bottom: 5mm;
     font-family: var(--pst-font-family-base);
     font-size: 0.9rem;
     font-weight: 400;
@@ -38,10 +38,10 @@
     }
 }
 @page :left {
-    padding-right: 2rem;
+    margin-right: 20mm;
 }
 @page :right {
-    padding-left: 2rem;
+    margin-left: 20mm;
 }
 
 @media print {
@@ -59,6 +59,10 @@
     }
     .bd-main .bd-content {
         margin-left: 0;
+    }
+    .bd-main .bd-content .bd-article-container .bd-article {
+        padding-left: 0;
+        padding-right: 0;
     }
     .bd-main .bd-content #jb-print-docs-body h1 {
         margin-top: 0;
