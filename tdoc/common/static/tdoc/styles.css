@@ -79,6 +79,15 @@ blockquote div > p:has(+ p.attribution) {
 .columns-5 {
     column-count: 5;
 }
+.columns-6 {
+    column-count: 6;
+}
+.columns-7 {
+    column-count: 7;
+}
+.columns-8 {
+    column-count: 8;
+}
 
 /* List styling */
 :is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5) {
