@@ -32,37 +32,41 @@ class FlexTable(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        rows = []
-        for line in self.content:
-            # TODO: Improve error reporting: show line
-            row = self.parse_row(line)
-            rows.append(row)
-
-        table = flex_table('', *rows)
+        table = flex_table()
         self.set_source_info(table)
         self.add_name(table)
         table['classes'] += self.options.get('class', [])
+        for i, line in enumerate(self.content, 1):
+            lineno = self.lineno + self.content_offset + i
+            try:
+                row = self.parse_row(line, lineno)
+            except Exception as e:
+                return [self.state.document.reporter.error(e, line=lineno)]
+            table.append(row)
         return [table]
 
-    def parse_row(self, line):
+    def parse_row(self, line, lineno):
         row = flex_row()
         attrs, start = parse_attrs(line, 0, len(line), row)
-        if (t := attrs.get('t')) == 'h':
+        if (t := attrs.pop('t', None)) == 'h':
             row['type'] = 'thead'
         elif t == 'b':
             row['type'] = 'tbody'
         elif t is not None:
             raise Exception(f"{{flex-table}} Invalid row type: {t}")
+        if attrs:
+            raise Exception("{{flex-table}} Unknown row attributes: "
+                            f"{' '.join(sorted(attrs.keys()))}")
         while True:
-            cell, start = self.parse_cell(line, start)
+            cell, start = self.parse_cell(line, lineno, start)
             if cell is None: break
             row.append(cell)
         return row
 
-    def parse_cell(self, line, start):
+    def parse_cell(self, line, lineno, start):
         if start >= len(line): return None, len(line)
         if line[start] != '|':
-            raise Exception("{flex-table} Invalid row: must start with a |")
+            raise Exception("{flex-table} Row must start with '|'")
         start += 1
         end = start
         while end < len(line) and not (
@@ -71,17 +75,21 @@ class FlexTable(docutils.SphinxDirective):
             end += 1
         cell = flex_cell()
         attrs, start = parse_attrs(line, start, end, cell)
-        if (t := attrs.get('t')) == 'h':
+        if (t := attrs.pop('t', None)) == 'h':
             cell['tag'] = 'th'
         elif t == 'd':
             cell['tag'] = 'td'
         elif t is not None:
             raise Exception(f"{{flex-table}} Invalid cell type: {t}")
-        if (v := attrs.get('cols')) is not None: cell['cols'] = v
-        if (v := attrs.get('rows')) is not None: cell['rows'] = v
-        content, msgs = self.parse_inline(line[start: end])
-        # TODO: Handle messages
+        if (v := attrs.pop('cols', None)) is not None: cell['cols'] = v
+        if (v := attrs.pop('rows', None)) is not None: cell['rows'] = v
+        if attrs:
+            raise Exception("{{flex-table}} Unknown cell attributes: "
+                            f"{' '.join(sorted(attrs.keys()))}")
+        # BUG(myst-pasrser): The line number reported in errors is off by 1.
+        content, msgs = self.parse_inline(line[start: end], lineno=lineno - 1)
         cell += content
+        cell += msgs
         return cell, end
 
 
