@@ -5,46 +5,6 @@ import {
     dec, domLoaded, elmt, enable, fromBase64, on, qs, qsa,
 } from './core.js';
 
-// TODO(0.51): Remove
-export function genTable(node, addCells) {
-    // Find the first table that precedes `node`.
-    let table;
-    while (!table) {
-        node = node.previousElementSibling;
-        if (!node) {
-            console.error("<table> not found");
-            return;
-        }
-        table = qs(node, 'table.table');
-    }
-
-    // Add a column to all existing rows for the check button.
-    qs(table, 'thead > tr').appendChild(elmt`<th></th>`);
-    let tbody = qs(table, 'tbody');
-    if (!tbody) tbody = table.appendChild(elmt`<tbody></tbody>`);
-    for (const tr of qsa(tbody, 'tr')) {
-        tr.appendChild(elmt`<td></td>`);
-    }
-
-    function addRow() {
-        const row = elmt`<tr class="tdoc-quiz-row text-center"></tr>`;
-        const button = elmt`<button class="tdoc-check fa-check"></button>`;
-        const {verify, focus} = addCells(table, row, button);
-        if (!verify) return;
-        row.appendChild(elmt`<td></td>`).appendChild(button);
-        on(button).click(() => {
-            if (!verify()) return;
-            enable(false, button);
-            const focus = addRow();
-            if (focus) focus.focus();
-        });
-        tbody.appendChild(row);
-        return focus;
-    }
-
-    addRow();
-}
-
 class QuizBase {
     constructor(quiz) {
         this.quiz = quiz;
@@ -241,17 +201,12 @@ function nextField(fields, field) {
     }
 }
 
-// TODO(0.51): Un-export
-export const checks = {
+const checks = {
     default(args) { checks.trim(args); },
     split(args, param = ',') { args.solution = args.solution.split(param); },
     trim(args) { args.applyAS(v => v.trim()); },
     remove: (args, param = '\\s+') => {
         args.applyAS(v => v.replaceAll(new RegExp(param, 'g'), ''));
-    },
-    // TODO(0.51): Remove
-    'remove-whitespace': (args) => {
-        args.applyAS(v => v.replaceAll(/\s+/g, ''));
     },
     lowercase(args) { args.applyAS(v => v.toLowerCase()); },
     uppercase(args) { args.applyAS(v => v.toUpperCase()); },
