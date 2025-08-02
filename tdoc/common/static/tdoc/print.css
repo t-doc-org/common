@@ -46,7 +46,7 @@
 
 @media print {
     html:not(#¶) {
-        --pst-font-size-base: 1rem;
+        --pst-font-size-base: 0.8rem;
         --pst-font-size-h1: 2rem;
         --pst-font-size-h2: 1.5rem;
         --pst-font-size-h3: 1.3rem;

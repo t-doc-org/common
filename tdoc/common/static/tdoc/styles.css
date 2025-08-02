@@ -206,7 +206,7 @@ table.function-table > :is(thead, tbody) > tr:not(:last-child) {
     border-bottom: 1px solid var(--pst-color-text-base);
 }
 table.function-table > :is(thead, tbody) > tr > :is(th, td) {
-    padding: 0.2rem 0.5rem;
+    padding: 0.1rem 0.5rem;
     border-right: 1px solid var(--pst-color-text-base);
 }
 table.function-table > :is(thead, tbody) > tr > :is(th, td).l {
