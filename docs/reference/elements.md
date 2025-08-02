@@ -164,6 +164,71 @@ removed.
 ```
 ````
 
+## Flex table
+
+`````{rst:directive} .. flex-table::
+This directive defines an HTML `<table>`{l=html} using a more flexible syntax
+than Markdown tables or other table directives. In particular, it allows
+assigning CSS classes to individual rows and cells, and allows cells to span
+multiple rows and / or columns. The directive content defines the content of the
+table, using the following syntax:
+
+- Each line of the directive content defines a row.
+- Each cell in a row starts with a `|` character.
+- A row can optionally start with
+  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
+  that are applied to the row. In addition to classes and identifiers, the
+  following attributes are recognized:
+  - `t`: Determines if the row is a header row (`h`) or a body row (`b`).
+    Consecutive header rows are grouped in a `<thead>`{l=html}, while body rows
+    are grouped in a `<tbody>`{l=html}. Rows that don't specify a type use the
+    type of the previous row. The default for the first row is `b`.
+- The content of a cell can optionally start with
+  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
+  that are applied to the cell. In addition to classes and identifiers, the
+  following attributes are recognized:
+  - `cols`: Sets the `colspan` attribute of the cell tag.
+  - `rows`: Sets the `rowspan` attribute of the cell tag.
+  - `t`: Determines if the cell is a heading cell (`h`) or a data cell (`d`).
+    Heading cells are rendered as `<th>`{l=html}, and data cells are rendered as
+    `<td>`{l=html}. Cells that don't specify a type default to `h` in header
+    rows and `d` in body rows.
+- The cell content is parsed as inline markup, i.e. it can include styling,
+  inline math, etc. `|` characters within the cell content must be escaped as
+  `\|`.
+
+````{code-block}
+```{flex-table}
+{t=h}|Name|Age|Shoe size
+{t=b}|{t=h}Joe|23|43
+     |{t=h}Jack|18|41
+     |{t=h}Jim|{cols=2}unknown
+```
+````
+
+Tables have no styling by default, but the following classes are set up in the
+stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
+
+- `function-table`: Formats the table as a function value and / or sign table.
+  The following classes can be set on table cells:
+  - `.l`: Left-align the cell content.
+  - `.r`: Right-align the cell content.
+  - `.g`: Apply a grey background to the cell. Typically used where the function
+    is undefined.
+  - `.w`: Sets `min-width: 5rem` on the cell.
+
+{.rubric}
+Options
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the `<table>`{l=html}.
+```
+```{rst:directive:option} name: name
+:type: ID
+A reference target for the table.
+```
+`````
+
 ## IFrame
 
 ````{rst:directive} .. youtube:: id

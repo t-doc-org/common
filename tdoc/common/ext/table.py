@@ -47,7 +47,8 @@ class FlexTable(docutils.SphinxDirective):
 
     def parse_row(self, line, lineno):
         row = flex_row()
-        attrs, start = parse_attrs(line, 0, len(line), row)
+        start = skip_whitespace(line, 0, len(line))
+        attrs, start = parse_attrs(line, start, len(line), row)
         if (t := attrs.pop('t', None)) == 'h':
             row['type'] = 'thead'
         elif t == 'b':
@@ -91,6 +92,11 @@ class FlexTable(docutils.SphinxDirective):
         cell += content
         cell += msgs
         return cell, end
+
+
+def skip_whitespace(text, start, end):
+    while start < end and text[start].isspace(): start += 1
+    return start
 
 
 def trailing_backslashes(text, start, end):

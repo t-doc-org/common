@@ -219,7 +219,7 @@ table.function-table > :is(thead, tbody) > tr > :is(th, td).g {
     background-color: var(--pst-color-border);
 }
 table.function-table > :is(thead, tbody) > tr > :is(th, td).w {
-    width: 5rem;
+    min-width: 5rem;
 }
 table.function-table > :is(thead, tbody) > tr
         > :is(th, td):is(:first-child, :last-child) {

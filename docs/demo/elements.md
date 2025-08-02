@@ -42,6 +42,33 @@ This solution is expanded by default.
 This solution has a different color, and no drop-down.
 ```
 
+## Flex tables
+
+### Function value table
+
+The {rst:dir}`flex-table` below uses the class `function-table` to render the
+value table of $f(x)=2x+1$.
+
+```{flex-table}
+:class: function-table
+|$x$|$0$|$1$|$2$|$3$|$4$
+|$f(x)$|$1$|$3$|$5$|$7$|$9$
+```
+
+### Function sign table
+
+The {rst:dir}`flex-table` below uses the class `function-table` to render the
+sign table of $f(x)=\dfrac{\sqrt{-x+2}}{2x(2x+1)}$.
+
+```{flex-table}
+:class: function-table
+|$x$|{.l .w}$\tiny-\;\infty$|$-\frac{1}{2}$|{.w}|$0$|{.w}|$2$|{.r .w}$\tiny+\;\infty$
+|$\sqrt{-x+2}$|$+$||$+$||$+$|$0$|{.g}
+|$2x$|$-$||$-$|{.g}$0$|$+$||$+$
+|$2x+1$|$-$|{.g}$0$|$+$||$+$||$+$
+|$\dfrac{\sqrt{-x+2}}{2x(2x+1)}$|$+$|{.g}|$-$|{.g}|$+$|$0$|{.g}
+```
+
 ## IFrames
 
 The [YouTube](https://youtube.com/) video below is embedded with the
