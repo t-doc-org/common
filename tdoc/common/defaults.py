@@ -34,6 +34,7 @@ extensions = [
     'tdoc.common.ext.poll',
     'tdoc.common.ext.quiz',
     'tdoc.common.ext.solution',
+    'tdoc.common.ext.table',
 ]
 
 suppress_warnings = [

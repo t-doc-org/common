@@ -35,6 +35,7 @@ requires-python = ">=3.12"
 dependencies = [
     "colorama>=0.4.6; sys_platform == 'win32'",
     "MarkupSafe>=3.0.2",
+    "mdit-py-plugins>=0.4.2",
     "myst-parser>=4.0.0",
     "pyyaml>=6.0.2",
     "Sphinx>=8.1.3",

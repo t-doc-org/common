@@ -197,6 +197,35 @@ blockquote div > p:has(+ p.attribution) {
     margin-top: 2rem;
 }
 
+/* Function tables. */
+table.function-table {
+    text-align: center;
+    margin: 1rem 0;
+}
+table.function-table > :is(thead, tbody) > tr:not(:last-child) {
+    border-bottom: 1px solid var(--pst-color-text-base);
+}
+table.function-table > :is(thead, tbody) > tr > :is(th, td) {
+    padding: 0.2rem 0.5rem;
+    border-right: 1px solid var(--pst-color-text-base);
+}
+table.function-table > :is(thead, tbody) > tr > :is(th, td).l {
+    text-align: left;
+}
+table.function-table > :is(thead, tbody) > tr > :is(th, td).r {
+    text-align: right;
+}
+table.function-table > :is(thead, tbody) > tr > :is(th, td).g {
+    background-color: var(--pst-color-border);
+}
+table.function-table > :is(thead, tbody) > tr > :is(th, td).w {
+    width: 5rem;
+}
+table.function-table > :is(thead, tbody) > tr
+        > :is(th, td):is(:first-child, :last-child) {
+    border-right: 3px double var(--pst-color-text-base);
+}
+
 /* Admonitions */
 .admonition.dropdown .admonition-title {
     cursor: pointer;
