@@ -155,10 +155,11 @@ def update_num_nodes(app, doctree, docname):
         else:  # Not an explicit target; replace node with its text
             node.parent.replace(node, text)
 
-    # TOCs are extracted on doctree-read, as a transform with priority=880,
-    # while toc_fignumbers are only assigned later, in env-get-updated. So the
-    # num nodes in the TOCs must be updated separately. Replace the node by its
-    # text altogether, to avoid duplicate 'id' attributes.
+    # TOCs are extracted on doctree-read in TocTreeCollector.process_doc(),
+    # while toc_fignumbers are only assigned later, on env-get-updated in
+    # TocTreeCollector.get_updated_docs(). So the num nodes in the TOCs must
+    # be updated separately. Replace the node by its text altogether, to avoid
+    # duplicate 'id' attributes.
     for node, text in iter_num(app.env, app.env.tocs[docname], docname):
         node.parent.replace(node, text)
 

@@ -2,22 +2,96 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
+from docutils import nodes
 import markupsafe
 
-from sphinx.util import logging
+from sphinx.util import docutils, logging
 
-from . import __version__
+from . import __version__, report_exceptions
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
+    app.add_directive('block', Block)
+    app.add_directive('blocks', Blocks)
+    app.add_node(block)
+    app.add_node(blocks)
+    # Move blocks before TOC extraction in TocTreeCollector.process_doc().
+    app.connect('doctree-read', move_blocks, priority=499)
     app.connect('html-page-context', set_html_context)
     return {
         'version': __version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
+
+
+class Block(docutils.SphinxDirective):
+    required_arguments = 1
+    has_content = True
+
+    @report_exceptions
+    def run(self):
+        children = self.parse_content_to_nodes()
+        node = block('', *children, type=self.arguments[0])
+        self.set_source_info(node)
+        return [node]
+
+
+class Blocks(docutils.SphinxDirective):
+    required_arguments = 1
+
+    @report_exceptions
+    def run(self):
+        node = blocks(type=self.arguments[0])
+        self.set_source_info(node)
+        print(node.source)
+        return [node]
+
+
+class block(nodes.Structural, nodes.Element): pass
+class blocks(nodes.Structural, nodes.Element): pass
+
+
+def move_blocks(app, doctree):
+    # Extract all blocks and group them by type.
+    bm = {}
+    for b in doctree.findall(block):
+        sect = closest_section(b)
+        b.parent.remove(b)
+        typ = b['type']
+        dsect = nodes.section(names=[f'{typ} {it}' for it in sect['names']],
+                              classes=sect['classes'])
+        dsect.source, dsect.line = b.source, b.line
+        doctree.set_id(dsect)
+        if (title := sect.next_node(nodes.title)) is not None:
+            dsect.append(title.deepcopy())
+        dsect += b.children
+        bm.setdefault(typ, []).append(dsect)
+
+    # Replace the destination markers with the extracted blocks.
+    done = set()
+    for d in doctree.findall(blocks):
+        parent = d.parent
+        idx = parent.index(d)
+        parent.remove(d)
+        if (typ := d['type']) in done:
+            _log.error(f"Duplicate {{blocks}} directive for type '{typ}'",
+                       location=d)
+            continue
+        if (bs := bm.pop(typ, None)) is not None: parent[idx: idx] = bs
+        done.add(typ)
+
+    for typ, sects in sorted(bm.items()):
+        _log.warning(f"No {{blocks}} directive for {{block}} type '{typ}'",
+                     location=sects[0])
+
+
+def closest_section(node):
+    while node is not None:
+        if isinstance(node, nodes.section): return node
+        node = node.parent
 
 
 def set_html_context(app, page, template, context, doctree):
