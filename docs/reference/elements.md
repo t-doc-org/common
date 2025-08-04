@@ -211,10 +211,10 @@ stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
 
 - `function-table`: Formats the table as a function value and / or sign table.
   The following classes can be set on table cells:
-  - `.l`: Left-align the cell content.
-  - `.r`: Right-align the cell content.
-  - `.g`: Apply a grey background to the cell. Typically used where the function
-    is undefined.
+  - `.l`: Aligns the cell content to the left.
+  - `.r`: Aligns the cell content to the right.
+  - `.g`: Applies a grey background to the cell. Typically used where the
+    function is undefined.
   - `.w`: Sets `min-width: 5rem` on the cell.
 
 {.rubric}
