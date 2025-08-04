@@ -3,9 +3,23 @@
 
 # Release notes
 
+(release-0-56)=
+## 0.56 *(2025-08-04)*
+
+- Added the {rst:dir}`flex-table` directive.
+- Added the {rst:dir}`block` and {rst:dir}`blocks` directives.
+- Added the {rst:role}`num1`, {rst:role}`num2` and {rst:role}`nump` roles.
+- Added styles for numbered lists and multi-column layouts.
+- Added a print stylesheet and styles for column and page break control.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.55...0.56)
+
 (release-0-55)=
 ## 0.55 *(2025-07-24)*
 
+- &#x2764;&#xfe0f; **Happy anniversary t-doc!** &#x2764;&#xfe0f;\
+  The first changeset was committed to the
+  [`common`](https://github.com/t-doc-org/common) repository one year ago, on
+  2024-07-23, followed by 682 more changesets since then.
 - Added support for running Python code on the main thread. This enables the use
   of `pygame-ce` in [`{exec} python`](/reference/exec.md#python) blocks.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.54...0.55)
