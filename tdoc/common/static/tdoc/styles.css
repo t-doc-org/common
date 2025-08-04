@@ -90,8 +90,13 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* List styling */
-:is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5) {
+:is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5, .columns-6,
+               .columns-7, .columns-8):not(.none) {
     column-gap: 2rem;
+}
+:is(ol, ul).none {
+    list-style-type: none;
+    padding-left: 0;
 }
 :is(ol, ul).disc {
     list-style-type: disc;
@@ -171,6 +176,9 @@ blockquote div > p:has(+ p.attribution) {
 }
 :is(ol, ul).upper-roman-paren {
     list-style-type: upper-roman-paren;
+}
+:is(ol, ul).avoid-break-items > li {
+    break-inside: avoid;
 }
 :is(ol, ul).hsep-1 > li {
     padding-left: 0.5rem;
@@ -737,6 +745,12 @@ div.tdoc-exec[data-tdoc-editor] div.cm-editor {
     border-radius: 0.25rem;
     overflow: hidden;
 }
+div.literal-block-wrapper > div.tdoc-exec[data-tdoc-editor] div.cm-editor {
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: 0;
+}
 div.cm-editor.cm-focused {
     outline: none;
 }
@@ -757,10 +771,19 @@ div.tdoc-exec div.highlight {
     flex-basis: 100%;
     overflow: auto;
 }
-div.tdoc-exec div.tdoc-exec-controls {
+div.tdoc-exec > div.tdoc-exec-controls {
     display: flex;
     flex-direction: column;
     row-gap: 0.3rem;
+}
+div.literal-block-wrapper
+        > div.tdoc-exec:is([class^=highlight-], [class*=" highlight-"]) pre {
+    border-right: 1px solid var(--pst-color-border);
+}
+div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
+    margin-top: 0.3rem;
+    margin-bottom: 0.3rem;
+    margin-right: 0.3rem;
 }
 
 /* SQL execution results */
