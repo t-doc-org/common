@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 
+cspace_net = 'ssh://rc.c-space.net//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
 
 
@@ -26,12 +27,12 @@ def main(argv, stdin, stdout, stderr):
     tests = base / 'tmp' / 'tests'
 
     # Find repository names and URLs.
-    names = argv[1:]
-    if not names:
-        names = [d.name for d in base.parent.iterdir()
+    repos = argv[1:]
+    if not repos:
+        repos = [d.name for d in base.parent.iterdir()
                  if (d / 'run.py').exists()
                     and (d / 'docs' / 'conf.py').exists()]
-    repos = {n: f'{github_org}/{n}' for n in names}
+    repos.sort()
     width = max(len(repo) for repo in repos)
     def label(repo): return f"{repo:{width}} | "
 
@@ -58,14 +59,14 @@ def main(argv, stdin, stdout, stderr):
         port = 8001
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
-            for repo, url in sorted(repos.items()):
+            for repo in repos:
                 def test(repo=repo, port=port):
-                    run_tests(tests, repo, label(repo), url, port, wheel, write)
+                    run_tests(tests, repo, label(repo), port, wheel, write)
                 tasks[repo] = ex.submit(test)
                 port += 1
 
         # Display output of failures.
-        for repo in sorted(repos):
+        for repo in repos:
             t = tasks[repo]
             if (e := t.exception()) is None: continue
             se = str(e)
@@ -74,7 +75,7 @@ def main(argv, stdin, stdout, stderr):
 
         # Display summary.
         write("\n")
-        for repo in sorted(repos):
+        for repo in repos:
             t = tasks[repo]
             e = t.exception()
             write(f"{label(repo)}{'PASS' if e is None else 'FAIL'}\n")
@@ -97,11 +98,16 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, label, url, port, wheel, write):
+def run_tests(tests, repo, label, port, wheel, write):
     # Clone the document repository.
     repo_dir = tests / repo
     write(f"{label}Cloning\n")
-    run('git', 'clone', url, repo_dir, '--branch', 'main')
+    if repo.endswith('-private'):
+        run('hg', 'clone', '--updaterev', 'main', f'{cspace_net}/{repo}',
+            repo_dir)
+    else:
+        run('git', 'clone', '--branch', 'main', f'{github_org}/{repo}',
+            repo_dir)
 
     def vrun(*args, wait=True, **kwargs):
         p = subprocess.Popen(
