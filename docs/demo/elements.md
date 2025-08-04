@@ -117,3 +117,41 @@ This is the last quote.
 {attribution="Iain M. Banks, Consider Phlebas"}
 > **Quote {num}`quote`:** I had nightmares I thought were really horrible until
 > I woke up and remembered what reality was at the moment.
+
+## Blocks
+
+The sections below define exercises where the solutions are defined next to
+their exercise in the source document using {rst:dir}`block` directives, and
+grouped together at the bottom with a {rst:dir}`blocks` directive. The exercises
+are numbered with the {rst:role}`num` role.
+
+### Exercises
+
+#### Exercise {num}`block-ex:a`
+
+This is exercise {numref}`block-ex:a`.
+
+```{block} solution
+This is the solution to exercise {numref}`block-ex:a`.
+```
+
+#### Exercise {num}`block-ex:b`
+
+This is exercise {numref}`block-ex:b`.
+
+```{block} solution
+This is the solution to exercise {numref}`block-ex:b`.
+```
+
+#### Exercise {num}`block-ex:c`
+
+This is exercise {numref}`block-ex:c`.
+
+```{block} solution
+This is the solution to exercise {numref}`block-ex:c`.
+```
+
+### Solutions
+
+```{blocks} solution
+```

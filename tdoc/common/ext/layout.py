@@ -46,7 +46,6 @@ class Blocks(docutils.SphinxDirective):
     def run(self):
         node = blocks(type=self.arguments[0])
         self.set_source_info(node)
-        print(node.source)
         return [node]
 
 
