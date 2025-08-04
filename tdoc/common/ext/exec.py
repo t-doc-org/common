@@ -82,6 +82,7 @@ class Exec(code.CodeBlock):
         return res
 
     def _update_node(self, node):
+        node = node.next_node(nodes.literal_block, include_self=True)
         if (hl := self.languages.get(runner := node['language'])) is None:
             raise Exception(f"{{exec}}: Unsupported runner: {runner}")
         node['runner'] = runner
