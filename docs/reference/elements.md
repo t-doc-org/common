@@ -287,10 +287,11 @@ by assistive technologies.
 ## Numbering
 
 ````{rst:role} num
-This role performs automatic numbering, optionally creating reference targets.
-The role content is either a label (e.g. `` {num}`label` ``) or an explicit
-title and a label (e.g. `` {num}`Exercise %s<label>` ``). In the latter case,
-the title must contain the string `%s`, which gets substituted with the number.
+This role performs automatic numbering across all documents, optionally creating
+reference targets. The role content is either a label (e.g. `` {num}`label` ``)
+or an explicit title and a label (e.g. `` {num}`Exercise %s<label>` ``). In the
+latter case, the title must contain the string `%s`, which gets substituted with
+the number.
 
 The label is composed of a counter identifier and an optional target name,
 separated by `:`. Distinct identifiers are numbered separately, and the counters
@@ -306,6 +307,22 @@ As an introduction to ...
 
 After completing {numref}`exercise %s<ex:intro>`, ...
 ```
+````
+
+````{rst:role} num1
+This role is identical to {rst:role}`num`, but the numbering is per first-level
+page name prefix. For example, numbering is continous across the pages
+`abc/page1` and `abc/page2`, but it reset for `def/page3`.
+````
+
+````{rst:role} num2
+This role is identical to {rst:role}`num`, but the numbering is per second-level
+page name prefix. For example, numbering is continous across the pages
+`abc/def/page1` and `abc/def/page2`, but it reset for `abc/ghi/page3`.
+````
+
+````{rst:role} nump
+This role is identical to {rst:role}`num`, but the numbering is per page.
 ````
 
 ## Block

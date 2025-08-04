@@ -6,13 +6,16 @@ from sphinx import errors
 from sphinx.environment import collectors
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
-from . import __version__
+from . import __version__, ReferenceRole
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_role('num', Num())
+    app.add_role('num', Num)
+    app.add_role('num1', Num)
+    app.add_role('num2', Num)
+    app.add_role('nump', Num)
     app.add_enumerable_node(num, 'num', lambda n: '<num_title>',
                             html=(visit_num, depart_num))
     app.connect('config-inited', update_numfig_format)
@@ -53,11 +56,12 @@ def update_numfig_format(app, config):
             numfig_format[k] = no_num
 
 
-class Num(docutils.ReferenceRole):
+class Num(ReferenceRole):
     def run(self):
         node = num()
         self.set_source_info(node)
-        node['target'] = self.target
+        node['type'] = self.name
+        node['cid'] = self.target.split(':', 1)[0]
         node['title'] = self.title if self.has_explicit_title else '%s'
         if ':' in self.target:
             node['names'].append(self.target)
@@ -90,7 +94,7 @@ class NumCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
         if not hasattr(app.env, 'tdoc_nums'):
-            app.env.tdoc_nums = {}  # docname => id => target
+            app.env.tdoc_nums = {}  # docname => id => ns
         # Save the old num fignumbers for the invalidation check.
         app.env.tdoc_old_num_fignumbers = {
             doc: nfn for doc, fn in app.env.toc_fignumbers.items()
@@ -104,9 +108,18 @@ class NumCollector(collectors.EnvironmentCollector):
             env.tdoc_nums[docname] = other.tdoc_nums[docname]
 
     def process_doc(self, app, doctree):
-        nums = app.env.tdoc_nums[app.env.docname] = {}
+        doc = app.env.docname
+        nums = app.env.tdoc_nums[doc] = {}
         for node in doctree.findall(num):
-            nums[node['ids'][0]] = node['target']
+            scope = doc if (typ := node['type']) == 'nump' \
+                    else docname_prefix(doc, 2) if typ == 'num2' \
+                    else docname_prefix(doc, 1) if typ == 'num1' \
+                    else None
+            nums[node['ids'][0]] = (scope, node['cid'])
+
+
+def docname_prefix(docname, level):
+    return '/'.join(docname.split('/', level)[:level])
 
 
 def number_per_namespace(app, env):
@@ -116,11 +129,10 @@ def number_per_namespace(app, env):
         if (fignums := fignums.get('num')) is None: continue
         nums = env.tdoc_nums[doc]
         for nid, n in fignums.items():
-            ns = nums[nid].split(':', 1)[0]
             *sect, cnt = n
-            per_ns.setdefault(ns, {}).setdefault(tuple(sect), []) \
+            per_ns.setdefault(nums[nid], {}).setdefault(tuple(sect), []) \
                 .append((cnt, doc, nid))
-    for ns, sects in per_ns.items():
+    for sects in per_ns.values():
         for sect, cnt_nids in sects.items():
             cnt_nids.sort()
             for i, (cnt, doc, nid) in enumerate(cnt_nids, 1):

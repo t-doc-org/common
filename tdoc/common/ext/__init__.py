@@ -267,10 +267,14 @@ def write_static_files(app, builder):
                              builder.outdir, force=True)
 
 
-class Role(docutils.SphinxRole):
+class RoleMixin:
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         return self(*args, **kwargs)
+
+
+class Role(docutils.SphinxRole, RoleMixin): pass
+class ReferenceRole(docutils.ReferenceRole, RoleMixin): pass
 
 
 class UniqueChecker(collectors.EnvironmentCollector):

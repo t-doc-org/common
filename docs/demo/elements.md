@@ -86,7 +86,7 @@ The presentation below is embedded with the {rst:dir}`iframe` directive.
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that
 reference each other with the {rst:role}`numref` role, and separately numbered
-unreferenced quotes.
+unreferenced quotes using {rst:role}`nump`.
 
 ### Exercise {num}`ex:first`
 
@@ -94,11 +94,11 @@ Read these quotes, then move on to exercises {numref}`ex:second` &
 {numref}`ex:third`.
 
 {attribution="Terry Pratchett, Mort"}
-> **Quote {num}`quote`:** "It would seem that you have no useful skill or talent
+> **Quote {nump}`quote`:** "It would seem that you have no useful skill or talent
 > whatsoever," he said. "Have you thought of going into teaching?""
 
 {attribution="Terry Pratchett, Hogfather"}
-> **Quote {num}`quote`:** Real stupidity beats artificial intelligence every
+> **Quote {nump}`quote`:** Real stupidity beats artificial intelligence every
 > time.
 
 ### Exercise {num}`ex:second`
@@ -107,7 +107,7 @@ You've already read the quotes from {numref}`exercise %s<ex:first>`. Read this
 one as well, then go to {numref}`exercise %s<ex:third>`.
 
 {attribution="Douglas Adams, The Hitchhiker’s Guide to the Galaxy"}
-> **Quote {num}`quote`:** For a moment, nothing happened. Then, after a second
+> **Quote {nump}`quote`:** For a moment, nothing happened. Then, after a second
 > or so, nothing continued to happen.
 
 ### Exercise {num}`ex:third`
@@ -115,7 +115,7 @@ one as well, then go to {numref}`exercise %s<ex:third>`.
 This is the last quote.
 
 {attribution="Iain M. Banks, Consider Phlebas"}
-> **Quote {num}`quote`:** I had nightmares I thought were really horrible until
+> **Quote {nump}`quote`:** I had nightmares I thought were really horrible until
 > I woke up and remembered what reality was at the moment.
 
 ## Blocks
