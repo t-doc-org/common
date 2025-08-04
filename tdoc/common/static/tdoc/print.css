@@ -92,6 +92,10 @@
     html[data-tdoc-page-break-avoid~=h6] section:has(> h6:first-child) {
         break-inside: avoid-page;
     }
+    a {
+        color: var(--pst-color-text-base);
+        text-decoration: none;
+    }
     #pst-back-to-top {
         display: none !important;
     }
