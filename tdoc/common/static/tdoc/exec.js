@@ -274,9 +274,16 @@ export class Executor {
         }
     }
 
+    // Return the block wrapper if there is one, or the node itself if not.
+    get wrapper() {
+        const parent = this.node.parentNode;
+        return parent.classList.contains('literal-block-wrapper') ? parent
+                                                                  : this.node;
+    }
+
     // Append output nodes associated with the {exec} block.
     appendOutputs(...outputs) {
-        let prev = this.node;
+        let prev = this.wrapper;
         for (;;) {
             const next = prev.nextElementSibling;
             if (!next || !next.classList.contains('tdoc-exec-output')) break;
@@ -287,7 +294,7 @@ export class Executor {
 
     // Replace the output nodes associated with the {exec} block.
     replaceOutputs(...outputs) {
-        let prev = this.node, i = 0;
+        let prev = this.wrapper, i = 0;
         for (;; ++i) {
             const next = prev.nextElementSibling;
             if (!next || !next.classList.contains('tdoc-exec-output')) break;
