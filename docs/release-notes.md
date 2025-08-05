@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-57)=
+## 0.57 *(2025-08-05)*
+
+- Added the {rst:dir}`list-grid` directive.
+- Fixed {rst:dir}`exec` blocks with a `:caption:` option.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.56...0.57)
+
 (release-0-56)=
 ## 0.56 *(2025-08-04)*
 
@@ -19,7 +26,7 @@
 - &#x2764;&#xfe0f; **Happy anniversary t-doc!** &#x2764;&#xfe0f;\
   The first changeset was committed to the
   [`common`](https://github.com/t-doc-org/common) repository one year ago, on
-  2024-07-23, followed by 682 more changesets since then.
+  2024-07-23, followed by 682 more changesets until this release.
 - Added support for running Python code on the main thread. This enables the use
   of `pygame-ce` in [`{exec} python`](/reference/exec.md#python) blocks.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.54...0.55)
