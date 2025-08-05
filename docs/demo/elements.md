@@ -87,7 +87,7 @@ The presentation below is embedded with the {rst:dir}`iframe` directive.
 The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to
 label the columns.
 
-````{list-grid}
+```{list-grid}
 :style: grid-template-columns: 5fr 3fr;
 - # Cell 1
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -103,7 +103,7 @@ label the columns.
   |a|1|
   |b|2|
   |c|3|
-````
+```
 
 ## Numbering
 
