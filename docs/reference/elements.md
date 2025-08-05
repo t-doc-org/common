@@ -284,6 +284,29 @@ by assistive technologies.
 ```
 `````
 
+## Grid
+
+`````{rst:directive} .. list-grid:: type
+This directive creates a
+[CSS grid layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
+([guide](https://css-tricks.com/snippets/css/complete-guide-grid/)). The
+geometry of the grid is defined in the {rst:dir}`:style: <list-grid:style>`
+option, e.g. with the `grid-template-columns` property. The content of the
+directive must be a bullet list, and each item is assigned to a grid cell, from
+left to right and from top to bottom.
+
+```{rst:directive:option} cell-style: property: value; [property: value; ...]
+CSS styles to apply to the grid cell elements.
+```
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the grid container element.
+```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the grid container element.
+```
+`````
+
 ## Numbering
 
 ````{rst:role} num

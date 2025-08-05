@@ -82,6 +82,29 @@ The presentation below is embedded with the {rst:dir}`iframe` directive.
 ```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
 ```
 
+## Grid layouts
+
+The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to
+label the columns.
+
+````{list-grid}
+:style: grid-template-columns: 5fr 3fr;
+- # Cell 1
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+  ex ea commodo consequat. Duis aute irure dolor in reprehenderit in
+  voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+  sint occaecat cupidatat non proident, sunt in culpa qui officia
+  deserunt mollit anim id est laborum.
+- # Cell 2
+  |Key|Value|
+  |:-:|:---:|
+  |a|1|
+  |b|2|
+  |c|3|
+````
+
 ## Numbering
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that

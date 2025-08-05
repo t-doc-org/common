@@ -3,6 +3,7 @@
 
 import datetime
 from docutils import nodes
+from docutils.parsers.rst import directives
 import markupsafe
 
 from sphinx.util import docutils, logging
@@ -15,8 +16,11 @@ _log = logging.getLogger(__name__)
 def setup(app):
     app.add_directive('block', Block)
     app.add_directive('blocks', Blocks)
+    app.add_directive('list-grid', ListGrid)
     app.add_node(block)
     app.add_node(blocks)
+    app.add_node(grid, html=(visit_grid, depart_grid))
+    app.add_node(grid_cell, html=(visit_grid_cell, depart_grid_cell))
     # Move blocks before TOC extraction in TocTreeCollector.process_doc().
     app.connect('doctree-read', move_blocks, priority=499)
     app.connect('html-page-context', set_html_context)
@@ -91,6 +95,52 @@ def closest_section(node):
     while node is not None:
         if isinstance(node, nodes.section): return node
         node = node.parent
+
+
+class ListGrid(docutils.SphinxDirective):
+    option_spec = {
+        'cell-style': directives.unchanged,
+        'class': directives.class_option,
+        'style': directives.unchanged,
+    }
+    has_content = True
+
+    @report_exceptions
+    def run(self):
+        children = self.parse_content_to_nodes()
+        if len(children) != 1 or not isinstance(children[0], nodes.bullet_list):
+            raise Exception("{list-grid}: Must contain exactly one bullet list")
+        node = grid('', *(grid_cell('', *it.children)
+                          for it in children[0].children))
+        node['classes'] += self.options.get('class', [])
+        if v := self.options.get('style', '').strip(): node['style'] = v
+        if v := self.options.get('cell-style', '').strip():
+            node['cell-style'] = v
+        return [node]
+
+
+class grid(nodes.Sequential, nodes.Element): pass
+class grid_cell(nodes.Part, nodes.Element): pass
+
+
+def visit_grid(self, node):
+    attrs = {}
+    if v := node.get('style'): attrs['style'] = v
+    self.body.append(self.starttag(node, 'div', classes=['tdoc-grid'], **attrs))
+
+
+def depart_grid(self, node):
+    self.body.append('</div>\n')
+
+
+def visit_grid_cell(self, node):
+    attrs = {}
+    if v := node.parent.get('cell-style'): attrs['style'] = v
+    self.body.append(self.starttag(node, 'div', '', **attrs))
+
+
+def depart_grid_cell(self, node):
+    self.body.append('</div>\n')
 
 
 def set_html_context(app, page, template, context, doctree):

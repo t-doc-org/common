@@ -89,6 +89,19 @@ blockquote div > p:has(+ p.attribution) {
     column-count: 8;
 }
 
+/* Grids */
+div.tdoc-grid {
+    margin: 1rem 0;
+    display: grid;
+    gap: 1rem;
+}
+div.tdoc-grid > div > :first-child {
+    margin-top: 0;
+}
+div.tdoc-grid > div > :last-child {
+    margin-bottom: 0;
+}
+
 /* List styling */
 :is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5, .columns-6,
                .columns-7, .columns-8):not(.none) {
