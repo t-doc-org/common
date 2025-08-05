@@ -61,10 +61,10 @@ blockquote div > p:has(+ p.attribution) {
 .column-break {
     break-before: column;
 }
-.allow-break {
+.allow-break:not(#¶) {
     break-inside: auto;
 }
-.avoid-break {
+.avoid-break:not(#¶) {
     break-inside: avoid;
 }
 .columns-2 {

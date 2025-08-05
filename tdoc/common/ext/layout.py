@@ -45,11 +45,15 @@ class Block(docutils.SphinxDirective):
 
 class Blocks(docutils.SphinxDirective):
     required_arguments = 1
+    option_spec = {
+        'class': directives.class_option,
+    }
 
     @report_exceptions
     def run(self):
         node = blocks(type=self.arguments[0])
         self.set_source_info(node)
+        node['classes'] += self.options.get('class', [])
         return [node]
 
 
@@ -83,7 +87,9 @@ def move_blocks(app, doctree):
             _log.error(f"Duplicate {{blocks}} directive for type '{typ}'",
                        location=d)
             continue
-        if (bs := bm.pop(typ, None)) is not None: parent[idx: idx] = bs
+        if (sects := bm.pop(typ, None)) is not None:
+            for sect in sects: sect['classes'] += d['classes']
+            parent[idx: idx] = sects
         done.add(typ)
 
     for typ, sects in sorted(bm.items()):

@@ -295,6 +295,8 @@ option, e.g. with the `grid-template-columns` property. The content of the
 directive must be a bullet list, and each item is assigned to a grid cell, from
 left to right and from top to bottom.
 
+{.rubric}
+Options
 ```{rst:directive:option} cell-style: property: value; [property: value; ...]
 CSS styles to apply to the grid cell elements.
 ```
@@ -365,4 +367,11 @@ given type on the page, in the order in which they appear in the source
 document. Each {rst:dir}`block` directive is rendered as a separate section,
 using the same section heading as the section containing the {rst:dir}`block`
 directive.
+
+{.rubric}
+Options
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the rendered block sections.
+```
 ````
