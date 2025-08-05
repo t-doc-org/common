@@ -99,4 +99,8 @@
     #pst-back-to-top {
         display: none !important;
     }
+    /* Prevent shadows from getting clipped at the right page margin. */
+    div.admonition {
+        margin-right: 0.5rem;
+    }
 }
