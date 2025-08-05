@@ -286,7 +286,7 @@ by assistive technologies.
 
 ## Grid
 
-`````{rst:directive} .. list-grid:: type
+`````{rst:directive} .. list-grid::
 This directive creates a
 [CSS grid layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
 ([guide](https://css-tricks.com/snippets/css/complete-guide-grid/)). The
