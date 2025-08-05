@@ -961,6 +961,11 @@ div.math mjx-container {
     padding-top: 0.2rem;
 }
 
+/* Allow margin collapse in math blocks, to avoid double margins. */
+div.math {
+    display: block;
+}
+
 /* Avoid that form controls change size on focus. */
 .form-control:focus, .form-control:focus-visible {
     border: var(--bs-border-width) solid var(--bs-border-color);
