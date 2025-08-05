@@ -56,14 +56,12 @@ def main(argv, stdin, stdout, stderr):
         wheel = build_wheel(tests)
 
         # Run tests.
-        port = 8001
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
             for repo in repos:
-                def test(repo=repo, port=port):
-                    run_tests(tests, repo, label(repo), port, wheel, write)
+                def test(repo=repo):
+                    run_tests(tests, repo, label(repo), wheel, write)
                 tasks[repo] = ex.submit(test)
-                port += 1
 
         # Display output of failures.
         for repo in repos:
@@ -98,7 +96,7 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, label, port, wheel, write):
+def run_tests(tests, repo, label, wheel, write):
     # Clone the document repository.
     repo_dir = tests / repo
     write(f"{label}Cloning\n")
@@ -143,7 +141,7 @@ def run_tests(tests, repo, label, port, wheel, write):
     # Run the local server, wait for it to serve or exit.
     write(f"{label}Running local server\n")
     p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
-             '--exit-on-idle=2', '--open', f'--port={port}', wait=False)
+             '--exit-on-idle=2', '--open', wait=False)
     try:
         out = io.StringIO()
         for line in p.stdout:

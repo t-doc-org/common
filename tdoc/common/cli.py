@@ -4,6 +4,7 @@
 import argparse
 import contextlib
 import datetime
+import errno
 from http import HTTPMethod, HTTPStatus
 import itertools
 import mimetypes
@@ -28,6 +29,7 @@ from . import __project__, __version__, api, deps, store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
+default_port = 8000
 dev_store = pathlib.Path('tmp/store.sqlite')
 
 
@@ -80,8 +82,9 @@ def main(argv, stdin, stdout, stderr):
              "(default: %(default)s).")
     arg('--open', action='store_true', dest='open',
         help="Open the site in a browser tab after the first build completes.")
-    arg('--port', metavar='PORT', type=int, dest='port', default=8000,
-        help="The port to bind the server to (default: %(default)s).")
+    arg('--port', metavar='PORT', type=int, dest='port', default=0,
+        help="The port to bind the server to (default: first unused port "
+             f"starting at {default_port}).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
     add_store_option(arg)
@@ -325,7 +328,7 @@ def cmd_serve(cfg):
     with Server(addr, RequestHandler) as srv, \
             get_store(cfg, allow_mem=True) as store, \
             api.Api(store, stderr=cfg.stderr) as api_, \
-            Application(cfg, addr, srv, api_) as app:
+            Application(cfg, srv, api_) as app:
         srv.set_app(app)
         try:
             srv.serve_forever()
@@ -576,7 +579,16 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     def server_bind(self):
         with contextlib.suppress(Exception):
             self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-        return super().server_bind()
+        addr = self.server_address
+        port = addr[1]
+        if auto_port := port == 0: port = default_port
+        while True:
+            self.server_address = addr = addr[:1] + (port,) + addr[2:]
+            try:
+                return super().server_bind()
+            except OSError as e:
+                if not auto_port or e.errno != errno.EADDRINUSE: raise
+                if (port := port + 1) > 65535: raise
 
 
 class RequestHandler(simple_server.WSGIRequestHandler):
@@ -595,9 +607,8 @@ def try_stat(path):
 
 
 class Application:
-    def __init__(self, cfg, addr, server, api_):
+    def __init__(self, cfg, server, api_):
         self.cfg = cfg
-        self.addr = addr
         self.server = server
         self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
@@ -727,7 +738,7 @@ class Application:
             self.remove(build)
 
     def print_serving(self):
-        host, port = self.addr[:2]
+        host, port = self.server.server_address[:2]
         if ':' in host: host = f'[{host}]'
         o = self.cfg.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
