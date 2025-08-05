@@ -190,8 +190,16 @@ div.tdoc-grid > div > :last-child {
 :is(ol, ul).upper-roman-paren {
     list-style-type: upper-roman-paren;
 }
-:is(ol, ul).avoid-break-items > li {
-    break-inside: avoid;
+:is(ol, ul).decimal-paren > li,
+:is(ol, ul).decimal-leading-zero-paren > li,
+:is(ol, ul).lower-alpha-paren > li,
+:is(ol, ul).lower-greek-paren > li,
+:is(ol, ul).lower-roman-paren > li,
+:is(ol, ul).upper-roman-paren > li {
+    padding-left: 0.5rem;
+}
+:is(ol, ul).hsep-0 > li {
+    padding-left: 0;
 }
 :is(ol, ul).hsep-1 > li {
     padding-left: 0.5rem;
@@ -216,6 +224,9 @@ div.tdoc-grid > div > :last-child {
 }
 :is(ol, ul).vsep-4 > li:not(:first-child) {
     margin-top: 2rem;
+}
+:is(ol, ul).avoid-break-items > li {
+    break-inside: avoid;
 }
 
 /* Function tables. */
