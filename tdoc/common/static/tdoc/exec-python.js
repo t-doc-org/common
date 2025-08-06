@@ -209,7 +209,7 @@ class PythonExecutor extends Executor {
 
     async run(run_id) {
         try {
-            this.output.remove();
+            this.replaceOutputs();
             const blocks = [];
             for (const {code, node} of this.codeBlocks()) {
                 blocks.push([code, node.id]);
