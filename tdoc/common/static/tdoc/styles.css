@@ -54,6 +54,12 @@ blockquote div > p:has(+ p.attribution) {
     content: '\f52b';
 }
 
+/* TOC */
+.bd-sidebar-primary li:is(.toctree-l1, .toctree-l2, .toctree-l3) > a {
+    padding-left: 1.25rem;  /* The original padding is 0.65rem */
+    text-indent: -0.6rem;
+}
+
 /* Layout */
 .page-break {
     break-before: page;
