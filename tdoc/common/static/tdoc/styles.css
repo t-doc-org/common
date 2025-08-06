@@ -978,9 +978,17 @@ div.math mjx-container {
     padding-top: 0.2rem;
 }
 
-/* Allow margin collapse in math blocks, to avoid double margins. */
+/* Fix margin collapse with math blocks. The math stylesheet uses
+   "display: flex", which creates a new block context and prevents margin
+   collapse. "display: block" prevents collapse in lists, while
+   "display: contents" works.
+
+   Flex is used with "flex-direction: row-reverse;" to place the equation number
+   to the right of the <mjx-container>, but the equation number also has
+   "float: right", so it still ends up on the right, though not centered
+   vertically anymore. */
 div.math {
-    display: block;
+    display: contents;
 }
 
 /* Avoid that form controls change size on focus. */
