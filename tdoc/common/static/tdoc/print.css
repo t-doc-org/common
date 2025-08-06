@@ -92,7 +92,7 @@
     html[data-tdoc-page-break-avoid~=h6] section:has(> h6:first-child) {
         break-inside: avoid-page;
     }
-    a {
+    a, a:visited {
         color: var(--pst-color-text-base);
         text-decoration: none;
     }
