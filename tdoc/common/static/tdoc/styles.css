@@ -59,6 +59,10 @@ blockquote div > p:has(+ p.attribution) {
     padding-left: 1.25rem;  /* The original padding is 0.65rem */
     text-indent: -0.6rem;
 }
+.bd-toc-nav li:is(.toc-h2, .toc-h3, .toc-h4, .toc-h5, .toc-h6) > a {
+    padding-left: 1.5rem;  /* The original padding is 1rem */
+    text-indent: -0.5rem;
+}
 
 /* Layout */
 .page-break {
