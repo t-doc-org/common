@@ -576,6 +576,9 @@ def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     daemon_threads = True
 
+    @property
+    def host_port(self): return self.server_address[:2]
+
     def server_bind(self):
         with contextlib.suppress(Exception):
             self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
@@ -712,7 +715,7 @@ class Application:
         return mtime
 
     def build_dir(self, mtime):
-        return self.cfg.build / f'serve-{mtime}'
+        return self.cfg.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
     def build(self, build):
         try:
@@ -738,7 +741,7 @@ class Application:
             self.remove(build)
 
     def print_serving(self):
-        host, port = self.server.server_address[:2]
+        host, port = self.server.host_port
         if ':' in host: host = f'[{host}]'
         o = self.cfg.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
