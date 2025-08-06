@@ -575,6 +575,14 @@ def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     daemon_threads = True
+
+    # SO_REUSEADDR is enabled on POSIX platforms to work around the TIME_WAIT
+    # issue after the process terminates. On these platforms, the option still
+    # doesn't allow multiple processes to listen on the exact same address
+    # simultaneously. Windows does, though, and this interferes with automatic
+    # port selection. But Windows doesn't have the TIME_WAIT issue, so
+    # SO_REUSEADDR is disabled there.
+    # https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ/14388707#14388707
     allow_reuse_address = sys.platform != 'win32'
 
     @property
