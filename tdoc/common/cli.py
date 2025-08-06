@@ -575,6 +575,7 @@ def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     daemon_threads = True
+    allow_reuse_address = sys.platform != 'win32'
 
     @property
     def host_port(self): return self.server_address[:2]
