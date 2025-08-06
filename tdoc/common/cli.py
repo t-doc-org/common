@@ -737,7 +737,7 @@ class Application:
         shutil.rmtree(build, onexc=on_error)
 
     def remove_all(self):
-        for build in self.cfg.build.glob('serve-*'):
+        for build in self.cfg.build.glob(f'serve-{self.server.host_port[1]}-*'):
             self.remove(build)
 
     def print_serving(self):
