@@ -60,6 +60,10 @@
     .bd-main .bd-content {
         margin-left: 0;
     }
+    .bd-main .bd-content .bd-article-container {
+        /* TODO: Maybe enable this */
+        /*max-width: 175mm;*/
+    }
     .bd-main .bd-content .bd-article-container .bd-article {
         padding-top: 1.5rem;
         padding-left: 0;

@@ -6,6 +6,7 @@
 ```{toctree}
 :maxdepth: 1
 elements
+math
 quizzes
 polls
 python

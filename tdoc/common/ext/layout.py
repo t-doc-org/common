@@ -118,6 +118,7 @@ class ListGrid(docutils.SphinxDirective):
             raise Exception("{list-grid}: Must contain exactly one bullet list")
         node = grid('', *(grid_cell('', *it.children)
                           for it in children[0].children))
+        self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
         if v := self.options.get('cell-style', '').strip():

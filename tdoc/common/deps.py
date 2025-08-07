@@ -10,6 +10,12 @@ info = {
         'version': '0.4.3',
         'url': lambda v: f'{jsdelivr}/npm/@drauu/core@{v}/dist',
     },
+    'jsxgraph': {
+        # https://www.npmjs.com/package/jsxgraph?activeTab=versions
+        # https://github.com/jsxgraph/jsxgraph/releases
+        'version': '1.11.1',
+        'url': lambda v: f'{jsdelivr}/npm/jsxgraph@{v}/distrib',
+    },
     'mathjax': {
         # https://www.npmjs.com/package/mathjax?activeTab=versions
         # https://github.com/mathjax/MathJax/releases
