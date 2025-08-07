@@ -66,7 +66,7 @@ JXG.merge(JXG.Options, {
 export function render(name, attrs, fn) {
     domLoaded.then(() => {
         const node = qs(document,
-                        `div.tdoc-jsxgraph[data-name=${CSS.escape(name)}]`);
+                        `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);
         if (!node) {
             console.error(`{jsxgraph} not found: ${name}`);
             return;
