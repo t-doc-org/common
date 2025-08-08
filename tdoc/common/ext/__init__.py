@@ -149,6 +149,7 @@ def on_builder_inited(app):
 def set_html_context(app, page, template, context, doctree):
     context['tdoc_version'] = __version__
     context.setdefault('html_attrs', {})
+    if 'tdoc-dev' in app.tags: context['html_attrs']['data-tdoc-dev'] = ''
     if v := app.config.license: context['license'] = v
     if v := app.config.license_url: context['license_url'] = v
 

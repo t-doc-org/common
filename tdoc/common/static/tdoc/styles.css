@@ -846,11 +846,11 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     /* The magic value is used to detect the default in jsxgraph.js. */
     aspect-ratio: 142857 / 142857;
     margin: 1rem auto;
-    border-color: var(--pst-color-danger);
+    border-color: var(--pst-color-border);
     border-radius: 0.25rem;
 }
-.tdoc-jsxgraph.rendered {
-    border-color: var(--pst-color-border);
+html[data-tdoc-dev] .tdoc-jsxgraph:not(.rendered) {
+    border-color: var(--pst-color-danger);
 }
 .tdoc-jsxgraph > div.spinner {
     display: flex;
