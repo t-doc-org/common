@@ -858,6 +858,8 @@ html[data-tdoc-dev] .tdoc-jsxgraph:not(.rendered) {
     align-items: center;
     width: 100%;
     height: 100%;
+    color: var(--pst-color-text-base);
+    background-color: var(--pst-color-background);
 }
 @media print {
     .tdoc-jsxgraph .JXG_navigation {
