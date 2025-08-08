@@ -321,3 +321,21 @@ class UniqueChecker(collectors.EnvironmentCollector):
                 ids[v] = (app.env.docname, (node.source, node.line))
             else:
                 doctree.reporter.error(f"{self.err}: {v}", base_node=node)
+
+
+class DictUpdater:
+    def __init__(self, d):
+        self.__dict__['_d'] = d
+
+    def __getitem__(self, key):
+        return DictUpdater(self._d.setdefault(key, {}))
+
+    def __setitem__(self, key, value):
+        self._d[key] = value
+
+    def __delitem__(self, key):
+        del self._d[key]
+
+    __getattr__ = __getitem__
+    __setattr__ = __setitem__
+    __delattr__ = __delitem__

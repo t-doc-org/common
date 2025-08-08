@@ -1,6 +1,8 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from tdoc.common.ext import DictUpdater as update
+
 # Sphinx options.
 author = ''
 language = 'fr'
@@ -82,9 +84,6 @@ mathjax3_config = {
         'menuOptions': {'settings': {'inTabOrder': False}},
     },
 }
-
-# LaTeX rendering options.
-latex_engine = 'xelatex'
 
 # Domain storage options.
 tdoc_domain_storage = {
