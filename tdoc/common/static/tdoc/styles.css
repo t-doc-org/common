@@ -843,7 +843,8 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
 
 /* JSXGraph blocks. */
 .tdoc-jsxgraph {
-    aspect-ratio: 1 / 1;
+    /* The magic value is used to detect the default in jsxgraph.js. */
+    aspect-ratio: 142857 / 142857;
     margin: 1rem auto;
     border-color: var(--pst-color-danger);
     border-radius: 0.25rem;

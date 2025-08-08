@@ -3,7 +3,11 @@
 
 import {domLoaded, qs} from './core.js';
 
-export const JXG = await import(`${tdoc.versions.jsxgraph}/jsxgraphcore.mjs`);
+// Import JSXGraph. Get the reference to JXG from globalThis instead of using
+// the module directly, as their content isn't identical, which breaks some
+// functions (e.d. deepCopy() fails due to exists() missing).
+await import(`${tdoc.versions.jsxgraph}/jsxgraphcore.mjs`);
+export const JXG = globalThis.JXG;
 
 // Set global defaults.
 const fontSize = 14;
@@ -22,6 +26,8 @@ JXG.merge(JXG.Options, {
                     offset: [0, 0],
                 },
                 ticks: {
+                    majorHeight: 10,
+                    strokeOpacity: 0.5,
                     label: {
                         display: 'html',
                         fontSize,
@@ -44,6 +50,8 @@ JXG.merge(JXG.Options, {
                     offset: [8, 7],
                 },
                 ticks: {
+                    majorHeight: 10,
+                    strokeOpacity: 0.5,
                     label: {
                         display: 'html',
                         fontSize,
@@ -63,20 +71,27 @@ JXG.merge(JXG.Options, {
     },
 });
 
-export function render(name, attrs, fn) {
-    domLoaded.then(() => {
-        const node = qs(document,
-                        `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);
-        if (!node) {
-            console.error(`{jsxgraph} not found: ${name}`);
-            return;
+export async function render(name, attrs, fn) {
+    await domLoaded;
+    const node = qs(document,
+                    `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);
+    if (!node) {
+        console.error(`{jsxgraph} not found: ${name}`);
+        return;
+    }
+    if (node.style.aspectRatio === ''
+            && getComputedStyle(node).aspectRatio === '142857 / 142857') {
+        const a = JXG.deepCopy(attrs, undefined, true);
+        if (a.keepaspectratio) {
+            const [xn, yp, xp, yn] = a.boundingbox;
+            node.style.aspectRatio = `${xp - xn} / ${yp - yn}`;
         }
-        const board = JXG.JSXGraph.initBoard(node, attrs);
-        const defaults = attrs.defaults ?? {};
-        if (defaults) JXG.merge(board.options, defaults);
-        fn(board);
-        node.classList.add('rendered');
-    });
+    }
+    const board = JXG.JSXGraph.initBoard(node, attrs);
+    const defaults = attrs.defaults ?? {};
+    if (defaults) JXG.merge(board.options, defaults);
+    fn(board);
+    node.classList.add('rendered');
 }
 
 export function nonInteractive(attrs) {

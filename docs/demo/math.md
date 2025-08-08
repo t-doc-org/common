@@ -7,12 +7,17 @@
 
 %This section renders live graphs using {rst:dir}`jsxgraph` directives.
 
+```{jsxgraph} sincos
+:style: aspect-ratio: 16 / 9;
+```
+
 <script type="module">
 const [{JXG, render}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 const attrs = {
-    boundingbox: [-7, 1.3, 7, -1.3],
+    boundingBox: [-7, 1.3, 7, -1.3],
     axis: true,
+    grid: true,
     defaults: {
         functiongraph: {
             withLabel: true,
@@ -37,7 +42,3 @@ render('sincos', attrs, board => {
          label: {position: '0.69fr right'}});
 });
 </script>
-
-```{jsxgraph} sincos
-:style: aspect-ratio: 16 / 9;
-```
