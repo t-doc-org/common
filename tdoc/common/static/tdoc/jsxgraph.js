@@ -14,6 +14,7 @@ const fontSize = 14;
 JXG.merge(JXG.Options, {
     board: {
         showCopyright: false,
+        showNavigation: false,
         defaultAxes: {
             x: {
                 name: `\\(x\\)`,
