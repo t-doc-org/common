@@ -27,10 +27,12 @@ JXG.merge(JXG.Options, {
                 },
                 ticks: {
                     majorHeight: 10,
+                    minorHeight: 8,
                     strokeOpacity: 0.5,
                     label: {
                         display: 'html',
                         fontSize,
+                        offset: [0, -6],
                     },
                     generateLabelText: function(tick, zero) {
                         const v = this.formatLabelText(tick.usrCoords[1]
@@ -51,10 +53,12 @@ JXG.merge(JXG.Options, {
                 },
                 ticks: {
                     majorHeight: 10,
+                    minorHeight: 8,
                     strokeOpacity: 0.5,
                     label: {
                         display: 'html',
                         fontSize,
+                        offset: [-10, 0],
                     },
                     generateLabelText: function(tick, zero) {
                         const v = this.formatLabelText(tick.usrCoords[2]
