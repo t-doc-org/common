@@ -990,7 +990,7 @@ code.literal.literal.literal {
 
 /* Reduce the bottom margin of directive definition list options. */
 dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
-              .simple):not(.¶) {
+              .simple):not(#¶) {
     margin-bottom: 1.5rem;
 }
 
@@ -1008,17 +1008,12 @@ div.math mjx-container {
     padding-top: 0.2rem;
 }
 
-/* Fix margin collapse with math blocks. The math stylesheet uses
-   "display: flex", which creates a new block context and prevents margin
-   collapse. "display: block" prevents collapse in lists, while
-   "display: contents" works.
-
-   Flex is used with "flex-direction: row-reverse;" to place the equation number
-   to the right of the <mjx-container>, but the equation number also has
-   "float: right", so it still ends up on the right, though not centered
-   vertically anymore. */
+/* Fix margin collapse with math blocks. */
 div.math {
-    display: contents;
+    margin: 1em 0;
+}
+mjx-container[display="true"]:not(#¶) {
+    margin: 0;
 }
 
 /* Avoid that form controls change size on focus. */
