@@ -1000,6 +1000,17 @@ dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
     display: none;
 }
 
+/* Make align-* classes work on math blocks. */
+div.math.align-left:not(#¶) > mjx-container {
+    text-align: left;
+}
+div.math.align-center:not(#¶) > mjx-container {
+    text-align: center;
+}
+div.math.align-right:not(#¶) > mjx-container {
+    text-align: right;
+}
+
 /* Avoid that math blocks sometimes get cut off at the top. */
 div.math, span.math {
     overflow: visible;
