@@ -15,6 +15,7 @@ JXG.merge(JXG.Options, {
     board: {
         showCopyright: false,
         showNavigation: false,
+        keepAspectRatio: true,
         defaultAxes: {
             x: {
                 name: `\\(x\\)`,
@@ -86,7 +87,7 @@ export async function render(name, attrs, fn) {
     }
     if (node.style.aspectRatio === ''
             && getComputedStyle(node).aspectRatio === '142857 / 142857') {
-        const a = JXG.deepCopy(attrs, undefined, true);
+        const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
         if (a.keepaspectratio) {
             const [xn, yp, xp, yn] = a.boundingbox;
             node.style.aspectRatio = `${xp - xn} / ${yp - yn}`;

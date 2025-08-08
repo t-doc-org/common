@@ -16,6 +16,7 @@ const [{JXG, render}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 const attrs = {
     boundingBox: [-7, 1.3, 7, -1.3],
+    keepAspectRatio: false,
     axis: true,
     grid: true,
     defaults: {
