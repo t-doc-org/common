@@ -143,7 +143,8 @@ def on_config_inited(app, config):
 def on_builder_inited(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
-    app.config.html_context['tdoc'] = json.dumps(tdoc, separators=(',', ':'))
+    app.config.html_context['tdoc'] = \
+        json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
 
 
 def set_html_context(app, page, template, context, doctree):
@@ -183,7 +184,7 @@ def add_js(app, page, template, context, doctree):
     if mathjax.startswith('/'): mathjax = f'../{mathjax[1:]}'
     context['tdoc_mathjax_path'] = app.config.mathjax_path
     app.config.mathjax_path = f'{mathjax}/tex-chtml-full.js'
-    tdoc = json.dumps(tdoc, separators=(',', ':'))
+    tdoc = json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
