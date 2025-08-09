@@ -18,7 +18,7 @@ JXG.merge(JXG.Options, {
         keepAspectRatio: true,
         defaultAxes: {
             x: {
-                name: `\\(x\\)`,
+                name: '\\(x\\)',
                 withLabel: true,
                 label: {
                     position: '1fr left',
@@ -44,7 +44,7 @@ JXG.merge(JXG.Options, {
                 },
             },
             y: {
-                name: `\\(y\\)`,
+                name: '\\(y\\)',
                 withLabel: true,
                 label: {
                     position: '1fr right',
