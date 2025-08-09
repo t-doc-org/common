@@ -6,8 +6,8 @@
 ## JSXGraph
 
 This section renders live graphs using {rst:dir}`jsxgraph` directives. The
-graphs are interactive: some points can be dragged, and the graphs can be panned
-and zoomed by holding {kbd}`Shift`.
+graphs are interactive: some points can be dragged, and some of the graphs can
+be panned and zoomed by holding {kbd}`Shift`.
 
 ### Sine and cosine
 
@@ -80,7 +80,7 @@ initBoard('centroid', {
 
 initBoard('trig-circle', {
     boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
-    pan: {enabled: false}, zoom: {enabled: false},
+    pan: {enabled: false}, zoom: {enabled: false}, showFullscreen: true,
     defaultAxes: {
         x: {
             name: '\\(x, \\alpha\\)',
@@ -97,7 +97,9 @@ initBoard('trig-circle', {
     },
 }, board => {
     // Place the circle.
-    const o = board.create('point', [0, 0], {fixed: true, visible: false});
+    const o = board.create('point', [0, 0], {
+        fixed: true, visible: false, withLabel: false,
+    });
     const c = board.create('circle', [o, 1], {strokeColor: JXG.palette.black});
 
     // Place the glider point and everything related to the angle.
@@ -106,8 +108,9 @@ initBoard('trig-circle', {
     for (let i = 0; i < 4; ++i) {
         for (const a of [0, Math.PI / 6, Math.PI / 4, Math.PI / 3]) {
             const b = i * Math.PI / 2 + a;
-            attractors.push(board.create('point', [Math.cos(b), Math.sin(b)],
-                                         {fixed: true, visible: false}));
+            attractors.push(board.create('point', [Math.cos(b), Math.sin(b)], {
+                fixed: true, visible: false, withLabel: false,
+            }));
         }
     }
     const p = board.create('glider', [0.85, -0.5, c], {
@@ -118,7 +121,9 @@ initBoard('trig-circle', {
         const a = Math.atan2(p.Y(), p.X());
         return a >= 0 ? a : a + 2 * Math.PI;
     };
-    const ax1 = board.create('point', [1, 0], {fixed: true, visible: false});
+    const ax1 = board.create('point', [1, 0], {
+        fixed: true, visible: false, withLabel: false,
+    });
     board.create('angle', [ax1, o, p], {
         name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
         radius: 0.2, orthoType: 'none',
@@ -133,8 +138,12 @@ initBoard('trig-circle', {
     });
 
     // Project the glider point onto the axes.
-    const px = board.create('point', [() => p.X(), 0], {visible: false});
-    const py = board.create('point', [0, () => p.Y()], {visible: false});
+    const px = board.create('point', [() => p.X(), 0], {
+        visible: false, withLabel: false,
+    });
+    const py = board.create('point', [0, () => p.Y()], {
+        visible: false, withLabel: false,
+    });
     board.create('segment', [p, px], {dash: 2, strokeColor: JXG.palette.black});
     board.create('segment', [p, py], {dash: 2, strokeColor: JXG.palette.black});
 

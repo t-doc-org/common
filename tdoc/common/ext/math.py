@@ -37,6 +37,7 @@ class JsxGraph(docutils.SphinxDirective):
     def run(self):
         node = jsxgraph('')
         self.set_source_info(node)
+        self.state.document.set_id(node)
         node['name'] = self.arguments[0]
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v

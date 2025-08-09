@@ -861,6 +861,13 @@ html[data-tdoc-dev] .tdoc-jsxgraph:not(.rendered) {
     color: var(--pst-color-text-base);
     background-color: var(--pst-color-background);
 }
+.JXG_navigation > .JXG_navigation_button {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+.JXG_navigation > .JXG_navigation_button > svg {
+    top: unset;
+}
 @media print {
     .tdoc-jsxgraph .JXG_navigation {
         display: none;
