@@ -17,9 +17,17 @@ and zoomed by holding {kbd}`Shift`.
 
 ### Centroid
 
-Drag $P_1$, $P_2$ and $P_3$.
+Drag the points $P_1$, $P_2$ and $P_3$.
 
 ```{jsxgraph} centroid
+:style: width: 50%;
+```
+
+### Trigonometric circle
+
+Drag the point $P$ on the circle.
+
+```{jsxgraph} trig-circle
 ```
 
 <script type="module">
@@ -68,5 +76,104 @@ initBoard('centroid', {
     const med = is.map(i => board.create('segment',
         [p[i], m[i]], {strokeColor: JXG.palette.blue}));
     board.create('intersection', [med[0], med[1]], {name: '\\(C\\)'});
+});
+
+initBoard('trig-circle', {
+    boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
+    pan: {enabled: false}, zoom: {enabled: false},
+    defaultAxes: {
+        x: {
+            name: '\\(x, \\alpha\\)',
+            ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
+        },
+        y: {
+            name: '\\(y, \\alpha\\)',
+            ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
+        },
+    },
+    defaults: {
+        point: {strokeWidth: 0},
+        line: {strokeWidth: 1},
+    },
+}, board => {
+    console.log(JXG.palette);
+    const o = board.create('point', [0, 0], {fixed: true, visible: false});
+    const ax1 = board.create('point', [1, 0], {fixed: true, visible: false});
+    const c = board.create('circle', [o, 1], {strokeColor: JXG.palette.black});
+    const alphaColor = JXG.palette.green;
+    const p = board.create('glider', [0.85, -0.5, c], {
+        name: '\\(P\\)', label: {strokeColor: alphaColor},
+        fillColor: alphaColor,
+    });
+    const alpha = () => {
+        const a = Math.atan2(p.Y(), p.X());
+        return a >= 0 ? a : a + 2 * Math.PI;
+    };
+    board.create('angle', [ax1, o, p], {
+        name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
+        radius: 0.2, orthoType: 'none',
+        strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
+    });
+    board.create('segment', [o, p], {strokeColor: alphaColor});
+    board.create('text', [0.5, -1.3, () => `\
+\\(\\alpha=${alpha().toFixed(2)}\\;rad\
+=${(alpha() * 180 / Math.PI).toFixed(1)}\\degree\\)`], {
+            strokeColor: alphaColor,
+    });
+
+    const px = board.create('point', [() => p.X(), 0], {visible: false});
+    const py = board.create('point', [0, () => p.Y()], {visible: false});
+    board.create('segment', [p, px], {dash: 2, strokeColor: JXG.palette.black});
+    board.create('segment', [p, py], {dash: 2, strokeColor: JXG.palette.black});
+
+    const sinColor = JXG.palette.blue;
+    board.create('arrow', [o, py], {
+        name: '\\(sin(\\alpha)\\)', withLabel: true,
+        label: {
+            position: '0.5fr left', anchorX: 'right', anchorY: 'middle',
+            distance: 0, offset: [-7, 0], strokeColor: sinColor,
+        },
+        strokeWidth: 2, strokeColor: sinColor,
+    });
+    board.create('curve', [a => a, a => Math.sin(a), 0, 2 * Math.PI], {
+        strokeColor: sinColor,
+    });
+    const psin = board.create('point', [alpha, () => p.Y()], {
+        withLabel: false, fillColor: sinColor,
+    });
+    board.create('segment', [p, psin], {
+        dash: 2, strokeColor: JXG.palette.black,
+    });
+    const ax = board.create('point', [alpha, 0], {
+        name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
+    });
+    board.create('segment', [psin, ax], {
+        dash: 2, strokeColor: JXG.palette.black,
+    });
+
+    const cosColor = JXG.palette.red;
+    board.create('arrow', [o, px], {
+        name: '\\(cos(\\alpha)\\)', withLabel: true,
+        label: {
+            position: '0.5fr right', anchorX: 'middle', anchorY: 'top',
+            distance: 0, offset: [0, -7], strokeColor: cosColor,
+        },
+        strokeWidth: 2, strokeColor: cosColor,
+    });
+    board.create('curve', [a => Math.cos(a), a => a, 0, 2 * Math.PI], {
+        strokeColor: cosColor,
+    });
+    const pcos = board.create('point', [() => p.X(), alpha], {
+        withLabel: false, fillColor: cosColor,
+    });
+    board.create('segment', [p, pcos], {
+        dash: 2, strokeColor: JXG.palette.black,
+    });
+    const ay = board.create('point', [0, alpha], {
+        name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
+    });
+    board.create('segment', [ay, pcos], {
+        dash: 2, strokeColor: JXG.palette.black,
+    });
 });
 </script>
