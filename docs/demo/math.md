@@ -115,10 +115,10 @@ initBoard('trig-circle', {
     });
     board.create('segment', [o, p], {strokeColor: alphaColor});
     board.create('text',
-        [0.5, -1.3, () => `\
+        [2, 6, () => `\
 \\(\\alpha=${alpha().toFixed(2)}\\;rad\
 =${(alpha() * 180 / Math.PI).toFixed(1)}\\degree\\)`], {
-            strokeColor: alphaColor,
+            strokeColor: alphaColor, fixed: true,
     });
 
     const px = board.create('point', [() => p.X(), 0], {visible: false});
@@ -150,6 +150,10 @@ initBoard('trig-circle', {
     board.create('segment', [psin, ax], {
         dash: 2, strokeColor: JXG.palette.black,
     });
+    board.create('text',
+        [2, 5.7, () => `\\(sin(\\alpha)=${Math.sin(alpha()).toFixed(3)}\\)`], {
+        strokeColor: sinColor, fixed: true,
+    });
 
     const cosColor = JXG.palette.red;
     board.create('arrow', [o, px], {
@@ -174,6 +178,10 @@ initBoard('trig-circle', {
     });
     board.create('segment', [ay, pcos], {
         dash: 2, strokeColor: JXG.palette.black,
+    });
+    board.create('text',
+        [2, 5.4, () => `\\(cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
+        strokeColor: cosColor, fixed: true,
     });
 });
 </script>
