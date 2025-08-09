@@ -5,20 +5,18 @@
 
 ## JSXGraph
 
-%This section renders live graphs using {rst:dir}`jsxgraph` directives.
+This section renders live graphs using {rst:dir}`jsxgraph` directives.
 
 ```{jsxgraph} sincos
 :style: aspect-ratio: 16 / 9;
 ```
 
 <script type="module">
-const [{JXG, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+const [{initBoard, JXG}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 const attrs = {
-    boundingBox: [-7, 1.3, 7, -1.3],
-    keepAspectRatio: false,
-    axis: true,
-    grid: true,
+    boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
+    axis: true, grid: true,
     defaults: {
         functiongraph: {
             withLabel: true,
@@ -31,8 +29,7 @@ const attrs = {
         },
     },
 };
-
-render('sincos', attrs, board => {
+initBoard('sincos', attrs, board => {
     board.create('functiongraph',
         [x => Math.sin(x)],
         {name: `\\(sin(x)\\)`, strokeColor: JXG.palette.blue,

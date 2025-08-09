@@ -130,7 +130,7 @@ unchanged in the browser. It should be imported before `pygame`.
 **Note:** This module only works on [Chromium-based browsers](#run-sync). For a
 more portable alternative, convert uses of the `pygame.time` module, including
 `Clock` methods, to asynchronous calls to {py:func}`~tdoc.core.animation_frame`
-and {py:func}`asyncio.sleep()`.
+and {py:func}`asyncio.sleep`.
 ```
 ````
 

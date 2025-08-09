@@ -3,9 +3,9 @@
 
 import {domLoaded, qs} from './core.js';
 
-// Import JSXGraph. Get the reference to JXG from globalThis instead of using
-// the module directly, as their content isn't identical, which breaks some
-// functions (e.d. deepCopy() fails due to exists() missing).
+// Import JSXGraph. Get the reference to the JXG namespace from globalThis
+// instead of using the module directly, as their content isn't identical,
+// which breaks some functions (e.d. deepCopy() fails due to exists() missing).
 await import(`${tdoc.versions.jsxgraph}/jsxgraphcore.mjs`);
 export const JXG = globalThis.JXG;
 
@@ -77,14 +77,27 @@ JXG.merge(JXG.Options, {
     },
 });
 
-export async function render(name, attrs, fn) {
+// Mix-in board attributes to disable interactive features.
+const nonInteractive = {
+    showNavigation: false,
+    registerEvents: {keyboard: false, pointer: false, wheel: false},
+};
+
+// Merge attribute sets, with later sets overriding earlier ones.
+export function merge(...attrs) {
+    const res = {};
+    for (const a of attrs) JXG.mergeAttr(res, a, true);
+    return res;
+}
+
+// Initialize a board for the {jsxgraph} directive with the given name. Calls
+// fn(board) if fn is provided, and returns the board.
+export async function initBoard(name, attrs, fn) {
+    if (attrs instanceof Array) attrs = merge(...attrs);
     await domLoaded;
     const node = qs(document,
                     `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);
-    if (!node) {
-        console.error(`{jsxgraph} not found: ${name}`);
-        return;
-    }
+    if (!node) throw new Error(`{jsxgraph} not found: ${name}`);
     if (node.style.aspectRatio === ''
             && getComputedStyle(node).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
@@ -96,13 +109,7 @@ export async function render(name, attrs, fn) {
     const board = JXG.JSXGraph.initBoard(node, attrs);
     const defaults = attrs.defaults ?? {};
     if (defaults) JXG.merge(board.options, defaults);
-    fn(board);
+    if (fn) fn(board);
     node.classList.add('rendered');
-}
-
-export function nonInteractive(attrs) {
-    return JXG.merge({
-        showNavigation: false,
-        registerEvents: {keyboard: false, pointer: false, wheel: false},
-    }, attrs);
+    return board;
 }

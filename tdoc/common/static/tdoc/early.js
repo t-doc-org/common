@@ -15,6 +15,9 @@
         };
     }
 
+    // Set up some per-page scratch space.
+    globalThis.data = {};
+
     const script = document.currentScript;
     const staticUrl = new URL('..', script.src);
     const importMap = {};
