@@ -260,7 +260,6 @@ checks are pre-defined:
     `ok` is set to `true` iff the result is `true`. If the result is a string,
     it is assigned to `hint`.
 
-
 The following example re-implements the built-in `split` check.
 
 ```{code-block} html
@@ -292,3 +291,24 @@ with only whitespace between them.
 ```
 ````
 `````
+
+## `tdoc/quiz.js`
+
+`````{js:module} quiz
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quiz.js))
+provides functionality to support {rst:dir}`quiz` directives.
+`````
+
+```{js:function} check(name, fn)
+Define a [check function](#check).
+:arg !string name: The name of the check function.
+:arg !function fn: The [check function](#check).
+```
+
+```{js:function} generator(name, fn)
+Define a [generator function](#generator), and render all {rst:dir}`quiz`
+directives that use this generator.
+:arg !string name: The name of the generator function.
+:arg !function fn: The [generator function](#generator).
+```
