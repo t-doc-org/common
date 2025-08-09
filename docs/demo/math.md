@@ -96,7 +96,6 @@ initBoard('trig-circle', {
         line: {strokeWidth: 1},
     },
 }, board => {
-    console.log(JXG.palette);
     const o = board.create('point', [0, 0], {fixed: true, visible: false});
     const ax1 = board.create('point', [1, 0], {fixed: true, visible: false});
     const c = board.create('circle', [o, 1], {strokeColor: JXG.palette.black});
@@ -115,7 +114,8 @@ initBoard('trig-circle', {
         strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
     });
     board.create('segment', [o, p], {strokeColor: alphaColor});
-    board.create('text', [0.5, -1.3, () => `\
+    board.create('text',
+        [0.5, -1.3, () => `\
 \\(\\alpha=${alpha().toFixed(2)}\\;rad\
 =${(alpha() * 180 / Math.PI).toFixed(1)}\\degree\\)`], {
             strokeColor: alphaColor,
