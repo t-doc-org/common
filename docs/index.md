@@ -19,7 +19,7 @@ components:
   sites and deploys them to [GitHub Pages](https://pages.github.com/) on every
   version control push.
 
-t-doc builds on the following open-source software:
+t-doc builds on the following open-source software, among others:
 
 - **[Sphinx](https://www.sphinx-doc.org/):** A documentation generation system.
 - **[MyST](https://mystmd.org/):** A
@@ -40,6 +40,8 @@ t-doc builds on the following open-source software:
 - **[SQLite WASM](https://sqlite.org/wasm/):** A build of
   [SQLite](https://sqlite.org/) to [WebAssembly](https://webassembly.org/) that
   enables the use of SQLite in the browser.
+- **[JSXGraph](https://jsxgraph.uni-bayreuth.de/wp/):** A JavaScript library for
+  interactive geometry, function plotting, charting and data visualization.
 
 A huge thank you to the developers and maitainers of these packages, for
 building awesome software and making it available for free!
