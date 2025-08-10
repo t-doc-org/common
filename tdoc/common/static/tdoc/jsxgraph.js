@@ -78,7 +78,7 @@ JXG.merge(JXG.Options, {
 });
 
 // Mix-in board attributes to disable interactive features.
-const nonInteractive = {
+export const nonInteractive = {
     showNavigation: false,
     registerEvents: {keyboard: false, pointer: false, wheel: false},
 };
