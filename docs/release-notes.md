@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-58)=
+## 0.58 *(2025-08-10)*
+
+- Added the {rst:dir}`jsxgraph` directive.
+- Made it easier to run multiple local servers simultaneously by automatically
+  selecting a port.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.57...0.58)
+
 (release-0-57)=
 ## 0.57 *(2025-08-05)*
 
