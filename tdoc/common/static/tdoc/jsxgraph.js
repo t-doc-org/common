@@ -83,17 +83,49 @@ export const nonInteractive = {
     registerEvents: {keyboard: false, pointer: false, wheel: false},
 };
 
+// Mix-in board attributes to draw only selected labels on the default axes.
+export function withAxesLabels(xs, ys) {
+    return {
+        defaultAxes: {
+            x: {ticks: {
+                // TODO: Find how to use "labels"
+                generateLabelText: function(tick, zero) {
+                    const v = this.formatLabelText(tick.usrCoords[1]
+                                                   - zero.usrCoords[1]);
+                    return !xs || xs.includes(v) ? `\\(${v}\\)` : '';
+                },
+            }},
+            y: {ticks: {
+                generateLabelText: function(tick, zero) {
+                    const v = this.formatLabelText(tick.usrCoords[2]
+                                                   - zero.usrCoords[2]);
+                    return !ys || ys.includes(v) ? `\\(${v}\\)` : '';
+                },
+            }},
+        },
+    };
+}
+
 // Merge attribute sets, with later sets overriding earlier ones.
 export function merge(...attrs) {
     const res = {};
-    for (const a of attrs) JXG.mergeAttr(res, a, true);
+    const mergeToRes = (...as) => {
+        for (const a of as) {
+            if (a instanceof Array) {
+                mergeToRes(...a);
+            } else {
+                JXG.mergeAttr(res, a, true);
+            }
+        }
+    };
+    mergeToRes(...attrs);
     return res;
 }
 
 // Initialize a board for the {jsxgraph} directive with the given name. Calls
 // fn(board) if fn is provided, and returns the board.
 export async function initBoard(name, attrs, fn) {
-    if (attrs instanceof Array) attrs = merge(...attrs);
+    attrs = merge(attrs);
     await domLoaded;
     const node = qs(document,
                     `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);

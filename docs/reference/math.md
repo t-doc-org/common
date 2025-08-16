@@ -66,8 +66,9 @@ Mix-in board attributes to disable interactive features.
 ```
 
 ```{js:function} merge(...attrs)
-Merge multiple attributes objects.
-:arg !Array[Object] attrs: The attribute objects to merge. Later arguments
+Merge multiple attributes objects. `Array` arguments have their items merged
+recursively.
+:arg !Array[Object|Array] attrs: The attribute objects to merge. Later arguments
 override earlier ones.
 :returns: The merged attribute object.
 ```
