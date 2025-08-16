@@ -38,7 +38,7 @@ JXG.merge(JXG.Options, {
                     },
                     generateLabelText: function(tick, zero) {
                         const v = this.formatLabelText(tick.usrCoords[1]
-                                                       - zero.usrCoords[1])
+                                                       - zero.usrCoords[1]);
                         return `\\(${v}\\)`;
                     },
                 },
@@ -64,7 +64,7 @@ JXG.merge(JXG.Options, {
                     },
                     generateLabelText: function(tick, zero) {
                         const v = this.formatLabelText(tick.usrCoords[2]
-                                                       - zero.usrCoords[2])
+                                                       - zero.usrCoords[2]);
                         return `\\(${v}\\)`;
                     },
                 },

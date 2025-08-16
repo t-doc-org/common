@@ -97,10 +97,9 @@ initBoard('trig-circle', {
     },
 }, board => {
     // Place the circle.
-    const o = board.create('point', [0, 0], {
-        fixed: true, visible: false, withLabel: false,
+    const c = board.create('circle', [[0, 0], 1], {
+        strokeColor: JXG.palette.black,
     });
-    const c = board.create('circle', [o, 1], {strokeColor: JXG.palette.black});
 
     // Place the glider point and everything related to the angle.
     const alphaColor = JXG.palette.green;
@@ -124,12 +123,12 @@ initBoard('trig-circle', {
     const ax1 = board.create('point', [1, 0], {
         fixed: true, visible: false, withLabel: false,
     });
-    board.create('angle', [ax1, o, p], {
+    board.create('angle', [ax1, [0, 0], p], {
         name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
         radius: 0.2, orthoType: 'none',
         strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
     });
-    board.create('segment', [o, p], {strokeColor: alphaColor});
+    board.create('segment', [[0, 0], p], {strokeColor: alphaColor});
     board.create('text',
         [2, 6, () => `\
 \\(\\alpha=${alpha().toFixed(2)}\\;rad\
@@ -138,18 +137,14 @@ initBoard('trig-circle', {
     });
 
     // Project the glider point onto the axes.
-    const px = board.create('point', [() => p.X(), 0], {
-        visible: false, withLabel: false,
-    });
-    const py = board.create('point', [0, () => p.Y()], {
-        visible: false, withLabel: false,
-    });
+    const px = [() => p.X(), 0];
+    const py = [0, () => p.Y()];
     board.create('segment', [p, px], {dash: 2, strokeColor: JXG.palette.black});
     board.create('segment', [p, py], {dash: 2, strokeColor: JXG.palette.black});
 
     // Place the elements related to the sine.
     const sinColor = JXG.palette.blue;
-    board.create('arrow', [o, py], {
+    board.create('arrow', [[0, 0], py], {
         name: '\\(sin(\\alpha)\\)', withLabel: true,
         label: {
             position: '0.5fr left', anchorX: 'right', anchorY: 'middle',
@@ -179,7 +174,7 @@ initBoard('trig-circle', {
 
     // Place the elments related to the cosine.
     const cosColor = JXG.palette.red;
-    board.create('arrow', [o, px], {
+    board.create('arrow', [[0, 0], px], {
         name: '\\(cos(\\alpha)\\)', withLabel: true,
         label: {
             position: '0.5fr right', anchorX: 'middle', anchorY: 'top',
