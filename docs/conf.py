@@ -6,7 +6,7 @@ import sys
 from tdoc.common.defaults import *
 
 project = "t-doc"
-copyright = "%Y Remy Blank"
+author = "Remy Blank"
 license = 'MIT'
 language = 'en'
 
