@@ -46,7 +46,7 @@ const obs = new MutationObserver((mutations) => {
 
 // The default extensions appended to the user-provided ones.
 const defaultExtensions = [
-    autocomplete.autocompletion(),
+    autocomplete.autocompletion({defaultKeymap: false}),
     autocomplete.closeBrackets(),
     commands.history(),
     language.bracketMatching(),
@@ -65,9 +65,19 @@ const defaultExtensions = [
     cmview.highlightActiveLineGutter(),
     cmview.highlightSpecialChars(),
     cmview.keymap.of([
+        {key: 'Mod-e', run: commands.deleteLine},
         ...autocomplete.closeBracketsKeymap,
-        ...autocomplete.completionKeymap,
-        ...commands.defaultKeymap,
+        ...autocomplete.completionKeymap.map(k =>
+            k.key === 'Enter' ? {
+                key: 'Tab', run: autocomplete.acceptCompletion,
+            } : k
+        ),
+        ...commands.defaultKeymap.map(k =>
+            k.key === 'Home' ? {
+                key: 'Home', run: commands.cursorLineStart,
+                shift: commands.selectLineStart, preventDefault: true,
+            } : k
+        ),
         ...commands.historyKeymap,
         commands.indentWithTab,
         ...language.foldKeymap,
