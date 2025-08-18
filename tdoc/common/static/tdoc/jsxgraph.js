@@ -138,10 +138,10 @@ export async function initBoard(name, attrs, fn) {
             node.style.aspectRatio = `${xp - xn} / ${yp - yn}`;
         }
     }
+    await mathJaxReady;
     const board = JXG.JSXGraph.initBoard(node, attrs);
     const defaults = attrs.defaults ?? {};
     if (defaults) JXG.merge(board.options, defaults);
-    await mathJaxReady;
     if (fn) fn(board);
     node.classList.add('rendered');
     return board;
