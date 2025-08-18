@@ -83,6 +83,12 @@ mathjax3_config = {
     'options': {
         'menuOptions': {'settings': {'inTabOrder': False}},
     },
+    'chtml': {
+        'mtextInheritFont': True,
+    },
+    'svg': {
+        'mtextInheritFont': True,
+    },
 }
 
 # Domain storage options.
