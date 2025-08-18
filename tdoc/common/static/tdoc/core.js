@@ -165,6 +165,7 @@ if (!typeset && globalThis.MathJax) {
         }
     });
 }
+export const mathJaxReady = typeset;
 
 // Typeset the math contained in one or more elements.
 export function typesetMath(...args) {

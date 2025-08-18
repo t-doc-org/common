@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, qs} from './core.js';
+import {domLoaded, mathJaxReady, qs} from './core.js';
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
@@ -141,6 +141,7 @@ export async function initBoard(name, attrs, fn) {
     const board = JXG.JSXGraph.initBoard(node, attrs);
     const defaults = attrs.defaults ?? {};
     if (defaults) JXG.merge(board.options, defaults);
+    await mathJaxReady;
     if (fn) fn(board);
     node.classList.add('rendered');
     return board;
