@@ -37,7 +37,7 @@ def visit_iframe(self, node):
     self.body.append(self.starttag(
         node, 'iframe', suffix='', classes=['tdoc'], src=node['src'], **attrs))
     self.body.append('</iframe>\n')
-    raise nodes.SkipNode
+    raise nodes.SkipNode()
 
 
 class IFrame(docutils.SphinxDirective):
@@ -54,11 +54,10 @@ class IFrame(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        node = iframe()
+        node = iframe(src=self.get_src(self.arguments[0]),
+                      credentialless='credentialful' not in self.options)
         self.set_source_info(node)
-        node['src'] = self.get_src(self.arguments[0])
         node['classes'] += self.options.get('class', [])
-        node['credentialless'] = 'credentialful' not in self.options
         for k in _attr_names:
             if (v := self.options.get(k)) is not None: node[k] = v
         return [node]

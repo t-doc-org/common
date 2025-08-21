@@ -32,7 +32,7 @@ def setup(app):
 
 
 def add_js(app, page, template, context, doctree):
-    if doctree and any(doctree.findall(quiz)):
+    if doctree and doctree.next_node(quiz) is not None:
         app.add_js_file('tdoc/quiz.js', type='module')
 
 
@@ -115,7 +115,7 @@ def visit_quiz(self, node):
     self.body.append(self.starttag(
         node, 'div', suffix='', classes=['tdoc-quiz'], **attrs))
     self.body.append(
-        '<div class="content"><span class="tdoc-quiz-hint"></span>')
+        '<div class="content"><span class="tdoc-quiz-hint"></span>\n')
 
 
 def depart_quiz(self, node):
@@ -126,7 +126,7 @@ def depart_quiz(self, node):
 <button class="tdoc-check fa-check" title="Check answers"></button>\
 </div>\
 """)
-    self.body.append('</div>')
+    self.body.append('</div>\n')
 
 
 class QuizPh(Role):
@@ -144,7 +144,7 @@ def visit_quiz_ph(self, node):
     self.body.append(self.starttag(
         node, 'span', suffix='', classes=['tdoc-quiz-ph'],
         **{'data-text': node['text']}))
-    raise nodes.SkipNode
+    raise nodes.SkipNode()
 
 
 class QuizHint(Role):
@@ -207,7 +207,7 @@ def visit_quiz_input(self, node):
         node, 'input', suffix='', type='text', classes=['tdoc-quiz-field'],
         autocapitalize="off", autocomplete="off", autocorrect="off",
         spellcheck="false", **attributes(node)))
-    raise nodes.SkipNode
+    raise nodes.SkipNode()
 
 
 class QuizSelect(QuizField):
@@ -231,4 +231,4 @@ def visit_quiz_select(self, node):
         self.body.append(
             f'<option value="{self.attval(opt)}">{html.escape(opt)}</option>')
     self.body.append('</select>')
-    raise nodes.SkipNode
+    raise nodes.SkipNode()

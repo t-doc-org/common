@@ -80,8 +80,7 @@ def visit_poll(self, node):
     if (v := node.get('close-after')) is not None:
         kwargs['data-close-after'] = v // datetime.timedelta(milliseconds=1)
     self.body.append(self.starttag(
-        node, 'div', suffix='', classes=['tdoc-poll', f'num-{node['number']}'],
-        **kwargs))
+        node, 'div', classes=['tdoc-poll', f'num-{node['number']}'], **kwargs))
 
 
 def depart_poll(self, node):
@@ -90,9 +89,9 @@ def depart_poll(self, node):
 
 def visit_answers(self, node):
     cols = 5 if node.parent['number'] != 'none' else 4
-    self.body.append(f"""
+    self.body.append(f"""\
 <table class="tdoc-poll-answers table">\
-<thead><tr><th class="tdoc-poll-header" colspan="{cols}"><div>\
+<thead><tr><th class="tdoc-poll-header" colspan="{cols}"><div>
 <div class="stats">\
 <div class="voters" title="Voters">\
 <span class="tdoc fa-user"></span><span></span></div>\
@@ -100,18 +99,20 @@ def visit_answers(self, node):
 <span class="tdoc fa-check-to-slot"></span><span></span></div>\
 <div class="closed" title="The poll is closed">\
 <span class="tdoc fa-lock"></span></div>\
-</div><div class="controls">\
+</div>
+<div class="controls">\
 <button class="tdoc-open fa-play"></button>\
 <button class="tdoc-results fa-eye"></button>\
 <button class="tdoc-solutions fa-check"></button>\
 <button class="tdoc-clear fa-trash"\
  title="Clear votes (Ctrl+click to clear all)"></button>\
-</div></div></th></thead><tbody>\
+</div>
+</div></th></tr></thead><tbody>
 """)
 
 
 def depart_answers(self, node):
-    self.body.append('</tbody></table>')
+    self.body.append('</tbody></table>\n')
 
 
 def visit_answer(self, node):
@@ -121,16 +122,16 @@ def visit_answer(self, node):
     self.body.append(f"""\
 <tr>{num}\
 <td class="tdoc-poll-sel{s}"><span class="tdoc fa-circle-check"></span></td>\
-<td class="tdoc-poll-ans">\
+<td class="tdoc-poll-ans">
 """)
 
 
 def depart_answer(self, node):
     self.body.append("""\
-</td><td class="tdoc-poll-cnt"></td><td class="tdoc-poll-pct"></td></tr>\
+</td><td class="tdoc-poll-cnt"></td><td class="tdoc-poll-pct"></td></tr>
 """)
 
 
 def add_js(app, page, template, context, doctree):
-    if doctree and any(doctree.findall(poll)):
+    if doctree and doctree.next_node(poll) is not None:
         app.add_js_file('tdoc/poll.js', type='module')
