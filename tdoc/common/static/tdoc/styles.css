@@ -874,6 +874,13 @@ html[data-tdoc-dev] .tdoc-jsxgraph:not(.rendered) {
     }
 }
 
+/* Diagrams */
+.tdoc-diagram {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+}
+
 /* Drop-down menus. */
 .dropdown-menu {
     --bs-dropdown-link-color: var(--pst-color-text-muted);

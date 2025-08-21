@@ -22,6 +22,12 @@ info = {
         'version': '3.2.2',
         'url': lambda v: f'{jsdelivr}/npm/mathjax@{v}/es5',
     },
+    'mermaid': {
+        # https://www.npmjs.com/package/mermaid?activeTab=versions
+        # https://github.com/mermaid-js/mermaid/releases
+        'version': '11.10.0',
+        'url': lambda v: f'{jsdelivr}/npm/mermaid@{v}/dist',
+    },
     'polyscript': {
         # https://www.npmjs.com/package/polyscript?activeTab=versions
         # https://github.com/pyscript/polyscript/tags

@@ -7,7 +7,7 @@ import yaml
 from docutils import nodes
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions
+from . import __version__, merge_dict, report_exceptions
 
 _log = logging.getLogger(__name__)
 
@@ -40,24 +40,15 @@ class Metadata(docutils.SphinxDirective):
 
 
 def extract_metadata(app, doctree):
-    md = app.env.metadata[app.env.docname]
-    merge(app.config.metadata, md)
+    md = merge_dict(app.env.metadata[app.env.docname], app.config.metadata)
     nodes = list(doctree.findall(metadata))
     for i, node in enumerate(nodes):
         if i == 0:
-            if (attrs := node['attrs']) is not None: merge(attrs, md)
+            if (attrs := node['attrs']) is not None: merge_dict(md, attrs)
         else:
             _log.warning("More than one {metadata} directive in the document",
                          location=node)
         node.parent.remove(node)
-
-
-def merge(src, dst):
-    for k, sv in src.items():
-        if isinstance(sv, dict) and k in dst and isinstance(dv := dst[k], dict):
-            merge(sv, dv)
-        else:
-            dst[k] = copy.deepcopy(sv)
 
 
 def add_head_elements(app, page, template, context, doctree):

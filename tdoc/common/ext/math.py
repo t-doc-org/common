@@ -3,7 +3,6 @@
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-
 from sphinx.util import docutils, logging
 
 from . import __version__, deps, report_exceptions, tdoc_config, UniqueChecker

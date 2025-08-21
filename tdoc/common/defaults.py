@@ -28,6 +28,7 @@ extensions = [
     'sphinx_design',
     'tdoc.common.ext',
     'tdoc.common.ext.defaults',
+    'tdoc.common.ext.diagram',
     'tdoc.common.ext.exec',
     'tdoc.common.ext.iframe',
     'tdoc.common.ext.layout',

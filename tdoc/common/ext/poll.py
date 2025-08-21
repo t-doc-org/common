@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
+
 from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging

@@ -51,6 +51,18 @@ def to_base64(s):
     return base64.b64encode(s.encode('utf-8')).decode('utf-8').rstrip('=')
 
 
+unset = object()
+
+def merge_dict(dst, src):
+    for k, sv in src.items():
+        dv = dst.get(k, unset)
+        if isinstance(sv, dict) and isinstance(dv, dict):
+            merge_dict(dv, sv)
+        else:
+            dst[k] = copy.deepcopy(sv)
+    return dst
+
+
 def names_option(arg):
     if arg is None: raise ValueError('no argument provided')
     return [nodes.fully_normalize_name(n) for n in arg.split()]
