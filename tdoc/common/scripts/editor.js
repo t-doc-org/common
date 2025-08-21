@@ -69,13 +69,13 @@ const defaultExtensions = [
         ...autocomplete.closeBracketsKeymap,
         ...autocomplete.completionKeymap.map(k =>
             k.key === 'Enter' ? {
-                key: 'Tab', run: autocomplete.acceptCompletion,
+                ...k, key: 'Tab',
             } : k
         ),
         ...commands.defaultKeymap.map(k =>
             k.key === 'Home' ? {
-                key: 'Home', run: commands.cursorLineStart,
-                shift: commands.selectLineStart, preventDefault: true,
+                ...k,
+                run: commands.cursorLineStart, shift: commands.selectLineStart,
             } : k
         ),
         ...commands.historyKeymap,
