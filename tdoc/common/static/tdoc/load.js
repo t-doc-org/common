@@ -7,6 +7,20 @@ import {
     StoredJson,
 } from './core.js';
 
+// Handle auto-reload on source change.
+if (tdoc.dev) {
+    let build;
+    api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
+        if (!data) return;
+        if (!build) {
+            build = data;
+            console.info(`[t-doc] Build: ${build}`);
+        } else if (data !== build) {
+            location.reload();
+        }
+    })]});
+}
+
 // Prevent doctools.js from capturing editor key events, in case keyboard
 // shortcuts are enabled.
 domLoaded.then(() => {
@@ -268,16 +282,20 @@ ${ds.marker ? ' checked="checked"' : ''}>\
     });
 };
 
-// Handle auto-reload on source change.
-if (tdoc.dev) {
-    let build;
-    api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
-        if (!data) return;
-        if (!build) {
-            build = data;
-            console.info(`[t-doc] Build: ${build}`);
-        } else if (data !== build) {
-            location.reload();
-        }
-    })]});
+// Handle Mermaid diagrams.
+if (tdoc.dyn.mermaid) {
+    (async () => {
+        const {default: mermaid} =
+            await import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`);
+        // TODO: Add support for the elk layout
+        await domLoaded;
+        // TODO: Set theme if not already set, based on current theme
+        // TODO: Re-render all diagrams on theme change
+        mermaid.initialize({
+            ...tdoc.dyn.mermaid,
+            startOnLoad: false,
+        });
+        // TODO: Render all concurrently using render()
+        await mermaid.run({nodes: qsa(document, '.tdoc-mermaid')});
+    })();
 }

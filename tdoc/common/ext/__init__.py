@@ -9,6 +9,7 @@ import pathlib
 import re
 
 from docutils import nodes, statemachine
+from docutils.parsers.rst import directives
 from myst_parser import mocking
 from sphinx import config, jinja2glue, locale
 from sphinx.environment import collectors
@@ -68,6 +69,17 @@ def names_option(arg):
     return [nodes.fully_normalize_name(n) for n in arg.split()]
 
 
+def log_exception(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            _log.error(f"{fn.__name__}: {e}")
+            raise
+    return wrapper
+
+
 def report_exceptions(fn):
     @functools.wraps(fn)
     def wrapper(self, /, *args, **kwargs):
@@ -119,6 +131,8 @@ def setup(app):
     app.connect('html-page-context', add_user_button, priority=500.7)
     app.connect('write-started', write_static_files)
 
+    app.add_node(dyn, html=(visit_dyn, depart_dyn))
+    app.connect('tdoc-html-page-config', add_dyn_config)
     return {
         'version': __version__,
         'parallel_read_safe': True,
@@ -352,3 +366,49 @@ class DictUpdater:
     __getattr__ = __getitem__
     __setattr__ = __setitem__
     __delattr__ = __delitem__
+
+
+class Dyn(docutils.SphinxDirective):
+    option_spec = {
+        'class': directives.class_option,
+        'style': directives.unchanged,
+    }
+
+    @report_exceptions
+    def run(self):
+        node = dyn(type=self.name)
+        self.set_source_info(node)
+        node['classes'] += self.options.get('class', [])
+        if v := self.options.get('style', '').strip(): node['style'] = v
+        self.parse_content(node)
+        return [node]
+
+    def parse_content(self, node):
+        if self.has_content:
+            node.append(nodes.Text(''.join(f'{line}\n'
+                                           for line in self.content)))
+
+
+class dyn(nodes.General, nodes.Element): pass
+
+
+def visit_dyn(self, node):
+    attrs = {}
+    if v := node.get('style'): attrs['style'] = v
+    self.body.append(self.starttag(
+        node, 'div', '', classes=['tdoc-dyn', f'tdoc-{node['type']}'], **attrs))
+
+
+def depart_dyn(self, node):
+    self.body.append('</div>\n')
+
+
+def add_dyn_config(app, page, config, doctree):
+    if page is None or doctree is None: return
+    dcfg = {}
+    for typ in {n['type'] for n in doctree.findall(dyn)}:
+        cfg = getattr(app.config, f'tdoc_{typ}')
+        if (md := app.env.metadata[page].get(typ)) is not None:
+            cfg = merge_dict(copy.deepcopy(cfg), md)
+        dcfg[typ] = cfg
+    if dcfg: config['dyn'] = dcfg

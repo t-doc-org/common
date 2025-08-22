@@ -841,6 +841,13 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     background-size: 28.28px 28.28px;
 }
 
+/* Dynamic containers */
+.tdoc-dyn {
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+}
+
 /* JSXGraph blocks. */
 .tdoc-jsxgraph {
     /* The magic value is used to detect the default in jsxgraph.js. */
@@ -872,13 +879,6 @@ html[data-tdoc-dev] .tdoc-jsxgraph:not(.rendered) {
     .tdoc-jsxgraph .JXG_navigation {
         display: none;
     }
-}
-
-/* Diagrams */
-.tdoc-diagram {
-    margin: 1rem 0;
-    display: flex;
-    justify-content: center;
 }
 
 /* Drop-down menus. */

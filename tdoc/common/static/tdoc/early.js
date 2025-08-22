@@ -33,6 +33,7 @@
             url = m;
         } else {
             importMap[url] = url;
+            // TODO: Compute the importMap only once
             for (const el of document.querySelectorAll('script[type=module]')) {
                 if (el.src.startsWith(url + '?')) {
                     url = importMap[url] = el.src;
