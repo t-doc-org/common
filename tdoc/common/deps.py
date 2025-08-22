@@ -25,7 +25,7 @@ info = {
     'mermaid': {
         # https://www.npmjs.com/package/mermaid?activeTab=versions
         # https://github.com/mermaid-js/mermaid/releases
-        'version': '11.10.0',
+        'version': '11.10.1',
         'url': lambda v: f'{jsdelivr}/npm/mermaid@{v}/dist',
     },
     'mermaid-layout-elk': {
