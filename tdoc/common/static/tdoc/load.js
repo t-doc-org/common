@@ -289,17 +289,29 @@ if (tdoc.dyn?.mermaid) {
             await import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`);
         // TODO: Add support for the elk layout
         await domLoaded;
+
         const config = tdoc.dyn.mermaid;
-        const theme = config.theme !== undefined ? config.theme :
-            document.documentElement.dataset.theme === 'dark' ? 'dark'
-                                                              : 'default';
-        // TODO: Re-render all diagrams on theme change
-        mermaid.initialize({
-            ...config,
-            startOnLoad: false,
-            theme,
-        });
-        // TODO: Render all concurrently using render()
-        await mermaid.run({nodes: findDyn('mermaid')});
+        const lightTheme = config.theme ?? 'default';
+        const darkTheme = config.darkTheme ?? 'dark';
+
+        const nodes = findDyn('mermaid');
+        for (const n of nodes) n.tdocCode = n.innerHTML;
+
+        async function render() {
+            mermaid.initialize({
+                ...config,
+                startOnLoad: false,
+                theme: document.documentElement.dataset.theme === 'dark' ?
+                       darkTheme : lightTheme,
+            });
+            for (const node of nodes) {
+                node.innerHTML = node.tdocCode;
+                delete node.dataset.processed;
+            }
+            await mermaid.run({nodes});
+        }
+
+        await render();
+        document.addEventListener('theme-change', render);
     })();
 }
