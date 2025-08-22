@@ -283,17 +283,21 @@ ${ds.marker ? ' checked="checked"' : ''}>\
 };
 
 // Handle Mermaid diagrams.
-if (tdoc.dyn.mermaid) {
+if (tdoc.dyn?.mermaid) {
     (async () => {
         const {default: mermaid} =
             await import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`);
         // TODO: Add support for the elk layout
         await domLoaded;
-        // TODO: Set theme if not already set, based on current theme
+        const config = tdoc.dyn.mermaid;
+        const theme = config.theme !== undefined ? config.theme :
+            document.documentElement.dataset.theme === 'dark' ? 'dark'
+                                                              : 'default';
         // TODO: Re-render all diagrams on theme change
         mermaid.initialize({
-            ...tdoc.dyn.mermaid,
+            ...config,
             startOnLoad: false,
+            theme,
         });
         // TODO: Render all concurrently using render()
         await mermaid.run({nodes: findDyn('mermaid')});

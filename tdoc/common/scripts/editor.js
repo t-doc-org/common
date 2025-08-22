@@ -31,18 +31,13 @@ function currentTheme() {
            darkTheme : lightTheme;
 }
 
-let curTheme = currentTheme();
-
-const obs = new MutationObserver((mutations) => {
-    const newTheme = currentTheme();
-    if (newTheme === curTheme) return;
-    curTheme = newTheme;
+document.addEventListener('theme-change', e => {
+    const curTheme = currentTheme();
     for (const div of document.querySelectorAll('div.cm-editor')) {
         const editor = div.tdocEditor;
         editor.dispatch({effects: theme.reconfigure(curTheme)});
     }
-}).observe(document.documentElement,
-           {attributes: true, attributeFilter: ['data-theme']});
+});
 
 // The default extensions appended to the user-provided ones.
 const defaultExtensions = [

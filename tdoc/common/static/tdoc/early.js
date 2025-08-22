@@ -59,13 +59,24 @@
         };
     };
 
-    // Copy the data-theme attribute of the document to data-bs-theme, to
-    // synchronize the Bootstrap theme.
+    // Observe the data-theme attribute and fire an event on the document
+    // when it changes.
+    let theme;
     new MutationObserver((mutations) => {
-        const ds = document.documentElement.dataset;
-        ds.bsTheme = ds.theme;
+        const newTheme = document.documentElement.dataset.theme;
+        if (newTheme !== theme) {
+            theme = newTheme;
+            document.dispatchEvent(new Event('theme-change'));
+        }
     }).observe(document.documentElement,
                {attributes: true, attributeFilter: ['data-theme']});
+
+    // Copy the data-theme attribute of the document to data-bs-theme, to
+    // synchronize the Bootstrap theme.
+    document.addEventListener('theme-change', e => {
+        const ds = document.documentElement.dataset;
+        ds.bsTheme = ds.theme;
+    });
 
     // Disable undesired global keydown event listeners, as they can interfere
     // with per-element listeners.
