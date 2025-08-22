@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    addTooltip, domLoaded, elmt, enable, htmlData, on, page, qs, qsa, rgb2hex,
-    StoredJson,
+    addTooltip, domLoaded, elmt, enable, findDyn, htmlData, on, page, qs, qsa,
+    rgb2hex, StoredJson,
 } from './core.js';
 
 // Handle auto-reload on source change.
@@ -296,6 +296,6 @@ if (tdoc.dyn.mermaid) {
             startOnLoad: false,
         });
         // TODO: Render all concurrently using render()
-        await mermaid.run({nodes: qsa(document, '.tdoc-mermaid')});
+        await mermaid.run({nodes: findDyn('mermaid')});
     })();
 }

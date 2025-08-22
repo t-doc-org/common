@@ -2,21 +2,16 @@
 # SPDX-License-Identifier: MIT
 
 from docutils import nodes
-from docutils.parsers.rst import directives
-from sphinx.util import docutils, logging
+from sphinx.util import logging
 
-from . import __version__, deps, report_exceptions, tdoc_config, UniqueChecker
+from . import __version__, Dyn, dyn, tdoc_config
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
     app.add_directive('jsxgraph', JsxGraph)
-    app.add_node(jsxgraph, html=(visit_jsxgraph, depart_jsxgraph))
-    app.add_env_collector(UniqueChecker('jsxgraph-name',
-        lambda doctree: ((n, n.get('name')) for n in doctree.findall(jsxgraph)),
-        "{jsxgraph}: Duplicate name"))
-    app.connect('html-page-context', add_css_js)
+    app.connect('html-page-context', add_css)
     return {
         'version': __version__,
         'parallel_read_safe': True,
@@ -24,41 +19,18 @@ def setup(app):
     }
 
 
-class JsxGraph(docutils.SphinxDirective):
+class JsxGraph(Dyn):
     required_arguments = 1
-    option_spec = {
-        'class': directives.class_option,
-        'style': directives.unchanged,
-    }
 
-    @report_exceptions
-    def run(self):
-        node = jsxgraph(name=self.arguments[0])
-        self.set_source_info(node)
-        self.state.document.set_id(node)
-        node['classes'] += self.options.get('class', [])
-        if v := self.options.get('style', '').strip(): node['style'] = v
-        return [node]
+    def populate(self, node):
+        node['classes'].append('jxgbox')
+        node.append(nodes.container('', nodes.Text("Rendering..."),
+                                    classes=['spinner']))
+        super().populate(node)
 
 
-class jsxgraph(nodes.General, nodes.Element): pass
-
-
-def visit_jsxgraph(self, node):
-    attrs = {'data-name': node['name']}
-    if v := node.get('style'): attrs['style'] = v
-    self.body.append(
-        self.starttag(node, 'div', '', classes=['tdoc-jsxgraph', 'jxgbox'],
-                      **attrs))
-    self.body.append('<div class="spinner">Rendering...</div>')
-
-
-def depart_jsxgraph(self, node):
-    self.body.append('</div>\n')
-
-
-def add_css_js(app, page, template, context, doctree):
-    if doctree and doctree.next_node(jsxgraph) is not None:
+def add_css(app, page, template, context, doctree):
+    if doctree and doctree.next_node(dyn.has_type('jsxgraph')) is not None:
         tdoc = tdoc_config(app, page, doctree, context)
         base = tdoc['versions']['jsxgraph']
         app.add_css_file(f'{base}/jsxgraph.css', priority=199)  # Before theme

@@ -89,6 +89,20 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
+// Find dyn elements of a specific type. If a name is given, only that element
+// is returned, and an exception is thrown if it cannot be found. Otherwise, all
+// dyn elements of that type are returned.
+export function findDyn(type, name) {
+    if (!name) {
+        return qsa(document, `div.tdoc-dyn[data-type="${CSS.escape(type)}"]`);
+    }
+    const node = qs(document, `\
+div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
+[data-name="${CSS.escape(name)}"]`);
+    if (!node) throw new Error(`{${type}} not found: ${name}`);
+    return node;
+}
+
 // Enable or disable one or more elements.
 export function enable(value, ...els) {
     for (const el of els) el.disabled = !value;

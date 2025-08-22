@@ -133,6 +133,12 @@ def setup(app):
 
     app.add_node(dyn, html=(visit_dyn, depart_dyn))
     app.connect('tdoc-html-page-config', add_dyn_config)
+    app.add_env_collector(UniqueChecker('dyn-name',
+        lambda doctree: ((n, (n['type'], name) if (name := n.get('name'))
+                                               else None)
+                         for n in doctree.findall(dyn)),
+        lambda v: f"{{{v[0]}}}: Duplicate name: {v[1]}"))
+
     return {
         'version': __version__,
         'parallel_read_safe': True,
@@ -338,7 +344,7 @@ class UniqueChecker(collectors.EnvironmentCollector):
             if v not in ids:
                 ids[v] = (dn, loc)
             else:
-                _log.error(f"{self.err}: {v}", location=loc)
+                _log.error(self.err(v), location=loc)
 
     def process_doc(self, app, doctree):
         ids = app.env.tdoc_unique[self.name]
@@ -347,7 +353,7 @@ class UniqueChecker(collectors.EnvironmentCollector):
             if v not in ids:
                 ids[v] = (app.env.docname, (node.source, node.line))
             else:
-                doctree.reporter.error(f"{self.err}: {v}", base_node=node)
+                doctree.reporter.error(self.err(v), base_node=node)
 
 
 class DictUpdater:
@@ -378,25 +384,31 @@ class Dyn(docutils.SphinxDirective):
     def run(self):
         node = dyn(type=self.name)
         self.set_source_info(node)
+        self.state.document.set_id(node)
+        if self.arguments: node['name'] = self.arguments[0]
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
-        self.parse_content(node)
+        self.populate(node)
         return [node]
 
-    def parse_content(self, node):
+    def populate(self, node):
         if self.has_content:
             node.append(nodes.Text(''.join(f'{line}\n'
                                            for line in self.content)))
 
 
-class dyn(nodes.General, nodes.Element): pass
+class dyn(nodes.General, nodes.Element):
+    @classmethod
+    def has_type(cls, typ):
+        return lambda n: isinstance(n, cls) and n['type'] == typ
 
 
 def visit_dyn(self, node):
-    attrs = {}
+    attrs = {'data-type': node['type']}
+    if v := node.get('name'): attrs['data-name'] = v
     if v := node.get('style'): attrs['style'] = v
-    self.body.append(self.starttag(
-        node, 'div', '', classes=['tdoc-dyn', f'tdoc-{node['type']}'], **attrs))
+    self.body.append(self.starttag(node, 'div', '', classes=['tdoc-dyn'],
+                                   **attrs))
 
 
 def depart_dyn(self, node):
@@ -407,7 +419,7 @@ def add_dyn_config(app, page, config, doctree):
     if page is None or doctree is None: return
     dcfg = {}
     for typ in {n['type'] for n in doctree.findall(dyn)}:
-        cfg = getattr(app.config, f'tdoc_{typ}')
+        cfg = getattr(app.config, f'tdoc_{typ}', {})
         if (md := app.env.metadata[page].get(typ)) is not None:
             cfg = merge_dict(copy.deepcopy(cfg), md)
         dcfg[typ] = cfg

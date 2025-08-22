@@ -22,6 +22,6 @@ def setup(app):
 class Mermaid(Dyn):
     has_content = True
 
-    def parse_content(self, node):
+    def populate(self, node):
         if self.content.count('---') == 1: node.append(nodes.Text("---\n"))
-        super().parse_content(node)
+        super().populate(node)

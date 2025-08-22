@@ -20,7 +20,7 @@ def setup(app):
     app.add_node(answer, html=(visit_answer, depart_answer))
     app.add_env_collector(UniqueChecker('poll-id',
         lambda doctree: ((n, n['id']) for n in doctree.findall(poll)),
-        "{poll}: Duplicate poll ID"))
+        lambda v: f"{{poll}}: Duplicate poll ID: {v}"))
     app.connect('html-page-context', add_js)
     return {
         'version': __version__,

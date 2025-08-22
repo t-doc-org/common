@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, mathJaxReady, qs} from './core.js';
+import {domLoaded, findDyn, mathJaxReady, qs} from './core.js';
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
@@ -127,9 +127,7 @@ export function merge(...attrs) {
 export async function initBoard(name, attrs, fn) {
     attrs = merge(attrs);
     await domLoaded;
-    const node = qs(document,
-                    `div.tdoc-jsxgraph[data-name="${CSS.escape(name)}"]`);
-    if (!node) throw new Error(`{jsxgraph} not found: ${name}`);
+    const node = findDyn('jsxgraph', name);
     if (node.style.aspectRatio === ''
             && getComputedStyle(node).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');

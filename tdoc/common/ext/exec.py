@@ -22,7 +22,7 @@ def setup(app):
     app.add_node(exec, html=(visit_exec, depart_exec))
     app.add_env_collector(UniqueChecker('exec-editor',
         lambda doctree: ((n, n.get('editor')) for n in doctree.findall(exec)),
-        "{exec}: Duplicate :editor: ID"))
+        lambda v: f"{{exec}}: Duplicate :editor: ID: {v}"))
     app.connect('doctree-resolved', check_references)
     app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_js)
