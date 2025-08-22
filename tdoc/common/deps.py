@@ -28,6 +28,12 @@ info = {
         'version': '11.10.0',
         'url': lambda v: f'{jsdelivr}/npm/mermaid@{v}/dist',
     },
+    'mermaid-layout-elk': {
+        # https://www.npmjs.com/package/@mermaid-js/layout-elk?activeTab=versions
+        # https://github.com/mermaid-js/mermaid/releases
+        'version': '0.1.9',
+        'url': lambda v: f'{jsdelivr}/npm/@mermaid-js/layout-elk@{v}/dist',
+    },
     'polyscript': {
         # https://www.npmjs.com/package/polyscript?activeTab=versions
         # https://github.com/pyscript/polyscript/tags

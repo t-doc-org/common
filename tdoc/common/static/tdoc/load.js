@@ -285,9 +285,12 @@ ${ds.marker ? ' checked="checked"' : ''}>\
 // Handle Mermaid diagrams.
 if (tdoc.dyn?.mermaid) {
     (async () => {
-        const {default: mermaid} =
-            await import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`);
-        // TODO: Add support for the elk layout
+        const [{default: mermaid}, {default: elk}] = await Promise.all([
+            import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`),
+            import(`\
+${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
+        ]);
+        mermaid.registerLayoutLoaders(elk);
         await domLoaded;
 
         const config = tdoc.dyn.mermaid;
