@@ -42,32 +42,15 @@ This solution is expanded by default.
 This solution has a different color, and no drop-down.
 ```
 
-## Flex tables
+## SVG
 
-### Function value table
-
-The {rst:dir}`flex-table` below uses the class `function-table` to render the
-value table of $f(x)=2x+1$.
-
-```{flex-table}
-:class: function-table
-|$x$|$0$|$1$|$2$|$3$|$4$
-|$f(x)$|$1$|$3$|$5$|$7$|$9$
-```
-
-### Function sign table
-
-The {rst:dir}`flex-table` below uses the class `function-table` to render the
-sign table of $f(x)=\dfrac{\sqrt{-x+2}}{2x(2x+1)}$.
-
-```{flex-table}
-:class: function-table
-|$x$|{.l .w}$\tiny-\;\infty$|$-\frac{1}{2}$|{.w}|$0$|{.w}|$2$|{.r .w}$\tiny+\;\infty$
-|$\sqrt{-x+2}$|$+$||$+$||$+$|$0$|{.g}
-|$2x$|$-$||$-$|{.g}$0$|$+$||$+$
-|$2x+1$|$-$|{.g}$0$|$+$||$+$||$+$
-|$\dfrac{\sqrt{-x+2}}{2x(2x+1)}$|$+$|{.g}|$-$|{.g}|$+$|$0$|{.g}
-```
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 100 100" width="100" height="100"
+     stroke="red" fill="transparent">
+  <path d="M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20
+           Q 40,10 0,40 Q -40,10 -40,-20 z"
+        transform="translate(50 50) rotate(20)"/>
+</svg>
 
 ## IFrames
 
@@ -80,29 +63,6 @@ The [YouTube](https://youtube.com/) video below is embedded with the
 The presentation below is embedded with the {rst:dir}`iframe` directive.
 
 ```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
-```
-
-## Grid layouts
-
-The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to
-label the columns.
-
-```{list-grid}
-:style: grid-template-columns: 5fr 3fr;
-- # Cell 1
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-  minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-  ex ea commodo consequat. Duis aute irure dolor in reprehenderit in
-  voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
-  sint occaecat cupidatat non proident, sunt in culpa qui officia
-  deserunt mollit anim id est laborum.
-- # Cell 2
-  |Key|Value|
-  |:-:|:---:|
-  |a|1|
-  |b|2|
-  |c|3|
 ```
 
 ## Numbering
@@ -140,6 +100,29 @@ This is the last quote.
 {attribution="Iain M. Banks, Consider Phlebas"}
 > **Quote {nump}`quote`:** I had nightmares I thought were really horrible until
 > I woke up and remembered what reality was at the moment.
+
+## Grid layouts
+
+The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to
+label the columns.
+
+```{list-grid}
+:style: grid-template-columns: 5fr 3fr;
+- # Cell 1
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+  minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+  ex ea commodo consequat. Duis aute irure dolor in reprehenderit in
+  voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur
+  sint occaecat cupidatat non proident, sunt in culpa qui officia
+  deserunt mollit anim id est laborum.
+- # Cell 2
+  |Key|Value|
+  |:-:|:---:|
+  |a|1|
+  |b|2|
+  |c|3|
+```
 
 ## Blocks
 

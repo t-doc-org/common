@@ -3,6 +3,43 @@
 
 # Math
 
+## Math notation
+
+The equation $ax^2 + bx + c = 0$ has two solutions:
+
+$$
+&x_1=\frac{-b-\sqrt{D}}{2a}\quad\textrm{and}\quad x_2=\frac{-b+\sqrt{D}}{2a}\\
+\\
+&\textrm{with } D=b^2-4ac
+$$
+
+## Flex tables
+
+### Function value table
+
+The {rst:dir}`flex-table` below uses the class `function-table` to render the
+value table of $f(x)=2x+1$.
+
+```{flex-table}
+:class: function-table
+|$x$|$0$|$1$|$2$|$3$|$4$
+|$f(x)$|$1$|$3$|$5$|$7$|$9$
+```
+
+### Function sign table
+
+The {rst:dir}`flex-table` below uses the class `function-table` to render the
+sign table of $f(x)=\dfrac{\sqrt{-x+2}}{2x(2x+1)}$.
+
+```{flex-table}
+:class: function-table
+|$x$|{.l .w}$\tiny-\;\infty$|$-\frac{1}{2}$|{.w}|$0$|{.w}|$2$|{.r .w}$\tiny+\;\infty$
+|$\sqrt{-x+2}$|$+$||$+$||$+$|$0$|{.g}
+|$2x$|$-$||$-$|{.g}$0$|$+$||$+$
+|$2x+1$|$-$|{.g}$0$|$+$||$+$||$+$
+|$\dfrac{\sqrt{-x+2}}{2x(2x+1)}$|$+$|{.g}|$-$|{.g}|$+$|$0$|{.g}
+```
+
 ## JSXGraph
 
 This section renders live graphs using {rst:dir}`jsxgraph` directives. The

@@ -6,6 +6,7 @@
 ```{toctree}
 :maxdepth: 1
 elements
+diagram
 math
 quizzes
 polls
@@ -13,6 +14,5 @@ python
 micropython
 sql
 html
-embedding
 crypto
 ```

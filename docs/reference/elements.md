@@ -23,6 +23,9 @@ interpreted.
       packages: [sqlite3]
   ```
 
+`mermaid`
+: A mapping of config properties for {rst:dir}`mermaid` diagrams.
+
 `page-break-avoid`
 : A level or list of levels of sections in which page breaks should be avoided.
 
@@ -164,6 +167,102 @@ removed.
 ```
 ````
 
+## IFrame
+
+````{rst:directive} .. youtube:: id
+This directive adds an
+[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
+element loading a YouTube video. The argument is the ID of the video, e.g.
+`aVwxzDHniEw`. All the options of {rst:dir}`iframe` are supported.
+````
+
+`````{rst:directive} .. iframe:: url
+This directive adds an
+[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
+element loading the given URL.
+
+{.rubric}
+Options
+````{rst:directive:option} allow: directive; [directive; ...]
+The
+[permission policy](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#allow)
+for the `<iframe>`{l=html}
+([supported directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy#directives)).
+The default is:
+
+```
+autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
+  screen-wake-lock; web-share
+```
+````
+
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the `<iframe>`{l=html}.
+```
+```{rst:directive:option} credentialful
+Indicate that the `<iframe>`{l=html} should **not** be loaded in
+[credentialless](https://developer.mozilla.org/en-US/docs/Web/Security/IFrame_credentialless) mode. The default is credentialless mode.
+```
+```{rst:directive:option} referrerpolicy: value
+Indicate the referrer to send when fetching the `<iframe>`{l=html} source
+([supported values](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#referrerpolicy)).
+```
+```{rst:directive:option} sandbox: token [token ...]
+Control the restrictions applied to the content embedded in the
+`<iframe>`{l=html}
+([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
+```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the `<iframe>`{l=html}, e.g. `width: 80%;`.
+```
+```{rst:directive:option} title: text
+A concise description of the content of the `<iframe>`{l=html}, typically used
+by assistive technologies.
+```
+`````
+
+## Numbering
+
+````{rst:role} num
+This role performs automatic numbering across all documents, optionally creating
+reference targets. The role content is either a label (e.g. `` {num}`label` ``)
+or an explicit title and a label (e.g. `` {num}`Exercise %s<label>` ``). In the
+latter case, the title must contain the string `%s`, which gets substituted with
+the number.
+
+The label is composed of a counter identifier and an optional target name,
+separated by `:`. Distinct identifiers are numbered separately, and the counters
+persist across pages. Instances with a target (e.g. `` {num}`ex:target` ``) can
+be referenced with the {rst:role}`numref` role (e.g. `` {numref}`ex:target` ``).
+
+```{code-block}
+## Exercise {num}`ex:intro`
+
+As an introduction to ...
+
+## Exercise {num}`ex`
+
+After completing {numref}`exercise %s<ex:intro>`, ...
+```
+````
+
+````{rst:role} num1
+This role is identical to {rst:role}`num`, but the numbering is per first-level
+page name prefix. For example, numbering is continous across the pages
+`abc/page1` and `abc/page2`, but it reset for `def/page3`.
+````
+
+````{rst:role} num2
+This role is identical to {rst:role}`num`, but the numbering is per second-level
+page name prefix. For example, numbering is continous across the pages
+`abc/def/page1` and `abc/def/page2`, but it reset for `abc/ghi/page3`.
+````
+
+````{rst:role} nump
+This role is identical to {rst:role}`num`, but the numbering is per page.
+````
+
 ## Flex table
 
 `````{rst:directive} .. flex-table::
@@ -229,61 +328,6 @@ A reference target for the table.
 ```
 `````
 
-## IFrame
-
-````{rst:directive} .. youtube:: id
-This directive adds an
-[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
-element loading a YouTube video. The argument is the ID of the video, e.g.
-`aVwxzDHniEw`. All the options of {rst:dir}`iframe` are supported.
-````
-
-`````{rst:directive} .. iframe:: url
-This directive adds an
-[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
-element loading the given URL.
-
-{.rubric}
-Options
-````{rst:directive:option} allow: directive; [directive; ...]
-The
-[permission policy](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#allow)
-for the `<iframe>`{l=html}
-([supported directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy#directives)).
-The default is:
-
-```
-autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
-  screen-wake-lock; web-share
-```
-````
-
-```{rst:directive:option} class: name [name...]
-:type: IDs
-A space-separated list of CSS classes to add to the `<iframe>`{l=html}.
-```
-```{rst:directive:option} credentialful
-Indicate that the `<iframe>`{l=html} should **not** be loaded in
-[credentialless](https://developer.mozilla.org/en-US/docs/Web/Security/IFrame_credentialless) mode. The default is credentialless mode.
-```
-```{rst:directive:option} referrerpolicy: value
-Indicate the referrer to send when fetching the `<iframe>`{l=html} source
-([supported values](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#referrerpolicy)).
-```
-```{rst:directive:option} sandbox: token [token ...]
-Control the restrictions applied to the content embedded in the
-`<iframe>`{l=html}
-([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
-```
-```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the `<iframe>`{l=html}, e.g. `width: 80%;`.
-```
-```{rst:directive:option} title: text
-A concise description of the content of the `<iframe>`{l=html}, typically used
-by assistive technologies.
-```
-`````
-
 ## Grid
 
 `````{rst:directive} .. list-grid::
@@ -308,47 +352,6 @@ A space-separated list of CSS classes to add to the grid container element.
 CSS styles to apply to the grid container element.
 ```
 `````
-
-## Numbering
-
-````{rst:role} num
-This role performs automatic numbering across all documents, optionally creating
-reference targets. The role content is either a label (e.g. `` {num}`label` ``)
-or an explicit title and a label (e.g. `` {num}`Exercise %s<label>` ``). In the
-latter case, the title must contain the string `%s`, which gets substituted with
-the number.
-
-The label is composed of a counter identifier and an optional target name,
-separated by `:`. Distinct identifiers are numbered separately, and the counters
-persist across pages. Instances with a target (e.g. `` {num}`ex:target` ``) can
-be referenced with the {rst:role}`numref` role (e.g. `` {numref}`ex:target` ``).
-
-```{code-block}
-## Exercise {num}`ex:intro`
-
-As an introduction to ...
-
-## Exercise {num}`ex`
-
-After completing {numref}`exercise %s<ex:intro>`, ...
-```
-````
-
-````{rst:role} num1
-This role is identical to {rst:role}`num`, but the numbering is per first-level
-page name prefix. For example, numbering is continous across the pages
-`abc/page1` and `abc/page2`, but it reset for `def/page3`.
-````
-
-````{rst:role} num2
-This role is identical to {rst:role}`num`, but the numbering is per second-level
-page name prefix. For example, numbering is continous across the pages
-`abc/def/page1` and `abc/def/page2`, but it reset for `abc/ghi/page3`.
-````
-
-````{rst:role} nump
-This role is identical to {rst:role}`num`, but the numbering is per page.
-````
 
 ## Block
 

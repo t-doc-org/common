@@ -841,11 +841,27 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     background-size: 28.28px 28.28px;
 }
 
-/* Dynamic containers */
+/* Dynamic containers. */
 .tdoc-dyn {
     margin: 1rem 0;
     display: flex;
     justify-content: center;
+}
+
+/* Mermaid blocks. */
+.tdoc-dyn[data-type=mermaid]:not([data-processed]) {
+    display: none;
+}
+.mermaidTooltip {
+  position: absolute;
+  max-width: 30%;
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.25rem;
+  padding: 2px 4px;
+  background-color: var(--pst-color-surface);
+  font-size: var(--pst-font-size-milli);
+  pointer-events: none;
+  z-index: 100;
 }
 
 /* JSXGraph blocks. */
