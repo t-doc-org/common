@@ -848,35 +848,6 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     background-size: 28.28px 28.28px;
 }
 
-/* Dynamic containers */
-.tdoc-dyn {
-    margin: 1rem 0;
-    display: flex;
-    justify-content: center;
-}
-
-/* Mermaid diagrams */
-.tdoc-dyn[data-type=mermaid]:not([data-processed]) {
-    display: none;
-}
-.tdoc-dyn[data-type=mermaid].background-light > svg {
-    background-color: var(--tdoc-background-light);
-}
-.tdoc-dyn[data-type=mermaid].background-dark > svg {
-    background-color: var(--tdoc-background-dark);
-}
-.mermaidTooltip {
-  position: absolute;
-  max-width: 30%;
-  border: 1px solid var(--pst-color-border);
-  border-radius: 0.25rem;
-  padding: 2px 4px;
-  background-color: var(--pst-color-surface);
-  font-size: var(--pst-font-size-milli);
-  pointer-events: none;
-  z-index: 100;
-}
-
 /* JSXGraph boards */
 .tdoc-dyn[data-type=jsxgraph] {
     /* The magic value is used to detect the default in jsxgraph.js. */
@@ -908,6 +879,32 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     .tdoc-dyn[data-type=jsxgraph] .JXG_navigation {
         display: none;
     }
+}
+
+/* Mermaid diagrams */
+.tdoc-dyn[data-type=mermaid] {
+    margin: 1rem auto;
+    text-align: center;
+}
+.tdoc-dyn[data-type=mermaid]:not([data-processed]) {
+    display: none;
+}
+.tdoc-dyn[data-type=mermaid].background-light > svg {
+    background-color: var(--tdoc-background-light);
+}
+.tdoc-dyn[data-type=mermaid].background-dark > svg {
+    background-color: var(--tdoc-background-dark);
+}
+.mermaidTooltip {
+  position: absolute;
+  max-width: 30%;
+  border: 1px solid var(--pst-color-border);
+  border-radius: 0.25rem;
+  padding: 2px 4px;
+  background-color: var(--pst-color-surface);
+  font-size: var(--pst-font-size-milli);
+  pointer-events: none;
+  z-index: 100;
 }
 
 /* Drop-down menus */
