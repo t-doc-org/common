@@ -37,19 +37,20 @@ info = {
     'polyscript': {
         # https://www.npmjs.com/package/polyscript?activeTab=versions
         # https://github.com/pyscript/polyscript/tags
-        'version': '0.18.7',
+        'version': '0.18.10',
         'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',
     },
     'pyodide': {
         # https://www.npmjs.com/package/pyodide?activeTab=versions
         # https://pyodide.org/en/stable/project/changelog.html
-        'version': '0.28.1',
+        'version': '0.28.2',
         'url': lambda v: f'{jsdelivr}/pyodide/v{v}/full',
     },
     'sqlite': {
         # https://www.npmjs.com/package/@sqlite.org/sqlite-wasm?activeTab=versions
         # https://github.com/sqlite/sqlite-wasm/releases
-        'version': '3.50.3-build1',
+        # https://www.sqlite.org/changes.html
+        'version': '3.50.4-build1',
         'url': lambda v: f'{jsdelivr}/npm/@sqlite.org/sqlite-wasm@{v}',
     },
 }
