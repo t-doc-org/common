@@ -123,6 +123,7 @@ xychart
 ## Graphviz
 
 ```{graphviz}
+:class: align-center
 digraph {
     A -> B
     A -> C

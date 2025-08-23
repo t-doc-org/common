@@ -856,6 +856,12 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     border-color: var(--pst-color-border);
     border-radius: 0.25rem;
 }
+.tdoc-dyn[data-type=jsxgraph].align-left {
+    margin-left: 0;
+}
+.tdoc-dyn[data-type=jsxgraph].align-right {
+    margin-right: 0;
+}
 html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     border-color: var(--pst-color-danger);
 }
@@ -885,6 +891,12 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
 .tdoc-dyn[data-type=mermaid] {
     margin: 1rem auto;
     text-align: center;
+}
+.tdoc-dyn[data-type=mermaid].align-left {
+    text-align: left;
+}
+.tdoc-dyn[data-type=mermaid].align-right {
+    text-align: right;
 }
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
