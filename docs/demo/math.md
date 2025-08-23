@@ -5,7 +5,7 @@
 
 ## Math notation
 
-The equation $ax^2 + bx + c = 0$ has two solutions:
+The equation $ax^2 + bx + c = 0$ has two solutions in $\mathbb{C}$:
 
 $$
 &x_1=\frac{-b-\sqrt{D}}{2a}\quad\textrm{and}\quad x_2=\frac{-b+\sqrt{D}}{2a}\\
