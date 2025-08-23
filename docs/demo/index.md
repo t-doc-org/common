@@ -8,8 +8,8 @@
 elements
 diagram
 math
-quizzes
-polls
+quiz
+poll
 python
 micropython
 sql
