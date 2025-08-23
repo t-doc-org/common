@@ -16,10 +16,11 @@ The default theme is set in the page {rst:dir}`metadata`.
 
 ([Documentation](https://mermaid.js.org/syntax/flowchart.html))
 
+This flowchart has links and tooltips on the boxes.
+
 ```{mermaid}
 title: t-doc.org site structure
 config:
-  look: handDrawn
   flowchart:
     curve: linear
     nodeSpacing: 20
@@ -39,8 +40,15 @@ flowchart LR;
     click informatique "https://informatique.t-doc.org/" "Computer science course"
 ```
 
+This flowchart has labels on the edges, sets the theme in the frontmatter with a
+static background, and has a hand-drawn look.
+
 ```{mermaid}
+:class: background-light
 title: How to repair a lamp
+config:
+  theme: default
+  look: handDrawn
 ---
 flowchart TD
   A(["Lamp doesn't work"]) --> B{"Lamp<br>plugged in?"}

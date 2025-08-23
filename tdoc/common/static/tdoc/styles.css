@@ -6,6 +6,13 @@
    selector should be more precise (.admonition > :last-child), but basic.css
    already has such a rule, so it could be removed altogether. */
 
+/* Variables */
+body {
+    --tdoc-background-light: #fff;
+    --tdoc-background-dark: #121212;
+}
+
+/* Utility classes */
 .hidden:not(#¶) {
     display: none;
 }
@@ -45,7 +52,7 @@ blockquote div > p:has(+ p.attribution) {
     margin-bottom: 0;
 }
 
-/* Server termination buttons. */
+/* Server termination buttons */
 .article-header-buttons > button.btn-terminate::before {
     font: var(--fa-font-solid);
     content: '\f52a';
@@ -239,7 +246,7 @@ div.tdoc-grid > div > :last-child {
     break-inside: avoid;
 }
 
-/* Function tables. */
+/* Function tables */
 table.function-table {
     text-align: center;
     margin: 1rem 0;
@@ -841,16 +848,22 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     background-size: 28.28px 28.28px;
 }
 
-/* Dynamic containers. */
+/* Dynamic containers */
 .tdoc-dyn {
     margin: 1rem 0;
     display: flex;
     justify-content: center;
 }
 
-/* Mermaid blocks. */
+/* Mermaid diagrams */
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
+}
+.tdoc-dyn[data-type=mermaid].background-light > svg {
+    background-color: var(--tdoc-background-light);
+}
+.tdoc-dyn[data-type=mermaid].background-dark > svg {
+    background-color: var(--tdoc-background-dark);
 }
 .mermaidTooltip {
   position: absolute;
@@ -864,7 +877,7 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
   z-index: 100;
 }
 
-/* JSXGraph blocks. */
+/* JSXGraph graphs */
 .tdoc-dyn[data-type=jsxgraph] {
     /* The magic value is used to detect the default in jsxgraph.js. */
     aspect-ratio: 142857 / 142857;
@@ -897,7 +910,7 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     }
 }
 
-/* Drop-down menus. */
+/* Drop-down menus */
 .dropdown-menu {
     --bs-dropdown-link-color: var(--pst-color-text-muted);
     --bs-dropdown-link-hover-color: var(--pst-color-text-muted);
@@ -935,7 +948,7 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     text-indent: -3rem;
 }
 
-/* Login functionality. */
+/* Login functionality */
 .article-header-buttons > .dropdown-user > button::before {
     font: var(--fa-font-regular);
     content: '\f007';
