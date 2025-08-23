@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-59)=
+## 0.59 *(2025-08-23)*
+
+- Added the {rst:dir}`mermaid` directive.
+- Changed the mapping for auto-completion in editors from {kbd}`Enter` to
+  {kbd}`Tab`.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.58...0.59)
+
 (release-0-58)=
 ## 0.58 *(2025-08-10)*
 
