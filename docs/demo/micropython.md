@@ -10,7 +10,6 @@ uploading and executing Python code on an embedded system running
 ```{defaults} exec
 :editor:
 :style: max-height: 20rem
-:output-style: max-height: 20rem
 ```
 
 ## Generic

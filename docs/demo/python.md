@@ -91,10 +91,10 @@ print("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
 ```
 
 The height of the terminal output block can be limited with
-{rst:dir}`:output-style: <exec:output-style>`.
+{rst:dir}`:console-style: <exec:console-style>`.
 
 ```{exec} python
-:output-style: max-height: 10rem
+:console-style: max-height: 10rem;
 for i in range(100):
   print(i)
 ```

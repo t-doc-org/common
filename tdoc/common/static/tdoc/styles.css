@@ -712,7 +712,10 @@ div.tdoc-exec-output.tdoc-sectioned > .canvas > canvas {
     display: block;
     margin: 0 auto;
 }
-div.tdoc-exec-output pre span.err {
+div.tdoc-exec-output > div.tdoc-console > pre {
+    max-height: 20rem;
+}
+div.tdoc-exec-output > div.tdoc-console > pre span.err {
     color: var(--pst-color-danger);
 }
 div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input {

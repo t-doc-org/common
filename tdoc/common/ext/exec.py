@@ -48,6 +48,7 @@ class Exec(code.CodeBlock):
     optional_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
         'after': names_option,
+        'console-style': directives.unchanged,
         'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
@@ -92,6 +93,7 @@ class Exec(code.CodeBlock):
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec', f'tdoc-exec-runner-{runner}']
         if v := self.options.get('after'): node['after'] = v
+        if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
@@ -193,6 +195,7 @@ def visit_exec(self, node):
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_data_attrs(self,
             after=' '.join(after) or None,
+            console_style=node.get('console-style'),
             editor=node.get('editor'),
             output_style=node.get('output-style'),
             then=' '.join(then) or None,

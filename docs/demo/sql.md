@@ -101,7 +101,8 @@ select * from wide;
 
 ### Tall results
 
-The height of large results tables can be limited with `:output-style:`.
+The height of large results tables can be limited with
+{rst:dir}`:output-style: <exec:output-style>`.
 
 ```{exec} sql
 :name: sql-tall

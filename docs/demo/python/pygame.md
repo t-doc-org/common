@@ -64,7 +64,6 @@ setup_canvas()
 :editor:
 :after: setup
 :style: max-height: 25rem;
-:output-style: max-height: 15rem;
 ```
 
 ## Changes required
@@ -248,7 +247,7 @@ finally:
 Terminate the program with {kbd}`Esc`.
 
 ```{exec} python main
-:output-style: max-height: 25rem;
+:console-style: max-height: 25rem;
 import pygame
 try:
     from pygame.examples.eventlist import main

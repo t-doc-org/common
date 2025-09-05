@@ -21,7 +21,7 @@ aspect ratio, but its size can be adjusted with
 ```{exec} html
 :when: load
 :editor:
-:style: height: 14rem
+:style: height: 14rem;
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,7 +50,7 @@ just an HTML snippet, and optionally styles (with a `<style>` element):
 ```{exec} html
 :when: load
 :editor:
-:output-style: height: 7rem
+:output-style: height: 7rem;
 <style>
 h1 { margin: 0; font-size: 5rem; }
 </style>
@@ -62,7 +62,8 @@ Or scripts (with a `<script>` element):
 ```{exec} html
 :when: load
 :editor:
-:output-style: height: 3rem
+:output-style: height: 3rem;
+:console-style: max-height: 5rem;
 Please click <button>here</button>
 <script>
 document.querySelector('button')

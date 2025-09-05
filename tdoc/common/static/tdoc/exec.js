@@ -332,7 +332,7 @@ class SectionedOutput {
     }
 
     render(name, html) {
-        const new_el = elmt(html);
+        const new_el = typeof html === 'string' ? elmt(html) : html;
         new_el.tdocName = name;
         if (!this.output?.parentNode) {
             this.output =
@@ -447,12 +447,13 @@ class ConsoleOut {
         if (data.length === 0) return;
         if (!this.out?.isConnected) {
             const div = this.out = this.output.render(
-                this.name, `<div class="highlight"><pre></pre></div>`);
+                this.name,
+                `<div class="tdoc-console highlight"><pre></pre></div>`);
             on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => div.remove());
-            const pre = qs(div, 'pre');
-            this.output.exec.setOutputStyle(pre);
+            const style = this.output.exec.node.dataset.tdocConsoleStyle;
+            if (style) qs(div, 'pre').setAttribute('style', style);
         }
         const out = qs(this.out, 'pre');
 
