@@ -84,9 +84,7 @@ class FlexTable(docutils.SphinxDirective):
             raise Exception(f"{{flex-table}} Invalid cell type: {t}")
         if (v := attrs.pop('cols', None)) is not None: cell['cols'] = v
         if (v := attrs.pop('rows', None)) is not None: cell['rows'] = v
-        if attrs:
-            raise Exception("{{flex-table}} Unknown cell attributes: "
-                            f"{' '.join(sorted(attrs.keys()))}")
+        cell['attrs'] = attrs
         # BUG(myst-pasrser): The line number reported in errors is off by 1.
         content, msgs = self.parse_inline(line[start: end], lineno=lineno - 1)
         cell += content

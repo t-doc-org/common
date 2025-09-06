@@ -1,12 +1,14 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import itertools
+
 from docutils import nodes
 from sphinx import errors
 from sphinx.environment import collectors
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
-from . import __version__, ReferenceRole
+from . import __version__, meta, ReferenceRole, report_exceptions, Role, table
 
 _log = logging.getLogger(__name__)
 
@@ -23,6 +25,11 @@ def setup(app):
     app.add_env_collector(NumCollector)
     app.connect('env-get-updated', number_per_namespace, priority=501)
     app.connect('doctree-resolved', update_num_nodes)
+
+    app.add_role('points', Points)
+    app.add_node(points, html=(visit_points, depart_points))
+    app.connect('doctree-resolved', handle_points, priority=499)
+
     return {
         'version': __version__,
         'parallel_read_safe': True,
@@ -72,7 +79,14 @@ class Num(ReferenceRole):
         return [node], []
 
 
-class num(nodes.Inline, nodes.TextElement): pass
+class num(nodes.Inline, nodes.TextElement):
+    def format(self, env, docname):
+        try:
+            n = env.toc_fignumbers[docname]['num'][self['ids'][0]]
+        except KeyError:
+            return None
+        return self['title'] % '.'.join(map(str, n))
+
 
 # Numbering is global per enumerable node type, and we want per-namespace
 # numbering. Numbers are assigned in TocTreeCollector.assign_figure_numbers()
@@ -180,13 +194,11 @@ def iter_num(env, doctree, docname):
     fail = not env.config.numfig
     for node in doctree.findall(num):
         if fail: raise errors.ConfigError("{num}: numfig is disabled")
-        try:
-            n = env.toc_fignumbers[docname]['num'][node['ids'][0]]
-        except KeyError:
+        if (text := node.format(env, docname)) is None:
             _log.warning("The {num} role cannot be used in orphaned documents",
                          location=node)
             continue
-        yield node, nodes.Text(node['title'] % '.'.join(map(str, n)))
+        yield node, nodes.Text(text)
 
 
 def visit_num(self, node):
@@ -195,3 +207,73 @@ def visit_num(self, node):
 
 def depart_num(self, node):
     self.body.append('</span>')
+
+
+class Points(Role):
+    @report_exceptions
+    def run(self):
+        node = points()
+        self.set_source_info(node)
+        parts = self.text.split(':', 1)
+        if (v := parts[0]).endswith('!'):
+            v = v[:-1]
+            node['nosum'] = True
+        try:
+            node['value'] = float(v)
+        except ValueError:
+            raise Exception(f"{{points}}: Invalid numeric value: {v}")
+        if len(parts) > 1: node['label'] = parts[1]
+        return [node], []
+
+
+class points(nodes.Inline, nodes.TextElement): pass
+
+
+def visit_points(self, node): pass
+def depart_points(self, node): pass
+
+
+def handle_points(app, doctree, docname):
+    # Format points values, in the document body and in the TOC.
+    fmt = meta(app, docname, 'points.format', "{0:.3g}")
+    tfmt = meta(app, docname, 'points.text', " ({0} points)").format(fmt)
+    for pn in itertools.chain(doctree.findall(points),
+                              app.env.tocs[docname].findall(points)):
+        pn[:] = [nodes.Text(tfmt.format(pn['value']))]
+
+    # Update points tables.
+    tbls = list(n for n in doctree.findall(table.flex_table)
+                if 'points-table' in n['classes'])
+    if not tbls: return
+    pns = list(doctree.findall(points))
+    for pn in pns:
+        if 'label' in pn: continue
+        if (n := pn.parent.next_node(num)) is not None:
+            if (t := n.format(app.env, docname)) is not None: pn['label'] = t
+    fmts = {None: fmt, True: f"({fmt})"}
+    for tbl in tbls:
+        for cell in list(tbl.findall(table.flex_cell)):
+            if (typ := cell['attrs'].get('points')) is None: continue
+            i = cell.parent.index(cell)
+            if typ == 'num':
+                cells = [clone(cell, nodes.Text(pn.get('label', '')))
+                         for pn in pns]
+            elif typ == 'value':
+                cells = [clone(cell, nodes.Text(
+                            fmts[pn.get('nosum')].format(pn['value'])))
+                         for pn in pns]
+            elif typ == 'sum':
+                psum = sum(pn['value'] for pn in pns if not pn.get('nosum'))
+                cells = [clone(cell, nodes.Text(fmt.format(psum)))]
+            elif typ == 'empty':
+                cells = [clone(cell) for pn in pns]
+            else:
+                _log.warning(f"Invalid points= attribute value: {typ}",
+                             location=cell)
+            cell.parent[i: i + 1] = cells
+
+
+def clone(node, *children):
+    n = node.copy()
+    if children: n.extend(children)
+    return n

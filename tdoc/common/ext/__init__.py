@@ -103,6 +103,16 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
+def meta(app, docname, key, default=None):
+    v = app.env.metadata[docname]
+    for k in key.split('.'):
+        try:
+            v = v[k]
+        except (KeyError, TypeError):
+            return default
+    return v
+
+
 def setup(app):
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
