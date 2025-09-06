@@ -78,7 +78,7 @@ interpreted.
   are dependency identifiers and the values can be either version numbers or
   full URLs. See
   [`deps.py`](https://github.com/t-doc-org/common/blob/main/tdoc/common/deps.py)
-  for the list of dependencies and their default version. The versions can be overridden for a whole site via the `tdoc_versions` option in `conf.py`.
+  for the list of dependencies and their default version.
 
   ```{code-block} yaml
   versions:

@@ -10,7 +10,6 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_config_value('tdoc_mermaid', {}, 'html', dict)
     app.add_directive('mermaid', Mermaid)
     return {
         'version': __version__,

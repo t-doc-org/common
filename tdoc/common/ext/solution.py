@@ -7,14 +7,12 @@ from docutils.parsers.rst.directives import admonitions
 from sphinx import config
 from sphinx.util import logging
 
-from . import _, __version__
+from . import _, __version__, meta
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_config_value('tdoc_solutions', 'show', 'html',
-                         config.ENUM('show', 'hide', 'dynamic'))
     app.add_directive('solution', Solution)
     app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('html-page-context', set_html_context)
@@ -55,12 +53,11 @@ class Solution(admonitions.BaseAdmonition):
         return res
 
 
-def set_html_context(app, page, template, context, doctree):
-    md = app.env.metadata[page]
-    v = md.get('solutions', app.config.tdoc_solutions)
-    if not app.config.values['tdoc_solutions'].valid_types.match(v):
-        _log.warning(f"{{metadata}}: Invalid 'solutions' value: {v}")
-        v = md['solutions'] = 'show'
+def set_html_context(app, docname, template, context, doctree):
+    v = meta(app, docname, 'solutions', 'show')
+    if v not in ('show', 'hide', 'dynamic'):
+        _log.warning(f"{{solution}}: Invalid 'solutions' value: {v}")
+        v = app.env.metadata[docname]['solutions'] = 'show'
     if v != 'show': context['html_attrs']['data-tdoc-solutions'] = v
 
 
