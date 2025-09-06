@@ -16,8 +16,8 @@ from wsgiref import util
 from . import store, wsgi
 
 missing = object()
-# TODO(py-3.13): Remove Shutdown
-Shutdown = getattr(queue, 'Shutdown', queue.Empty)
+# TODO(py-3.13): Remove ShutDown
+ShutDown = getattr(queue, 'ShutDown', queue.Empty)
 
 
 def arg(data, name, validate=None):
@@ -328,7 +328,7 @@ class Watcher:
                 yield b'}\n'
             except queue.Empty:
                 yield b'\n'
-            except Shutdown:
+            except ShutDown:
                 return
 
     def __enter__(self): return self
