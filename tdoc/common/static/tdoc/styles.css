@@ -29,6 +29,11 @@ div.sidebar, aside.sidebar {
     width: inherit;
 }
 
+/* Make rulers darker. */
+hr {
+    opacity: 1;
+}
+
 /* Invert the even and odd row colors in tables, so that the first row below the
    header has a different color than the header. */
 .table > tbody > tr:nth-child(even) {
@@ -244,6 +249,28 @@ div.tdoc-grid > div > :last-child {
 }
 :is(ol, ul).avoid-break-items > li {
     break-inside: avoid;
+}
+
+/* Grid tables */
+table.grid {
+    text-align: center;
+    margin: 1rem auto;
+}
+table.grid.align-left {
+    margin-left: 0;
+}
+table.grid.align-right {
+    margin-right: 0;
+}
+table.grid > :is(thead, tbody) > tr > :is(th, td) {
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--pst-color-text-base);
+}
+table.grid > :is(thead, tbody) > tr > :is(th, td).l {
+    text-align: left;
+}
+table.grid > :is(thead, tbody) > tr > :is(th, td).r {
+    text-align: right;
 }
 
 /* Function tables */
