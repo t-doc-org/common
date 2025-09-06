@@ -6,9 +6,14 @@
 @page {
     @top-left {
         content: attr(data-tdoc-subject);
+        white-space: nowrap;
+    }
+    @top-center {
+        content: attr(data-tdoc-title);
+        font-weight: bold;
     }
     @top-right {
-        content: attr(data-tdoc-title);
+        content: attr(data-tdoc-date);
     }
     @bottom-left {
         content: attr(data-tdoc-author);
@@ -16,7 +21,12 @@
     @bottom-center {
         content: counter(page) " / " counter(pages);
     }
-    @bottom-right {
-        content: attr(data-tdoc-date);
+}
+
+@media print {
+    .bd-main .bd-content #jb-print-docs-body {
+        display: none !important;
     }
+    .bd-main .bd-content .bd-article-container .bd-article {
+        padding-top: 0;
 }

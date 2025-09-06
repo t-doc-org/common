@@ -1,0 +1,116 @@
+/* Copyright 2025 Remy Blank <remy@c-space.org> */
+/* SPDX-License-Identifier: MIT */
+
+@page {
+    margin: 15mm 15mm 15mm 15mm;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    padding-top: 5mm;
+    padding-bottom: 5mm;
+    font-family: var(--pst-font-family-base);
+    font-size: 0.9rem;
+    font-weight: 400;
+
+    @top-left {
+        padding-bottom: 0.25rem;
+        vertical-align: bottom;
+    }
+    @top-center {
+        padding: 0 1rem 0.25rem 1rem;
+        vertical-align: bottom;
+    }
+    @top-right {
+        padding-bottom: 0.25rem;
+        vertical-align: bottom;
+    }
+    @bottom-left {
+        padding-top: 0.25rem;
+        vertical-align: top;
+    }
+    @bottom-center {
+        padding: 0.25rem 1rem 0 1rem;
+        vertical-align: top;
+    }
+    @bottom-right {
+        padding-top: 0.25rem;
+        vertical-align: top;
+    }
+}
+@page :left {
+    margin-right: 20mm;
+}
+@page :right {
+    margin-left: 20mm;
+}
+
+@media print {
+    html:not(#¶) {
+        --pst-font-size-base: 0.8rem;
+        --pst-font-size-h1: 2rem;
+        --pst-font-size-h2: 1.5rem;
+        --pst-font-size-h3: 1.3rem;
+        --pst-font-size-h4: 1.2rem;
+        --pst-font-size-h5: 1.15rem;
+        --pst-font-size-h6: 1.1rem;
+    }
+    #print-main-content {
+        display: none;
+    }
+    .bd-main .bd-content {
+        margin-left: 0;
+    }
+    .bd-main .bd-content .bd-article-container {
+        /* TODO: Maybe enable this */
+        /*max-width: 175mm;*/
+    }
+    .bd-main .bd-content #jb-print-docs-body h1 {
+        margin-top: 0;
+        font-size: var(--pst-font-size-h1);
+    }
+    .bd-main .bd-content .bd-article-container .bd-article {
+        padding-top: 1.5rem;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        margin: 1.5rem 0 0.75rem;
+    }
+    section.page-break > :is(h2, h3, h4, h5, h6):first-child {
+        margin-top: 0;
+    }
+    html[data-tdoc-page-break-force~=h2] section:has(> h2:first-child),
+    html[data-tdoc-page-break-force~=h3] section:has(> h3:first-child),
+    html[data-tdoc-page-break-force~=h4] section:has(> h4:first-child),
+    html[data-tdoc-page-break-force~=h5] section:has(> h5:first-child),
+    html[data-tdoc-page-break-force~=h6] section:has(> h6:first-child) {
+        break-after: page;
+        & > :is(h2, h3, h4, h5, h6):first-child {
+            margin-top: 0;
+        }
+    }
+    html[data-tdoc-page-break-avoid~=h2] section:has(> h2:first-child),
+    html[data-tdoc-page-break-avoid~=h3] section:has(> h3:first-child),
+    html[data-tdoc-page-break-avoid~=h4] section:has(> h4:first-child),
+    html[data-tdoc-page-break-avoid~=h5] section:has(> h5:first-child),
+    html[data-tdoc-page-break-avoid~=h6] section:has(> h6:first-child) {
+        break-inside: avoid-page;
+    }
+    a, a:visited {
+        color: var(--pst-color-text-base);
+        text-decoration: none;
+    }
+    hr {
+        border-top: 1px solid var(--pst-color-text-base);
+        opacity: 1;
+    }
+    .admonition.solution.dropdown:not(.expand) {
+        display: none;
+    }
+    #pst-back-to-top {
+        display: none !important;
+    }
+    /* Prevent shadows from getting clipped at the right page margin. */
+    div.admonition {
+        margin-right: 0.5rem;
+    }
+}
