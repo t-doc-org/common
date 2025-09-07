@@ -222,7 +222,7 @@ class Points(Role):
             node['value'] = float(v)
         except ValueError:
             raise Exception(f"{{points}}: Invalid numeric value: {v}")
-        if len(parts) > 1: node['label'] = parts[1]
+        node['label'] = parts[1] if len(parts) > 1 else "{0}"
         return [node], []
 
 
@@ -235,35 +235,33 @@ def handle_points(app, doctree, docname):
     tfmt = meta(app, docname, 'points.text', [" ({0} point)", " ({0} points)"])
     if isinstance(tfmt, str): tfmt = [tfmt, tfmt]
     tfmt = [f.format(fmt) for f in tfmt]
-    pns = list(doctree.findall(points))
-    for pn in itertools.chain(pns, app.env.tocs[docname].findall(points)):
+    pns = [(pn, pn.parent.next_node(num)) for pn in doctree.findall(points)]
+    for pn in itertools.chain((pn for pn, n in pns),
+                              app.env.tocs[docname].findall(points)):
         v = pn['value']
         pn.parent.replace(pn, nodes.Text(tfmt[v != 1].format(v)))
 
     # Update points tables.
-    tbls = list(n for n in doctree.findall(table.flex_table)
-                if 'points' in n['classes'])
-    if not tbls: return
-    for pn in pns:
-        if 'label' in pn: continue
-        if (n := pn.parent.next_node(num)) is not None:
-            if (t := n.format(app.env, docname)) is not None: pn['label'] = t
     fmts = {None: fmt, True: f"({fmt})"}
-    for tbl in tbls:
+    for tbl in doctree.findall(table.flex_table):
+        if 'points' not in tbl['classes']: continue
         for cell in list(tbl.findall(table.flex_cell)):
             if (typ := cell['attrs'].pop('points', None)) is None: continue
             if typ == 'label':
-                cells = [clone(cell, nodes.Text(pn.get('label', '')))
-                         for pn in pns]
+                cells = [
+                    clone(cell, nodes.Text(pn['label'].format(
+                        n.format(app.env, docname) if n is not None else '')))
+                     for pn, n in pns
+                ]
             elif typ == 'value':
                 cells = [clone(cell, nodes.Text(
                             fmts[pn.get('nosum')].format(pn['value'])))
-                         for pn in pns]
+                         for pn, n in pns]
             elif typ == 'sum':
-                psum = sum(pn['value'] for pn in pns if not pn.get('nosum'))
+                psum = sum(pn['value'] for pn, n in pns if not pn.get('nosum'))
                 cells = [clone(cell, nodes.Text(fmt.format(psum)))]
             elif typ == 'empty':
-                cells = [clone(cell) for pn in pns]
+                cells = [clone(cell) for pn, n in pns]
             else:
                 _log.warning(f"Invalid points= attribute value: {typ}",
                              location=cell)
