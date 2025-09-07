@@ -103,9 +103,6 @@
         border-top: 1px solid var(--pst-color-text-base);
         opacity: 1;
     }
-    .admonition.solution.dropdown:not(.expand) {
-        display: none;
-    }
     #pst-back-to-top {
         display: none !important;
     }

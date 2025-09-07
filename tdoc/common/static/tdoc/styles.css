@@ -339,6 +339,11 @@ table.function-table > :is(thead, tbody) > tr
     overflow: hidden;
     opacity: 0;
 }
+@media print {
+    .admonition.dropdown:not(.expand) {
+        display: none;
+    }
+}
 
 /* Iframes */
 iframe.tdoc {
