@@ -263,8 +263,9 @@ def handle_points(app, doctree, docname):
             elif typ == 'empty':
                 cells = [clone(cell) for pn, n in pns]
             else:
-                _log.warning(f"Invalid points= attribute value: {typ}",
-                             location=cell)
+                cells = [cell]
+                _log.error(f"Invalid points= attribute value: {typ}",
+                           location=cell)
             cell.parent.replace(cell, cells)
 
 
