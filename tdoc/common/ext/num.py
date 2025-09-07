@@ -232,10 +232,13 @@ class points(nodes.Inline, nodes.TextElement): pass
 def handle_points(app, doctree, docname):
     # Format points values, in the document body and in the TOC.
     fmt = meta(app, docname, 'points.format', "{0:.3g}")
-    tfmt = meta(app, docname, 'points.text', " ({0} points)").format(fmt)
+    tfmt = meta(app, docname, 'points.text', [" ({0} point)", " ({0} points)"])
+    if isinstance(tfmt, str): tfmt = [tfmt, tfmt]
+    tfmt = [f.format(fmt) for f in tfmt]
     pns = list(doctree.findall(points))
     for pn in itertools.chain(pns, app.env.tocs[docname].findall(points)):
-        pn.parent.replace(pn, nodes.Text(tfmt.format(pn['value'])))
+        v = pn['value']
+        pn.parent.replace(pn, nodes.Text(tfmt[v != 1].format(v)))
 
     # Update points tables.
     tbls = list(n for n in doctree.findall(table.flex_table)
@@ -249,7 +252,7 @@ def handle_points(app, doctree, docname):
     for tbl in tbls:
         for cell in list(tbl.findall(table.flex_cell)):
             if (typ := cell['attrs'].pop('points', None)) is None: continue
-            if typ == 'num':
+            if typ == 'label':
                 cells = [clone(cell, nodes.Text(pn.get('label', '')))
                          for pn in pns]
             elif typ == 'value':
