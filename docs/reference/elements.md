@@ -133,7 +133,9 @@ combine.
 
 ````{rst:directive} .. solution:: [title]
 This directive adds an admonition of type `solution`. The title defaults to
-"Solution", and the body is collapsed by default.
+"Solution", and the body is collapsed by default. The solution can be toggled by
+clicking on the title bar. Holding {kbd}`Ctrl` while clicking toggles all
+admonitions on the page.
 
 The `solutions:` key in the [document metadata](#document-metadata) controls how
 solutions are displayed.
