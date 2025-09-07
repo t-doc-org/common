@@ -99,11 +99,20 @@ tdoc.logout = async () => await api.user.logout();
 // Handle admonition expansion. The button is needed to enable keyboard focus.
 domLoaded.then(() => {
     for (const el of qsa(document, '.admonition.dropdown')) {
+        const toggle = all => {
+            const v = !el.classList.contains('expand');
+            for (const dd of all ? qsa(document, '.admonition.dropdown')
+                                 : [el]) {
+                dd.classList.toggle('expand', v);
+            }
+        };
         const title = qs(el, '.admonition-title')
-        on(title).click(() => el.classList.toggle('expand'));
+        on(title).click(e => {
+            toggle(e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey);
+        });
         // Enable keyboard navigation.
         on(title.appendChild(elmt`<button></button>`)).click(e => {
-            el.classList.toggle('expand');
+            toggle(e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey);
             e.stopPropagation();
         });
     }
