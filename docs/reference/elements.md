@@ -263,6 +263,70 @@ page name prefix. For example, numbering is continous across the pages
 This role is identical to {rst:role}`num`, but the numbering is per page.
 ````
 
+## Points
+
+`````{rst:role} points
+This role specifies a number of points, typically for an exercise or an exam
+question. The content of the role is structured as follows:
+
+- A points value, as a floating-point number.
+- Optionally, a `!` following the value to indicate that the value should not be
+  included in the sum of points. The points value is enclosed in parentheses in
+  the points table. This is typically used for bonus questions.
+- Optionally, a `:` followed by a label
+  [format string](https://docs.python.org/3/library/string.html#formatstrings).
+  A single argument is provided for formatting: the value of a {rst:role}`num`
+  role located at the same level as the {rst:role}`points` role, typically a
+  heading, or the empty string if there is none. The default is `"{0}"`.
+
+The points values can be collected into a {rst:dir}`flex-table` with
+`:class: points`. Cells with `points=` attributes are substituted with cells
+derived from the {rst:role}`points` roles. The following attribute values are
+supported:
+
+- `points=label`: Replace the cell with a list of cells containing the labels
+  of the points values.
+- `points=value`: Replace the cell with a list of cells containing the formatted
+  points values.
+- `points=empty`: Replace the cell with a list of empty cells, one for each
+  points value.
+- `points=sum`: Replace the cell with a cell containing the formatted sum of the
+  points values, excluding those postfixed with `!`.
+
+````{code-block}
+```{flex-table}
+:class: points grid
+{t=h}|{.l}Exercise    |{points=label}|Total
+{t=b}|{t=h .l}Points  |{points=value}|{points=sum}
+     |{t=h .l}Obtained|{points=empty}|
+```
+
+## Exercise {nump}`ex:intro`{points}`2`
+
+Calculate...
+
+## Exercise {nump}`ex`{points}`3`
+
+Prove that...
+
+## Bonus {nump}`bonus`{points}`1!:Bonus {0}`
+
+Explain how...
+````
+
+The points values are formatted using
+[format strings](https://docs.python.org/3/library/string.html#formatstrings)
+specified in {rst:dir}`metadata`.
+
+- `points:format:`: A format string to format a {py:class}`float` value. The
+  default is `"{0:.3g}"`.
+- `points:text:` A single or a pair of format strings to format the text that is
+  substituted for the {rst:role}`points` roles. When a pair is provided, the
+  first element is used when the points value is `1` (singular), and the second
+  is used for all other values (plural). The default is
+  `[" ({0} point)", " ({0} points)"]`.
+`````
+
 ## Flex table
 
 `````{rst:directive} .. flex-table::
@@ -308,6 +372,10 @@ table, using the following syntax:
 Tables have no styling by default, but the following classes are set up in the
 stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
 
+- `grid`: Formats the table as a grid, using a `1px` solid border on all cells.
+  The following classes can be set on table cells:
+  - `.l`: Aligns the cell content to the left.
+  - `.r`: Aligns the cell content to the right.
 - `function-table`: Formats the table as a function value and / or sign table.
   The following classes can be set on table cells:
   - `.l`: Aligns the cell content to the left.

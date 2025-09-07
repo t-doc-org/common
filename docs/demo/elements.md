@@ -10,6 +10,8 @@ hide solutions by default.
 
 ```{metadata}
 solutions: hide
+points:
+  text: [" ({0} pt)", " ({0} pts)"]
 ```
 
 ## Solutions
@@ -65,13 +67,28 @@ The presentation below is embedded with the {rst:dir}`iframe` directive.
 ```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
 ```
 
-## Numbering
+## Numbering & points
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that
 reference each other with the {rst:role}`numref` role, and separately numbered
-unreferenced quotes using {rst:role}`nump`.
+unreferenced quotes using {rst:role}`nump`. It also assigns points to each
+sub-section with the {rst:role}`points` role, and displays a points table at the
+top.
 
-### Exercise {num}`ex:first`
+<style>
+table.points > thead > tr > th {
+  min-width: 3rem;
+}
+</style>
+
+```{flex-table}
+:class: points grid align-left
+{t=h}|{.l}Exercise    |{points=label}|Total
+{t=b}|{t=h .l}Points  |{points=value}|{points=sum}
+     |{t=h .l}Obtained|{points=empty}|
+```
+
+### Exercise {num}`ex:first`{points}`2.5`
 
 Read these quotes, then move on to exercises {numref}`ex:second` &
 {numref}`ex:third`.
@@ -84,7 +101,7 @@ Read these quotes, then move on to exercises {numref}`ex:second` &
 > **Quote {nump}`quote`:** Real stupidity beats artificial intelligence every
 > time.
 
-### Exercise {num}`ex:second`
+### Exercise {num}`ex:second`{points}`1`
 
 You've already read the quotes from {numref}`exercise %s<ex:first>`. Read this
 one as well, then go to {numref}`exercise %s<ex:third>`.
@@ -93,13 +110,26 @@ one as well, then go to {numref}`exercise %s<ex:third>`.
 > **Quote {nump}`quote`:** For a moment, nothing happened. Then, after a second
 > or so, nothing continued to happen.
 
-### Exercise {num}`ex:third`
+### Exercise {num}`ex:third`{points}`2`
 
 This is the last quote.
 
 {attribution="Iain M. Banks, Consider Phlebas"}
 > **Quote {nump}`quote`:** I had nightmares I thought were really horrible until
 > I woke up and remembered what reality was at the moment.
+
+### Bonus {num}`bonus`{points}`1!:B{0}`
+
+{attribution="Martha Wells, Network Effect"}
+> **Quote {nump}`quote`:** "Can I ask you a question?" I never know how to
+> answer this. Should I go with my first impulse, which is always "no" or just
+> give in to the inevitable?
+
+### Bonus {num}`bonus`{points}`0.5!:B{0}`
+
+{attribution="Neal Stephenson, Anathem"}
+> **Quote {nump}`quote`:** Technically, of course, he was right. Socially, he
+> was annoying us.
 
 ## Grid layouts
 
