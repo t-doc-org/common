@@ -27,7 +27,7 @@ def setup(app):
     app.connect('doctree-resolved', update_num_nodes)
 
     app.add_role('points', Points)
-    app.add_node(points, html=(visit_points, depart_points))
+    app.add_node(points)
     app.connect('doctree-resolved', handle_points, priority=499)
 
     return {
@@ -229,23 +229,18 @@ class Points(Role):
 class points(nodes.Inline, nodes.TextElement): pass
 
 
-def visit_points(self, node): pass
-def depart_points(self, node): pass
-
-
 def handle_points(app, doctree, docname):
     # Format points values, in the document body and in the TOC.
     fmt = meta(app, docname, 'points.format', "{0:.3g}")
     tfmt = meta(app, docname, 'points.text', " ({0} points)").format(fmt)
-    for pn in itertools.chain(doctree.findall(points),
-                              app.env.tocs[docname].findall(points)):
-        pn[:] = [nodes.Text(tfmt.format(pn['value']))]
+    pns = list(doctree.findall(points))
+    for pn in itertools.chain(pns, app.env.tocs[docname].findall(points)):
+        pn.parent.replace(pn, nodes.Text(tfmt.format(pn['value'])))
 
     # Update points tables.
     tbls = list(n for n in doctree.findall(table.flex_table)
-                if 'points-table' in n['classes'])
+                if 'points' in n['classes'])
     if not tbls: return
-    pns = list(doctree.findall(points))
     for pn in pns:
         if 'label' in pn: continue
         if (n := pn.parent.next_node(num)) is not None:
@@ -253,8 +248,7 @@ def handle_points(app, doctree, docname):
     fmts = {None: fmt, True: f"({fmt})"}
     for tbl in tbls:
         for cell in list(tbl.findall(table.flex_cell)):
-            if (typ := cell['attrs'].get('points')) is None: continue
-            i = cell.parent.index(cell)
+            if (typ := cell['attrs'].pop('points', None)) is None: continue
             if typ == 'num':
                 cells = [clone(cell, nodes.Text(pn.get('label', '')))
                          for pn in pns]
@@ -270,7 +264,7 @@ def handle_points(app, doctree, docname):
             else:
                 _log.warning(f"Invalid points= attribute value: {typ}",
                              location=cell)
-            cell.parent[i: i + 1] = cells
+            cell.parent.replace(cell, cells)
 
 
 def clone(node, *children):
