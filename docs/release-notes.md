@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-60)=
+## 0.60 *(2025-09-07)*
+
+- Added the {rst:role}`points` role.
+- Added a print stylesheet for exams.
+- Added support for styling console output with
+  {rst:dir}`{exec} :console-style: <exec:console-style>`.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.59...0.60)
+
 (release-0-59)=
 ## 0.59 *(2025-08-23)*
 
