@@ -1087,6 +1087,13 @@ dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
     display: none;
 }
 
+/* Adjust the stroke width for SVG character paths. */
+/* TODO(mathjax-4): Remove and use the svg.blacker setting instead */
+mjx-container[jax="SVG"]:not(#¶) path[data-c],
+mjx-container[jax="SVG"]:not(#¶) use[data-c] {
+  stroke-width: 0;
+}
+
 /* Make align-* classes work on math blocks. */
 div.math.align-left:not(#¶) > mjx-container {
     text-align: left;

@@ -88,6 +88,7 @@ mathjax3_config = {
         'mtextInheritFont': True,
     },
     'svg': {
+        'blacker': 0,
         'mtextInheritFont': True,
     },
 }

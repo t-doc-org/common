@@ -224,7 +224,7 @@ def add_js(app, page, template, context, doctree):
     mathjax = tdoc['versions'].pop('mathjax')
     if mathjax.startswith('/'): mathjax = f'../{mathjax[1:]}'
     context['tdoc_mathjax_path'] = app.config.mathjax_path
-    app.config.mathjax_path = f'{mathjax}/tex-chtml-full.js'
+    app.config.mathjax_path = f'{mathjax}/tex-svg-full.js'
     tdoc = json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
