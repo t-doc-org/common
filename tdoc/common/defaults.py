@@ -101,7 +101,7 @@ class update:
         self.__dict__['_d'] = d
 
     def __getitem__(self, key):
-        return DictUpdater(self._d.setdefault(key, {}))
+        return update(self._d.setdefault(key, {}))
 
     def __setitem__(self, key, value):
         self._d[key] = value
