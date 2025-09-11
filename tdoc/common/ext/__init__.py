@@ -217,14 +217,23 @@ jinja2glue.SphinxFileSystemLoader.get_source = _get_source
 
 
 def add_js(app, page, template, context, doctree):
-    # Set up early and on-load JavaScript. Temporarily override mathjax_path
-    # as per version specification, then restore it after
-    # mathjax.install_mathjax() has run.
+    # Temporarily override mathjax_path and mathjax3_config, then restore them
+    # after mathjax.install_mathjax() has run.
     tdoc = tdoc_config(app, page, doctree, context)
-    mathjax = tdoc['versions'].pop('mathjax')
-    if mathjax.startswith('/'): mathjax = f'../{mathjax[1:]}'
-    context['tdoc_mathjax_path'] = app.config.mathjax_path
-    app.config.mathjax_path = f'{mathjax}/tex-svg-full.js'
+    version = tdoc['versions'].pop('mathjax')
+    if version.startswith('/'): version = f'..{version}'
+    cfg = meta(app, page, 'mathjax', {})
+    if (out := cfg.get('output', 'svg')) not in ('chtml', 'svg'):
+        _log.warning("Invalid mathjax:output: metadata value (allowed: chtml, "
+                     f"svg): {out}")
+        out = 'svg'
+    context['tdoc_mathjax_save'] = (app.config.mathjax_path,
+                                    app.config.mathjax3_config)
+    app.config.mathjax_path = f'{version}/tex-{out}-full.js'
+    app.config.mathjax3_config = merge_dict(
+        copy.deepcopy(app.config.mathjax3_config), cfg)
+
+    # Set up early and on-load JavaScript.
     tdoc = json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
@@ -232,8 +241,9 @@ def add_js(app, page, template, context, doctree):
 
 
 def restore_mathjax(app, page, template, context, doctree):
-    app.config.mathjax_path = context['tdoc_mathjax_path']
-    del context['tdoc_mathjax_path']
+    app.config.mathjax_path, app.config.mathjax3_config = \
+        context['tdoc_mathjax_save']
+    del context['tdoc_mathjax_save']
 
 
 def tdoc_config(app, page=None, doctree=None, context=None):
@@ -360,24 +370,6 @@ class UniqueChecker(collectors.EnvironmentCollector):
                 ids[v] = (app.env.docname, (node.source, node.line))
             else:
                 doctree.reporter.error(self.err(v), base_node=node)
-
-
-class DictUpdater:
-    def __init__(self, d):
-        self.__dict__['_d'] = d
-
-    def __getitem__(self, key):
-        return DictUpdater(self._d.setdefault(key, {}))
-
-    def __setitem__(self, key, value):
-        self._d[key] = value
-
-    def __delitem__(self, key):
-        del self._d[key]
-
-    __getattr__ = __getitem__
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
 
 
 class Dyn(docutils.SphinxDirective):

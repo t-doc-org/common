@@ -14,8 +14,12 @@ In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields), the following top-level keys are
 interpreted.
 
+`date`
+: The date to use in headers and footers when printing. Defaults to the current
+  date.
+
 `exec`
-: A mapping of per-language configuration for client-side code execution.
+: A map of per-language configuration for client-side code execution.
 
   ```{code-block} yaml
   exec:
@@ -23,8 +27,16 @@ interpreted.
       packages: [sqlite3]
   ```
 
+`mathjax`
+: A map of
+  [MathJax configuration](https://docs.mathjax.org/en/stable/web/configuration.html)
+  overrides.
+
+  `output`
+  : The default output processor (`chtml`, `svg`). The default is `svg`.
+
 `mermaid`
-: A mapping of config properties for {rst:dir}`mermaid` diagrams.
+: A map of config properties for {rst:dir}`mermaid` diagrams.
 
 `page-break-avoid`
 : A level or list of levels of sections in which page breaks should be avoided.
@@ -37,7 +49,18 @@ interpreted.
 : A CSS stylesheet URL to use when printing. Relative URLs are resolved relative
   to the `_static` directory. The following print stylesheets are provided:
 
-  - `tdoc/print.css`: A simple style with page headers and footers.
+  - `tdoc/print.css`
+    - Header, left: The value of the `subject` metadata.
+    - Header, right: The first-level title of the document.
+    - Footer, left: The site author.
+    - Footer, center: The page number and the total number of pages.
+    - Footer, right: The value of the `date` metadata.
+  - `tdoc/print-exam.css`
+    - Header, left: The value of the `subject` metadata.
+    - Header, center: The first-level title of the document.
+    - Header, right: The value of the `date` metadata.
+    - Footer, left: The site author.
+    - Footer, center: The page number and the total number of pages.
 
 `scripts`
 : A list of scripts to reference from the page header through `<script>`{l=html}

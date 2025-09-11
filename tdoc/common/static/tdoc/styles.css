@@ -1088,7 +1088,7 @@ dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
 }
 
 /* Adjust the stroke width for SVG character paths. */
-/* TODO(mathjax-4): Remove and use the svg.blacker setting instead */
+/* TODO(mathjax-4): Remove and use the svg.blacker config instead */
 mjx-container[jax="SVG"]:not(#¶) path[data-c],
 mjx-container[jax="SVG"]:not(#¶) use[data-c] {
   stroke-width: 0;
