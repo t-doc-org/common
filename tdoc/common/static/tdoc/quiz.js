@@ -180,8 +180,9 @@ class TableGenQuiz extends QuizBase {
 
 export async function generator(name, fn) {
     await setupDone;
-    for (const quiz of qsa(document, '.tdoc-quiz')) {
-        if (quiz.dataset.gen === name) quiz.tdocQuiz.setGenerator(fn);
+    for (const quiz of qsa(document,
+                           `.tdoc-quiz[data-gen="${CSS.escape(name)}"]`)) {
+        quiz.tdocQuiz.setGenerator(fn);
     }
 }
 
