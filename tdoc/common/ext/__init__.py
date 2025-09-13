@@ -405,6 +405,7 @@ def visit_dyn(self, node):
     attrs = {'data-type': node['type']}
     if v := node.get('name'): attrs['data-name'] = v
     if v := node.get('style'): attrs['style'] = v
+    if (v := node.get('attrs')) is not None: attrs |= v
     self.body.append(self.starttag(node, 'div', '', classes=['tdoc-dyn'],
                                    **attrs))
 

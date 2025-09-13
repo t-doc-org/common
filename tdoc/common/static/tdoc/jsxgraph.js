@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, findDyn, mathJaxReady, qs} from './core.js';
+import {domLoaded, findDyn, mathJaxReady, qs, qsa} from './core.js';
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
@@ -75,6 +75,12 @@ JXG.merge(JXG.Options, {
         fontSize,
         useMathJax: true,
     },
+    grid: {
+        includeBoundaries: true,
+        strokeOpacity: 0.6,
+        major: {face: 'line'},
+        minor: {face: 'line', strokeOpacity: 0.3},
+    },
 });
 
 // Mix-in board attributes to disable interactive features.
@@ -84,26 +90,35 @@ export const nonInteractive = {
 };
 
 // Mix-in board attributes to draw only selected labels on the default axes.
+// For number arguments, the labels that are their multiples are drawn. For
+// array arguments, only the listed values are drawn.
 export function withAxesLabels(xs, ys) {
-    return {
-        defaultAxes: {
-            x: {ticks: {
-                // TODO: Find how to use "labels"
-                generateLabelText: function(tick, zero) {
-                    const v = this.formatLabelText(tick.usrCoords[1]
-                                                   - zero.usrCoords[1]);
-                    return !xs || xs.includes(v) ? `\\(${v}\\)` : '';
-                },
-            }},
-            y: {ticks: {
-                generateLabelText: function(tick, zero) {
-                    const v = this.formatLabelText(tick.usrCoords[2]
-                                                   - zero.usrCoords[2]);
-                    return !ys || ys.includes(v) ? `\\(${v}\\)` : '';
-                },
-            }},
-        },
-    };
+    function gen(i, vs) {
+        // This must not be a lambda because JSXGraph binds "this".
+        function format(tick, zero) {
+            const v = tick.usrCoords[i] - zero.usrCoords[i];
+            return !vs || (typeof vs === 'number' && multipleOf(v, vs))
+                       || (vs instanceof Array && includesClose(vs, v))
+                   ? `\\(${this.formatLabelText(v)}\\)` : '';
+        }
+        return format;
+    }
+    // TODO: Find how to use "labels"
+    return {defaultAxes: {
+        x: {ticks: xs ? {generateLabelText: gen(1, xs)} : {}},
+        y: {ticks: ys ? {generateLabelText: gen(2, ys)} : {}},
+    }};
+}
+
+// Return true iff v is close to a multiple of n.
+function multipleOf(v, n, epsilon = 1e-6) {
+    const d = Math.abs((v % n) / n);
+    return d < epsilon || (1 - d) < epsilon;
+}
+
+// Return true iff values contains a value that is close to v.
+function includesClose(values, v, epsilon = 1e-6) {
+    return values.some(value => Math.abs(value - v) < epsilon);
 }
 
 // Merge attribute sets, with later sets overriding earlier ones.
@@ -122,12 +137,15 @@ export function merge(...attrs) {
     return res;
 }
 
-// Initialize a board for the {jsxgraph} directive with the given name. Calls
-// fn(board) if fn is provided, and returns the board.
-export async function initBoard(name, attrs, fn) {
+// Initialize a board for a {jsxgraph} directive, identified either by name or
+// by its wrapper element. Calls fn(board) if fn is provided, and returns the
+// board.
+export async function initBoard(node, attrs, fn) {
     attrs = merge(attrs);
-    await domLoaded;
-    const node = findDyn('jsxgraph', name);
+    if (typeof node === 'string') {
+        await domLoaded;
+        node = findDyn('jsxgraph', node);
+    }
     if (node.style.aspectRatio === ''
             && getComputedStyle(node).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
@@ -144,3 +162,47 @@ export async function initBoard(name, attrs, fn) {
     node.classList.add('rendered');
     return board;
 }
+
+// Define a template.
+export async function template(name, fn) {
+    await domLoaded;
+    for (const el of qsa(document, `\
+div.tdoc-dyn[data-type=jsxgraph][data-template="${CSS.escape(name)}"]`)) {
+        const args = el.dataset.args ? JSON.parse(el.dataset.args) : [];
+        fn(el, ...args);
+    }
+}
+
+template('grid', (el, width = 35, height = 10, grid = {}, board = {}) => {
+    initBoard(el, [
+        {
+            boundingBox: [0, 0, width, -height],
+            grid: {majorStep: 1, minorElements: 0},
+        },
+        {grid}, nonInteractive, board,
+    ]);
+});
+
+template('axes', (el, boundingBox = [-11, 11, 11, -11], opts = {},
+                  board = {}) => {
+    initBoard(el, [
+        {
+            boundingBox, axis: true, grid: true,
+            defaultAxes: {
+                x: {ticks: {
+                    insertTicks: false,
+                    ticksDistance: opts.majorX ?? opts.major ?? 1,
+                    minorTicks: opts.minorX ?? opts.minor ?? 0,
+                }},
+                y: {ticks: {
+                    insertTicks: false,
+                    ticksDistance: opts.majorY ?? opts.major ?? 1,
+                    minorTicks: opts.minorY ?? opts.minor ?? 0,
+                }},
+            },
+        },
+        withAxesLabels(opts.labelsX ?? opts.labels,
+                       opts.labelsY ?? opts.labels),
+        {grid: opts.grid ?? {}}, nonInteractive, board,
+    ]);
+});

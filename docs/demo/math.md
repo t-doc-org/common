@@ -67,6 +67,36 @@ Drag the point $P$ on the circle.
 ```{jsxgraph} trig-circle
 ```
 
+### Template: `grid`
+
+5mm grid (approximate) for writing
+
+```{jsxgraph}
+:template: grid(35, 10)
+```
+
+Millimeter grid (approximate) for precise drawing
+
+```{jsxgraph}
+:template: grid(17.5, 5, {"minorElements": 9})
+```
+
+### Template: `axes`
+
+```{jsxgraph}
+:template: |
+: axes([-2, 5, 25, -5],
+:      {"majorX": 5, "minorX": 4, "majorY": 2, "minorY": 1,
+:       "grid": {"majorStep": 1}})
+```
+
+```{jsxgraph}
+:template: |
+: axes([-1, 8, 25, -1],
+:      {"labelsX": [1, 2, 4, 8, 16], "majorY": 2, "minorY": 1,
+:       "grid": {"majorStep": [10, 2], "minorElements": [9, 1]}})
+```
+
 <script type="module">
 const [{initBoard, JXG}] = await tdoc.imports('tdoc/jsxgraph.js');
 
