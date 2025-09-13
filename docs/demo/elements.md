@@ -14,7 +14,9 @@ points:
   text: [" ({0} pt)", " ({0} pts)"]
 ```
 
-## Vertical space
+## Spacing
+
+The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
 
 1.  Write the chemical formula for acetic acid.
     {vspace}`2lh`
@@ -25,7 +27,8 @@ points:
 
 {.lower-alpha-paren .vsep-2}
 1.  $(x-1)(x+2)=$ {leader}`.`
-2.  Which properties did you use above? {leader}`_`
+2.  Which property did you use above? {leader}`_`
+3.  The quick brown {leader}`.|6em` jumps over the {leader}`_|6em` dog.
 
 ## SVG
 

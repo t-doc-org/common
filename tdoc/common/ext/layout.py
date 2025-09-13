@@ -15,6 +15,7 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
+    app.add_role('hspace', HSpace)
     app.add_role('vspace', VSpace)
     app.add_role('leader', Leader)
     app.add_directive('block', Block)
@@ -35,12 +36,16 @@ def setup(app):
     }
 
 
-class VSpace(Role):
+class Space(Role):
     def run(self):
         node = span('', classes=[f'tdoc-{self.name}'],
-                    attrs={'style': f'height:{self.text}'})
+                    attrs={'style': f'{self.attr}:{self.text}'})
         self.set_source_info(node)
         return [node], []
+
+
+class HSpace(Space): attr = 'width'
+class VSpace(Space): attr = 'height'
 
 
 class span(nodes.Inline, nodes.Element): pass
@@ -57,12 +62,17 @@ def leave_span(self, node):
 
 class Leader(Role):
     def run(self):
-        node = nodes.pending(misc.CallBack, {
-            'callback': add_classes_to_parent,
-            'classes': [f'tdoc-{self.name}', f'c{self.text}'],
-        })
+        parts = self.text.split('|', 1)
+        if len(parts) == 1:
+            node = nodes.pending(misc.CallBack, {
+                'callback': add_classes_to_parent,
+                'classes': [f'tdoc-{self.name}', 'eol', f'c{self.text}'],
+            })
+            self.inliner.document.note_pending(node)
+        else:
+            node = span('', classes=[f'tdoc-{self.name}', f'c{parts[0]}'],
+                        attrs={'style': f'width:{parts[1]}'})
         self.set_source_info(node)
-        self.inliner.document.note_pending(node)
         return [node], []
 
 

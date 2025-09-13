@@ -152,11 +152,22 @@ combine.
 ````
 `````
 
-## Vertical space
+## Spacing
+
+````{rst:role} hspace
+This role inserts a `<span>` with `display: inline-block`, and sets the content
+of the role as the element's `width:` property. The content must include a
+[length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
+`em`.
+
+```{code-block}
+The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
+```
+````
 
 ````{rst:role} vspace
 This role inserts a `<span>` with `display: block`, and sets the content of the
-role as the element's `height:` property. The content should include a
+role as the element's `height:` property. The content must include a
 [length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
 `lh` for a number of lines.
 
@@ -171,17 +182,21 @@ Calculate the product of the integers from 1 to 10.
 ## Leader
 
 ````{rst:role} leader
-This role causes its container to end with a leader line. The content of the
-role is the character to use for the leader line. The stylesheet supports `.`
-and `_` out-of-the-box.
+This role adds a leader line. The content of the role is the character to use
+for the leader line, optionally followed by `|` and the width of the leader
+(including a
+[length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length)). If no
+width is given, the leader extends until the end of the line.
 
 ```{code-block}
 $2 + 3 =$ {leader}`.`
+
+The quick brown {leader}`_|6em` jumps over the {leader}`_|6em` dog.
 ```
 
-To add support for other characters, e.g. `*`, define a CSS rule like the
-following, with the `contents:` property value long enough to exceed the page
-width.
+The stylesheet supports `.` and `_` out-of-the-box. To add support for other
+characters, e.g. `*`, define a CSS rule like the following, with the `contents:`
+property value long enough to exceed the page width.
 
 ```{code-block}
 .tdoc-leader.c\*::after {

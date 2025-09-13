@@ -110,19 +110,26 @@ blockquote div > p:has(+ p.attribution) {
 .columns-8 {
     column-count: 8;
 }
+.tdoc-hspace {
+    display: inline-block;
+}
 .tdoc-vspace {
     display: block;
 }
 
 /* Leaders */
-.tdoc-leader {
+.tdoc-leader.eol {
     position: relative;
     overflow: hidden;
 }
-.tdoc-leader::after {
+.tdoc-leader.eol::after {
   position: absolute;
   margin-left: 0.5rem;
-  text-align: right;
+}
+.tdoc-leader:not(.eol) {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
 }
 .tdoc-leader.c\.::after {
   content: "................................................................"
@@ -132,7 +139,7 @@ blockquote div > p:has(+ p.attribution) {
            "................................................................"
            "................................................................";
 }
-.tdoc-leader.c_::after {
+.tdoc-leader.c\_::after {
   content: "________________________________________________________________"
            "________________________________________________________________"
            "________________________________________________________________"
