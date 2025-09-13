@@ -144,6 +144,7 @@ def visit_quiz_ph(self, node):
     self.body.append(self.starttag(
         node, 'span', suffix='', classes=['tdoc-quiz-ph'],
         **{'data-text': node['text']}))
+    self.body.append('</span>')
     raise nodes.SkipNode()
 
 
