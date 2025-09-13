@@ -194,9 +194,9 @@ $2 + 3 =$ {leader}`.`
 The quick brown {leader}`_|6em` jumps over the {leader}`_|6em` dog.
 ```
 
-The stylesheet supports `.` and `_` out-of-the-box. To add support for other
-characters, e.g. `*`, define a CSS rule like the following, with the `contents:`
-property value long enough to exceed the page width.
+The stylesheet supports `.`, `_` and `dot` (dot leader). To add support for
+other characters, e.g. `*`, define a CSS rule like the following, with the
+`contents:` property value long enough to exceed the page width.
 
 ```{code-block}
 .tdoc-leader.c\*::after {
