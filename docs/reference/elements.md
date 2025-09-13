@@ -247,6 +247,22 @@ by assistive technologies.
 ```
 `````
 
+## Vertical space
+
+````{rst:role} vspace
+This role inserts a `<span>` with `display: block`, and sets the content of the
+role as the element's `height:` property. The content should include a
+[length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
+`lh` to set the height to a number of lines.
+
+```{code-block}
+Calculate the sum of the integers from 1 to 10.
+{vspace}`3lh`
+Calculate the product of the integers from 1 to 10.
+{vspace}`3lh`
+```
+````
+
 ## Numbering
 
 ````{rst:role} num

@@ -8,15 +8,17 @@ from docutils.parsers.rst import directives
 import markupsafe
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions
+from . import __version__, report_exceptions, Role
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
+    app.add_role('vspace', VSpace)
     app.add_directive('block', Block)
     app.add_directive('blocks', Blocks)
     app.add_directive('list-grid', ListGrid)
+    app.add_node(span, html=(visit_span, leave_span))
     app.add_node(block)
     app.add_node(blocks)
     app.add_node(grid, html=(visit_grid, depart_grid))
@@ -29,6 +31,26 @@ def setup(app):
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
+
+
+class VSpace(Role):
+    def run(self):
+        node = span('', classes=[f'tdoc-{self.name}'],
+                    attrs={'style': f'height:{self.text}'})
+        self.set_source_info(node)
+        return [node], []
+
+
+class span(nodes.Inline, nodes.Element): pass
+
+
+def visit_span(self, node):
+    self.body.append(self.starttag(node, 'span', suffix='',
+                                   **node.get('attrs', {})))
+
+
+def leave_span(self, node):
+    self.body.append('</span>')
 
 
 class Block(docutils.SphinxDirective):

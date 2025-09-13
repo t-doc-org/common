@@ -110,6 +110,9 @@ blockquote div > p:has(+ p.attribution) {
 .columns-8 {
     column-count: 8;
 }
+.tdoc-vspace {
+    display: block;
+}
 
 /* Grids */
 .tdoc-grid {
