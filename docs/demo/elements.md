@@ -14,6 +14,29 @@ points:
   text: [" ({0} pt)", " ({0} pts)"]
 ```
 
+## Vertical space
+
+1.  Write the chemical formula for acetic acid.
+    {vspace}`2lh`
+2.  Write the chemical equation of the synthesis of water.
+    {vspace}`2lh`
+
+## Leaders
+
+{.lower-alpha-paren .vsep-2}
+1.  $(x-1)(x+2)=$ {leader}`.`
+2.  Which properties did you use above? {leader}`_`
+
+## SVG
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 100 100" width="100" height="100"
+     stroke="red" fill="transparent">
+  <path d="M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20
+           Q 40,10 0,40 Q -40,10 -40,-20 z"
+        transform="translate(50 50) rotate(20)"/>
+</svg>
+
 ## Solutions
 
 This section has several {rst:dir}`solution` blocks, and the page is
@@ -44,27 +67,17 @@ This solution is expanded by default.
 This solution has a different color, and no drop-down.
 ```
 
-## SVG
-
-<svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 100 100" width="100" height="100"
-     stroke="red" fill="transparent">
-  <path d="M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20
-           Q 40,10 0,40 Q -40,10 -40,-20 z"
-        transform="translate(50 50) rotate(20)"/>
-</svg>
-
 ## IFrames
+
+The presentation below is embedded with the {rst:dir}`iframe` directive.
+
+```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
+```
 
 The [YouTube](https://youtube.com/) video below is embedded with the
 {rst:dir}`youtube` directive.
 
 ```{youtube} aVwxzDHniEw
-```
-
-The presentation below is embedded with the {rst:dir}`iframe` directive.
-
-```{iframe} https://docs.google.com/presentation/d/e/2PACX-1vQEemAMuCYvYvdxAJVRJBFD5NU8NQzasRyRpNau10iIVNGCpZSRgw_5dYTUd8EDhE8YyB_6v8b_2F37/embed?start=false&loop=false&delayms=3000
 ```
 
 ## Numbering & points

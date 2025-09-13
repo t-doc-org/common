@@ -5,6 +5,7 @@ import datetime
 
 from docutils import nodes
 from docutils.parsers.rst import directives
+from docutils.transforms import misc
 import markupsafe
 from sphinx.util import docutils, logging
 
@@ -15,6 +16,7 @@ _log = logging.getLogger(__name__)
 
 def setup(app):
     app.add_role('vspace', VSpace)
+    app.add_role('leader', Leader)
     app.add_directive('block', Block)
     app.add_directive('blocks', Blocks)
     app.add_directive('list-grid', ListGrid)
@@ -51,6 +53,21 @@ def visit_span(self, node):
 
 def leave_span(self, node):
     self.body.append('</span>')
+
+
+class Leader(Role):
+    def run(self):
+        node = nodes.pending(misc.CallBack, {
+            'callback': add_classes_to_parent,
+            'classes': [f'tdoc-{self.name}', f'c{self.text}'],
+        })
+        self.set_source_info(node)
+        self.inliner.document.note_pending(node)
+        return [node], []
+
+
+def add_classes_to_parent(pending):
+    pending.parent['classes'] += pending.details['classes']
 
 
 class Block(docutils.SphinxDirective):

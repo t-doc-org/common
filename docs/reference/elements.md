@@ -152,6 +152,47 @@ combine.
 ````
 `````
 
+## Vertical space
+
+````{rst:role} vspace
+This role inserts a `<span>` with `display: block`, and sets the content of the
+role as the element's `height:` property. The content should include a
+[length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
+`lh` for a number of lines.
+
+```{code-block}
+Calculate the sum of the integers from 1 to 10.
+{vspace}`3lh`
+Calculate the product of the integers from 1 to 10.
+{vspace}`3lh`
+```
+````
+
+## Leader
+
+````{rst:role} leader
+This role causes its container to end with a leader line. The content of the
+role is the character to use for the leader line. The stylesheet supports `.`
+and `_` out-of-the-box.
+
+```{code-block}
+$2 + 3 =$ {leader}`.`
+```
+
+To add support for other characters, e.g. `*`, define a CSS rule like the
+following, with the `contents:` property value long enough to exceed the page
+width.
+
+```{code-block}
+.tdoc-leader.c\*::after {
+  content: "****************************************************************"
+           "****************************************************************"
+           "****************************************************************"
+           "****************************************************************";
+}
+```
+````
+
 ## Solution
 
 ````{rst:directive} .. solution:: [title]
@@ -193,13 +234,6 @@ removed.
 ````
 
 ## IFrame
-
-````{rst:directive} .. youtube:: id
-This directive adds an
-[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
-element loading a YouTube video. The argument is the ID of the video, e.g.
-`aVwxzDHniEw`. All the options of {rst:dir}`iframe` are supported.
-````
 
 `````{rst:directive} .. iframe:: url
 This directive adds an
@@ -247,21 +281,106 @@ by assistive technologies.
 ```
 `````
 
-## Vertical space
+````{rst:directive} .. youtube:: id
+This directive adds an
+[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
+element loading a YouTube video. The argument is the ID of the video, e.g.
+`aVwxzDHniEw`. All the options of {rst:dir}`iframe` are supported.
+````
 
-````{rst:role} vspace
-This role inserts a `<span>` with `display: block`, and sets the content of the
-role as the element's `height:` property. The content should include a
-[length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
-`lh` to set the height to a number of lines.
+## Table
 
-```{code-block}
-Calculate the sum of the integers from 1 to 10.
-{vspace}`3lh`
-Calculate the product of the integers from 1 to 10.
-{vspace}`3lh`
+`````{rst:directive} .. flex-table::
+This directive defines an HTML `<table>`{l=html} using a more flexible syntax
+than Markdown tables or other table directives. In particular, it allows
+assigning CSS classes to individual rows and cells, and allows cells to span
+multiple rows and / or columns. The directive content defines the content of the
+table, using the following syntax:
+
+- Each line of the directive content defines a row.
+- Each cell in a row starts with a `|` character.
+- A row can optionally start with
+  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
+  that are applied to the row. In addition to classes and identifiers, the
+  following attributes are recognized:
+  - `t`: Determines if the row is a header row (`h`) or a body row (`b`).
+    Consecutive header rows are grouped in a `<thead>`{l=html}, while body rows
+    are grouped in a `<tbody>`{l=html}. Rows that don't specify a type use the
+    type of the previous row. The default for the first row is `b`.
+- The content of a cell can optionally start with
+  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
+  that are applied to the cell. In addition to classes and identifiers, the
+  following attributes are recognized:
+  - `cols`: Sets the `colspan` attribute of the cell tag.
+  - `rows`: Sets the `rowspan` attribute of the cell tag.
+  - `t`: Determines if the cell is a heading cell (`h`) or a data cell (`d`).
+    Heading cells are rendered as `<th>`{l=html}, and data cells are rendered as
+    `<td>`{l=html}. Cells that don't specify a type default to `h` in header
+    rows and `d` in body rows.
+- The cell content is parsed as inline markup, i.e. it can include styling,
+  inline math, etc. `|` characters within the cell content must be escaped as
+  `\|`.
+
+````{code-block}
+```{flex-table}
+{t=h}|Name|Age|Shoe size
+{t=b}|{t=h}Joe|23|43
+     |{t=h}Jack|18|41
+     |{t=h}Jim|{cols=2}unknown
 ```
 ````
+
+Tables have no styling by default, but the following classes are set up in the
+stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
+
+- `grid`: Formats the table as a grid, using a `1px` solid border on all cells.
+  The following classes can be set on table cells:
+  - `.l`: Aligns the cell content to the left.
+  - `.r`: Aligns the cell content to the right.
+- `function-table`: Formats the table as a function value and / or sign table.
+  The following classes can be set on table cells:
+  - `.l`: Aligns the cell content to the left.
+  - `.r`: Aligns the cell content to the right.
+  - `.g`: Applies a grey background to the cell. Typically used where the
+    function is undefined.
+  - `.w`: Sets `min-width: 5rem` on the cell.
+
+{.rubric}
+Options
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the `<table>`{l=html}.
+```
+```{rst:directive:option} name: name
+:type: ID
+A reference target for the table.
+```
+`````
+
+## Grid
+
+`````{rst:directive} .. list-grid::
+This directive creates a
+[CSS grid layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
+([guide](https://css-tricks.com/snippets/css/complete-guide-grid/)). The
+geometry of the grid is defined in the {rst:dir}`:style: <list-grid:style>`
+option, e.g. with the `grid-template-columns` property. The content of the
+directive must be a bullet list, and each item is assigned to a grid cell, from
+left to right and from top to bottom.
+
+{.rubric}
+Options
+```{rst:directive:option} cell-style: property: value; [property: value; ...]
+CSS styles to apply to the grid cell elements.
+```
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the grid container element.
+```
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the grid container element.
+```
+`````
 
 ## Numbering
 
@@ -366,100 +485,6 @@ specified in {rst:dir}`metadata`.
   first element is used when the points value is `1` (singular), and the second
   is used for all other values (plural). The default is
   `[" ({0} point)", " ({0} points)"]`.
-`````
-
-## Flex table
-
-`````{rst:directive} .. flex-table::
-This directive defines an HTML `<table>`{l=html} using a more flexible syntax
-than Markdown tables or other table directives. In particular, it allows
-assigning CSS classes to individual rows and cells, and allows cells to span
-multiple rows and / or columns. The directive content defines the content of the
-table, using the following syntax:
-
-- Each line of the directive content defines a row.
-- Each cell in a row starts with a `|` character.
-- A row can optionally start with
-  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
-  that are applied to the row. In addition to classes and identifiers, the
-  following attributes are recognized:
-  - `t`: Determines if the row is a header row (`h`) or a body row (`b`).
-    Consecutive header rows are grouped in a `<thead>`{l=html}, while body rows
-    are grouped in a `<tbody>`{l=html}. Rows that don't specify a type use the
-    type of the previous row. The default for the first row is `b`.
-- The content of a cell can optionally start with
-  [attributes](https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#attributes)
-  that are applied to the cell. In addition to classes and identifiers, the
-  following attributes are recognized:
-  - `cols`: Sets the `colspan` attribute of the cell tag.
-  - `rows`: Sets the `rowspan` attribute of the cell tag.
-  - `t`: Determines if the cell is a heading cell (`h`) or a data cell (`d`).
-    Heading cells are rendered as `<th>`{l=html}, and data cells are rendered as
-    `<td>`{l=html}. Cells that don't specify a type default to `h` in header
-    rows and `d` in body rows.
-- The cell content is parsed as inline markup, i.e. it can include styling,
-  inline math, etc. `|` characters within the cell content must be escaped as
-  `\|`.
-
-````{code-block}
-```{flex-table}
-{t=h}|Name|Age|Shoe size
-{t=b}|{t=h}Joe|23|43
-     |{t=h}Jack|18|41
-     |{t=h}Jim|{cols=2}unknown
-```
-````
-
-Tables have no styling by default, but the following classes are set up in the
-stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
-
-- `grid`: Formats the table as a grid, using a `1px` solid border on all cells.
-  The following classes can be set on table cells:
-  - `.l`: Aligns the cell content to the left.
-  - `.r`: Aligns the cell content to the right.
-- `function-table`: Formats the table as a function value and / or sign table.
-  The following classes can be set on table cells:
-  - `.l`: Aligns the cell content to the left.
-  - `.r`: Aligns the cell content to the right.
-  - `.g`: Applies a grey background to the cell. Typically used where the
-    function is undefined.
-  - `.w`: Sets `min-width: 5rem` on the cell.
-
-{.rubric}
-Options
-```{rst:directive:option} class: name [name...]
-:type: IDs
-A space-separated list of CSS classes to add to the `<table>`{l=html}.
-```
-```{rst:directive:option} name: name
-:type: ID
-A reference target for the table.
-```
-`````
-
-## Grid
-
-`````{rst:directive} .. list-grid::
-This directive creates a
-[CSS grid layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
-([guide](https://css-tricks.com/snippets/css/complete-guide-grid/)). The
-geometry of the grid is defined in the {rst:dir}`:style: <list-grid:style>`
-option, e.g. with the `grid-template-columns` property. The content of the
-directive must be a bullet list, and each item is assigned to a grid cell, from
-left to right and from top to bottom.
-
-{.rubric}
-Options
-```{rst:directive:option} cell-style: property: value; [property: value; ...]
-CSS styles to apply to the grid cell elements.
-```
-```{rst:directive:option} class: name [name...]
-:type: IDs
-A space-separated list of CSS classes to add to the grid container element.
-```
-```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the grid container element.
-```
 `````
 
 ## Block
