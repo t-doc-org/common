@@ -94,21 +94,3 @@ mathjax3_config = {
 tdoc_domain_storage = {
     'origin': 'https://t-doc.org',
 }
-
-# TODO(0.62): Remove
-class update:
-    def __init__(self, d):
-        self.__dict__['_d'] = d
-
-    def __getitem__(self, key):
-        return update(self._d.setdefault(key, {}))
-
-    def __setitem__(self, key, value):
-        self._d[key] = value
-
-    def __delitem__(self, key):
-        del self._d[key]
-
-    __getattr__ = __getitem__
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
