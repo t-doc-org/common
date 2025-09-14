@@ -140,26 +140,26 @@ export function merge(...attrs) {
 // Initialize a board for a {jsxgraph} directive, identified either by name or
 // by its wrapper element. Calls fn(board) if fn is provided, and returns the
 // board.
-export async function initBoard(node, attrs, fn) {
+export async function initBoard(el, attrs, fn) {
     attrs = merge(attrs);
-    if (typeof node === 'string') {
+    if (typeof el === 'string') {
         await domLoaded;
-        node = findDyn('jsxgraph', node);
+        el = findDyn('jsxgraph', el);
     }
-    if (node.style.aspectRatio === ''
-            && getComputedStyle(node).aspectRatio === '142857 / 142857') {
+    if (el.style.aspectRatio === ''
+            && getComputedStyle(el).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
         if (a.keepaspectratio) {
             const [xn, yp, xp, yn] = a.boundingbox;
-            node.style.aspectRatio = `${xp - xn} / ${yp - yn}`;
+            el.style.aspectRatio = `${xp - xn} / ${yp - yn}`;
         }
     }
     await mathJaxReady;
-    const board = JXG.JSXGraph.initBoard(node, attrs);
+    const board = JXG.JSXGraph.initBoard(el, attrs);
     const defaults = attrs.defaults ?? {};
     if (defaults) JXG.merge(board.options, defaults);
     if (fn) fn(board);
-    node.classList.add('rendered');
+    el.classList.add('rendered');
     return board;
 }
 

@@ -67,6 +67,24 @@ Drag the point $P$ on the circle.
 ```{jsxgraph} trig-circle
 ```
 
+### Custom template
+
+````{list-grid}
+:style: grid-template-columns: 1fr 1fr;
+- ```{jsxgraph}
+  :template: regular-polygon(3)
+  ```
+- ```{jsxgraph}
+  :template: regular-polygon(4)
+  ```
+- ```{jsxgraph}
+  :template: regular-polygon(5)
+  ```
+- ```{jsxgraph}
+  :template: regular-polygon(6)
+  ```
+````
+
 ### Template: `grid`
 
 5mm grid (approximate) for writing
@@ -98,7 +116,7 @@ Millimeter grid (approximate) for precise drawing
 ```
 
 <script type="module">
-const [{initBoard, JXG}] = await tdoc.imports('tdoc/jsxgraph.js');
+const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 initBoard('sincos', {
     boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
@@ -267,6 +285,19 @@ initBoard('trig-circle', {
     board.create('text',
         [2, 5.4, () => `\\(cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
         strokeColor: cosColor, fixed: true,
+    });
+});
+
+template('regular-polygon', (el, n) => {
+    initBoard(el, {
+        boundingBox: [-1.3, 1.3, 1.3, -1.3],
+    }, board => {
+        const n1 = 1 / n;
+        board.create('regularpolygon', [
+            [Math.cos(Math.PI * (-0.5 - n1)), Math.sin(Math.PI * (-0.5 - n1))],
+            [Math.cos(Math.PI * (-0.5 + n1)), Math.sin(Math.PI * (-0.5 + n1))],
+            n,
+        ]);
     });
 });
 </script>
