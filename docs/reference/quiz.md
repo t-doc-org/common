@@ -62,7 +62,7 @@ looked up in the object returned by the [generator function](#generator).
 `````{rst:role} quiz-ph
 This role defines a placeholder for a variable part of a question in a
 dynamically generated quiz. The text of the role is an identifier to be looked
-up in the object returned by the [question generator]
+up in the object returned by the [generator function](#generator).
 `````
 
 ## Field
