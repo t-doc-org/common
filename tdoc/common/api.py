@@ -4,7 +4,6 @@
 import contextlib
 import hashlib
 from http import HTTPMethod, HTTPStatus
-import json
 import queue
 import secrets
 import sys

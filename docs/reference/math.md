@@ -66,7 +66,7 @@ JavaScript via {js:func}`~jsxgraph.template`.
 
   ````{code-block}
   ```{jsxgraph}
-  :template: grid(17.5, 5, {"minorElements": 9})
+  :template: grid(17.5, 5, {minorElements: 9})
   ```
   ````
 
@@ -94,8 +94,7 @@ JavaScript via {js:func}`~jsxgraph.template`.
   ```{jsxgraph}
   :template: |
   : axes([-2, 5, 25, -5],
-  :      {"majorX": 5, "minorX": 4, "majorY": 2, "minorY": 1,
-  :       "grid": {"majorStep": 1}})
+  :      {majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1}})
   ```
   ````
 `````

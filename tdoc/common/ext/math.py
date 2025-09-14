@@ -6,6 +6,7 @@ import re
 
 from docutils import nodes
 from docutils.parsers.rst import directives
+import pyjson5
 from sphinx.util import logging
 
 from . import __version__, Dyn, dyn, tdoc_config
@@ -42,7 +43,7 @@ class JsxGraph(Dyn):
                 raise Exception(f"{{jsxgraph}} Invalid :template: value: {v}")
             attrs = {'data-template': m.group(1)}
             if (v := m.group(2)) is not None:
-                attrs['data-args'] = json.dumps(json.loads(f'[{v}]'),
+                attrs['data-args'] = json.dumps(pyjson5.decode(f'[{v}]'),
                                                 separators=(',', ':'))
             node['attrs'] = attrs
         elif 'name' not in node:

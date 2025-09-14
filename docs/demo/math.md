@@ -96,7 +96,7 @@ Drag the point $P$ on the circle.
 Millimeter grid (approximate) for precise drawing
 
 ```{jsxgraph}
-:template: grid(17.5, 5, {"minorElements": 9})
+:template: grid(17.5, 5, {minorElements: 9})
 ```
 
 ### Template: `axes`
@@ -104,15 +104,14 @@ Millimeter grid (approximate) for precise drawing
 ```{jsxgraph}
 :template: |
 : axes([-2, 5, 25, -5],
-:      {"majorX": 5, "minorX": 4, "majorY": 2, "minorY": 1,
-:       "grid": {"majorStep": 1}})
+:      {majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1}})
 ```
 
 ```{jsxgraph}
 :template: |
-: axes([-1, 8, 25, -1],
-:      {"labelsX": [1, 2, 4, 8, 16], "majorY": 2, "minorY": 1,
-:       "grid": {"majorStep": [10, 2], "minorElements": [9, 1]}})
+: axes([-1, 8, 25, -1], {
+:   labelsX: [1, 2, 4, 8, 16], majorY: 2, minorY: 1,
+:   grid: {majorStep: [10, 2], minorElements: [9, 1]}})
 ```
 
 <script type="module">
