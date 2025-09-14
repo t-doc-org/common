@@ -169,7 +169,7 @@ The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
 This role inserts a `<span>` with `display: block`, and sets the content of the
 role as the element's `height:` property. The content must include a
 [length unit](https://developer.mozilla.org/en-US/docs/Web/CSS/length), e.g.
-`lh` for a number of lines.
+`lh` to specify a number of lines.
 
 ```{code-block}
 Calculate the sum of the integers from 1 to 10.
@@ -192,6 +192,9 @@ width is given, the leader extends until the end of the line.
 $2 + 3 =$ {leader}`.`
 
 The quick brown {leader}`_|6em` jumps over the {leader}`_|6em` dog.
+
+Give an example.
+{leader}`.|100%`{leader}`.|100%`{leader}`.|100%`
 ```
 
 The stylesheet supports `.`, `_` and `dot` (dot leader). To add support for

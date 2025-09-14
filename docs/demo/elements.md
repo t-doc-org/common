@@ -30,6 +30,8 @@ The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
 2.  Which property did you use above? {leader}`_`
 3.  The {leader}`.|6em` brown {leader}`_|6em` jumps over the {leader}`dot|6em`
     dog.
+4.  Describe the main components of a computer.
+    {leader}`.|100%`{leader}`.|100%`{leader}`.|100%`
 
 ## SVG
 
