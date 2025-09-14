@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-61)=
+## 0.61 *(2025-09-14)*
+
+- Added the {rst:role}`hspace` and {rst:role}`vspace` roles.
+- Added the {rst:role}`leader` role.
+- Added the {rst:dir}`{jsxgraph} :template: <jsxgraph:template>` option.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.60...0.61)
+
 (release-0-60)=
 ## 0.60 *(2025-09-07)*
 
