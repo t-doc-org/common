@@ -10,8 +10,8 @@ version="$(sed -rne "s/^__version__\\s*=\\s*'([^']+)'\\s*(#.*)?\$/\\1/p" \
              < "${common}/tdoc/common/__init__.py")"
 previous="$(hg -R "${common}" tags --quiet | grep -vF 'tip' | head -n 1)"
 
-echo "Version:  ${version}"
 echo "Previous: ${previous}"
+echo "Release:  ${version}"
 echo
 hg -R "${common}" log --graph --rev="${previous}:tip"
 echo
