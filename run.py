@@ -21,12 +21,15 @@ VERSION = ''
 
 package = 't-doc-common'
 default_command = ['tdoc', 'serve', '--open']
+default_command_dev = ['tdoc', 'serve', '--debug',
+                       '--watch=../common/tdoc', '--full-builds']
 
 
 def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve()
 
     # Parse command-line options.
+    debug = False
     version = os.environ.get('TDOC_VERSION', VERSION)
     i = 1
     while True:
@@ -36,6 +39,8 @@ def main(argv, stdin, stdout, stderr):
         elif arg == '--':
             argv = argv[:1] + argv[i + 1:]
             break
+        elif arg == '--debug':
+            debug = True
         elif arg.startswith('--version='):
             version = arg[10:]
         else:
@@ -43,7 +48,7 @@ def main(argv, stdin, stdout, stderr):
         i += 1
 
     # Find a matching venv, or create one if there is none.
-    builder = EnvBuilder(base, version, stderr, '--debug' in argv)
+    builder = EnvBuilder(base, version, stderr, debug or '--debug' in argv)
     envs, matching = builder.find()
     if not matching:
         stderr.write("Installing...\n")
@@ -91,10 +96,12 @@ Release notes: <https://common.t-doc.org/release-notes.html\
                 stderr.write("\n")
 
     # Start the upgrade checker.
-    threading.Thread(target=env.check_upgrade, daemon=True).start()
+    if version != 'dev':
+        threading.Thread(target=env.check_upgrade, daemon=True).start()
 
     # Run the command.
-    args = argv[1:] if len(argv) > 1 else default_command
+    args = argv[1:] if len(argv) > 1 \
+           else default_command_dev if version == 'dev' else default_command
     args[0] = env.bin_path(args[0])
     return subprocess.run(args).returncode
 
