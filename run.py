@@ -113,6 +113,7 @@ class Namespace(dict):
 
 class Env:
     requirements_txt = 'requirements.txt'
+    requirements_deps_txt = 'requirements-deps.txt'
     upgrade_txt = 'upgrade.txt'
 
     env = contextvars.ContextVar('env')
@@ -159,6 +160,12 @@ class Env:
             shutil.rmtree(self.path, onexc=on_error)
         except Exception as e:
             self.builder.out.write(f"ERROR: {e}")
+
+    def uv(self, *args, **kwargs):
+        p = subprocess.run(('uv',) + args, stdin=subprocess.DEVNULL, text=True,
+                           **kwargs)
+        if p.returncode != 0: raise Exception(p.stderr)
+        return p.stdout
 
     def pip(self, *args, json_output=False, **kwargs):
         p = subprocess.run((self.bin_path('python'), '-P', '-m', 'pip',
@@ -231,10 +238,20 @@ class EnvBuilder(venv.EnvBuilder):
     def post_setup(self, ctx):
         super().post_setup(ctx)
         env = Env.env.get()
+        pip_args = []
+        if self.version == 'dev':
+            rdpath = env.path / env.requirements_deps_txt
+            env.uv('export', '--no-emit-project', '--format=requirements-txt',
+                   f'--output-file={rdpath}', capture_output=True)
+            env.pip('install', '--require-hashes', '--only-binary=:all:',
+                    '--no-deps', '--requirement', rdpath,
+                    check=True, stdout=self.out, stderr=self.out)
+            pip_args.append('--no-deps')
+
         rpath = env.path / f'{env.requirements_txt}.tmp'
         rpath.write_text(self.requirements)
-        env.pip('install', '--only-binary=:all:', '--requirement', rpath,
-                check=True, stdout=self.out, stderr=self.out)
+        env.pip('install', '--only-binary=:all:', f'--requirement={rpath}',
+                *pip_args, check=True, stdout=self.out, stderr=self.out)
         rpath.rename(env.path / env.requirements_txt)
 
 
