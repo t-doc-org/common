@@ -218,8 +218,6 @@ class EnvBuilder(venv.EnvBuilder):
         self.version, self.out, self.debug = version, out, debug
         self.requirements = (
             f'-e {base.as_uri()}' if version == 'dev'
-            else version if version.startswith(('https:', 'file:'))
-            else p.as_uri() if (p := pathlib.Path(version).resolve()).is_file()
             else f'{package}=={version}' if version else package)
 
     def find(self):
