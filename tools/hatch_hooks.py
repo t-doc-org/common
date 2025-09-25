@@ -90,7 +90,7 @@ class BuildHook(BuildHookInterface, HookMixin):
         self.app.display_info("Installing node packages")
         npm = shutil.which('npm')
         if npm is None: raise Exception("The 'npm' command cannot be found")
-        self.run([npm, 'clean-install'])
+        self.run([npm, 'clean-install', '--ignore-scripts'])
 
         self.app.display_info("Removing generated files")
         shutil.rmtree(self.static_gen, ignore_errors=True)
