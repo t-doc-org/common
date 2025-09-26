@@ -2,6 +2,7 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import contextvars
 import functools
 import json
@@ -12,14 +13,22 @@ import subprocess
 import shutil
 import sys
 import sysconfig
+import tempfile
 import threading
 import time
+import tomllib
+from urllib import request
 import venv
 
-# Set this variable to temporarily install a specific version.
-VERSION = ''
+# The default version to install.
+# TODO: Get default version and releases from t-doc.toml
+VERSION = 'stable'
 
-package = 't-doc-common'
+# The URL of the release config.
+RELEASES = 'https://github.com/t-doc-org/common' \
+           '/raw/refs/heads/main/releases/releases.toml'
+
+# The default command to run, if there are no positional arguments.
 default_command = ['tdoc', 'serve', '--open']
 default_command_dev = ['tdoc', 'serve', '--debug',
                        '--watch=../common/tdoc', '--full-builds']
@@ -30,6 +39,7 @@ def main(argv, stdin, stdout, stderr):
 
     # Parse command-line options.
     debug = False
+    releases = os.environ.get('TDOC_RELEASES', RELEASES)
     version = os.environ.get('TDOC_VERSION', VERSION)
     i = 1
     while True:
@@ -41,14 +51,19 @@ def main(argv, stdin, stdout, stderr):
             break
         elif arg == '--debug':
             debug = True
+        elif arg.startswith('--releases='):
+            releases = arg[11:]
         elif arg.startswith('--version='):
             version = arg[10:]
         else:
             raise Exception(f"Unknown option: {arg}")
         i += 1
+    if not (is_version(version) or is_tag(version)):
+        raise Exception(f"Invalid version: {version}")
 
     # Find a matching venv, or create one if there is none.
-    builder = EnvBuilder(base, version, stderr, debug or '--debug' in argv)
+    builder = EnvBuilder(base, version, releases, stderr,
+                         debug or '--debug' in argv)
     envs, matching = builder.find()
     if not matching:
         stderr.write("Installing...\n")
@@ -63,47 +78,48 @@ def main(argv, stdin, stdout, stderr):
         if e is not env: e.remove()
 
     # Check for upgrades, and upgrade if requested.
-    cur, new = env.upgrade
-    if new is not None:
+    reqs, reqs_up = env.requirements, env.requirements_upgrade
+    if reqs_up is not None and reqs_up != reqs:
+        cur, new = builder.version_from(reqs), builder.version_from(reqs_up)
         stderr.write(f"""\
-An upgrade is available: {package} {cur} => {new}
+An upgrade is available: {builder.package} {cur} => {new}
 Release notes: <https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}>
 """)
-        if VERSION:
-            stderr.write("Unset VERSION in run.py and restart the program to "
-                         "upgrade.\n\n")
-        elif os.environ.get('TDOC_VERSION'):
-            stderr.write("Unset TDOC_VERSION and restart the program to "
-                         "upgrade.\n\n")
-        elif version:
-            stderr.write("Restart the program without the --version= option to "
-                         "upgrade.\n\n")
-        else:
-            stderr.write("Would you like to install the upgrade (y/n)? ")
-            stderr.flush()
-            resp = input().lower()
+        stderr.write("Would you like to install the upgrade (y/n)? ")
+        stderr.flush()
+        resp = input().lower()
+        stderr.write("\n")
+        if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+            stderr.write("Upgrading...\n")
+            new_env = builder.new()
+            try:
+                new_env.create(reqs_up)
+                env = new_env
+            except Exception:
+                stderr.write("\nThe upgrade failed. Continuing with the "
+                             "current version.\n")
             stderr.write("\n")
-            if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-                stderr.write("Upgrading...\n")
-                new_env = builder.new()
-                try:
-                    new_env.create()
-                    env = new_env
-                except Exception:
-                    stderr.write("\nThe upgrade failed. Continuing with the "
-                                 "current version.\n")
-                stderr.write("\n")
 
-    # Start the upgrade checker.
+    # Check for upgrades.
+    wait_until = None
     if version != 'dev':
-        threading.Thread(target=env.check_upgrade, daemon=True).start()
+        checker = threading.Thread(target=env.check_upgrade, daemon=True)
+        checker.start()
+        wait_until = time.monotonic() + 5
 
     # Run the command.
-    args = argv[1:] if len(argv) > 1 \
-           else default_command_dev if version == 'dev' else default_command
-    args[0] = env.bin_path(args[0])
-    return subprocess.run(args).returncode
+    try:
+        args = argv[1:] if len(argv) > 1 \
+               else default_command_dev if version == 'dev' else default_command
+        args[0] = env.bin_path(args[0])
+        rc = subprocess.run(args).returncode
+    except (Exception, KeyboardInterrupt):
+        rc = 1
+
+    # Give the upgrade checker a chance to run at least for a bit.
+    if wait_until is not None: checker.join(wait_until - time.monotonic())
+    return rc
 
 
 class Namespace(dict):
@@ -111,9 +127,28 @@ class Namespace(dict):
         return self[name]
 
 
+version_re = re.compile(r'[0-9][0-9a-z.!+]*')
+tag_re = re.compile(r'[a-z][a-z0-9-]*')
+
+
+def is_version(version): return version_re.match(version)
+def is_tag(version): return tag_re.match(version)
+
+
+@contextlib.contextmanager
+def write_atomic(path, *args, **kwargs):
+    with tempfile.NamedTemporaryFile(*args, dir=path.parent,
+                                     prefix=path.name + '.',
+                                     delete_on_close=False, **kwargs) as f:
+        yield f
+        f.close()
+        pathlib.Path(f.name).replace(path)
+
+
 class Env:
     requirements_txt = 'requirements.txt'
     requirements_deps_txt = 'requirements-deps.txt'
+    requirements_upgrade_txt = 'requirements-upgrade.txt'
     upgrade_txt = 'upgrade.txt'
 
     env = contextvars.ContextVar('env')
@@ -129,6 +164,13 @@ class Env:
             return None
 
     @functools.cached_property
+    def requirements_upgrade(self):
+        try:
+            return (self.path / self.requirements_upgrade_txt).read_text()
+        except OSError:
+            return None
+
+    @functools.cached_property
     def sysinfo(self):
         vars = {'base': self.path, 'platbase': self.path,
                 'installed_base': self.path, 'intsalled_platbase': self.path}
@@ -140,9 +182,9 @@ class Env:
         scripts, ext = self.sysinfo
         return scripts / f'{name}{ext}'
 
-    def create(self):
+    def create(self, requirements=None):
         self.builder.root.mkdir(exist_ok=True)
-        token = self.env.set(self)
+        token = self.env.set((self, requirements))
         try:
             self.builder.create(self.path)
         except BaseException:
@@ -175,67 +217,90 @@ class Env:
         if not json_output: return p.stdout
         return json.loads(p.stdout, object_pairs_hook=Namespace)
 
-    @functools.cached_property
-    def upgrade(self):
-        try:
-            upgrade = (self.path / self.upgrade_txt).read_text('utf-8')
-            return upgrade.split(' ')[:2]
-        except Exception:
-            return None, None
-
     def check_upgrade(self):
         try:
-            pkgs = self.pip('list', '--format=json',
-                            capture_output=True, text=True, json_output=True)
-            for pkg in pkgs:
-                if pkg.name == package:
-                    if pkg.get('editable_project_location') is not None: return
-                    cur = pkg.version
-                    break
-            else:
-                return
-            data = self.pip('install', '--dry-run', '--quiet', '--upgrade',
-                            '--upgrade-strategy=only-if-needed',
-                            '--only-binary=:all:', '--report=-', package,
-                            capture_output=True, text=True, json_output=True)
-            upgrades = {pkg.metadata.name: pkg.metadata.version
-                        for pkg in data.install}
-            if (new := upgrades.get(package)) is None: return
-            (self.path / self.upgrade_txt).write_text(f'{cur} {new}', 'utf-8')
-            self.upgrade = cur, new
+            releases = self.builder.fetch_releases()
+            reqs = self.builder.requirements(releases=releases)
+            if reqs != self.requirements:
+                with write_atomic(
+                        self.path / self.requirements_upgrade_txt, 'w') as f:
+                    f.write(reqs)
+                # TODO(0.62): Remove
+                cur = self.builder.version_from(self.requirements)
+                new = self.builder.version_from(reqs)
+                (self.path / self.upgrade_txt).write_text(f'{cur} {new}',
+                                                          'utf-8')
         except Exception:
             if self.builder.debug: raise
 
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
-    venv_dev = 'dev'
-    venv_prefix = 'venv'
+    releases_toml = 'releases.toml'
 
-    def __init__(self, base, version, out, debug):
+    def __init__(self, base, version, releases, out, debug):
         super().__init__(with_pip=True)
         self.root = base / self.venv_root
-        self.version, self.out, self.debug = version, out, debug
-        self.requirements = (
-            f'-e {base.as_uri()}' if version == 'dev'
-            else f'{package}=={version}' if version else package)
+        self.version, self.releases_url = version, releases
+        self.out, self.debug = out, debug
+
+    @functools.cached_property
+    def package(self):
+        return self.releases['package']
+
+    @functools.cached_property
+    def releases(self):
+        try:
+            return self.parse_releases(
+                (self.root / self.releases_toml).read_bytes())
+        except (OSError, ValueError):
+            return self.fetch_releases()
+
+    def fetch_releases(self):
+        if self.releases_url.startswith('https://'):
+            with request.urlopen(self.releases_url, timeout=30) as f:
+                data = f.read()
+        else:
+            data = pathlib.Path(self.releases_url).read_bytes()
+        releases = self.parse_releases(data)
+        with write_atomic(self.root / self.releases_toml, 'wb') as f:
+            f.write(data)
+        return releases
+
+    def parse_releases(self, data):
+        releases = tomllib.loads(data.decode('utf-8'))
+        if 'package' not in releases:
+            raise ValueError("Invalid releases file: missing 'package'")
+        return releases
+
+    def requirements(self, releases=None):
+        if (v := self.version) == 'dev': return None, f'-e {base.as_uri()}\n'
+        if releases is None: releases = self.releases
+        version_num = releases.get('tags', {}).get(v) if is_tag(v) else v
+        if version_num is None:
+            raise Exception(f"Unknown version tag: {v}\nAvailable tags: "
+                            f"{' '.join(sorted(releases['tags'].keys()))}")
+        return f'{releases['package']}=={version_num}\n'
+
+    def version_from(self, requirements):
+        pat = re.compile(f'^{re.escape(self.package)}==([^\\s;]+)$')
+        if (m := pat.search(requirements)) is not None: return m.group(1)
 
     def find(self):
-        pat = self.venv_dev if self.version == 'dev' \
-              else f'{self.venv_prefix}-*'
+        pat = 'dev' if self.version == 'dev' else f'{self.version}-*'
         envs = [Env(path, self) for path in self.root.glob(pat)]
         envs.sort(key=lambda e: e.path, reverse=True)
-        matching = [e for e in envs if e.requirements == self.requirements]
+        matching = [e for e in envs if e.requirements is not None]
         return envs, matching
 
     def new(self):
         name = 'dev' if self.version == 'dev' \
-               else f'{self.venv_prefix}-{time.time_ns():024x}'
+               else f'{self.version}-{time.time_ns():024x}'
         return Env(self.root / name, self)
 
     def post_setup(self, ctx):
         super().post_setup(ctx)
-        env = Env.env.get()
+        env, requirements = Env.env.get()
         pip_args = []
         if self.version == 'dev':
             rdpath = env.path / env.requirements_deps_txt
@@ -246,11 +311,12 @@ class EnvBuilder(venv.EnvBuilder):
                     check=True, stdout=self.out, stderr=self.out)
             pip_args.append('--no-deps')
 
-        rpath = env.path / f'{env.requirements_txt}.tmp'
-        rpath.write_text(self.requirements)
-        env.pip('install', '--only-binary=:all:', f'--requirement={rpath}',
-                *pip_args, check=True, stdout=self.out, stderr=self.out)
-        rpath.rename(env.path / env.requirements_txt)
+        if requirements is None: requirements = self.requirements()
+        with write_atomic(env.path / env.requirements_txt) as f:
+            rpath = pathlib.Path(f.name)
+            rpath.write_text(requirements)
+            env.pip('install', '--only-binary=:all:', f'--requirement={rpath}',
+                    *pip_args, check=True, stdout=self.out, stderr=self.out)
 
 
 MAX_WPATH = 32768
