@@ -261,7 +261,7 @@ class EnvBuilder(venv.EnvBuilder):
         self.config_url = config
         self.out, self.debug = out, debug
         if version is None: version = self.config['version']
-        if not (is_version(version) or is_tag(version)) or is_wheel(version):
+        if not (is_version(version) or is_tag(version) or is_wheel(version)):
             raise Exception(f"Invalid version: {version}")
         self.version = version
 
