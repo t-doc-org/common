@@ -299,7 +299,7 @@ class EnvBuilder(venv.EnvBuilder):
 
     def requirements(self, config=None):
         if is_dev(v := self.version): return f'-e {self.base.as_uri()}\n'
-        if is_wheel(v): return f'{pathlib.Path(v).resolve().as_uri}\n'
+        if is_wheel(v): return f'{pathlib.Path(v).resolve().as_uri()}\n'
         if config is None: config = self.config
         version_num = config.get('tags', {}).get(v) if is_tag(v) else v
         if version_num is None:
