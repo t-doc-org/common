@@ -284,6 +284,7 @@ class EnvBuilder(venv.EnvBuilder):
         else:
             data = pathlib.Path(self.config_url).read_bytes()
         config = tomllib.loads(data.decode('utf-8'))
+        self.root.mkdir(exist_ok=True)
         with write_atomic(self.root / self.config_toml, 'wb') as f:
             f.write(data)
         self.merge_local_config(config)
