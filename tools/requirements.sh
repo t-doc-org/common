@@ -10,7 +10,7 @@ if [[ $# -ne 1 ]]; then
     exit 2
 fi
 
-uv export --no-header --format=requirements-txt --script=<(
+uv export --no-header --format=requirements.txt --script=<(
 cat <<EOF
 # /// script
 # requires-python = '>=3.12'
