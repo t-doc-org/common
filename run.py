@@ -20,13 +20,9 @@ import tomllib
 from urllib import request
 import venv
 
-# The default version to install.
-# TODO: Get default version and releases from t-doc.toml
-VERSION = 'stable'
-
-# The URL of the release config.
-RELEASES = 'https://github.com/t-doc-org/common' \
-           '/raw/refs/heads/main/releases/releases.toml'
+# The URL of the default config.
+CONFIG = 'https://github.com/t-doc-org/common' \
+         '/raw/refs/heads/main/config/t-doc.toml'
 
 # The default command to run, if there are no positional arguments.
 default_command = ['tdoc', 'serve', '--open']
@@ -38,9 +34,9 @@ def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve()
 
     # Parse command-line options.
+    config = os.environ.get('TDOC_CONFIG', CONFIG)
     debug = False
-    releases = os.environ.get('TDOC_RELEASES', RELEASES)
-    version = os.environ.get('TDOC_VERSION', VERSION)
+    version = os.environ.get('TDOC_VERSION')
     i = 1
     while True:
         if i >= len(argv) or not (arg := argv[i]).startswith('--'):
@@ -49,20 +45,18 @@ def main(argv, stdin, stdout, stderr):
         elif arg == '--':
             argv = argv[:1] + argv[i + 1:]
             break
+        elif arg.startswith('--config='):
+            config = arg[9:]
         elif arg == '--debug':
             debug = True
-        elif arg.startswith('--releases='):
-            releases = arg[11:]
         elif arg.startswith('--version='):
             version = arg[10:]
         else:
             raise Exception(f"Unknown option: {arg}")
         i += 1
-    if not (is_version(version) or is_tag(version)):
-        raise Exception(f"Invalid version: {version}")
 
     # Find a matching venv, or create one if there is none.
-    builder = EnvBuilder(base, version, releases, stderr,
+    builder = EnvBuilder(base, config, version, stderr,
                          debug or '--debug' in argv)
     envs, matching = builder.find()
     if not matching:
@@ -127,9 +121,19 @@ class Namespace(dict):
         return self[name]
 
 
+unset = object()
+
+def merge_dict(dst, src):
+    for k, sv in src.items():
+        dv = dst.get(k, unset)
+        if isinstance(sv, dict) and isinstance(dv, dict):
+            merge_dict(dv, sv)
+        else:
+            dst[k] = sv
+
+
 version_re = re.compile(r'[0-9][0-9a-z.!+]*')
 tag_re = re.compile(r'[a-z][a-z0-9-]*')
-
 
 def is_version(version): return version_re.match(version)
 def is_tag(version): return tag_re.match(version)
@@ -219,8 +223,8 @@ class Env:
 
     def check_upgrade(self):
         try:
-            releases = self.builder.fetch_releases()
-            reqs = self.builder.requirements(releases=releases)
+            config = self.builder.fetch_config()
+            reqs = self.builder.requirements(config=config)
             if reqs != self.requirements:
                 with write_atomic(
                         self.path / self.requirements_upgrade_txt, 'w') as f:
@@ -236,51 +240,58 @@ class Env:
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
-    releases_toml = 'releases.toml'
+    config_toml = 't-doc.toml'
 
-    def __init__(self, base, version, releases, out, debug):
+    def __init__(self, base, config, version, out, debug):
         super().__init__(with_pip=True)
+        self.base = base
         self.root = base / self.venv_root
-        self.version, self.releases_url = version, releases
+        self.config_url = config
         self.out, self.debug = out, debug
+        if version is None: version = self.config['version']
+        if not (is_version(version) or is_tag(version)):
+            raise Exception(f"Invalid version: {version}")
+        self.version = version
 
     @functools.cached_property
     def package(self):
-        return self.releases['package']
+        return self.config['package']
 
     @functools.cached_property
-    def releases(self):
+    def config(self):
         try:
-            return self.parse_releases(
-                (self.root / self.releases_toml).read_bytes())
-        except (OSError, ValueError):
-            return self.fetch_releases()
+            data = (self.root / self.config_toml).read_bytes()
+            config = tomllib.loads(data.decode('utf-8'))
+        except Exception:
+            return self.fetch_config()
+        self.merge_local_config(config)
+        return config
 
-    def fetch_releases(self):
-        if self.releases_url.startswith('https://'):
-            with request.urlopen(self.releases_url, timeout=30) as f:
+    def fetch_config(self):
+        if self.config_url.startswith('https://'):
+            with request.urlopen(self.config_url, timeout=30) as f:
                 data = f.read()
         else:
-            data = pathlib.Path(self.releases_url).read_bytes()
-        releases = self.parse_releases(data)
-        with write_atomic(self.root / self.releases_toml, 'wb') as f:
+            data = pathlib.Path(self.config_url).read_bytes()
+        config = tomllib.loads(data.decode('utf-8'))
+        with write_atomic(self.root / self.config_toml, 'wb') as f:
             f.write(data)
-        return releases
+        self.merge_local_config(config)
+        return config
 
-    def parse_releases(self, data):
-        releases = tomllib.loads(data.decode('utf-8'))
-        if 'package' not in releases:
-            raise ValueError("Invalid releases file: missing 'package'")
-        return releases
+    def merge_local_config(self, config):
+        with contextlib.suppress(OSError), \
+                (self.base / self.config_toml).open('rb') as f:
+            merge_dict(config, tomllib.load(f))
 
-    def requirements(self, releases=None):
-        if (v := self.version) == 'dev': return None, f'-e {base.as_uri()}\n'
-        if releases is None: releases = self.releases
-        version_num = releases.get('tags', {}).get(v) if is_tag(v) else v
+    def requirements(self, config=None):
+        if (v := self.version) == 'dev': return f'-e {self.base.as_uri()}\n'
+        if config is None: config = self.config
+        version_num = config.get('tags', {}).get(v) if is_tag(v) else v
         if version_num is None:
             raise Exception(f"Unknown version tag: {v}\nAvailable tags: "
-                            f"{' '.join(sorted(releases['tags'].keys()))}")
-        return f'{releases['package']}=={version_num}\n'
+                            f"{' '.join(sorted(config['tags'].keys()))}")
+        return f'{config['package']}=={version_num}\n'
 
     def version_from(self, requirements):
         pat = re.compile(f'^{re.escape(self.package)}==([^\\s;]+)$')

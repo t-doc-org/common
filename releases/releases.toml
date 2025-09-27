@@ -1,9 +1,0 @@
-# Copyright 2025 Remy Blank <remy@c-space.org>
-# SPDX-License-Identifier: MIT
-
-package = "t-doc-common"
-
-[tags]
-testing = "0.61"
-stable = "0.61"
-previous = "0.60"
