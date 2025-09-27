@@ -51,9 +51,6 @@ jobs:
       - name: Build HTML (dev)
         if: ${{ inputs.dev }}
         run: |
-          ${{ steps.python.outputs.python-path }} -m pip install \
-              --require-hashes --only-binary=:all: --no-deps \
-              --requirement=common/config/uv.req
           ${{ steps.python.outputs.python-path }} common/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Build HTML (release)
