@@ -40,13 +40,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: repo
-      - name: Get t-doc/common version
-        id: version
-        run: |
-          echo "version=$(${{ steps.python.outputs.python-path }} \
-                            repo/run.py --print=version)" >> "$GITHUB_OUTPUT"
       - name: Checkout t-doc/common repository
-        if: ${{ steps.version.outputs.version == 'dev' }}
+        if: ${{ inputs.dev }}
         uses: actions/checkout@v4
         with:
           repository: t-doc-org/common
@@ -54,13 +49,15 @@ jobs:
           path: common
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Build HTML (dev)
-        if: ${{ steps.version.outputs.version == 'dev' }}
+        if: ${{ inputs.dev }}
         run: |
-          ${{ steps.python.outputs.python-path }} -m pip install uv
+          ${{ steps.python.outputs.python-path }} -m pip install \
+              --require-hashes --only-binary=:all: --no-deps \
+              --requirement=common/config/uv.req
           ${{ steps.python.outputs.python-path }} common/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Build HTML (release)
-        if: ${{ steps.version.outputs.version != 'dev' }}
+        if: ${{ !inputs.dev }}
         run: |
           ${{ steps.python.outputs.python-path }} repo/run.py \
               tdoc build --source=repo/docs --build=_build html
