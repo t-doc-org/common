@@ -36,30 +36,33 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Checkout t-doc/common repository
-        if: ${{ inputs.dev }}
-        uses: actions/checkout@v4
-        with:
-          repository: t-doc-org/common
-          ref: main
-          submodules: recursive
-          path: common
-          ssh-key: ${{ secrets.DEPLOY_COMMON }}
-      - name: Install t-doc/common package from checkout
-        if: ${{ inputs.dev }}
-        run: |
-          ${{ steps.python.outputs.python-path }} -m pip install ./common
-      - name: Install t-doc/common package from PyPI
-        if: ${{ !inputs.dev }}
-        run: |
-          ${{ steps.python.outputs.python-path }} -m pip install t-doc-common
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: repo
-      - name: Build HTML
+      - name: Get t-doc/common version
+        id: version
         run: |
-          tdoc build --source=repo/docs --build=_build html
+          echo "version=$(${{ steps.python.outputs.python-path }} \
+                            repo/run.py --print=version)" >> "$GITHUB_OUTPUT"
+      - name: Checkout t-doc/common repository
+        if: ${{ steps.version.outputs.version == 'dev' }}
+        uses: actions/checkout@v4
+        with:
+          repository: t-doc-org/common
+          ref: main
+          path: common
+          ssh-key: ${{ secrets.DEPLOY_COMMON }}
+      - name: Build HTML (dev)
+        if: ${{ steps.version.outputs.version == 'dev' }}
+        run: |
+          ${{ steps.python.outputs.python-path }} common/run.py \
+              tdoc build --source=repo/docs --build=_build html
+      - name: Build HTML (release)
+        if: ${{ steps.version.outputs.version != 'dev' }}
+        run: |
+          ${{ steps.python.outputs.python-path }} repo/run.py \
+              tdoc build --source=repo/docs --build=_build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload GitHub Pages artifact
