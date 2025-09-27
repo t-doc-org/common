@@ -326,8 +326,9 @@ class EnvBuilder(venv.EnvBuilder):
         pip_args = []
         if self.version == 'dev':
             rdpath = env.path / env.requirements_deps_txt
-            env.uv('export', '--no-emit-project', '--format=requirements-txt',
-                   f'--output-file={rdpath}', capture_output=True)
+            env.uv('export', '--frozen', '--no-emit-project',
+                   '--format=requirements-txt', f'--output-file={rdpath}',
+                   cwd=self.base, capture_output=True)
             env.pip('install', '--require-hashes', '--only-binary=:all:',
                     '--no-deps', '--requirement', rdpath,
                     check=True, stdout=self.out, stderr=self.out)
