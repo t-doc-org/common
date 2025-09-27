@@ -24,11 +24,6 @@ import venv
 CONFIG = 'https://github.com/t-doc-org/common' \
          '/raw/refs/heads/main/config/t-doc.toml'
 
-# The default command to run, if there are no positional arguments.
-default_command = ['tdoc', 'serve', '--open']
-default_command_dev = ['tdoc', 'serve', '--debug',
-                       '--watch=../common/tdoc', '--full-builds']
-
 
 def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve()
@@ -97,7 +92,7 @@ Release notes: <https://common.t-doc.org/release-notes.html\
 
     # Check for upgrades.
     wait_until = None
-    if version != 'dev':
+    if builder.version != 'dev':
         checker = threading.Thread(target=env.check_upgrade, daemon=True)
         checker.start()
         wait_until = time.monotonic() + 5
@@ -105,7 +100,9 @@ Release notes: <https://common.t-doc.org/release-notes.html\
     # Run the command.
     try:
         args = argv[1:] if len(argv) > 1 \
-               else default_command_dev if version == 'dev' else default_command
+               else builder.config['defaults']['command-dev'] \
+               if builder.version == 'dev' \
+               else builder.config['defaults']['command']
         args[0] = env.bin_path(args[0])
         rc = subprocess.run(args).returncode
     except (Exception, KeyboardInterrupt):
