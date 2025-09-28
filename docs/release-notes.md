@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-62)=
+## 0.62 *(2025-09-28)*
+
+- Hardened t-doc against
+  [supply chain attacks](https://en.wikipedia.org/wiki/Supply_chain_attack).
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.61...0.62)
+
 (release-0-61)=
 ## 0.61 *(2025-09-14)*
 
