@@ -122,26 +122,34 @@ If the local server refuses to start, it may be due to a broken install. To
 force a clean install of the `t-doc-common` package and its dependencies, remove
 the `_venv` directory at the root of the document repository.
 
-### Install a specific version
+### Use the previous version
 
-If the latest version of the `t-doc-common` package is broken, a previous
+If the stable version of the `t-doc-common` package is broken, the previous
 version of the package can be used until a fix is released.
 
+- Create a text file `t-doc.toml` at the root of the site repository, and set
+  its content as follows:
+
+  ```{code-block} toml
+  version = 'previous'
+  ```
+
+- Start the local server. This will install and run the previous version.
+
+- To return to the stable version, remove the file `t-doc.toml` created above.
+
+### Install a specific version
+
 - Check the [release notes](release-notes.md) and find the version of the
-  `t-doc-common` package to install.
+  `t-doc-common` package to install, e.g. `0.62`.
 
-- Open the `run.py` script in a text editor and set the version in the `VERSION`
-  variable.
+- Create a text file `t-doc.toml` at the root of the site repository, and set
+  its content as follows:
 
-  ```{code-block} python
-  VERSION = '0.28'
+  ```{code-block} toml
+  version = '0.62'
   ```
 
 - Start the local server. This will install and run the selected version.
 
-- To return to the latest version (and re-enable upgrades), restore the
-  `VERSION` variable to an empty string.
-
-  ```{code-block} python
-  VERSION = ''
-  ```
+- To return to the stable version, remove the file `t-doc.toml` created above.
