@@ -618,6 +618,17 @@ def try_stat(path):
         return path.stat()
 
 
+def prefix_read(fname):
+    return (pathlib.Path(sys.prefix) / fname).read_text()
+
+
+version_re = re.compile(f'(?m)^{re.escape(__project__)}==([^\\s;]+)(?:\\s|$)')
+
+def project_version(reqs):
+    if (m := version_re.search(reqs)) is not None: return m.group(1)
+    return 'unknown'
+
+
 class Application:
     def __init__(self, cfg, server, api_):
         self.cfg = cfg
@@ -763,9 +774,10 @@ class Application:
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
         o = self.cfg.stdout
         with contextlib.suppress(Exception):
-            marker = pathlib.Path(sys.prefix) / 'upgrade.txt'
-            cur, new = marker.read_text('utf-8').split(' ')[:2]
-            if cur == new: return
+            reqs = prefix_read('requirements.txt')
+            reqs_up = prefix_read('requirements-upgrade.txt')
+            if reqs_up == reqs: return
+            cur, new = project_version(reqs), project_version(reqs_up)
             o.write(f"""\
 {o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
  {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
