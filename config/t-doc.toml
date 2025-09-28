@@ -3,6 +3,7 @@
 
 package = 't-doc-common'
 version = 'stable'
+hermetic = true
 
 [tags]
 testing = '0.61'
