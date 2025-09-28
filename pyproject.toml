@@ -5,9 +5,6 @@
 name = "t-doc-common"
 description = "Common functionality for t-doc"
 authors = [{name = "Remy Blank", email = "remy@c-space.org"}]
-urls.Code = "https://github.com/t-doc-org/common"
-urls.Documentation = "https://common.t-doc.org/"
-urls.Homepage = "https://t-doc.org/"
 readme = "README.md"
 license = "MIT"
 # BUG(hatchling): PEP 639 says it should be a list, but hatchling wants a table
@@ -45,6 +42,12 @@ dependencies = [
     "sphinx_design>=0.6.1",
 ]
 dynamic = ["version"]
+
+[project.urls]
+Code = "https://github.com/t-doc-org/common"
+Documentation = "https://common.t-doc.org/"
+Homepage = "https://t-doc.org/"
+"Release notes" = "https://common.t-doc.org/release-notes.html"
 
 [project.scripts]
 tdoc = "tdoc.common.cli:main"
