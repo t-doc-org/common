@@ -89,11 +89,11 @@ class Stage2:
             f.close()
             pathlib.Path(f.name).replace(path)
 
-    def update(self, data):
+    def update(self, cached):
         try:
-            if (new_data := self.fetch()) == data: return
-            self.exec(new_data)
-            self.write(new_data)
+            if (data := self.fetch()) == cached: return
+            self.exec(data)  # Check that stage2 compiles and executes
+            self.write(data)
         except Exception:
             if '--debug' in self.argv: raise
 
