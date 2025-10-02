@@ -24,9 +24,21 @@ import venv
 CONFIG = 'https://github.com/t-doc-org/common/raw/refs/heads/main/config'
 
 
-def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).parent.resolve()
+def main(*args, **kwargs):
+    try:
+        sys.exit(run(*args, **kwargs))
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        sys.exit(1)
+    except BaseException as e:
+        if '--debug' in sys.argv: raise
+        sys.stderr.write(f'\nERROR: {e}\n')
+        maybe_wait_on_exit(sys.stderr)
+        sys.exit(1)
 
+
+def run(base, argv, stdin, stdout, stderr):
     # Parse command-line options.
     config = os.environ.get('TDOC_CONFIG', CONFIG)
     debug = False
@@ -398,14 +410,5 @@ def maybe_wait_on_exit(stderr):
 
 
 if __name__ == '__main__':
-    try:
-        sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
-    except SystemExit:
-        raise
-    except KeyboardInterrupt:
-        sys.exit(1)
-    except BaseException as e:
-        if '--debug' in sys.argv: raise
-        sys.stderr.write(f'\nERROR: {e}\n')
-        maybe_wait_on_exit(sys.stderr)
-        sys.exit(1)
+    main(pathlib.Path(sys.argv[0]).parent.parent.resolve(),
+         sys.argv, sys.stdin, sys.stdout, sys.stderr)

@@ -15,8 +15,17 @@ REPO = 'https://github.com/t-doc-org/common'
 
 
 def main(argv, stdin, stdout, stderr):
-    with Stage2(argv) as stage2:
-        return stage2.run(stdin, stdout, stderr)
+    try:
+        with Stage2(argv) as stage2:
+            sys.exit(stage2.run(stdin, stdout, stderr))
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        sys.exit(1)
+    except BaseException as e:
+        if '--debug' in sys.argv: raise
+        sys.stderr.write(f'\nERROR: {e}\n')
+        sys.exit(1)
 
 
 class Stage2:
@@ -37,7 +46,7 @@ class Stage2:
 
     def run(self, stdin, stdout, stderr):
         mod = self.get()
-        return mod['main'](self.argv, stdin, stdout, stderr)
+        return mod['main'](self.base, self.argv, stdin, stdout, stderr)
 
     def get(self):
         with contextlib.suppress(Exception):
@@ -90,14 +99,4 @@ class Stage2:
 
 
 if __name__ == '__main__':
-    try:
-        sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
-    except SystemExit:
-        raise
-    except KeyboardInterrupt:
-        sys.exit(1)
-    except BaseException as e:
-        if '--debug' in sys.argv: raise
-        sys.stderr.write(f'\nERROR: {e}\n')
-        maybe_wait_on_exit(sys.stderr)
-        sys.exit(1)
+    main(sys.argv, sys.stdin, sys.stdout, sys.stderr)
