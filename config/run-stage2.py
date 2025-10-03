@@ -26,7 +26,10 @@ CONFIG = 'https://github.com/t-doc-org/common/raw/refs/heads/main/config'
 
 def main(*args, **kwargs):
     try:
-        sys.exit(run(*args, **kwargs))
+        # TODO: Remove compatibility code and *args
+        for a, n in zip(args, ('base', 'argv', 'stdin', 'stdout', 'stderr')):
+            kwargs[n] = a
+        sys.exit(run(**kwargs))
     except SystemExit:
         raise
     except KeyboardInterrupt:
@@ -38,7 +41,7 @@ def main(*args, **kwargs):
         sys.exit(1)
 
 
-def run(base, argv, stdin, stdout, stderr):
+def run(argv, stdin, stdout, stderr, base):
     # Parse command-line options.
     config = os.environ.get('TDOC_CONFIG', CONFIG)
     debug = False
@@ -410,5 +413,5 @@ def maybe_wait_on_exit(stderr):
 
 
 if __name__ == '__main__':
-    main(pathlib.Path(sys.argv[0]).parent.parent.resolve(),
-         sys.argv, sys.stdin, sys.stdout, sys.stderr)
+    main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr,
+         base=pathlib.Path(sys.argv[0]).parent.parent.resolve())
