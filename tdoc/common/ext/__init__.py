@@ -15,6 +15,7 @@ from sphinx import config, jinja2glue, locale
 from sphinx.environment import collectors
 from sphinx.util import docutils, fileutil, logging
 
+from . import patch
 from .. import __version__, deps
 
 _log = logging.getLogger(__name__)
@@ -46,6 +47,40 @@ def _parse_directive_block(self, *args, **kwargs):
 
 MockState_parse_directive_block = mocking.MockState.parse_directive_block
 mocking.MockState.parse_directive_block = _parse_directive_block
+
+
+@patch.asset_file('/_static/styles/pydata-sphinx-theme.css')
+def pydata_sphinx_theme_css(data):
+    # BUG(pydata_sphinx_theme): The theme's CSS sets a top margin on the next
+    # element after the title. Remove that, and set a bottom margin on the title
+    # instead.
+    data = patch.overwrite(data,
+                           r'\.admonition>\.admonition-title\+\*,'
+                           r'div\.admonition>\.admonition-title\+\*'
+                           r'\{(margin-top:[^}]+)\}',
+                           ' ')
+    # BUG(pydata_sphinx_theme): The rule in the theme's CSS is too broad. The
+    # selector should be more precise (.admonition > :last-child), but basic.css
+    # already has such a rule, so it can be removed altogether.
+    data = patch.overwrite(data,
+                           r'\.admonition :last-child\{(margin-bottom:[^}]+)\}',
+                           ' ')
+    # BUG(pydata_sphinx_theme): The theme's CSS sets left and right margins on
+    # all direct descendants of admonition containers. This breaks horizontal
+    # alignment classes.
+    data = patch.overwrite(data,
+                           r'\.admonition p\.admonition-title~\*,'
+                           r'div\.admonition p\.admonition-title~\*'
+                           r'\{(margin-left:[^;]+;margin-right:[^}]+)\}',
+                           ' ')
+    # BUG(pydata_sphinx_theme): The theme's CSS adds sets a left margin on lists
+    # that are direct descendants of admonition containers.
+    data = patch.overwrite(data,
+                           r'\.admonition>ol,\.admonition>ul,'
+                           r'div\.admonition>ol,div\.admonition>ul'
+                           r'\{(margin-left:[^}]+)\}',
+                           ' ')
+    return data
 
 
 def to_base64(s):
@@ -199,6 +234,7 @@ def set_html_context(app, page, template, context, doctree):
 # BUG(pydata-sphinx-theme): The layout.html template doesn't allow overriding
 # the <html> tag. Patch the template source at load-time to add attributes from
 # the html_attrs context variable, by monkey-patching SphinxFileSystemLoader.
+# TODO: Make template patching generic and move to patch.py
 html_re = re.compile(r'(?m)^(<html[^>]*)(>)$')
 
 def _get_source(self, env, template):

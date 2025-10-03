@@ -146,3 +146,112 @@ This is the solution to exercise {numref}`block-ex:c`.
 
 ```{blocks} solution
 ```
+
+## Admonitions
+
+
+````{admonition} Horizontal alignment
+:class: note dropdown expand
+The `pydata_sphinx_theme` CSS breaks the layout of its content, in particular
+horizontal alignment. We fix it by patching the CSS file after copying the
+asset.
+
+- Item 1
+- Item 2
+
+# Math
+
+```{math}
+:class: align-left
+x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+```
+```{math}
+:class: align-center
+x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+```
+```{math}
+:class: align-right
+x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+```
+
+# Tables
+
+```{flex-table}
+:class: grid align-left
+{t=h}|$x$|0|1|2|3
+{t=b}|{t=h}$f(x)$|1|3|5|7
+```
+```{flex-table}
+:class: grid
+{t=h}|$x$|0|1|2|3
+{t=b}|{t=h}$f(x)$|1|3|5|7
+```
+```{flex-table}
+:class: grid align-right
+{t=h}|$x$|0|1|2|3
+{t=b}|{t=h}$f(x)$|1|3|5|7
+```
+
+```{flex-table}
+:class: function-table
+|$x$|$0$|$1$|$2$|$3$
+|$f(x)$|$1$|$3$|$5$|$7$
+```
+```{flex-table}
+:class: function-table align-center
+|$x$|$0$|$1$|$2$|$3$
+|$f(x)$|$1$|$3$|$5$|$7$
+```
+```{flex-table}
+:class: function-table align-right
+|$x$|$0$|$1$|$2$|$3$
+|$f(x)$|$1$|$3$|$5$|$7$
+```
+
+# JSXGraph
+
+```{jsxgraph}
+:template: grid(35, 2)
+:style: width: 50%;
+:class: align-left
+```
+```{jsxgraph}
+:template: grid(35, 2)
+:style: width: 50%;
+:class: align-middle
+```
+```{jsxgraph}
+:template: grid(35, 2)
+:style: width: 50%;
+:class: align-right
+```
+
+# Mermaid
+
+```{mermaid}
+:class: align-left
+config:
+  flowchart:
+    curve: linear
+---
+flowchart LR;
+    node(Node)
+```
+```{mermaid}
+config:
+  flowchart:
+    curve: linear
+---
+flowchart LR;
+    node(Node)
+```
+```{mermaid}
+:class: align-right
+config:
+  flowchart:
+    curve: linear
+---
+flowchart LR;
+    node(Node)
+```
+````

@@ -1,11 +1,6 @@
 /* Copyright 2024 Remy Blank <remy@c-space.org> */
 /* SPDX-License-Identifier: MIT */
 
-/* BUG(pydata_sphinx_theme): The theme's CSS has a rule
-   ".admonition :last-child { margin-bottom: 0 }" that is too broad. The
-   selector should be more precise (.admonition > :last-child), but basic.css
-   already has such a rule, so it could be removed altogether. */
-
 /* Variables */
 body {
     --tdoc-background-light: #fff;
@@ -297,18 +292,12 @@ blockquote div > p:has(+ p.attribution) {
 
 /* Grid tables */
 table.grid {
-    text-align: center;
     margin: 1rem auto;
-}
-table.grid.align-left {
-    margin-left: 0;
-}
-table.grid.align-right {
-    margin-right: 0;
+    text-align: center;
 }
 table.grid > :is(thead, tbody) > tr > :is(th, td) {
-    padding: 0.1rem 0.5rem;
     border: 1px solid var(--pst-color-text-base);
+    padding: 0.1rem 0.5rem;
 }
 table.grid > :is(thead, tbody) > tr > :is(th, td).l {
     text-align: left;
@@ -319,15 +308,15 @@ table.grid > :is(thead, tbody) > tr > :is(th, td).r {
 
 /* Function tables */
 table.function-table {
-    text-align: center;
     margin: 1rem 0;
+    text-align: center;
 }
 table.function-table > :is(thead, tbody) > tr:not(:last-child) {
     border-bottom: 1px solid var(--pst-color-text-base);
 }
 table.function-table > :is(thead, tbody) > tr > :is(th, td) {
-    padding: 0.1rem 0.5rem;
     border-right: 1px solid var(--pst-color-text-base);
+    padding: 0.1rem 0.5rem;
 }
 table.function-table > :is(thead, tbody) > tr > :is(th, td).l {
     text-align: left;
@@ -344,6 +333,34 @@ table.function-table > :is(thead, tbody) > tr > :is(th, td).w {
 table.function-table > :is(thead, tbody) > tr
         > :is(th, td):is(:first-child, :last-child) {
     border-right: 3px double var(--pst-color-text-base);
+}
+
+/* Table alignment */
+table.align-left {
+    margin-left: 0;
+    margin-right: auto;
+}
+table.align-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+table.align-right {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* Fix the layout of admonition content. pydata_sphinx_theme sets left and right
+   margins on all direct descendants, which breaks horizontal alignment classes.
+   Use padding on the container instead, adn remove the margins through
+   patching. Also, set a bottom margin on the title. */
+.admonition, div.admonition {
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+.admonition > .admonition-title, div.admonition > .admonition-title {
+    margin-left: -2rem;
+    margin-right: -2rem;
+    margin-bottom: 0.4em;
 }
 
 /* Admonitions */
