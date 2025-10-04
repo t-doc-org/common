@@ -8,9 +8,8 @@ import json
 import pathlib
 import re
 
-from docutils import nodes, statemachine
+from docutils import nodes
 from docutils.parsers.rst import directives
-from myst_parser import mocking
 from sphinx import config, locale
 from sphinx.environment import collectors
 from sphinx.util import docutils, fileutil, logging
@@ -33,20 +32,6 @@ _license_urls = {
     'CC-BY-ND-4.0': 'https://creativecommons.org/licenses/by-nd/4.0/',
     'MIT': 'https://opensource.org/license/mit',
 }
-
-# BUG(myst-parser): MockState.parse_directive_block() [myst_parser] returns the
-# content as a StringList, whereas Body.parse_directive_block() [docutils]
-# returns a list. The StringList is constructed with source=content.source,
-# which is a bound method and clearly wrong. Patch the method to unwrap the
-# list.
-def _parse_directive_block(self, *args, **kwargs):
-    arguments, options, content, content_offset = \
-        MockState_parse_directive_block(self, *args, **kwargs)
-    if isinstance(content, statemachine.StringList): content = content.data
-    return arguments, options, content, content_offset
-
-MockState_parse_directive_block = mocking.MockState.parse_directive_block
-mocking.MockState.parse_directive_block = _parse_directive_block
 
 
 @patch.asset_file('/_static/styles/pydata-sphinx-theme.css')
