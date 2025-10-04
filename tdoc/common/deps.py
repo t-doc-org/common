@@ -25,7 +25,7 @@ info = {
     'mermaid': {
         # https://www.npmjs.com/package/mermaid?activeTab=versions
         # https://github.com/mermaid-js/mermaid/releases
-        'version': '11.11.0',
+        'version': '11.12.0',
         'url': lambda v: f'{jsdelivr}/npm/mermaid@{v}/dist',
     },
     'mermaid-layout-elk': {
@@ -37,13 +37,13 @@ info = {
     'polyscript': {
         # https://www.npmjs.com/package/polyscript?activeTab=versions
         # https://github.com/pyscript/polyscript/tags
-        'version': '0.18.11',
+        'version': '0.18.14',
         'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',
     },
     'pyodide': {
         # https://www.npmjs.com/package/pyodide?activeTab=versions
         # https://pyodide.org/en/stable/project/changelog.html
-        'version': '0.28.2',
+        'version': '0.28.3',
         'url': lambda v: f'{jsdelivr}/pyodide/v{v}/full',
     },
     'sqlite': {
