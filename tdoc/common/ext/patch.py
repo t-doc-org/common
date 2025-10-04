@@ -5,7 +5,14 @@ import os
 import pathlib
 import re
 
+from sphinx import jinja2glue
 from sphinx.util import fileutil
+
+_asset_file_patches = []
+
+def asset_file(dest):
+    def wrapper(fn): _asset_file_patches.append((dest.replace('/', os.sep), fn))
+    return wrapper
 
 
 def _copy_asset_file(source, destination, context=None, renderer=None, *,
@@ -16,7 +23,7 @@ def _copy_asset_file(source, destination, context=None, renderer=None, *,
     destination = pathlib.Path(destination)
     if destination.is_dir(): destination /= source.name
     dstr = str(destination)
-    for dest, fn in asset_file_patches:
+    for dest, fn in _asset_file_patches:
         if dstr.endswith(dest):
             old = destination.read_text(encoding='utf-8')
             new = fn(old)
@@ -26,32 +33,25 @@ orig_copy_asset_file = fileutil.copy_asset_file
 fileutil.copy_asset_file = _copy_asset_file
 
 
-asset_file_patches = []
+_template_patches = {}
 
-def asset_file(dest):
-    def wrapper(fn):
-        asset_file_patches.append((dest.replace('/', os.sep), fn))
+def template(name):
+    def wrapper(fn): _template_patches.setdefault(name, []).append(fn)
     return wrapper
 
 
-def overwrite(data, pattern, *fills):
-    def replace(m):
-        mstart, mend = m.span(0)
-        if m.re.groups == 0:
-            f = fills[0]
-            return (f * ((mend - mstart + len(f) - 1) // len(f)))[:mend
-                                                                   - mstart]
-        res = ''
-        prev_end = mstart
-        for i in range(m.re.groups):
-            start, end = m.span(1 + i)
-            if start == end == -1: continue
-            res += data[prev_end: start]
-            prev_end = end
-            f = fills[i]
-            res += (f * ((end - start + len(f) - 1) // len(f)))[:end - start]
-        if prev_end != mend: res += data[prev_end: mend]
-        return res
-    new = re.sub(pattern, replace, data)
+def _get_source(self, env, template):
+    contents, filename, uptodate = \
+        SphinxFileSystemLoader_get_source(self, env, template)
+    for fn in _template_patches.get(template, ()):
+        contents = fn(contents, env)
+    return contents, filename, uptodate
+
+SphinxFileSystemLoader_get_source = jinja2glue.SphinxFileSystemLoader.get_source
+jinja2glue.SphinxFileSystemLoader.get_source = _get_source
+
+
+def sub(data, pattern, repl, count=0, flags=0):
+    new = re.sub(pattern, repl, data, count, flags)
     if new == data: raise Exception(f"Patching failed: {pattern}")
     return new

@@ -11,7 +11,7 @@ import re
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
 from myst_parser import mocking
-from sphinx import config, jinja2glue, locale
+from sphinx import config, locale
 from sphinx.environment import collectors
 from sphinx.util import docutils, fileutil, logging
 
@@ -51,35 +51,37 @@ mocking.MockState.parse_directive_block = _parse_directive_block
 
 @patch.asset_file('/_static/styles/pydata-sphinx-theme.css')
 def pydata_sphinx_theme_css(data):
+    overwrite = lambda m: f'{m[1]}{' ' * len(m[2])}{m[3]}'
+
     # BUG(pydata_sphinx_theme): The theme's CSS sets a top margin on the next
     # element after the title. Remove that, and set a bottom margin on the title
     # instead.
-    data = patch.overwrite(data,
-                           r'\.admonition>\.admonition-title\+\*,'
-                           r'div\.admonition>\.admonition-title\+\*'
-                           r'\{(margin-top:[^}]+)\}',
-                           ' ')
+    data = patch.sub(data,
+                     r'(\.admonition>\.admonition-title\+\*,'
+                     r'div\.admonition>\.admonition-title\+\*'
+                     r'\{)(margin-top:[^}]+)(\})',
+                     overwrite)
     # BUG(pydata_sphinx_theme): The rule in the theme's CSS is too broad. The
     # selector should be more precise (.admonition > :last-child), but basic.css
     # already has such a rule, so it can be removed altogether.
-    data = patch.overwrite(data,
-                           r'\.admonition :last-child\{(margin-bottom:[^}]+)\}',
-                           ' ')
+    data = patch.sub(data,
+                     r'(\.admonition :last-child\{)(margin-bottom:[^}]+)(\})',
+                     overwrite)
     # BUG(pydata_sphinx_theme): The theme's CSS sets left and right margins on
     # all direct descendants of admonition containers. This breaks horizontal
     # alignment classes.
-    data = patch.overwrite(data,
-                           r'\.admonition p\.admonition-title~\*,'
-                           r'div\.admonition p\.admonition-title~\*'
-                           r'\{(margin-left:[^;]+;margin-right:[^}]+)\}',
-                           ' ')
-    # BUG(pydata_sphinx_theme): The theme's CSS adds sets a left margin on lists
-    # that are direct descendants of admonition containers.
-    data = patch.overwrite(data,
-                           r'\.admonition>ol,\.admonition>ul,'
-                           r'div\.admonition>ol,div\.admonition>ul'
-                           r'\{(margin-left:[^}]+)\}',
-                           ' ')
+    data = patch.sub(data,
+                     r'(\.admonition p\.admonition-title~\*,'
+                     r'div\.admonition p\.admonition-title~\*'
+                     r'\{)(margin-left:[^;]+;margin-right:[^}]+)(\})',
+                     overwrite)
+    # BUG(pydata_sphinx_theme): The theme's CSS sets a left margin on lists that
+    # are direct descendants of admonition containers.
+    data = patch.sub(data,
+                     r'(\.admonition>ol,\.admonition>ul,'
+                     r'div\.admonition>ol,div\.admonition>ul'
+                     r'\{)(margin-left:[^}]+)(\})',
+                     overwrite)
     return data
 
 
@@ -231,25 +233,13 @@ def set_html_context(app, page, template, context, doctree):
     if v := app.config.license_url: context['license_url'] = v
 
 
-# BUG(pydata-sphinx-theme): The layout.html template doesn't allow overriding
-# the <html> tag. Patch the template source at load-time to add attributes from
-# the html_attrs context variable, by monkey-patching SphinxFileSystemLoader.
-# TODO: Make template patching generic and move to patch.py
-html_re = re.compile(r'(?m)^(<html[^>]*)(>)$')
-
-def _get_source(self, env, template):
-    contents, filename, uptodate = \
-        SphinxFileSystemLoader_get_source(self, env, template)
-    if template == 'pydata_sphinx_theme/layout.html':
-        contents, n = html_re.subn(
-            r'\1{{ html_attrs | default({}) | xmlattr }}\2', contents)
-        if n != 1:
-            raise Exception(
-                "Patching of pydata_sphinx_theme/layout.html failed")
-    return contents, filename, uptodate
-
-SphinxFileSystemLoader_get_source = jinja2glue.SphinxFileSystemLoader.get_source
-jinja2glue.SphinxFileSystemLoader.get_source = _get_source
+@patch.template('pydata_sphinx_theme/layout.html')
+def pydata_sphinx_theme_layout(contents, env):
+    # BUG(pydata-sphinx-theme): The layout.html template doesn't allow
+    # overriding the <html> tag. Patch the template source at load-time to add
+    # attributes from the html_attrs context variable.
+    return patch.sub(contents, r'(?m)^(<html[^>]*)(>)$',
+                     r'\1{{ html_attrs | default({}) | xmlattr }}\2')
 
 
 def add_js(app, page, template, context, doctree):
