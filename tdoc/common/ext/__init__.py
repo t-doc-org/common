@@ -193,6 +193,10 @@ def on_config_inited(app, config):
     if config.author and not config.copyright:
         config.copyright = f'%Y {config.author}'
 
+    # Set a default favicon.
+    if not config.html_favicon:
+        config.html_favicon = str(_base / 'favicon.svg')
+
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
     opts.setdefault('use_sidenotes', True)

@@ -13,7 +13,6 @@ language = 'en'
 # myst_links_external_new_tab = True
 
 html_logo = '_static/logo.svg'
-html_favicon = '_static/favicon.svg'
 html_theme_options = {
     'repository_url': 'https://github.com/t-doc-org/common',
     'use_download_button': True,
