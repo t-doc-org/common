@@ -3,8 +3,8 @@
 
 <svg
    width="16mm"
-   height="20mm"
-   viewBox="0 0 16 20"
+   height="16mm"
+   viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
    inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
@@ -26,9 +26,9 @@
      inkscape:document-units="mm"
      showgrid="true"
      showguides="true"
-     inkscape:zoom="6.323597"
-     inkscape:cx="46.571595"
-     inkscape:cy="16.999818"
+     inkscape:zoom="8.9429167"
+     inkscape:cx="36.173881"
+     inkscape:cy="29.688301"
      inkscape:window-width="1920"
      inkscape:window-height="1029"
      inkscape:window-x="2560"
@@ -89,63 +89,63 @@
        inkscape:collect="always"
        xlink:href="#linearGradient8"
        id="linearGradient9"
-       x1="10"
+       x1="11"
        y1="10"
-       x2="10"
-       y2="28"
+       x2="11"
+       y2="26"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-9,-9)" />
+       gradientTransform="translate(-9,-10)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient8"
        id="linearGradient11"
-       x1="10"
+       x1="12"
        y1="10"
-       x2="10"
-       y2="28"
+       x2="12"
+       y2="26"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-9,-9)" />
+       gradientTransform="translate(-10,-10)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient8"
        id="linearGradient13"
-       x1="10"
+       x1="12"
        y1="10"
-       x2="10"
-       y2="28"
+       x2="12"
+       y2="26"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-9,-9)" />
+       gradientTransform="translate(-10,-10)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient8"
        id="linearGradient23"
-       x1="4.7294841"
-       y1="1.6415663"
-       x2="4.7294841"
-       y2="19.641567"
+       x1="4.675045"
+       y1="1.2356483"
+       x2="4.675045"
+       y2="20.047485"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-3.7294841,-0.64156631)" />
+       gradientTransform="matrix(0.85052834,0,0,0.85052834,-1.9762581,-1.0509539)" />
   </defs>
   <g
-     inkscape:label="logo"
+     inkscape:label="favicon"
      inkscape:groupmode="layer"
      id="layer1">
     <path
        id="rect1"
        style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:url(#linearGradient9)"
-       d="m 3,1.5 8,1e-7 3.500001,3.5000001 L 14.5,17 c 0,0.7 -0.8,1.5 -1.5,1.5 H 3 C 2.3,18.5 1.5,17.7 1.5,17 V 3 C 1.5,2.3 2.3,1.5 3,1.5 Z"
+       d="m 4,0.5 7,0 2.5,2.5 0,11 c 0,0.7 -0.8,1.5 -1.5,1.5 H 4 c -0.7,0 -1.5,-0.8 -1.5,-1.5 L 2.5,2 c -0,-0.7 0.8,-1.5 1.5,-1.5 z"
        sodipodi:nodetypes="sssssssss"
        inkscape:label="page1" />
     <path
        style="display:inline;fill:url(#linearGradient13);fill-opacity:1;fill-rule:evenodd;stroke:url(#linearGradient11);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
-       d="m 14.500001,5.0000002 h -2 C 11.800001,5.0000002 11,4.2000001 11,3.5000001 l 0,-2 z"
+       d="m 13.5,3 h -1 c -0.7,0 -1.5,-0.8 -1.5,-1.5 l 0,-1 z"
        id="path2"
        sodipodi:nodetypes="ccccc"
        inkscape:label="fold" />
     <path
-       d="M 5.2508192,7.3128316 H 6.367028 V 4.1213014 h 1.744593 v 3.1915302 h 2.63756 v 1.7445933 h -2.63756 v 4.3904211 q 0,0.281119 0.214974,0.487824 0.223242,0.198437 0.529165,0.198437 h 1.893421 V 15.8787 H 8.830956 q -0.677994,0 -1.240232,-0.32246 Q 7.036754,15.225511 6.697757,14.679809 6.367028,14.125839 6.367028,13.456114 V 9.0574249 H 5.2508192 Z"
+       d="M 5.6617444,5.7144869 H 6.6111117 V 3 h 1.4838257 v 2.7144869 h 2.2433196 v 1.483826 H 8.0949374 V 10.93249 q 0,0.2391 0.1828415,0.414908 0.1898736,0.168776 0.4500698,0.168776 h 1.6104083 v 1.483827 H 8.7067522 q -0.5766531,0 -1.0548524,-0.274262 Q 7.1807326,12.444444 6.892406,11.98031 6.6111117,11.509142 6.6111117,10.939522 V 7.1983129 H 5.6617444 Z"
        id="t"
-       style="font-size:16.9333px;line-height:125%;font-family:Anta;-inkscape-font-specification:'Anta, Normal';letter-spacing:0px;word-spacing:0px;fill:url(#linearGradient23);stroke-width:0.264583px;stroke-opacity:0"
+       style="font-size:16.9333px;line-height:125%;font-family:Anta;-inkscape-font-specification:'Anta, Normal';letter-spacing:0px;word-spacing:0px;fill:url(#linearGradient23);stroke-width:0.225035px;stroke-opacity:0"
        aria-label="t" />
   </g>
 </svg>
