@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-63)=
+## 0.63 *(2025-10-04)*
+
+- Fixed layout issues in admonitions.
+- Added a logo and a favicon. Yay!
+- Split `run.py` into two stages, a loader (still in the site repository) and a
+  payload fetched from GitHub. This should reduce the frequency of `run.py`
+  updates across all repositories.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.62...0.63)
+
 (release-0-62)=
 ## 0.62 *(2025-09-28)*
 
