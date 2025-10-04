@@ -6,9 +6,9 @@ version = 'stable'
 hermetic = true
 
 [tags]
-testing = '0.62'
-stable = '0.62'
-previous = '0.61'
+testing = '0.63'
+stable = '0.63'
+previous = '0.62'
 
 [defaults]
 command = ['tdoc', 'serve', '--open']
