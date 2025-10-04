@@ -26,9 +26,9 @@
      inkscape:document-units="mm"
      showgrid="true"
      showguides="true"
-     inkscape:zoom="5.6568542"
-     inkscape:cx="77.693358"
-     inkscape:cy="53.651727"
+     inkscape:zoom="7.9999999"
+     inkscape:cx="70.437501"
+     inkscape:cy="21.6875"
      inkscape:window-width="1920"
      inkscape:window-height="1029"
      inkscape:window-x="2560"
@@ -175,12 +175,12 @@
       <path
          id="rect1"
          style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:url(#linearGradient9)"
-         d="m 12,10.5 h 8.5 l 3,3 V 26 c 0,0.7 -0.8,1.5 -1.5,1.5 H 12 c -0.7,0 -1.5,-0.8 -1.5,-1.5 V 12 c 0,-0.7 0.8,-1.5 1.5,-1.5 z"
+         d="m 12,10.5 7.500123,0 4,4 L 23.5,26 c -7e-6,0.7 -0.8,1.5 -1.5,1.5 H 12 c -0.7,0 -1.5,-0.8 -1.5,-1.5 V 12 c 0,-0.7 0.8,-1.5 1.5,-1.5 z"
          sodipodi:nodetypes="sssssssss"
          inkscape:label="page1" />
       <path
          style="display:inline;fill:url(#linearGradient13);fill-opacity:1;fill-rule:evenodd;stroke:url(#linearGradient11);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
-         d="M 23.5,13.5 H 22 c -0.7,0 -1.5,-0.8 -1.5,-1.5 v -1.5 z"
+         d="m 23.500123,14.5 h -2.5 c -0.7,0 -1.5,-0.8 -1.5,-1.5 l 0,-2.5 z"
          id="path2"
          sodipodi:nodetypes="ccccc"
          inkscape:label="fold" />
