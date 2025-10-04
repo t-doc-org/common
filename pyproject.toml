@@ -13,7 +13,7 @@ license = "MIT"
 # license-files = ["LICENSE.txt", "LICENSES.deps.txt"]
 keywords = []
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: Sphinx :: Extension",
     "Framework :: Sphinx :: Theme",
     "Intended Audience :: Developers",
