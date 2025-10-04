@@ -27,12 +27,12 @@
      showgrid="true"
      showguides="true"
      inkscape:zoom="7.9999999"
-     inkscape:cx="70.437501"
-     inkscape:cy="21.6875"
+     inkscape:cx="49.250001"
+     inkscape:cy="44.187501"
      inkscape:window-width="1920"
      inkscape:window-height="1029"
-     inkscape:window-x="2560"
-     inkscape:window-y="360"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1"
      showborder="false"
@@ -180,7 +180,7 @@
          inkscape:label="page1" />
       <path
          style="display:inline;fill:url(#linearGradient13);fill-opacity:1;fill-rule:evenodd;stroke:url(#linearGradient11);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
-         d="m 23.500123,14.5 h -2.5 c -0.7,0 -1.5,-0.8 -1.5,-1.5 l 0,-2.5 z"
+         d="m 23,14.5 -2,0 c -0.7,0 -1.5,-0.8 -1.5,-1.5 l 0,-2 z"
          id="path2"
          sodipodi:nodetypes="ccccc"
          inkscape:label="fold" />
