@@ -21,10 +21,6 @@ html_theme_options = {
     'show_toc_level': 2,
 }
 
-tdoc_enable_sab = 'no'
-# tdoc_enable_sab = 'cross-origin-isolation'
-# tdoc_enable_sab = 'sabayon'
-
 intersphinx_mapping = {
     'python': (
         f'https://docs.python.org/{sys.version_info[0]}.{sys.version_info[1]}',
