@@ -414,4 +414,4 @@ def maybe_wait_on_exit(stderr):
 
 if __name__ == '__main__':
     main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr,
-         base=pathlib.Path(sys.argv[0]).parent.parent.resolve())
+         base=pathlib.Path(sys.argv[0]).parent.resolve().parent)

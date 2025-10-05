@@ -2,55 +2,91 @@
 # SPDX-License-Identifier: MIT
 
 jsdelivr = 'https://cdn.jsdelivr.net'
+npmjs_versions = \
+    lambda n: f'https://www.npmjs.com/package/{n}?activeTab=versions'
+
+# TODO: Add constraints on allowed versions
 
 info = {
     'drauu': {
-        # https://www.npmjs.com/package/@drauu/core?activeTab=versions
-        # https://github.com/antfu/drauu/tags
+        'name': '@drauu/core',
         'version': '0.4.3',
-        'url': lambda v: f'{jsdelivr}/npm/@drauu/core@{v}/dist',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'docs': [
+            'https://github.com/antfu/drauu/tags',
+            npmjs_versions,
+        ],
     },
     'jsxgraph': {
-        # https://www.npmjs.com/package/jsxgraph?activeTab=versions
-        # https://github.com/jsxgraph/jsxgraph/releases
+        'name': 'jsxgraph',
         'version': '1.11.1',
-        'url': lambda v: f'{jsdelivr}/npm/jsxgraph@{v}/distrib',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
+        'docs': [
+            'https://github.com/jsxgraph/jsxgraph/releases',
+            npmjs_versions,
+        ],
     },
     'mathjax': {
-        # https://www.npmjs.com/package/mathjax?activeTab=versions
-        # https://github.com/mathjax/MathJax/releases
+        'name': 'mathjax',
         'version': '3.2.2',
-        'url': lambda v: f'{jsdelivr}/npm/mathjax@{v}/es5',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/es5',
+        'docs': [
+            'https://github.com/mathjax/MathJax/releases',
+            npmjs_versions,
+        ],
     },
     'mermaid': {
-        # https://www.npmjs.com/package/mermaid?activeTab=versions
-        # https://github.com/mermaid-js/mermaid/releases
+        'name': 'mermaid',
         'version': '11.12.0',
-        'url': lambda v: f'{jsdelivr}/npm/mermaid@{v}/dist',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'docs': [
+            'https://github.com/mermaid-js/mermaid/releases',
+            npmjs_versions,
+        ],
     },
     'mermaid-layout-elk': {
-        # https://www.npmjs.com/package/@mermaid-js/layout-elk?activeTab=versions
-        # https://github.com/mermaid-js/mermaid/releases
+        'name': '@mermaid-js/layout-elk',
         'version': '0.2.0',
-        'url': lambda v: f'{jsdelivr}/npm/@mermaid-js/layout-elk@{v}/dist',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'docs': [
+            'https://github.com/mermaid-js/mermaid/releases',
+            npmjs_versions,
+        ],
     },
     'polyscript': {
-        # https://www.npmjs.com/package/polyscript?activeTab=versions
-        # https://github.com/pyscript/polyscript/tags
+        'name': 'polyscript',
         'version': '0.18.14',
-        'url': lambda v: f'{jsdelivr}/npm/polyscript@{v}/dist',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'docs': [
+            'https://github.com/pyscript/polyscript/tags',
+            npmjs_versions,
+        ],
     },
     'pyodide': {
-        # https://www.npmjs.com/package/pyodide?activeTab=versions
-        # https://pyodide.org/en/stable/project/changelog.html
+        'name': 'pyodide',
         'version': '0.28.3',
-        'url': lambda v: f'{jsdelivr}/pyodide/v{v}/full',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
+        'docs': [
+            'https://pyodide.org/en/stable/project/changelog.html',
+            npmjs_versions,
+        ],
     },
     'sqlite': {
-        # https://www.npmjs.com/package/@sqlite.org/sqlite-wasm?activeTab=versions
-        # https://github.com/sqlite/sqlite-wasm/releases
-        # https://www.sqlite.org/changes.html
+        'name': '@sqlite.org/sqlite-wasm',
         'version': '3.50.4-build1',
-        'url': lambda v: f'{jsdelivr}/npm/@sqlite.org/sqlite-wasm@{v}',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
+        'docs': [
+            'https://github.com/sqlite/sqlite-wasm/releases',
+            'https://www.sqlite.org/changes.html',
+            npmjs_versions,
+        ],
     },
 }

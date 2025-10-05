@@ -814,7 +814,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             parts = path_info.split('/', 3)
             if parts[0] != '' or len(parts) < 4: return
             if (d := deps.info.get(parts[1])) is None: return
-            url = f'{d['url'](parts[2])}/{parts[3]}'
+            url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
             self.cfg.stderr.write(f"Caching {url}\n")
             with request.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)

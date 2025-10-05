@@ -271,7 +271,8 @@ def tdoc_config(app, page=None, doctree=None, context=None):
     versions = tdoc['versions'] = meta(app, page, 'versions', {}).copy()
     for name, info in deps.info.items():
         if '://' not in (v := versions.setdefault(name, info['version'])):
-            versions[name] = f'/_cache/{name}/{v}' if is_dev else info['url'](v)
+            versions[name] = f'/_cache/{name}/{v}' if is_dev \
+                             else info['url'](info['name'], v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return tdoc
