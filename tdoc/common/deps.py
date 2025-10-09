@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 jsdelivr = 'https://cdn.jsdelivr.net'
-npmjs_versions = \
-    lambda n: f'https://www.npmjs.com/package/{n}?activeTab=versions'
 
 # TODO: Add constraints on allowed versions
 
@@ -15,7 +13,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'docs': [
             'https://github.com/antfu/drauu/tags',
-            npmjs_versions,
         ],
     },
     'jsxgraph': {
@@ -25,7 +22,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
         'docs': [
             'https://github.com/jsxgraph/jsxgraph/releases',
-            npmjs_versions,
         ],
     },
     'mathjax': {
@@ -35,7 +31,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/es5',
         'docs': [
             'https://github.com/mathjax/MathJax/releases',
-            npmjs_versions,
         ],
     },
     'mermaid': {
@@ -45,7 +40,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'docs': [
             'https://github.com/mermaid-js/mermaid/releases',
-            npmjs_versions,
         ],
     },
     'mermaid-layout-elk': {
@@ -55,7 +49,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'docs': [
             'https://github.com/mermaid-js/mermaid/releases',
-            npmjs_versions,
         ],
     },
     'polyscript': {
@@ -65,7 +58,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'docs': [
             'https://github.com/pyscript/polyscript/tags',
-            npmjs_versions,
         ],
     },
     'pyodide': {
@@ -75,7 +67,6 @@ info = {
         'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'docs': [
             'https://pyodide.org/en/stable/project/changelog.html',
-            npmjs_versions,
         ],
     },
     'sqlite': {
@@ -86,7 +77,6 @@ info = {
         'docs': [
             'https://github.com/sqlite/sqlite-wasm/releases',
             'https://www.sqlite.org/changes.html',
-            npmjs_versions,
         ],
     },
 }
