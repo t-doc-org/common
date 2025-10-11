@@ -10,10 +10,11 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
+import tomllib
 from urllib import request
 import webbrowser
 
-# TODO: Python: tools/requirements.sh uv
 # TODO: GitHub actions
 
 
@@ -22,6 +23,7 @@ def main(argv, stdin, stdout, stderr):
     checker.check_deps()
     checker.check_node()
     checker.check_python()
+    checker.check_requirements()
 
 
 class Checker:
@@ -43,6 +45,11 @@ class Checker:
             else:
                 raise Exception(f"Unknown option: {arg}")
             i += 1
+
+    @functools.cached_property
+    def pyproject(self):
+        with (self.base / 'pyproject.toml').open('rb') as f:
+            return tomllib.load(f)
 
     def write(self, s): return self.stdout.write(s)
 
@@ -96,10 +103,43 @@ class Checker:
             pkg = PythonPackage(m[1], m[2], m[3])
             pkg.add_releases_url()
             pkgs.append(pkg)
-
         if not pkgs: return
-        self.section("Python")
+        self.section("pyproject.toml")
         self.report_packages(pkgs)
+
+    def check_requirements(self):
+        for p in sorted((self.base / 'config').glob('[!0-9]*.req')):
+            cur_reqs = self.parse_requirements(p.read_text())
+            with tempfile.NamedTemporaryFile('w') as f:
+                f.write(f"""\
+# /// script
+# requires-python = {self.pyproject['project']['requires-python']!r}
+# dependencies = [{p.stem!r}]
+# ///
+""")
+                f.flush()
+                out = self.uv('export', '--no-header',
+                              '--format=requirements.txt', f'--script={f.name}',
+                              capture_output=True, text=True)[0]
+            want_reqs = self.parse_requirements(out)
+            if want_reqs == cur_reqs: continue
+            pkgs = []
+            for pn in cur_reqs | want_reqs:
+                current, wanted = cur_reqs.get(pn), want_reqs.get(pn)
+                if current == wanted: continue
+                pkg = PythonPackage(pn, current, wanted)
+                pkg.add_releases_url()
+                pkgs.append(pkg)
+            if not pkgs: return
+            self.section(p.name)
+            self.report_packages(pkgs)
+
+    reqs_pkg_version_re = re.compile(f'(?m)^([^\\s=]+)==([^\\s;]+)(?:\\s|$)')
+
+    def parse_requirements(self, text):
+        reqs = {}
+        for m in self.reqs_pkg_version_re.finditer(text): reqs[m[1]] = m[2]
+        return reqs
 
     def uv(self, *args, **kwargs):
         p = subprocess.run(('uv', *args), cwd=self.base,
@@ -134,6 +174,12 @@ class Package:
     @property
     def outdated(self): return self.wanted != self.current
 
+    @property
+    def info(self):
+        if (info := self._info_cache.get(self.name)) is not None: return info
+        res = self._info_cache[self.name] = fetch_json(self.info_url)
+        return res
+
     def report(self, out, open):
         out.write(f"{self.name}\n")
         w = max(len(self.current), len(self.wanted))
@@ -146,6 +192,11 @@ class Package:
 
 
 class NpmPackage(Package):
+    _info_cache = {}
+
+    @property
+    def info_url(self): return f'https://registry.npmjs.org/{self.name}'
+
     def wanted_tag(self, tag):
         self.wanted = self.info['dist-tags'][tag]
 
@@ -158,16 +209,17 @@ class NpmPackage(Package):
 
     def time(self, version): return self.info.time[version]
 
-    @functools.cached_property
-    def info(self):
-        return fetch_json(f'https://registry.npmjs.org/{self.name}')
-
     @property
     def versions_url(self):
         return f'https://www.npmjs.com/package/{self.name}?activeTab=versions'
 
 
 class PythonPackage(Package):
+    _info_cache = {}
+
+    @property
+    def info_url(self): return f'https://pypi.org/pypi/{self.name}/json'
+
     def time(self, version):
         return max((subsec_re.sub('', p.upload_time_iso_8601)
                     for p in self.info.releases[version]),
@@ -191,10 +243,6 @@ class PythonPackage(Package):
                 self.urls.append(url)
                 return True
         return False
-
-    @functools.cached_property
-    def info(self):
-        return fetch_json(f'https://pypi.org/pypi/{self.name}/json')
 
     @property
     def versions_url(self):
