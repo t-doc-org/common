@@ -6,12 +6,13 @@ import functools
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 from urllib import request
 import webbrowser
 
-# TODO: Python: tools/requirements.sh uv, uv lock --upgrade
+# TODO: Python: tools/requirements.sh uv
 # TODO: GitHub actions
 
 
@@ -19,6 +20,7 @@ def main(argv, stdin, stdout, stderr):
     checker = Checker(argv, stdout, stderr)
     checker.check_deps()
     checker.check_node()
+    checker.check_python()
 
 
 class Checker:
@@ -57,32 +59,52 @@ class Checker:
         for info in mod.info.values():
             pkg = NpmPackage(info['name'], info['version'], info['docs'])
             pkg.set_wanted(tag=info['tag'])
-            pkgs.append(pkg)
+            if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("deps.py")
-        self.report_npm_packages(pkgs)
+        self.report_packages(pkgs)
 
     def check_node(self):
         pkgs = []
         for name, info in self.npm_outdated().items():
             pkg = NpmPackage(name, info.current)
             pkg.set_wanted(version=info.wanted)
-            pkgs.append(pkg)
+            # TODO: Get release notes URL from info
+            if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("npm outdated")
-        self.report_npm_packages(pkgs)
+        self.report_packages(pkgs)
 
     def npm_outdated(self):
-        p = subprocess.run(('npm', 'outdated', '--json'),
-                           stdin=subprocess.DEVNULL, capture_output=True,
-                           cwd=self.base)
-        if p.returncode != 0 and p.stderr: raise Exception(p.stderr)
+        p = subprocess.run(('npm', 'outdated', '--json'), cwd=self.base,
+                           stdin=subprocess.DEVNULL, capture_output=True)
+        if p.returncode not in (0, 1): raise Exception(p.stderr)
         return json.loads(p.stdout, object_pairs_hook=Namespace)
 
-    def report_npm_packages(self, pkgs):
+    uv_update_re = re.compile('^Update ([^ ]+) v([^ ]+) -> v([^ ]+)$')
+
+    def check_python(self):
+        pkgs = []
+        out = self.uv('lock', '--upgrade', '--dry-run', '--no-progress',
+                      '--color=never', capture_output=True, text=True)[1]
+        for line in out.splitlines():
+            if (m := self.uv_update_re.fullmatch(line)) is None: continue
+            pkg = PythonPackage(m[1], m[2], m[3])
+            pkgs.append(pkg)
+
+        if not pkgs: return
+        self.section("Python")
+        self.report_packages(pkgs)
+
+    def uv(self, *args, **kwargs):
+        p = subprocess.run(('uv', *args), cwd=self.base,
+                           stdin=subprocess.DEVNULL, **kwargs)
+        if p.returncode != 0: raise Exception(p.stderr)
+        return p.stdout, p.stderr
+
+    def report_packages(self, pkgs):
         pkgs.sort(key=lambda p: p.name)
         for pkg in pkgs:
-            if not pkg.outdated: continue
             self.write(f"{pkg.name}\n")
             w = max(len(pkg.current), len(pkg.wanted))
             self.write(
@@ -125,6 +147,30 @@ class NpmPackage:
     @property
     def npmjs_versions(self):
         return f'https://www.npmjs.com/package/{self.name}?activeTab=versions'
+
+
+subsec_re = re.compile(r'\.\d{1,6}')
+
+
+class PythonPackage:
+    def __init__(self, name, current, wanted):
+        self.name, self.current, self.wanted = name, current, wanted
+        self.urls = [self.pypi_versions]
+
+    def time(self, version):
+        return max((subsec_re.sub('', p.upload_time_iso_8601)
+                    for p in self.info.releases[version]),
+                   default="unknown")
+
+    @functools.cached_property
+    def info(self):
+        with request.urlopen(f'https://pypi.org/pypi/{self.name}/json',
+                             timeout=30) as f:
+            return json.load(f, object_pairs_hook=Namespace)
+
+    @property
+    def pypi_versions(self):
+        return f'https://pypi.org/project/{self.name}/#history'
 
 
 if __name__ == '__main__':
