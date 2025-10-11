@@ -57,8 +57,8 @@ class Checker:
         exec(code, mod.__dict__)
         pkgs = []
         for info in mod.info.values():
-            pkg = NpmPackage(info['name'], info['version'], info['docs'])
-            pkg.set_wanted(tag=info['tag'])
+            pkg = NpmPackage(info['name'], info['version'], urls=info['docs'])
+            pkg.wanted_tag(info['tag'])
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("deps.py")
@@ -67,8 +67,7 @@ class Checker:
     def check_node(self):
         pkgs = []
         for name, info in self.npm_outdated().items():
-            pkg = NpmPackage(name, info.current)
-            pkg.set_wanted(version=info.wanted)
+            pkg = NpmPackage(name, info.current, info.wanted)
             # TODO: Get release notes URL from info
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
@@ -90,6 +89,7 @@ class Checker:
         for line in out.splitlines():
             if (m := self.uv_update_re.fullmatch(line)) is None: continue
             pkg = PythonPackage(m[1], m[2], m[3])
+            # TODO: Get release notes URL from info
             pkgs.append(pkg)
 
         if not pkgs: return
@@ -104,16 +104,7 @@ class Checker:
 
     def report_packages(self, pkgs):
         pkgs.sort(key=lambda p: p.name)
-        for pkg in pkgs:
-            self.write(f"{pkg.name}\n")
-            w = max(len(pkg.current), len(pkg.wanted))
-            self.write(
-                f"  current: {pkg.current:{w}} ({pkg.time(pkg.current)})\n")
-            self.write(
-                f"  wanted : {pkg.wanted:{w}} ({pkg.time(pkg.wanted)})\n")
-            if self.open:
-                for url in pkg.urls:
-                    webbrowser.open_new_tab(url)
+        for pkg in pkgs: pkg.report(self.stdout, self.open)
 
 
 class Namespace(dict):
@@ -121,42 +112,50 @@ class Namespace(dict):
         return self[name]
 
 
-class NpmPackage:
-    def __init__(self, name, current, urls=None):
-        self.name, self.current = name, current
-        self.urls = [self.npmjs_versions]
+def fetch_json(url):
+    with request.urlopen(url, timeout=30) as f:
+        return json.load(f, object_pairs_hook=Namespace)
+
+
+class Package:
+    def __init__(self, name, current, wanted=None, urls=None):
+        self.name, self.current, self.wanted = name, current, wanted
+        self.urls = [self.versions_url]
         if urls is not None:
             self.urls.extend(u if isinstance(u, str) else u(name) for u in urls)
 
-    def set_wanted(self, version=None, tag=None):
-        if tag is not None:
-            version = self.info['dist-tags'][tag]
-        self.wanted = version
-
     @property
     def outdated(self): return self.wanted != self.current
+
+    def report(self, out, open):
+        out.write(f"{self.name}\n")
+        w = max(len(self.current), len(self.wanted))
+        out.write(
+            f"  current: {self.current:{w}} ({self.time(self.current)})\n")
+        out.write(f"  wanted : {self.wanted:{w}} ({self.time(self.wanted)})\n")
+        if open:
+            for url in self.urls: webbrowser.open_new_tab(url)
+
+
+class NpmPackage(Package):
+    def wanted_tag(self, tag):
+        self.wanted = self.info['dist-tags'][tag]
 
     def time(self, version): return self.info.time[version]
 
     @functools.cached_property
     def info(self):
-        with request.urlopen(f'https://registry.npmjs.org/{self.name}',
-                             timeout=30) as f:
-            return json.load(f, object_pairs_hook=Namespace)
+        return fetch_json(f'https://registry.npmjs.org/{self.name}')
 
     @property
-    def npmjs_versions(self):
+    def versions_url(self):
         return f'https://www.npmjs.com/package/{self.name}?activeTab=versions'
 
 
 subsec_re = re.compile(r'\.\d{1,6}')
 
 
-class PythonPackage:
-    def __init__(self, name, current, wanted):
-        self.name, self.current, self.wanted = name, current, wanted
-        self.urls = [self.pypi_versions]
-
+class PythonPackage(Package):
     def time(self, version):
         return max((subsec_re.sub('', p.upload_time_iso_8601)
                     for p in self.info.releases[version]),
@@ -164,12 +163,10 @@ class PythonPackage:
 
     @functools.cached_property
     def info(self):
-        with request.urlopen(f'https://pypi.org/pypi/{self.name}/json',
-                             timeout=30) as f:
-            return json.load(f, object_pairs_hook=Namespace)
+        return fetch_json(f'https://pypi.org/pypi/{self.name}/json')
 
     @property
-    def pypi_versions(self):
+    def versions_url(self):
         return f'https://pypi.org/project/{self.name}/#history'
 
 
