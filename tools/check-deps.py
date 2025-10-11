@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import functools
+import itertools
 import json
 import os
 import pathlib
@@ -57,8 +58,12 @@ class Checker:
         exec(code, mod.__dict__)
         pkgs = []
         for info in mod.info.values():
-            pkg = NpmPackage(info['name'], info['version'], urls=info['docs'])
+            pkg = NpmPackage(info['name'], info['version'])
             pkg.wanted_tag(info['tag'])
+            if (urls := info.get('release_urls')) is not None:
+                pkg.urls.extend(urls)
+            else:
+                pkg.add_releases_url()
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("deps.py")
@@ -68,7 +73,7 @@ class Checker:
         pkgs = []
         for name, info in self.npm_outdated().items():
             pkg = NpmPackage(name, info.current, info.wanted)
-            # TODO: Get release notes URL from info
+            pkg.add_releases_url()
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("npm outdated")
@@ -89,7 +94,7 @@ class Checker:
         for line in out.splitlines():
             if (m := self.uv_update_re.fullmatch(line)) is None: continue
             pkg = PythonPackage(m[1], m[2], m[3])
-            # TODO: Get release notes URL from info
+            pkg.add_releases_url()
             pkgs.append(pkg)
 
         if not pkgs: return
@@ -117,12 +122,14 @@ def fetch_json(url):
         return json.load(f, object_pairs_hook=Namespace)
 
 
+gh_repo_re = re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)')
+subsec_re = re.compile(r'\.\d{1,6}')
+
+
 class Package:
-    def __init__(self, name, current, wanted=None, urls=None):
+    def __init__(self, name, current, wanted=None):
         self.name, self.current, self.wanted = name, current, wanted
         self.urls = [self.versions_url]
-        if urls is not None:
-            self.urls.extend(u if isinstance(u, str) else u(name) for u in urls)
 
     @property
     def outdated(self): return self.wanted != self.current
@@ -133,13 +140,21 @@ class Package:
         out.write(
             f"  current: {self.current:{w}} ({self.time(self.current)})\n")
         out.write(f"  wanted : {self.wanted:{w}} ({self.time(self.wanted)})\n")
-        if open:
-            for url in self.urls: webbrowser.open_new_tab(url)
+        for url in self.urls:
+            out.write(f"  url: {url}\n")
+            if open: webbrowser.open_new_tab(url)
 
 
 class NpmPackage(Package):
     def wanted_tag(self, tag):
         self.wanted = self.info['dist-tags'][tag]
+
+    def add_releases_url(self):
+        for pi in (self.info, self.info.versions.get(self.wanted, ''),
+                   self.info.versions.get(self.current, '')):
+            if (m := gh_repo_re.search(pi.repository.url)) is None: continue
+            self.urls.append(f'https://github.com/{m[1]}/releases')
+            break
 
     def time(self, version): return self.info.time[version]
 
@@ -152,14 +167,30 @@ class NpmPackage(Package):
         return f'https://www.npmjs.com/package/{self.name}?activeTab=versions'
 
 
-subsec_re = re.compile(r'\.\d{1,6}')
-
-
 class PythonPackage(Package):
     def time(self, version):
         return max((subsec_re.sub('', p.upload_time_iso_8601)
                     for p in self.info.releases[version]),
                    default="unknown")
+
+    def add_releases_url(self):
+        if self._add_project_url('release'): return
+        if self._add_project_url('change'): return
+        if self._add_project_url('news'): return
+        for url in itertools.chain(
+                self.info.info.get('project_urls', {}).values(),
+                [self.info.info.get('home_page', '')]):
+            if (m := gh_repo_re.search(url)) is None: continue
+            self.urls.append(f'https://github.com/{m[1]}/releases')
+            return
+        if self._add_project_url('home'): return
+
+    def _add_project_url(self, label):
+        for ul, url in self.info.info.project_urls.items():
+            if label in ul.lower():
+                self.urls.append(url)
+                return True
+        return False
 
     @functools.cached_property
     def info(self):

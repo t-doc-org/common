@@ -11,7 +11,7 @@ info = {
         'version': '0.4.3',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
-        'docs': [
+        'release_urls': [
             'https://github.com/antfu/drauu/tags',
         ],
     },
@@ -20,43 +20,31 @@ info = {
         'version': '1.11.1',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
-        'docs': [
-            'https://github.com/jsxgraph/jsxgraph/releases',
-        ],
     },
     'mathjax': {
         'name': 'mathjax',
         'version': '3.2.2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/es5',
-        'docs': [
-            'https://github.com/mathjax/MathJax/releases',
-        ],
     },
     'mermaid': {
         'name': 'mermaid',
         'version': '11.12.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
-        'docs': [
-            'https://github.com/mermaid-js/mermaid/releases',
-        ],
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
         'version': '0.2.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
-        'docs': [
-            'https://github.com/mermaid-js/mermaid/releases',
-        ],
     },
     'polyscript': {
         'name': 'polyscript',
         'version': '0.18.14',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
-        'docs': [
+        'release_urls': [
             'https://github.com/pyscript/polyscript/tags',
         ],
     },
@@ -65,7 +53,7 @@ info = {
         'version': '0.28.3',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
-        'docs': [
+        'release_urls': [
             'https://pyodide.org/en/stable/project/changelog.html',
         ],
     },
@@ -74,7 +62,7 @@ info = {
         'version': '3.50.4-build1',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
-        'docs': [
+        'release_urls': [
             'https://github.com/sqlite/sqlite-wasm/releases',
             'https://www.sqlite.org/changes.html',
         ],
