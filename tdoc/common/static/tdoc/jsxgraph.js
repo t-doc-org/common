@@ -9,6 +9,12 @@ import {domLoaded, findDyn, mathJaxReady, qs, qsa} from './core.js';
 await import(`${tdoc.versions.jsxgraph}/jsxgraphcore.mjs`);
 export const JXG = globalThis.JXG;
 
+function generateLabelText(...args) {
+    let v = Object.getPrototypeOf(this).generateLabelText.call(this, ...args);
+    if (this.evalVisProp('label').usemathjax) v = v.replace(/\\[()]/g, '');
+    return `\\(${v}\\)`;
+}
+
 // Set global defaults.
 const fontSize = 14;
 JXG.merge(JXG.Options, {
@@ -36,11 +42,7 @@ JXG.merge(JXG.Options, {
                         fontSize,
                         offset: [0, -6],
                     },
-                    generateLabelText: function(tick, zero) {
-                        const v = this.formatLabelText(tick.usrCoords[1]
-                                                       - zero.usrCoords[1]);
-                        return `\\(${v}\\)`;
-                    },
+                    generateLabelText,
                 },
             },
             y: {
@@ -62,11 +64,7 @@ JXG.merge(JXG.Options, {
                         fontSize,
                         offset: [-10, 0],
                     },
-                    generateLabelText: function(tick, zero) {
-                        const v = this.formatLabelText(tick.usrCoords[2]
-                                                       - zero.usrCoords[2]);
-                        return `\\(${v}\\)`;
-                    },
+                    generateLabelText,
                 },
             },
         },
@@ -93,20 +91,22 @@ export const nonInteractive = {
 // For number arguments, the labels that are their multiples are drawn. For
 // array arguments, only the listed values are drawn.
 export function withAxesLabels(xs, ys) {
-    function gen(i, vs) {
+    function gen(vs) {
         // This must not be a lambda because JSXGraph binds "this".
-        function format(tick, zero) {
-            const v = tick.usrCoords[i] - zero.usrCoords[i];
-            return !vs || (typeof vs === 'number' && multipleOf(v, vs))
-                       || (vs instanceof Array && includesClose(vs, v))
-                   ? `\\(${this.formatLabelText(v)}\\)` : '';
+        function format(tick, zero, value) {
+            let v = this.getDistanceFromZero(zero, tick);
+            if (Math.abs(v) < JXG.Math.eps) v = 0;
+            v /= this.evalVisProp('scale');
+            return (typeof vs === 'number' && !multipleOf(v, vs))
+                   || (vs instanceof Array && !includesClose(vs, v)) ?
+                   '' : generateLabelText.call(this, tick, zero, value);
         }
         return format;
     }
     // TODO: Find how to use "labels"
     return {defaultAxes: {
-        x: {ticks: xs ? {generateLabelText: gen(1, xs)} : {}},
-        y: {ticks: ys ? {generateLabelText: gen(2, ys)} : {}},
+        x: {ticks: xs ? {generateLabelText: gen(xs)} : {}},
+        y: {ticks: ys ? {generateLabelText: gen(ys)} : {}},
     }};
 }
 
