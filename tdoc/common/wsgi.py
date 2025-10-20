@@ -4,6 +4,7 @@
 from http import HTTPStatus
 import json
 import re
+from wsgiref import util
 
 # A regexp matching a hostname component.
 hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
@@ -114,3 +115,32 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
             return fn(env, respond_with_allow_origin)
         return handle
     return decorator
+
+
+class Dispatcher:
+    def __init__(self):
+        self._endpoints = {}
+        for cls in self.__class__.__mro__:
+            for k, v in cls.__dict__.items():
+                if (ep := getattr(v, '_endpoint', None)) is None: continue
+                if ep in self._endpoints: continue
+                self._endpoints[ep] = getattr(self, k)
+
+    def add_endpoint(self, name, fn):
+        self._endpoints[name] = fn
+
+    def get_handler(self, env):
+        name = util.shift_path_info(env)
+        if (handler := self._endpoints.get(name)) is None:
+            raise Error(HTTPStatus.NOT_FOUND)
+        return handler
+
+    def __call__(self, env, respond):
+        return self.get_handler(env)(env, respond)
+
+
+def endpoint(name):
+    def deco(fn):
+        fn._endpoint = name
+        return fn
+    return deco

@@ -10,7 +10,6 @@ import sys
 import threading
 import time
 import traceback
-from wsgiref import util
 
 from . import store, wsgi
 
@@ -35,21 +34,15 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
     if not cond: raise wsgi.Error(code, msg)
 
 
-class Api:
+class Api(wsgi.Dispatcher):
     def __init__(self, store, stderr=None, db_pool_size=16):
+        super().__init__()
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
         self.store = store
         self.pool = store.pool(size=db_pool_size)
         self.events = EventsApi(self)
-        self.endpoints = {
-            'events': self.events,
-            'health': self.handle_health,
-            'log': self.handle_log,
-            'poll': self.handle_poll,
-            'solutions': self.handle_solutions,
-            'user': self.handle_user,
-        }
+        self.add_endpoint('events', self.events)
 
     def stop(self):
         self.events.stop()
@@ -58,9 +51,6 @@ class Api:
 
     def __exit__(self, typ, value, tb):
         self.stop()
-
-    def add_endpoint(self, name, handler):
-        self.endpoints[name] = handler
 
     def print_exception(self, e=None, limit=None, chain=True):
         if e is None: e = sys.exception()
@@ -98,9 +88,7 @@ class Api:
 
     def __call__(self, env, respond):
         try:
-            name = util.shift_path_info(env)
-            if (handler := self.endpoints.get(name)) is None:
-                raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            handler = self.get_handler(env)
             self.authenticate(env)
             yield from handler(env, respond)
         except wsgi.Error as e:
@@ -113,16 +101,18 @@ class Api:
         except store.Error as e:
             self.print_exception(limit=-1, chain=False)
             msg = e.args[0] if e.args else None
-            yield from wsgi.error(respond, HTTPStatus.FORBIDDEN,
-                                  msg, exc_info=sys.exc_info())
+            yield from wsgi.error(respond, HTTPStatus.FORBIDDEN, msg,
+                                  exc_info=sys.exc_info())
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 
+    @wsgi.endpoint('health')
     def handle_health(self, env, respond):
         wsgi.method(env, HTTPMethod.GET)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         return wsgi.respond_json(respond, {})
 
+    @wsgi.endpoint('log')
     def handle_log(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -137,6 +127,7 @@ class Api:
                   wsgi.to_json(req['data'])))
         return wsgi.respond_json(respond, {})
 
+    @wsgi.endpoint('poll')
     def handle_poll(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -168,6 +159,7 @@ class Api:
                                             'vote'))
         return wsgi.respond_json(respond, {})
 
+    @wsgi.endpoint('solutions')
     def handle_solutions(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -180,6 +172,7 @@ class Api:
             db.solutions.set_show(origin, page, show)
         return wsgi.respond_json(respond, {})
 
+    @wsgi.endpoint('user')
     def handle_user(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -190,20 +183,12 @@ class Api:
         return wsgi.respond_json(respond, info)
 
 
-class EventsApi:
+class EventsApi(wsgi.Dispatcher):
     def __init__(self, api):
+        super().__init__()
         self.api = api
-        self.endpoints = {
-            'sub': self.handle_sub,
-            'watch': self.handle_watch,
-        }
         self.lock = threading.Lock()
         self.observables = {}
-        self.dyn_observables = {
-            'solutions': SolutionsObservable,
-            'poll': PollObservable,
-            'poll/votes': PollVotesObservable,
-        }
         self.watchers = {}
         self._stop_watchers = False
         self._last_watcher = None
@@ -212,12 +197,6 @@ class EventsApi:
         with self.lock:
             self._stop_watchers = True
             for w in self.watchers.values(): w.stop()
-
-    def __call__(self, env, respond):
-        name = util.shift_path_info(env)
-        if (handler := self.endpoints.get(name)) is None:
-            raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        return handler(env, respond)
 
     def add_observable(self, obs):
         with self.lock: self.observables[obs.key] = obs
@@ -230,8 +209,8 @@ class EventsApi:
         with self.lock:
             if (obs := self.observables.get(key)) is not None:
                 if not obs.stopping: return obs
-            if (typ := self.dyn_observables.get(req['name'])) is not None:
-                obs = typ(req, self, env)
+            if (cls := DynObservable.lookup(req['name'])) is not None:
+                obs = cls(req, self, env)
                 self.observables[obs.key] = obs
                 return obs
         raise Exception("Observable not found")
@@ -263,6 +242,7 @@ class EventsApi:
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
+    @wsgi.endpoint('watch')
     def handle_watch(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -278,6 +258,7 @@ class EventsApi:
             yield wsgi.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
+    @wsgi.endpoint('sub')
     def handle_sub(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
@@ -400,6 +381,16 @@ class ValueObservable(Observable):
 
 
 class DynObservable(Observable):
+    _observables = {}
+
+    def __init_subclass__(cls, /, **kwargs):
+        if (name := kwargs.pop('name', None)) is not None:
+            DynObservable._observables[name] = cls
+        super().__init_subclass__(**kwargs)
+
+    @classmethod
+    def lookup(cls, name): return cls._observables.get(name)
+
     def __init__(self, req, events):
         super().__init__(req)
         self.events = events
@@ -486,7 +477,7 @@ class DbObservable(DynObservable):
         raise NotImplementedError()
 
 
-class SolutionsObservable(DbObservable):
+class SolutionsObservable(DbObservable, name='solutions'):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
         self._page = arg(req, 'page')
@@ -499,7 +490,7 @@ class SolutionsObservable(DbObservable):
         return {'show': db.solutions.get_show(self._origin, self._page)}, None
 
 
-class PollObservable(DbObservable):
+class PollObservable(DbObservable, name='poll'):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
         self._id = arg(req, 'id')
@@ -515,7 +506,7 @@ class PollObservable(DbObservable):
         return data, exp
 
 
-class PollVotesObservable(DbObservable):
+class PollVotesObservable(DbObservable, name='poll/votes'):
     def __init__(self, req, events, env):
         self._origin = wsgi.origin(env)
         self._voter, self._ids = args(req, 'voter', 'ids')
