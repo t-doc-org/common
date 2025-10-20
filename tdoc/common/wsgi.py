@@ -4,6 +4,7 @@
 from http import HTTPStatus
 import json
 import re
+import sys
 from wsgiref import util
 
 # A regexp matching a hostname component.
@@ -118,11 +119,12 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
 
 
 class Dispatcher:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._endpoints = {}
         for cls in self.__class__.__mro__:
             for k, v in cls.__dict__.items():
-                if (ep := getattr(v, '_endpoint', None)) is None: continue
+                if (ep := getattr(v, '_endpoint', False)) is False: continue
                 if ep in self._endpoints: continue
                 self._endpoints[ep] = getattr(self, k)
 
@@ -130,13 +132,22 @@ class Dispatcher:
         self._endpoints[name] = fn
 
     def get_handler(self, env):
-        name = util.shift_path_info(env)
-        if (handler := self._endpoints.get(name)) is None:
-            raise Error(HTTPStatus.NOT_FOUND)
-        return handler
+        script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
+        if (name := util.shift_path_info(env)) is not None:
+            if (h := self._endpoints.get(name)) is not None: return h
+            env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
+        if (h := self._endpoints.get(None)) is not None: return h
+        raise Error(HTTPStatus.NOT_FOUND)
 
     def __call__(self, env, respond):
-        return self.get_handler(env)(env, respond)
+        try:
+            yield from self.handle_request(self.get_handler(env), env, respond)
+        except Error as e:
+            yield from error(respond, e.status, e.message,
+                             exc_info=sys.exc_info())
+
+    def handle_request(self, handler, env, respond):
+        return handler(env, respond)
 
 
 def endpoint(name):

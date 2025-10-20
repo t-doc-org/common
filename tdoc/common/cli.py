@@ -629,8 +629,9 @@ def project_version(reqs):
     return 'unknown'
 
 
-class Application:
+class Application(wsgi.Dispatcher):
     def __init__(self, cfg, server, api_):
+        super().__init__()
         self.cfg = cfg
         self.server = server
         self.lock = threading.Condition(threading.Lock())
@@ -639,6 +640,7 @@ class Application:
         self.min_mtime = time.time_ns()
         self.returncode = 0
         self.api = api_
+        self.add_endpoint('_api', self.api)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.build_mtime = None
@@ -646,10 +648,6 @@ class Application:
         self.api.events.add_observable(self.build_obs)
         self.builder = threading.Thread(target=self.watch_and_build)
         self.builder.start()
-        self.endpoints = {
-            '_api': self.api,
-            '_cache': self.handle_cache,
-        }
 
     def __enter__(self): return self
 
@@ -786,25 +784,11 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
 
-    def __call__(self, env, respond):
-        try:
-            env['tdoc.dev'] = True
+    def handle_request(self, handler, env, respond):
+        env['tdoc.dev'] = True
+        return handler(env, respond)
 
-            # Dispatch endpoints.
-            script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
-            part = wsgiutil.shift_path_info(env)
-            if (handler := self.endpoints.get(part)) is not None:
-                yield from handler(env, respond)
-                return
-            env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
-
-            # Serve from the filesystem.
-            with self.lock: base = self.directory
-            yield from self.handle_file(env, respond, base)
-        except wsgi.Error as e:
-            yield from wsgi.error(respond, e.status, e.message,
-                                  exc_info=sys.exc_info())
-
+    @wsgi.endpoint('_cache')
     def handle_cache(self, env, respond):
         yield from self.handle_file(env, respond, self.cfg.cache,
                                     self.on_cache_not_found)
@@ -826,6 +810,11 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
             self.cfg.stderr.write(f"Cache: {e}\n")
+
+    @wsgi.endpoint(None)
+    def handle_default(self, env, respond):
+        with self.lock: base = self.directory
+        yield from self.handle_file(env, respond, base)
 
     def handle_file(self, env, respond, base, on_not_found=None):
         env['wsgi.multithread'] = True

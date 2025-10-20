@@ -86,23 +86,17 @@ class Api(wsgi.Dispatcher):
                 if perm in perms or '*' in perms: return
         raise wsgi.Error(HTTPStatus.FORBIDDEN)
 
-    def __call__(self, env, respond):
+    def handle_request(self, handler, env, respond):
         try:
-            handler = self.get_handler(env)
             self.authenticate(env)
             yield from handler(env, respond)
-        except wsgi.Error as e:
-            yield from wsgi.error(respond, e.status, e.message,
-                                  exc_info=sys.exc_info())
         except store.client_errors:
             self.print_exception(limit=-1, chain=False)
-            yield from wsgi.error(respond, HTTPStatus.BAD_REQUEST,
-                                  exc_info=sys.exc_info())
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         except store.Error as e:
             self.print_exception(limit=-1, chain=False)
-            msg = e.args[0] if e.args else None
-            yield from wsgi.error(respond, HTTPStatus.FORBIDDEN, msg,
-                                  exc_info=sys.exc_info())
+            raise wsgi.Error(HTTPStatus.FORBIDDEN,
+                             e.args[0] if e.args else None)
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 
