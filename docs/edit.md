@@ -95,7 +95,7 @@ are located below the `docs` directory.
   build succeeded.
 
   The HTML pages are in _build\serve-1724331687766143000\html.
-  Serving at <http://[::1]:8000/>
+  Serving at <http://localhost:8000/>
   ```
 
 - **Navigate** to [`http://localhost:8000/`](http://localhost:8000/) to view the

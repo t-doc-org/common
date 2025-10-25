@@ -317,13 +317,14 @@ def cmd_group_remove(opts):
 
 
 def cmd_serve(opts):
-    for family, _, _, _, addr in socket.getaddrinfo(
-            opts.bind if opts.bind != 'ALL' else None, opts.port,
-            type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
-        break
+    addr = (opts.bind if opts.bind != 'ALL' else '', opts.port)
+    families = {info[0] for info in socket.getaddrinfo(
+                    addr[0] or None, opts.port, type=socket.SOCK_STREAM,
+                    flags=socket.AI_PASSIVE)}
 
     class Server(ServerBase):
-        address_family = family
+        address_family = socket.AF_INET6 if socket.AF_INET6 in families \
+                         else socket.AF_INET
 
     with Server(addr, RequestHandler) as srv, \
             get_store(opts, allow_mem=True) as store, \
@@ -583,10 +584,10 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     # port selection. But Windows doesn't have the TIME_WAIT issue, so
     # SO_REUSEADDR is disabled there.
     # https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ/14388707#14388707
-    allow_reuse_address = sys.platform != 'win32'
+    allow_reuse_address = os.name not in ('nt', 'cygwin')
 
     @property
-    def host_port(self): return self.server_address[:2]
+    def host_port(self): return self.bind_address[:2]
 
     def server_bind(self):
         with contextlib.suppress(Exception):
@@ -595,7 +596,9 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
         port = addr[1]
         if auto_port := port == 0: port = default_port
         while True:
-            self.server_address = addr = addr[:1] + (port,) + addr[2:]
+            # server_bind() sets server_address to the socket's name.
+            self.server_address = self.bind_address = addr = \
+                addr[:1] + (port,) + addr[2:]
             try:
                 return super().server_bind()
             except OSError as e:
@@ -761,6 +764,7 @@ class Application(wsgi.Dispatcher):
 
     def print_serving(self):
         host, port = self.server.host_port
+        if host in ('', '::', '0.0.0.0'): host = socket.getfqdn()
         if ':' in host: host = f'[{host}]'
         o = self.opts.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
