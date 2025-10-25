@@ -89,13 +89,13 @@ def get_arg_parser(stdin, stdout, stderr):
             super()._print_message(message, stderr)
 
         def parse_args(self, *args, **kwargs):
-            cfg = super().parse_args(*args, **kwargs)
-            cfg.stdin = stdin
-            color = None if not hasattr(cfg, 'color') or cfg.color == 'auto' \
-                    else cfg.color == 'true'
-            cfg.stdout = AnsiStream(stdout, color)
-            cfg.stderr = AnsiStream(stderr, color)
-            return cfg
+            opts = super().parse_args(*args, **kwargs)
+            opts.stdin = stdin
+            color = None if not hasattr(opts, 'color') or opts.color == 'auto' \
+                    else opts.color == 'true'
+            opts.stdout = AnsiStream(stdout, color)
+            opts.stderr = AnsiStream(stderr, color)
+            return opts
 
     return Parser
 

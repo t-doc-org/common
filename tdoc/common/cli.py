@@ -101,8 +101,8 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_version)
     add_options(p)
 
-    cfg = parser.parse_args(argv[1:])
-    return cfg.handler(cfg)
+    opts = parser.parse_args(argv[1:])
+    return opts.handler(opts)
 
 
 def add_options(parser, sphinx=False):
@@ -132,17 +132,17 @@ def add_store_option(arg):
 
 
 @contextlib.contextmanager
-def get_store(cfg, allow_mem=False, check_latest=True):
-    if cfg.store is None and (ds := dev_store.resolve()).exists():
-        cfg.store = ds
-    if not allow_mem and not cfg.store:
+def get_store(opts, allow_mem=False, check_latest=True):
+    if opts.store is None and (ds := dev_store.resolve()).exists():
+        opts.store = ds
+    if not allow_mem and not opts.store:
         raise Exception("--store: No path specified")
-    with store.Store(cfg.store) as st:
+    with store.Store(opts.store) as st:
         if check_latest:
             with contextlib.closing(st.connect()) as db:
                 version, latest = st.version(db)
                 if version != latest:
-                    o = cfg.stdout
+                    o = opts.stdout
                     o.write(f"""\
 {o.LYELLOW}The store database must be upgraded:{o.NORM} version\
  {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
@@ -153,25 +153,25 @@ Would you like to perform the upgrade (y/n)? """)
                     if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
                         raise Exception("Store version mismatch "
                                         f"(current: {version}, want: {latest})")
-                    upgrade_store(cfg, st, db, version, latest)
+                    upgrade_store(opts, st, db, version, latest)
         yield st
 
 
 @contextlib.contextmanager
-def get_db(cfg):
-    with get_store(cfg) as store, contextlib.closing(store.connect()) as db:
+def get_db(opts):
+    with get_store(opts) as store, contextlib.closing(store.connect()) as db:
         yield db
 
 
-def store_backup_path(cfg):
+def store_backup_path(opts):
     suffix = datetime.datetime.now() \
                 .isoformat('.', 'seconds').replace(':', '-')
-    return cfg.store.with_name(f'{cfg.store.name}.{suffix}')
+    return opts.store.with_name(f'{opts.store.name}.{suffix}')
 
 
-def upgrade_store(cfg, store, db, version, to_version):
-    o = cfg.stdout
-    backup = store_backup_path(cfg)
+def upgrade_store(opts, store, db, version, to_version):
+    o = opts.stdout
+    backup = store_backup_path(opts)
     o.write(f"Backing up store to {backup}\n")
     store.backup(db, backup)
     def on_version(v): o.write(f"Upgrading store to version {v}\n")
@@ -184,14 +184,14 @@ def comma_separated(s):
     return s.split(',')
 
 
-def cmd_build(cfg):
-    for target in cfg.target:
-        res = sphinx_build(cfg, target, build=cfg.build)
+def cmd_build(opts):
+    for target in opts.target:
+        res = sphinx_build(opts, target, build=opts.build)
         if res.returncode != 0: return res.returncode
 
 
-def cmd_clean(cfg):
-    return sphinx_build(cfg, 'clean', build=cfg.build).returncode
+def cmd_clean(opts):
+    return sphinx_build(opts, 'clean', build=opts.build).returncode
 
 
 def add_group_commands(parser):
@@ -259,66 +259,66 @@ def add_group_commands(parser):
     add_options(p)
 
 
-def cmd_group_add(cfg):
-    with get_db(cfg) as db, db:
-        db.groups.modify(cfg.origin, cfg.group,
-                         add_users=comma_separated(cfg.users),
-                         add_groups=comma_separated(cfg.groups))
+def cmd_group_add(opts):
+    with get_db(opts) as db, db:
+        db.groups.modify(opts.origin, opts.group,
+                         add_users=comma_separated(opts.users),
+                         add_groups=comma_separated(opts.groups))
 
 
-def cmd_group_list(cfg):
-    with get_db(cfg) as db, db:
-        groups = db.groups.list(cfg.groups)
+def cmd_group_list(opts):
+    with get_db(opts) as db, db:
+        groups = db.groups.list(opts.groups)
     groups.sort()
-    o = cfg.stdout
-    for group in groups: cfg.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
+    o = opts.stdout
+    for group in groups: opts.stdout.write(f"{o.CYAN}{group}{o.NORM}\n")
 
 
-def cmd_group_members(cfg):
-    with get_db(cfg) as db, db:
-        members = db.groups.members(cfg.origin, cfg.groups,
-                                    transitive=cfg.transitive)
+def cmd_group_members(opts):
+    with get_db(opts) as db, db:
+        members = db.groups.members(opts.origin, opts.groups,
+                                    transitive=opts.transitive)
     members.sort()
     wgroup = max((len(m[0]) for m in members), default=0)
     wname = max((len(m[2]) for m in members), default=0)
-    o = cfg.stdout
+    o = opts.stdout
     prev = None
     for group, typ, name, transitive in members:
         prefix = f"{o.CYAN}{group:{wgroup}}{o.NORM}" if group != prev \
                  else f"{'':{wgroup}}"
         if transitive:
-            cfg.stdout.write(
+            opts.stdout.write(
                 f"{prefix}  {typ:5} {o.LWHITE}{name:{wname}}{o.NORM}  "
                 "(transitive)\n")
         else:
-            cfg.stdout.write(f"{prefix}  {typ:5} {o.LWHITE}{name}{o.NORM}\n")
+            opts.stdout.write(f"{prefix}  {typ:5} {o.LWHITE}{name}{o.NORM}\n")
         prev = group
 
 
-def cmd_group_memberships(cfg):
-    with get_db(cfg) as db, db:
-        memberships = db.groups.memberships(cfg.origin, cfg.groups)
+def cmd_group_memberships(opts):
+    with get_db(opts) as db, db:
+        memberships = db.groups.memberships(opts.origin, opts.groups)
     memberships.sort()
     wmember = max((len(m[0]) for m in memberships), default=0)
-    o = cfg.stdout
+    o = opts.stdout
     prev = None
     for member, group in memberships:
         prefix = f"{o.CYAN}{member:{wmember}}{o.NORM}" if member != prev \
                  else f"{'':{wmember}}"
-        cfg.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
+        opts.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
         prev = member
 
 
-def cmd_group_remove(cfg):
-    with get_db(cfg) as db, db:
-        db.groups.modify(cfg.origin, cfg.group,
-                         remove_users=comma_separated(cfg.users),
-                         remove_groups=comma_separated(cfg.groups))
+def cmd_group_remove(opts):
+    with get_db(opts) as db, db:
+        db.groups.modify(opts.origin, opts.group,
+                         remove_users=comma_separated(opts.users),
+                         remove_groups=comma_separated(opts.groups))
 
 
-def cmd_serve(cfg):
+def cmd_serve(opts):
     for family, _, _, _, addr in socket.getaddrinfo(
-            cfg.bind if cfg.bind != 'ALL' else None, cfg.port,
+            opts.bind if opts.bind != 'ALL' else None, opts.port,
             type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE):
         break
 
@@ -326,19 +326,19 @@ def cmd_serve(cfg):
         address_family = family
 
     with Server(addr, RequestHandler) as srv, \
-            get_store(cfg, allow_mem=True) as store, \
-            api.Api(store, stderr=cfg.stderr) as api_, \
-            Application(cfg, srv, api_) as app:
+            get_store(opts, allow_mem=True) as store, \
+            api.Api(store, stderr=opts.stderr) as api_, \
+            Application(opts, srv, api_) as app:
         srv.set_app(app)
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
-            cfg.restart_on_change = False
-            cfg.stderr.write("Interrupted, exiting\n")
+            opts.restart_on_change = False
+            opts.stderr.write("Interrupted, exiting\n")
 
-    if cfg.restart_on_change:
-        cfg.stdout.flush()
-        cfg.stderr.flush()
+    if opts.restart_on_change:
+        opts.stdout.flush()
+        opts.stderr.flush()
         os.execv(sys.argv[0], sys.argv)
     return app.returncode
 
@@ -376,32 +376,32 @@ def add_store_commands(parser):
     add_options(p)
 
 
-def cmd_store_backup(cfg):
-    with get_store(cfg, check_latest=False) as store, \
+def cmd_store_backup(opts):
+    with get_store(opts, check_latest=False) as store, \
             contextlib.closing(store.connect(params='mode=ro')) as db:
-        if cfg.destination is None: cfg.destination = store_backup_path(cfg)
-        store.backup(db, cfg.destination)
+        if opts.destination is None: opts.destination = store_backup_path(opts)
+        store.backup(db, opts.destination)
 
 
-def cmd_store_create(cfg):
-    if cfg.store is None and cfg.dev: cfg.store = dev_store.resolve()
-    if not cfg.store: raise Exception("--store: No path specified")
-    st = store.Store(cfg.store)
+def cmd_store_create(opts):
+    if opts.store is None and opts.dev: opts.store = dev_store.resolve()
+    if not opts.store: raise Exception("--store: No path specified")
+    st = store.Store(opts.store)
     st.path.parent.mkdir(parents=True, exist_ok=True)
-    version = st.create(version=cfg.version, dev=cfg.dev)
-    cfg.stdout.write(f"Store created (version: {version})\n")
+    version = st.create(version=opts.version, dev=opts.dev)
+    opts.stdout.write(f"Store created (version: {version})\n")
 
 
-def cmd_store_upgrade(cfg):
-    with get_store(cfg, check_latest=False) as store, \
+def cmd_store_upgrade(opts):
+    with get_store(opts, check_latest=False) as store, \
             contextlib.closing(store.connect()) as db:
         version, latest = store.version(db)
         if version == latest:
-            cfg.stdout.write(
+            opts.stdout.write(
                 f"Store is already up-to-date (version: {version})\n")
             return
-        upgrade_store(cfg, store, db, version,
-                      cfg.version if cfg.version is not None else latest)
+        upgrade_store(opts, store, db, version,
+                      opts.version if opts.version is not None else latest)
 
 
 def add_token_commands(parser):
@@ -447,34 +447,34 @@ def add_origin_option(arg):
         help="The origin on which to operate.")
 
 
-def cmd_token_create(cfg):
-    with get_db(cfg) as db, db:
-        tokens = db.tokens.create(cfg.user, cfg.expire)
-    width = max((len(u) for u in cfg.user), default=0)
-    o = cfg.stdout
-    for user, token in zip(cfg.user, tokens):
-        cfg.stdout.write(
+def cmd_token_create(opts):
+    with get_db(opts) as db, db:
+        tokens = db.tokens.create(opts.user, opts.expire)
+    width = max((len(u) for u in opts.user), default=0)
+    o = opts.stdout
+    for user, token in zip(opts.user, tokens):
+        opts.stdout.write(
             f"{o.CYAN}{user:{width}}{o.NORM} "
-            f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n")
+            f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n")
 
 
-def cmd_token_expire(cfg):
-    with get_db(cfg) as db, db:
-        db.tokens.expire(cfg.token, cfg.time)
+def cmd_token_expire(opts):
+    with get_db(opts) as db, db:
+        db.tokens.expire(opts.token, opts.time)
 
 
-def cmd_token_list(cfg):
-    with get_db(cfg) as db, db:
-        tokens = db.tokens.list(cfg.users, expired=cfg.expired)
+def cmd_token_list(opts):
+    with get_db(opts) as db, db:
+        tokens = db.tokens.list(opts.users, expired=opts.expired)
     epoch = datetime.datetime.fromtimestamp(0)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
     wuser = max((len(u) for u, *_ in tokens), default=0)
-    o = cfg.stdout
+    o = opts.stdout
     for user, uid, token, created, expires in tokens:
         if expires: expires = f", expires: {expires.isoformat(' ', 'seconds')}"
-        cfg.stdout.write(
+        opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} "
-            f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n"
+            f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n"
             f"  created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
 
 
@@ -516,61 +516,61 @@ def add_user_commands(parser):
     add_options(p)
 
 
-def cmd_user_create(cfg):
-    with get_db(cfg) as db, db:
-        uids = db.users.create(cfg.user)
-        tokens = db.tokens.create(cfg.user, cfg.token_expire)
-    wuser = max((len(u) for u in cfg.user), default=0)
-    o = cfg.stdout
-    for user, uid, token in zip(cfg.user, uids, tokens):
-        cfg.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
-                         f"{o.LBLUE}{cfg.origin}#?login={token}{o.NORM}\n")
+def cmd_user_create(opts):
+    with get_db(opts) as db, db:
+        uids = db.users.create(opts.user)
+        tokens = db.tokens.create(opts.user, opts.token_expire)
+    wuser = max((len(u) for u in opts.user), default=0)
+    o = opts.stdout
+    for user, uid, token in zip(opts.user, uids, tokens):
+        opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
+                         f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n")
 
 
-def cmd_user_list(cfg):
-    with get_db(cfg) as db, db:
-        users = db.users.list(cfg.users)
+def cmd_user_list(opts):
+    with get_db(opts) as db, db:
+        users = db.users.list(opts.users)
     users.sort(key=lambda r: r[0])
     wuser = max((len(u[0]) for u in users), default=0)
-    o = cfg.stdout
+    o = opts.stdout
     for user, uid, created in users:
-        cfg.stdout.write(
+        opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
             f"created: {created.isoformat(' ', 'seconds')}\n")
 
 
-def cmd_user_memberships(cfg):
-    with get_db(cfg) as db, db:
-        memberships = db.users.memberships(cfg.origin, cfg.users,
-                                           transitive=cfg.transitive)
+def cmd_user_memberships(opts):
+    with get_db(opts) as db, db:
+        memberships = db.users.memberships(opts.origin, opts.users,
+                                           transitive=opts.transitive)
     memberships.sort()
     wuser = max((len(m[0]) for m in memberships), default=0)
     wgroup = max((len(m[1]) for m in memberships), default=0)
-    o = cfg.stdout
+    o = opts.stdout
     prev = None
     for user, group, transitive in memberships:
         prefix = f"{o.CYAN}{user:{wuser}}{o.NORM}" if user != prev \
                  else f"{'':{wuser}}"
         if transitive:
-            cfg.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
+            opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
                              "(transitive)\n")
         else:
-            cfg.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
+            opts.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
         prev = user
 
 
-def cmd_version(cfg):
-    cfg.stdout.write(f"{__project__}-{__version__}\n")
+def cmd_version(opts):
+    opts.stdout.write(f"{__project__}-{__version__}\n")
 
 
-def sphinx_build(cfg, target, *, build, tags=(), **kwargs):
+def sphinx_build(opts, target, *, build, tags=(), **kwargs):
     argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
-            cfg.source, build, '--fail-on-warning', '--jobs=auto']
+            opts.source, build, '--fail-on-warning', '--jobs=auto']
     argv += [f'--tag={tag}' for tag in tags]
-    if cfg.debug: argv += ['--show-traceback']
-    argv += cfg.sphinx_opts
-    return subprocess.run(argv, stdin=cfg.stdin, stdout=cfg.stdout,
-                          stderr=cfg.stderr, **kwargs)
+    if opts.debug: argv += ['--show-traceback']
+    argv += opts.sphinx_opts
+    return subprocess.run(argv, stdin=opts.stdin, stdout=opts.stdout,
+                          stderr=opts.stderr, **kwargs)
 
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
@@ -608,7 +608,7 @@ class RequestHandler(simple_server.WSGIRequestHandler):
         pass
 
     def log_message(self, format, *args):
-        self.server.application.cfg.stderr.write("%s - - [%s] %s\n" % (
+        self.server.application.opts.stderr.write("%s - - [%s] %s\n" % (
             self.address_string(), self.log_date_time_string(),
             (format % args).translate(self._control_char_table)))
 
@@ -630,9 +630,9 @@ def project_version(reqs):
 
 
 class Application(wsgi.Dispatcher):
-    def __init__(self, cfg, server, api_):
+    def __init__(self, opts, server, api_):
         super().__init__()
-        self.cfg = cfg
+        self.opts = opts
         self.server = server
         self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
@@ -659,9 +659,9 @@ class Application(wsgi.Dispatcher):
 
     def watch_and_build(self):
         self.remove_all()
-        interval = self.cfg.interval * 1_000_000_000
-        delay = self.cfg.delay * 1_000_000_000
-        idle = self.cfg.exit_on_idle * 1_000_000_000
+        interval = self.opts.interval * 1_000_000_000
+        delay = self.opts.delay * 1_000_000_000
+        idle = self.opts.exit_on_idle * 1_000_000_000
         prev, prev_mtime, build_mtime = 0, 0, None
         build_next = self.build_dir('next')
         # TODO: Use monotonic clock for delays
@@ -684,12 +684,12 @@ class Application(wsgi.Dispatcher):
                 prev = mtime + delay - interval
                 continue
             if prev_mtime != 0:
-                if self.cfg.restart_on_change:
-                    self.cfg.stdout.write(
+                if self.opts.restart_on_change:
+                    self.opts.stdout.write(
                         "\nSource change detected, restarting\n")
                     self.server.shutdown()
                     break
-                self.cfg.stdout.write(
+                self.opts.stdout.write(
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
             if self.build(build_next):
@@ -705,7 +705,7 @@ class Application(wsgi.Dispatcher):
                 build_mtime = mtime
             else:
                 self.remove(build_next)
-            if not self.cfg.full_builds and build_mtime is not None:
+            if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
             self.print_upgrade()
@@ -715,13 +715,13 @@ class Application(wsgi.Dispatcher):
 
     def latest_mtime(self):
         def on_error(e):
-            self.cfg.stderr.write(f"Scan: {e}\n")
+            self.opts.stderr.write(f"Scan: {e}\n")
         mtime = self.min_mtime
-        for path in itertools.chain([self.cfg.source], self.cfg.watch):
+        for path in itertools.chain([self.opts.source], self.opts.watch):
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
                     p = base / file
-                    if self.cfg.ignore.search(str(p)) is not None: continue
+                    if self.opts.ignore.search(str(p)) is not None: continue
                     try:
                         st = p.stat()
                         if stat.S_ISREG(st.st_mode):
@@ -729,48 +729,49 @@ class Application(wsgi.Dispatcher):
                     except Exception as e:
                         on_error(e)
                 dirs[:] = [d for d in dirs
-                           if self.cfg.ignore.search(str(base / d)) is None]
+                           if self.opts.ignore.search(str(base / d)) is None]
         return mtime
 
     def build_dir(self, mtime):
-        return self.cfg.build / f'serve-{self.server.host_port[1]}-{mtime}'
+        return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
     def build(self, build):
         try:
-            res = sphinx_build(self.cfg, 'html', build=build,
+            res = sphinx_build(self.opts, 'html', build=build,
                                tags=['tdoc-dev'])
             if res.returncode == 0: return True
         except Exception as e:
-            self.cfg.stderr.write(f"Build: {e}\n")
-        if self.cfg.exit_on_failure:
+            self.opts.stderr.write(f"Build: {e}\n")
+        if self.opts.exit_on_failure:
             self.returncode = 1
             self.server.shutdown()
         return False
 
     def remove(self, build):
-        build.relative_to(self.cfg.build)  # Ensure we're below the build dir
+        build.relative_to(self.opts.build)  # Ensure we're below the build dir
         if not build.exists(): return
         def on_error(fn, path, e):
-            self.cfg.stderr.write(f"Removal: {fn}: {path}: {e}\n")
+            self.opts.stderr.write(f"Removal: {fn}: {path}: {e}\n")
         shutil.rmtree(build, onexc=on_error)
 
     def remove_all(self):
-        for build in self.cfg.build.glob(f'serve-{self.server.host_port[1]}-*'):
+        for build in self.opts.build.glob(
+                f'serve-{self.server.host_port[1]}-*'):
             self.remove(build)
 
     def print_serving(self):
         host, port = self.server.host_port
         if ':' in host: host = f'[{host}]'
-        o = self.cfg.stdout
+        o = self.opts.stdout
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
         o.flush()
-        if self.cfg.open and not self.opened:
+        if self.opts.open and not self.opened:
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
     def print_upgrade(self):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
-        o = self.cfg.stdout
+        o = self.opts.stdout
         with contextlib.suppress(Exception):
             reqs = prefix_read('requirements.txt')
             reqs_up = prefix_read('requirements-upgrade.txt')
@@ -790,7 +791,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 
     @wsgi.endpoint('_cache')
     def handle_cache(self, env, respond):
-        yield from self.handle_file(env, respond, self.cfg.cache,
+        yield from self.handle_file(env, respond, self.opts.cache,
                                     self.on_cache_not_found)
 
     def on_cache_not_found(self, path_info, path):
@@ -799,7 +800,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if parts[0] != '' or len(parts) < 4: return
             if (d := deps.info.get(parts[1])) is None: return
             url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
-            self.cfg.stderr.write(f"Caching {url}\n")
+            self.opts.stderr.write(f"Caching {url}\n")
             with request.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
@@ -809,7 +810,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 f.close()
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
-            self.cfg.stderr.write(f"Cache: {e}\n")
+            self.opts.stderr.write(f"Cache: {e}\n")
 
     @wsgi.endpoint(None)
     def handle_default(self, env, respond):
