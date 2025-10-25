@@ -43,7 +43,7 @@ def main(*args, **kwargs):
 
 def run(argv, stdin, stdout, stderr, base):
     # Parse command-line options.
-    config = os.environ.get('TDOC_CONFIG', CONFIG)
+    config = CONFIG
     debug = False
     hermetic = None
     print_key = None
