@@ -28,6 +28,15 @@ def to_nsec(dt, default=None):
 def placeholders(args): return ', '.join('?' * len(args))
 
 
+@contextlib.contextmanager
+def autocommit(db, value):
+    saved, db.autocommit = db.autocommit, value
+    try:
+        yield
+    finally:
+        db.autocommit = saved
+
+
 class Error(Exception): pass
 client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
@@ -89,6 +98,29 @@ class Connection(sqlite3.Connection):
     def check_origin(self, origin):
         if not origin and not self.dev:
             raise Exception("No origin specified")
+
+    def check_foreign_keys(self):
+        violations = []
+        cursor = self.cursor()
+        cursor.row_factory = sqlite3.Row
+        for r, i, t, c in self.execute("pragma foreign_key_check"):
+            rcs, tcs = [], []
+            for row in cursor.execute(f"pragma foreign_key_list({r})"):
+                if row['id'] != c: continue
+                rcs.append(row['from'])
+                tcs.append(row['to'])
+            rowid = f"[{i}]" if i is not None else ''
+            rcs = ", ".join(rcs)
+            tcs = ", ".join(tcs)
+            violations.append(f"{r}{rowid} ({rcs}) references {t} ({tcs})")
+        if violations:
+            raise Exception(
+                f"Foreign key check failed:\n  {"\n  ".join(violations)}")
+
+    def check_integrity(self):
+        issues = [i for i, in self.execute("PRAGMA integrity_check")]
+        if issues == ['ok']: return
+        raise Exception(f"Integrity check failed:\n  {"\n  ".join(issues)}")
 
     @functools.cached_property
     def users(self): return Users(self)
@@ -624,13 +656,23 @@ class Store:
         for v, fn in self.versions(from_version + 1):
             if to_version is not None and v > to_version: break
             if on_version is not None: on_version(v)
-            with db:
-                fn(db, dev, now)
-                db.execute("""
-                    insert or replace into meta (key, value)
-                        values ('version', ?)
-                """, (v,))
-            version = v
+            # For complex schema upgrades, follow:
+            # https://sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes
+            with autocommit(db, True):
+                db.execute("pragma foreign_keys = off")
+            try:
+                with db:
+                    fn(db, dev, now)
+                    db.execute("""
+                        insert or replace into meta (key, value)
+                            values ('version', ?)
+                    """, (v,))
+                    db.check_foreign_keys()
+                    db.check_integrity()
+                version = v
+            finally:
+                with autocommit(db, True):
+                    db.execute("pragma foreign_keys = on")
         return version
 
     def versions(self, version=1):
@@ -676,13 +718,13 @@ create table log (
     def version_2(self, db, dev, now):
         db.executescript("""
 -- Convert the meta table to "without rowid".
-alter table meta rename to _meta;
-create table meta (
+create table meta_ (
     key text primary key,
     value any
 ) strict, without rowid;
-insert into meta select * from _meta;
-drop table _meta;
+insert into meta_ select * from meta;
+drop table meta;
+alter table meta_ rename to meta;
 
 -- Create tables for user management.
 create table users (
