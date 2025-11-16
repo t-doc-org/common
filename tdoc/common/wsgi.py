@@ -10,6 +10,8 @@ from wsgiref import util
 # A regexp matching a hostname component.
 hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
 
+request_uri = util.request_uri
+
 
 def http_status(status):
     return f'{status} {status.phrase}'
@@ -23,6 +25,15 @@ def error(respond, status, msg=None, exc_info=None):
         ('Content-Length', str(len(body))),
     ], exc_info)
     return [body]
+
+
+def redirect(respond, url):
+    respond(http_status(HTTPStatus.FOUND), [
+        ('Content-Type', 'text/plain; charset=utf-8'),
+        ('Content-Length', '0'),
+        ('Location', url),
+    ])
+    return []
 
 
 class Error(Exception):
