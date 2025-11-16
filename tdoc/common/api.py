@@ -35,14 +35,15 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 
 class Api(wsgi.Dispatcher):
-    def __init__(self, store, stderr=None, db_pool_size=16):
+    def __init__(self, store, *, config=None, stderr=None, db_pool_size=16):
         super().__init__()
+        self.config = config if config is not None else {}
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
         self.store = store
         self.pool = store.pool(size=db_pool_size)
-        self.events = EventsApi(self)
-        self.add_endpoint('events', self.events)
+        self.events = self.add_endpoint('events', EventsApi(self))
+        self.auth = self.add_endpoint('auth', OidcAuthApi(self))
 
     def stop(self):
         self.events.stop()

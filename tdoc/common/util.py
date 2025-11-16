@@ -67,6 +67,14 @@ class AnsiStream:
             return getattr(self.__stream, name)
 
 
+def get(config, prop, default=None):
+    """Get a potentially nested value from a dict via its path."""
+    v = config
+    for p in prop.split('.'):
+        if (v := v.get(p)) is None: return default
+    return v
+
+
 def get_arg_parser(stdin, stdout, stderr):
     """Get an ArgumentParser class operating with the given streams."""
     class Parser(argparse.ArgumentParser):

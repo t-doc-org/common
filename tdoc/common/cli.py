@@ -21,6 +21,7 @@ import sys
 import tempfile
 import threading
 import time
+import tomllib
 from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
@@ -102,6 +103,13 @@ def main(argv, stdin, stdout, stderr):
     add_options(p)
 
     opts = parser.parse_args(argv[1:])
+    opts.cfg = None
+    if opts.config is not None:
+        with opts.config.open('rb') as f: config = tomllib.load(f)
+        if opts.store is None \
+                and (p := util.get(config, 'store.path')) is not None:
+            opts.store = opts.config.parent / p
+        opts.cfg = config
     return opts.handler(opts)
 
 
@@ -111,6 +119,9 @@ def add_options(parser, sphinx=False):
     arg('--color', dest='color', choices=['auto', 'false', 'true'],
         default='auto',
         help="Control the use of colors in output (default: %(default)s).")
+    arg('--config', metavar='PATH', type='path', dest='config',
+        default=os.environ.get('TDOC_CONFIG'),
+        help="The path to the config file.")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
 
@@ -328,7 +339,7 @@ def cmd_serve(opts):
 
     with Server(addr, RequestHandler) as srv, \
             get_store(opts, allow_mem=True) as store, \
-            api.Api(store, stderr=opts.stderr) as api_, \
+            api.Api(store, config=opts.cfg, stderr=opts.stderr) as api_, \
             Application(opts, srv, api_) as app:
         srv.set_app(app)
         try:
@@ -642,8 +653,7 @@ class Application(wsgi.Dispatcher):
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.api = api_
-        self.add_endpoint('_api', self.api)
+        self.api = self.add_endpoint('_api', api_)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.build_mtime = None
@@ -790,6 +800,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 """)
 
     def handle_request(self, handler, env, respond):
+        # TODO: Move to wsgi.py
         env['tdoc.dev'] = True
         return handler(env, respond)
 

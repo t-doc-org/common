@@ -130,6 +130,7 @@ class Dispatcher:
 
     def add_endpoint(self, name, fn):
         self._endpoints[name] = fn
+        return fn
 
     def get_handler(self, env):
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
