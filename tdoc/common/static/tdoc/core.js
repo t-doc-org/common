@@ -32,6 +32,26 @@ export const page = {
     }
 };
 
+// Handle the hash parameters with the given names, and remove them from the
+// page URL.
+export function handleHashParams(names, fn) {
+    const params = page.hashParams
+    if (!params) return;
+    let found = false;
+    const vs = names.map(name => {
+        const v = params.get(name);
+        if (v !== null) {
+            found = true;
+            params.delete(name);
+        }
+        return v;
+    });
+    if (found) {
+        page.hashParams = params;
+        fn(...vs);
+    }
+}
+
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 export const domLoaded = new Promise(resolve => {
     if (document.readyState !== 'loading') {
