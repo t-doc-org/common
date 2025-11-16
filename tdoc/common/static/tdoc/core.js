@@ -316,14 +316,15 @@ export async function fetchJson(url, opts) {
         referrer: '',
         ...opts,
         headers: {
-            'Content-Type': 'application/json',
-            ...opts.headers || {},
+            ...opts?.body ? {'Content-Type': 'application/json'} : {},
+            ...opts?.headers ?? {},
         },
-        ...opts.body ? {body: JSON.stringify(opts.body)} : {},
+        ...opts?.body ? {body: JSON.stringify(opts.body)} : {},
     });
-    if (resp.status !== 200) {
-        throw Error(`Request failed: ${resp.status} ${resp.statusText}`,
-                    {cause: {status: resp.status}});
+    if (!resp.ok) {
+        let msg = await resp.text();
+        if (!msg) msg = `${resp.status} ${resp.statusText}`;
+        throw Error(msg, {cause: {status: resp.status}});
     }
     return await resp.json();
 }
