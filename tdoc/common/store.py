@@ -144,30 +144,42 @@ class DbNamespace:
 
 
 class Users(DbNamespace):
-    def member_of(self, origin, user, group):
-        if user is None: return False
+    def member_of(self, origin, uid, group):
+        if uid is None: return False
         return bool(self.row("""
             select exists(
                 select 1 from user_memberships
                 where (origin, user) = (?, ?) and (group_ = ? or group_ = '*')
             )
-        """, (origin, user, group))[0])
+        """, (origin, uid, group))[0])
 
-    def info(self, origin, user):
-        name, = self.row("select name from users where id = ?", (user,))
+    def info(self, origin, uid):
+        name, = self.row("select name from users where id = ?", (uid,))
         groups = [g for g, in self.execute("""
             select group_ from user_memberships where (origin, user) = (?, ?)
-        """, (origin, user))]
+        """, (origin, uid))]
         return {'name': name, 'groups': groups}
 
-    def list(self, users=''):
+    def uid(self, name):
+        if name.startswith('#'): return int(name[1:])
+        uids = [u for u, in self.execute("select id from users where name = ?",
+                                         (name,))]
+        if len(uids) == 1: return uids[0]
+        if not uids: raise Error(f"User not found: {name}")
+        uids.sort()
+        raise Error(
+            f"Ambiguous user name %r: {" ".join(f"#{u}" for u in uids)}")
+
+    def list(self, name_re=''):
         return [(name, uid, to_datetime(created))
                 for uid, name, created in self.execute("""
                     select id, name, created from users
                     where name regexp ?
-                """, (users,))]
+                """, (name_re,))]
 
     def create(self, names):
+        if invalid := [n for n in names if n.startswith('#')]:
+            raise Error(f"Invalid user names: {" ".join(invalid)}")
         now = time.time_ns()
         uids = [secrets.randbelow(1 << 63) for _ in names]
         self.executemany("""
@@ -175,14 +187,14 @@ class Users(DbNamespace):
         """, [(uid, name, now) for uid, name in zip(uids, names)])
         return uids
 
-    def memberships(self, origin, users='', transitive=False):
+    def memberships(self, origin, name_re='', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select users.name, group_, transitive from user_memberships
             left join users on users.id = user
             where origin = ? and users.name regexp ?
               and (? or not transitive)
-        """, (origin, users, transitive)))
+        """, (origin, name_re, transitive)))
 
 
 class Tokens(DbNamespace):
@@ -192,7 +204,7 @@ class Tokens(DbNamespace):
             where token = ? and (expires is null or ? < expires)
         """, (token, time.time_ns()), default=(None,))[0]
 
-    def list(self, users='', expired=False):
+    def list(self, user_re='', expired=False):
         now = time.time_ns()
         return [(name, uid, token, to_datetime(created), to_datetime(expires))
                 for token, uid, name, created, expires in self.execute("""
@@ -202,17 +214,17 @@ class Tokens(DbNamespace):
                     left join users on users.id = user_tokens.user
                     where users.name regexp ?
                       and (? or expires is null or ? < expires)
-                """, (users, expired, now))]
+                """, (user_re, expired, now))]
 
-    def create(self, users, expires=None):
+    def create(self, uids, expires=None):
         now = time.time_ns()
         expires = to_nsec(expires)
-        tokens = [secrets.token_urlsafe() for _ in users]
+        tokens = [secrets.token_urlsafe() for _ in uids]
         self.executemany("""
             insert into user_tokens (token, user, created, expires)
-                values (?, (select id from users where name = ?), ?, ?)
+                values (?, ?, ?, ?)
         """, [(token, user, now, expires)
-              for user, token in zip(users, tokens)])
+              for user, token in zip(uids, tokens)])
         return tokens
 
     def expire(self, tokens, expires=None):
@@ -223,38 +235,42 @@ class Tokens(DbNamespace):
                or exists(select 1 from users where id = user and name = ?)
         """, [(expires, token, token) for token in tokens])
 
+    def remove(self, tokens):
+        self.executemany("delete from user_tokens where token = ?",
+                         [(token,) for token in tokens])
+
 
 class Groups(DbNamespace):
-    def list(self, groups=''):
+    def list(self, name_re=''):
         return [g for g, in self.execute("""
                     select distinct group_ from user_memberships
-                    where group_ regexp :groups
+                    where group_ regexp :name_re
                     union
                     select distinct group_ from group_memberships
-                    where group_ regexp :groups
+                    where group_ regexp :name_re
                     union
                     select distinct member from group_memberships
-                    where member regexp :groups
-                """, {'groups': groups})]
+                    where member regexp :name_re
+                """, {'name_re': name_re})]
 
-    def members(self, origin, groups='', transitive=False):
+    def members(self, origin, name_re='', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select group_, 'user', users.name, transitive from user_memberships
             left join users on users.id = user
-            where origin = :origin and group_ regexp :groups
+            where origin = :origin and group_ regexp :name_re
               and (:transitive or not transitive)
             union all
             select group_, 'group', member, false from group_memberships
-            where origin = :origin and group_ regexp :groups
-        """, {'origin': origin, 'groups': groups, 'transitive': transitive}))
+            where origin = :origin and group_ regexp :name_re
+        """, {'origin': origin, 'name_re': name_re, 'transitive': transitive}))
 
-    def memberships(self, origin, groups=''):
+    def memberships(self, origin, name_re=''):
         self.check_origin(origin)
         return list(self.execute("""
             select member, group_ from group_memberships
             where origin = ? and member regexp ?
-        """, (origin, groups)))
+        """, (origin, name_re)))
 
     def modify(self, origin, groups, add_users=None, add_groups=None,
                remove_users=None, remove_groups=None):
