@@ -2,16 +2,21 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
+import functools
 import hashlib
 from http import HTTPMethod, HTTPStatus
+import json
 import queue
 import secrets
 import sys
 import threading
 import time
 import traceback
+from urllib import parse, request
 
-from . import store, wsgi
+import jwt
+
+from . import store, wsgi, util
 
 missing = object()
 # TODO(py-3.13): Remove ShutDown
@@ -40,6 +45,7 @@ class Api(wsgi.Dispatcher):
         self.config = config if config is not None else {}
         if stderr is None: stderr = sys.stderr
         self.stderr = stderr
+        self.cache = wsgi.HttpCache()
         self.store = store
         self.pool = store.pool(size=db_pool_size)
         self.events = self.add_endpoint('events', EventsApi(self))
@@ -514,3 +520,213 @@ class PollVotesObservable(DbObservable, name='poll/votes'):
 
     def query(self, db):
         return db.polls.votes_data(self._origin, self._voter, self._ids), None
+
+
+class OidcAuthApi(wsgi.Dispatcher):
+    def __init__(self, api):
+        super().__init__()
+        self.api = api
+
+    @functools.cached_property
+    def providers(self):
+        ps = util.get(self.api.config, 'oidc.providers', {})
+        return {p: i for p, i in ps.items() if i.get('enabled', True)}
+
+    def provider(self, provider):
+        if (info := self.providers.get(provider)) is None:
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        return info, self.discovery(info)
+
+    def discovery(self, info):
+        return json.loads(self.api.cache.get(info['discovery'], timeout=10)[0])
+
+    @wsgi.endpoint('info')
+    def handle_info(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        ps = self.providers
+        resp = {
+            'providers': [{'provider': p, 'label': i.get('label', p)}
+                          for p, i in ps.items()],
+        }
+        if (user := self.api.user(env)) is not None:
+            pids = [(i, self.discovery(i)) for i in ps.values()]
+            resp['logins'] = logins = []
+            with self.api.db(env) as db:
+                for id_token, updated in db.oidc.logins(user):
+                    for pinfo, disc in pids:
+                        if disc['issuer'] != id_token['iss']: continue
+                        logins.append({
+                            'issuer': id_token['iss'],
+                            'label': pinfo['label'],
+                            'subject': id_token['sub'],
+                            'email': id_token['email'],
+                            'updated': updated.date().isoformat(),
+                        })
+        return wsgi.respond_json(respond, resp)
+
+    def get_key(self, disc, token):
+        header = jwt.get_unverified_header(token)
+        alg, kid = header['alg'], header['kid']
+        if alg not in util.get(self.api.config, 'oidc.token_algorithms', ()):
+            raise wsgi.Error(HTTPStatus.FORBIDDEN,
+                             f"Unsupported signing algorithm: {alg}")
+        resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10)[0])
+        for key in resp['keys']:
+            if key['kid'] == kid and key['alg'] == alg: return jwt.PyJWK(key)
+        raise wsgi.Error(HTTPStatus.FORBIDDEN, "No verification key found")
+
+    def verify_id_token(self, disc, token, audience, nonce):
+        key = self.get_key(disc, token)
+        try:
+            info = jwt.decode(token, key, issuer=disc['issuer'],
+                              audience=audience, options={'strict_aud': True})
+        except jwt.exceptions.InvalidTokenError as e:
+            raise wsgi.Error(HTTPStatus.FORBIDDEN, str(e))
+        if info['nonce'] != nonce:
+            raise wsgi.Error(HTTPStatus.FORBIDDEN, "Nonce mismatch")
+        return info
+
+    @wsgi.endpoint('login')
+    def handle_login(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        req = wsgi.read_json(env)
+        token = wsgi.authorization(env)
+
+        # Handle "log in as" in dev mode.
+        if wsgi.is_dev(env) and (user := req.get('user')):
+            with self.api.db(env) as db:
+                try:
+                    uid = db.users.uid(user)
+                except Exception as e:
+                    raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
+                if (token := db.tokens.find(uid)) is None:
+                    token, = db.tokens.create([uid])
+            return wsgi.respond_json(respond, {'token': token})
+
+        # Handle OIDC login.
+        provider, href = args(req, 'provider', 'href')
+        href_origin = parse.urlunparse(parse.urlparse(href)._replace(
+            path='', params='', query='', fragment=''))
+        if href_origin != env.get('HTTP_ORIGIN'):
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
+        pinfo, disc = self.provider(provider)
+        state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
+        # TODO: Add PKCE challenge
+        user = self.api.user(env)
+        with self.api.db(env) as db:
+            db.oidc.create_state(state, {
+                'provider': provider, 'nonce': nonce, 'verifier': None,
+                'user': user, 'token': token, 'href': href,
+            })
+        auth = wsgi.request_uri(env).rsplit('/', 1)[0]
+        parts = parse.urlparse(disc['authorization_endpoint'])
+        parts = parts._replace(query=parse.urlencode({
+            'client_id': pinfo['client_id'],
+            'nonce': nonce,
+            'redirect_uri': f'{auth}/redirect',
+            'response_type': 'code',
+            'scope': 'openid profile email',
+            'state': state,
+            **({'prompt': 'select_account'} if user is not None else {}),
+        }))
+        return wsgi.respond_json(respond, {'redirect': parse.urlunparse(parts)})
+
+    @wsgi.endpoint('redirect')
+    def handle_redirect(self, env, respond):
+        wsgi.method(env, HTTPMethod.GET)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        qs = parse.parse_qs(env['QUERY_STRING'])
+        print(qs)
+        href = None
+        with self.api.db(env) as db:
+            if (state := qs.get('state')) is not None:
+                data = db.oidc.state(state[0])
+            if data is None:
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
+            href = data['href']
+            try:
+                params = self._handle_redirect(env, qs, db, data)
+            except Exception as e:
+                self.api.print_exception(limit=-1, chain=False)  # TODO: Remove
+                params = {'error': f"Login failed: {e}"}
+        parts = parse.urlparse(href)
+        parts = parts._replace(fragment='?' + parse.urlencode(params))
+        return wsgi.redirect(respond, parse.urlunparse(parts))
+
+    def _handle_redirect(self, env, qs, db, state):
+        if (err := self.get_error(qs)) is not None:
+            raise Exception(err or "Unknown ID provider error")
+        if (code := qs.get('code')) is None: raise Exception("Missing code")
+
+        # Get the ID token from the provider.
+        pinfo, disc = self.provider(state['provider'])
+        data = parse.urlencode({
+            'code': code[0],
+            'client_id': pinfo['client_id'],
+            'client_secret': pinfo['client_secret'],
+            'redirect_uri': wsgi.request_uri(env, include_query=False),
+            'grant_type': 'authorization_code',
+        }).encode('utf-8')
+        req = request.Request(disc['token_endpoint'], data, headers={
+            'Content-Type': 'application/x-www-form-urlencoded',
+        })
+        with request.urlopen(req, timeout=10) as f: resp = json.load(f)
+        print(resp)
+
+        # Validate the ID token.
+        if (id_token := resp.get('id_token')) is None:
+            raise Exception("No id_token returned")
+        id_token = self.verify_id_token(disc, id_token, pinfo['client_id'],
+                                        state['nonce'])
+        print(id_token)
+
+        # Find the user for the returned identity, if it exists.
+        user, _, _ = db.oidc.user(id_token)
+
+        # If the user is logged in, we're adding a new identity or updating an
+        # existing one. Check that the identity isn't associated with another
+        # user, and remove the existing token, as a new one will be generated.
+        if (state_user := state.get('user')) is not None:
+            if user is not None and user != state_user:
+                raise Exception(
+                    "This identity is already assigned to another user")
+            user = state_user
+            if (t := state.get('token')) is not None: db.tokens.remove([t])
+
+        # If the user isn't logged in, and the identity's domain is allowlisted,
+        # create a new user.
+        if user is None and (hd := id_token.get('hd')) is not None \
+                and hd in pinfo.get('create_users_for_domains', []):
+            if (email := id_token.get('email')) is None:
+                raise Exception(
+                    "This identity doesn't specify an email address")
+            if not id_token.get('email_verified', False):
+                raise Exception(
+                    "This identity's email address hasn't been verified")
+            user, = db.users.create([email])
+
+        # If we've found or created a user, add or update the identity and
+        # generate a new token.
+        if user is None: raise Exception("Not authorized")
+        db.oidc.add_login(user, id_token)
+        token, = db.tokens.create([user])
+        return {'token': token}
+
+    def get_error(self, qs):
+        if (err := qs.get('error')) is None: return
+        err = err[0]
+        if (desc := qs.get('error_description')) is not None:
+            err = f"{err}: {desc[0]}"
+        return err
+
+    @wsgi.endpoint('logout')
+    def handle_logout(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        self.api.user(env, anon=False)
+        token = wsgi.authorization(env)
+        with self.api.db(env) as db:
+            db.tokens.remove([token])
+        return wsgi.respond_json(respond, {})

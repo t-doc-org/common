@@ -5,6 +5,8 @@ from http import HTTPStatus
 import json
 import re
 import sys
+import threading
+from urllib import request
 from wsgiref import util
 
 # A regexp matching a hostname component.
@@ -167,3 +169,20 @@ def endpoint(name):
         fn._endpoint = name
         return fn
     return deco
+
+
+class HttpCache:
+    default_lifetime = 10 * 60 * 1_000_000_000
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.cache = {}
+
+    def get(self, url, timeout=None):
+        # TODO: Implement an actual cache; return stale data if request fails
+        # now = time.time_ns()
+        # with self.lock:
+        #     data, headers, until = self.cache.get(url, (None, None, None))
+        #     if until is not None and now < until: return data
+        with request.urlopen(url, timeout=timeout) as f:
+            return f.read(), f.headers

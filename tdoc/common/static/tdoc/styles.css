@@ -1058,12 +1058,17 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     font: var(--fa-font-regular);
     content: '\f007';
 }
-.article-header-buttons > .dropdown-user.signed-in > button::before {
+html[data-tdoc-logged-in] .article-header-buttons > .dropdown-user
+        > button::before {
     font: var(--fa-font-solid);
 }
-#tdoc-login .message {
-    margin-right: 1rem;
-    color: var(--pst-color-danger);
+html[data-tdoc-logged-in] .article-header-buttons > .dropdown-user
+        .dropdown-item.btn-login {
+    display: none;
+}
+html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
+        .dropdown-item.btn-settings {
+    display: none;
 }
 .tdoc-domain-storage {
     position: absolute;

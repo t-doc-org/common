@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    AsyncStoredJson, backoff, bearerAuthorization, dec, fetchJson, FifoBuffer,
-    on, page, sleep, Stored,
+    AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
+    fetchJson, FifoBuffer, handleHashParams, htmlData, on, page, qs, sleep,
+    Stored,
 } from './core.js';
 
 function handleApiBackend() {
@@ -33,7 +34,7 @@ export const url = (() => {
     return null;
 })();
 
-class User extends EventTarget {
+class Auth extends EventTarget {
     static async create() {
         return new this(await AsyncStoredJson.create('tdoc:api:user'));
     }
@@ -42,9 +43,9 @@ class User extends EventTarget {
         super();
         this.stored = stored;
         ({promise: this.pReady, resolve: this.ready} = Promise.withResolvers());
-        this.handleLogin();
+        this.handleHashParams();
         if (!this.initialized) {
-            this.login(this.stored.get()?.token);  // Background
+            this.setToken(this.stored.get()?.token);  // Background
         }
     }
 
@@ -71,6 +72,11 @@ class User extends EventTarget {
 
     set(data) {
         this.data = data;
+        if (data) {
+            htmlData.tdocLoggedIn = '';
+        } else {
+            delete htmlData.tdocLoggedIn;
+        }
         if (this.ready) {
             this.ready();
             delete this.pReady, this.ready;
@@ -78,49 +84,198 @@ class User extends EventTarget {
         this.dispatchEvent(new CustomEvent('change'));
     }
 
-    async login(token) {
+    async fetchJson(url, opts) {
+        return await fetchJson(url, {
+            ...opts,
+            headers: {
+                ...bearerAuthorization(opts?.token ?? await this.token()),
+                ...opts?.headers ?? {},
+            },
+        });
+    }
+
+    async info() {
+        return await this.fetchJson(`${url}/auth/info`);
+    }
+
+    async login({provider, user}) {
+        const data = await this.fetchJson(`${url}/auth/login`, {
+            body: {provider, user, href: location.href},
+        });
+        if (data.token) {
+            if (!await this.setToken(data.token)) {
+                throw Error("Failed to set token.");
+            }
+            return;
+        }
+        if (data.redirect) location.assign(data.redirect);
+    }
+
+    async logout() {
+        const token = await this.token();
+        await this.setToken(undefined);
+        await this.fetchJson(`${url}/auth/logout`, {token});
+    }
+
+    async setToken(token) {
         this.initialized = true;
-        if (!token) return await this.logout();
+        if (!token) {
+            await this.stored.set(undefined);
+            this.set(undefined);
+            return true;
+        }
         try {
-            const data = await fetchJson(`${url}/user`, {
-                headers: bearerAuthorization(token),
-            });
+            const data = await this.fetchJson(`${url}/user`, {token});
             data.token = token;
             await this.stored.set(data);
             this.set(data);
         } catch (e) {
-            if (this.resolve) this.set(this.stored.get());
+            await this.stored.set(undefined);
+            this.set(undefined);
             return false;
         }
         return true;
     }
 
-    async logout() {
-        this.initialized = true;
-        await this.stored.set(undefined);
-        this.set(undefined);
-        return true;
-    }
-
-    handleLogin() {
-        const params = page.hashParams
-        if (!params) return;
-        if (params.get('logout') !== null) {
-            params.delete('logout');
-            page.hashParams = params;
-            this.logout();  // Background
-        }
-        const token = params.get('login');
-        if (token) {
-            params.delete('login');
-            page.hashParams = params;
-            this.login(token);  // Background
-        }
+    handleHashParams() {
+        handleHashParams(['token', 'error'], (token, error) => {
+            // TODO: Prevent CSRF via client-side nonce in sessionStorage.
+            if (token) {
+                this.setToken(token);  // Background
+            }
+            if (error) {
+                // TODO: Display notification or modal dialog
+                alert(error);
+            }
+        });
     }
 }
 
-export const user = await User.create();
-on(window).hashchange(() => user.handleLogin());
+export const auth = await Auth.create();
+on(window).hashchange(() => auth.handleHashParams());
+
+// Handle login / logout.
+domLoaded.then(() => {
+    const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
+    el.classList.add('disabled');
+    auth.onChange(async () => {
+        const name = await auth.name();
+        qs(el, '.btn__text-container')
+            .replaceChildren(name !== undefined ? name : "Not logged in");
+    });
+});
+
+function showModal(el) {
+    const modal = new bootstrap.Modal(el);
+    on(el)['hide.bs.modal'](() => document.activeElement.blur());
+    on(el)['hidden.bs.modal'](() => {
+        modal.dispose();
+        el.remove();
+    });
+    modal.show();
+    return modal;
+}
+
+async function catchToMessage(modal, fn) {
+    try {
+        await fn();
+    } catch (e) {
+        const msg = qs(modal._element, '.message');
+        msg.textContent = e.message;
+        msg.classList.remove('hidden');
+    }
+}
+
+function addProviderButtons(modal, prefix, providers) {
+    const btns = qs(modal, '.providers');
+    if (providers.length === 0) btns.classList.add('d-none');
+    for (const {provider, label} of providers) {
+        const btn = btns.appendChild(elmt`\
+<div class="col-auto">\
+<button type="button" class="btn btn-outline-primary">${prefix} ${label}\
+</button>\
+</div>\
+`);
+        on(btn).click(async () => {
+            await catchToMessage(modal, async () => {
+                await auth.login({provider});
+            });
+        });
+    }
+}
+
+tdoc.login = async () => {
+    const info = await auth.info();
+    const el = elmt`\
+<div class="modal fade" tabindex="-1" aria-hidden="true"\
+ aria-labelledby="tdoc-login-title">\
+<div class="modal-dialog"><div class="modal-content">\
+<div class="modal-header">\
+<h1 class="modal-title fs-5" id="tdoc-login-title">Log in</h1>\
+<button type="button" class="btn-close" data-bs-dismiss="modal"\
+ aria-label="Close"></button>\
+</div><div class="modal-body vstack gap-3">\
+<form class="hstack gap-2 text-nowrap login hidden">
+<label for="tdoc-login-user" class="col-form-label">User:</label>\
+<input type="text" class="form-control" id="tdoc-login-user" value="admin">\
+<button type="submit" class="btn btn-primary login" disabled>Log in</button>\
+</form>\
+<div class="hstack gap-2 text-nowrap providers"></div>\
+</div><div class="modal-footer">\
+<div class="flex-fill text-danger message"></div>\
+<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
+</button>\
+</div></div></div>\
+`;
+    const loginForm = qs(el, 'form.login');
+    loginForm.classList.toggle('hidden', !tdoc.dev);
+    const input = qs(loginForm, 'input#tdoc-login-user');
+    const loginBtn = qs(loginForm, 'button.login');
+    enable(input.value, loginBtn);
+    addProviderButtons(el, "Log in with", info.providers);
+
+    const modal = showModal(el);
+    on(input).input(() => enable(input.value, loginBtn));
+    on(loginForm).submit(async e => {
+        e.preventDefault();
+        if (!input.value) return;
+        await catchToMessage(modal, async () => {
+            await auth.login({user: input.value});
+            modal.hide();
+        });
+    });
+};
+
+tdoc.settings = async () => {
+    const info = await auth.info();
+    console.log(info);
+    const el = elmt`\
+<div class="modal fade" tabindex="-1" aria-hidden="true"\
+ aria-labelledby="tdoc-settings-title">\
+<div class="modal-dialog"><div class="modal-content">\
+<div class="modal-header">\
+<h1 class="modal-title fs-5" id="tdoc-settings-title">Settings</h1>\
+<button type="button" class="btn-close" data-bs-dismiss="modal"\
+ aria-label="Close"></button>\
+</div><div class="modal-body vstack gap-3">\
+<div class="hstack gap-2 text-nowrap providers"></div>\
+</div><div class="modal-footer">\
+<button type="button" class="btn btn-danger logout">Log out</button>\
+<div class="flex-fill text-danger message"></div>\
+<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
+</button>\
+</div></div></div>\
+`;
+    addProviderButtons(el, "Add login with", info.providers);
+
+    const modal = showModal(el);
+    on(qs(el, '.logout')).click(async () => {
+        await catchToMessage(modal, async () => {
+            await auth.logout();
+            modal.hide();
+        });
+    });
+};
 
 export function log(session, data, options) {
     return fetchJson(`${url}/log`, {
@@ -134,15 +289,11 @@ export function log(session, data, options) {
 }
 
 export async function poll(req) {
-    return await fetchJson(`${url}/poll`, {
-        headers: bearerAuthorization(await user.token()),
-        body: req,
-    });
+    return await auth.fetchJson(`${url}/poll`, {body: req});
 }
 
 export async function solutions(show) {
-    return await fetchJson(`${url}/solutions`, {
-        headers: bearerAuthorization(await user.token()),
+    return await auth.fetchJson(`${url}/solutions`, {
         body: {page: page.path, show},
     });
 }
@@ -191,10 +342,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await fetchJson(`${url}/events/sub`, {
-                headers: bearerAuthorization(await user.token()),
-                body: req,
-            });
+            const resp = await auth.fetchJson(`${url}/events/sub`, {body: req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }
@@ -229,7 +377,7 @@ class EventsApi {
     }
 
     async stream(req, connected) {
-        this.token = await user.token();
+        this.token = await auth.token();
         this.abort = new AbortController();
         try {
             const resp = await fetch(`${url}/events/watch`, {
@@ -301,4 +449,4 @@ class EventsApi {
 }
 
 export const events = new EventsApi();
-user.onChange(async () => events.restartOnTokenChange(await user.token()));
+auth.onChange(async () => events.restartOnTokenChange(await auth.token()));

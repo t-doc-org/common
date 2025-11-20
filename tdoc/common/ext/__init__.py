@@ -4,6 +4,7 @@
 import base64
 import copy
 import functools
+import html
 import json
 import pathlib
 import re
@@ -305,21 +306,21 @@ def add_user_button(app, page, template, context, doctree):
         'label': 'user',
         'buttons': [{
             'type': 'link',
-            'text': "Not signed in",
+            'text': "Not logged in",
             'icon': 'fa fa-user',
             'label': 'user',
         }, {
             'type': 'javascript',
             'javascript': 'tdoc.login()',
-            'text': "Sign in",
+            'text': "Log in",
             'icon': 'fa fa-right-to-bracket',
             'label': 'login',
         }, {
             'type': 'javascript',
-            'javascript': 'tdoc.logout()',
-            'text': "Sign out",
-            'icon': 'fa fa-right-from-bracket',
-            'label': 'logout',
+            'javascript': 'tdoc.settings()',
+            'text': "Settings",
+            'icon': 'fa fa-gear',
+            'label': 'settings',
         }],
     })
 

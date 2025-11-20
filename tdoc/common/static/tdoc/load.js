@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    addTooltip, domLoaded, elmt, enable, findDyn, htmlData, on, page, qs, qsa,
-    rgb2hex, StoredJson,
+    addTooltip, domLoaded, elmt, findDyn, htmlData, on, page, qs, qsa, rgb2hex,
+    StoredJson,
 } from './core.js';
 
 // Handle auto-reload on source change.
@@ -28,73 +28,6 @@ domLoaded.then(() => {
         BLACKLISTED_KEY_CONTROL_ELEMENTS.add('DIV');
     }
 });
-
-// Handle login / logout.
-domLoaded.then(() => {
-    const dd = qs(document, '.dropdown-user');
-    const menu = qs(dd, '.dropdown-menu');
-    const user = qs(menu, 'li > a.btn-user');
-    user.classList.add('disabled');
-    const login = qs(menu, 'li:has(.btn-login)');
-    const logout = qs(menu, 'li:has(.btn-logout)');
-    api.user.onChange(async () => {
-        const name = await api.user.name();
-        dd.classList.toggle('signed-in', name !== undefined);
-        login.classList.toggle('hidden', name !== undefined);
-        logout.classList.toggle('hidden', name === undefined);
-        qs(user, '.btn__text-container')
-            .replaceChildren(name !== undefined ? name : "Not signed in");
-    });
-});
-let loginModal;
-tdoc.login = async() => {
-    if (!loginModal) {
-        const el = document.body.appendChild(elmt`
-<div class="modal fade" id="tdoc-login" tabindex="-1" aria-hidden="true"\
- aria-labelledby="tdoc-login-title">\
-<div class="modal-dialog"><div class="modal-content">\
-<div class="modal-header">\
-<h1 class="modal-title fs-5" id="tdoc-login-title">Sign in</h1>\
-<button type="button" class="btn-close" data-bs-dismiss="modal"\
- aria-label="Close"></button>\
-</div><div class="modal-body">\
-<form><div class="mb-3">\
-<label for="tdoc-login-token" class="col-form-label">Token:</label>\
-<input type="password" class="form-control" id="tdoc-login-token"\
- autocomplete="current-password">\
-</div></form>\
-</div><div class="modal-footer">\
-<div class="message hidden">Sign in failed.</div>\
-<button type="button" class="btn btn-primary" disabled>Sign in</button>\
-</div></div></div>\
-`);
-        const form = qs(el, 'form');
-        const input = qs(form, 'input#tdoc-login-token');
-        const msg = qs(el, '.message');
-        const btn = qs(el, '.btn-primary');
-        loginModal = bootstrap.Modal.getOrCreateInstance(el);
-        on(el)['shown.bs.modal'](() => input.focus());
-        on(el)['hide.bs.modal'](() => document.activeElement.blur());
-        on(el)['hidden.bs.modal'](() => {
-            input.value = '';
-            msg.classList.add('hidden');
-            btn.disabled = true;
-        });
-        on(input).input(() => enable(input.value, btn));
-        on(btn).click(() => form.requestSubmit());
-        on(form).submit(async e => {
-            e.preventDefault();
-            if (await api.user.login(input.value)) {
-                loginModal.hide();
-            } else {
-                msg.classList.remove('hidden');
-                input.focus();
-            }
-        });
-    }
-    loginModal.show();
-};
-tdoc.logout = async () => await api.user.logout();
 
 // Handle admonition expansion. The button is needed to enable keyboard focus.
 domLoaded.then(() => {
@@ -138,8 +71,8 @@ if (toggleSolutionsBtn) {
                 htmlData.tdocSolutionsState = data.show ?? 'hide';
                 updateSolutionsTooltip();
             })]});
-        api.user.onChange(async () => {
-            if (await api.user.member_of('solutions:write')) {
+        api.auth.onChange(async () => {
+            if (await api.auth.member_of('solutions:write')) {
                 htmlData.tdocSolutionsCtrl = '';
             } else {
                 delete htmlData.tdocSolutionsCtrl;

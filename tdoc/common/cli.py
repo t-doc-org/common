@@ -461,7 +461,8 @@ def add_origin_option(arg):
 
 def cmd_token_create(opts):
     with get_db(opts) as db, db:
-        tokens = db.tokens.create(opts.user, opts.expire)
+        uids = [db.users.uid(u) for u in opts.user]
+        tokens = db.tokens.create(uids, opts.expire)
     width = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
     for user, token in zip(opts.user, tokens):
@@ -531,7 +532,7 @@ def add_user_commands(parser):
 def cmd_user_create(opts):
     with get_db(opts) as db, db:
         uids = db.users.create(opts.user)
-        tokens = db.tokens.create(opts.user, opts.token_expire)
+        tokens = db.tokens.create(uids, opts.token_expire)
     wuser = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
     for user, uid, token in zip(opts.user, uids, tokens):

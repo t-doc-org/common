@@ -147,8 +147,8 @@ domLoaded.then(() => {
             }
         });
     api.events.sub({add: [...polls.map(p => p.watch), watch]});  // Background
-    api.user.onChange(async () => {
-        if (await api.user.member_of('polls:control')) {
+    api.auth.onChange(async () => {
+        if (await api.auth.member_of('polls:control')) {
             htmlData.tdocPollControl = '';
         } else {
             delete htmlData.tdocPollControl;

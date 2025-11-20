@@ -4,6 +4,7 @@
 import contextlib
 import datetime
 import functools
+import json
 import pathlib
 import re
 import secrets
@@ -23,6 +24,10 @@ def to_datetime(nsec):
 def to_nsec(dt, default=None):
     if dt is None: return default
     return int(dt.timestamp() * 1e9)
+
+
+def to_json(data, sort_keys=False):
+    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
 
 
 def placeholders(args): return ', '.join('?' * len(args))
@@ -129,6 +134,9 @@ class Connection(sqlite3.Connection):
     def tokens(self): return Tokens(self)
 
     @functools.cached_property
+    def oidc(self): return Oidc(self)
+
+    @functools.cached_property
     def groups(self): return Groups(self)
 
     @functools.cached_property
@@ -198,11 +206,20 @@ class Users(DbNamespace):
 
 
 class Tokens(DbNamespace):
+    min_generated_token_len = 16
+
     def authenticate(self, token):
         return self.row("""
             select user from user_tokens
             where token = ? and (expires is null or ? < expires)
         """, (token, time.time_ns()), default=(None,))[0]
+
+    def find(self, user):
+        return self.row("""
+            select token from user_tokens
+            where user = ? and  (expires is null or ? < expires)
+            order by created limit 1
+        """, (user, time.time_ns()), default=(None,))[0]
 
     def list(self, user_re='', expired=False):
         now = time.time_ns()
@@ -236,8 +253,50 @@ class Tokens(DbNamespace):
         """, [(expires, token, token) for token in tokens])
 
     def remove(self, tokens):
+        # Don't remove non-generated tokens.
         self.executemany("delete from user_tokens where token = ?",
-                         [(token,) for token in tokens])
+                         [(t,) for t in tokens
+                          if len(t) >= self.min_generated_token_len])
+
+
+class Oidc(DbNamespace):
+    def create_state(self, state, data):
+        self.execute("""
+            insert into oidc_states (state, created, data) values (?, ?, ?)
+        """, (state, time.time_ns(), to_json(data)))
+
+    def state(self, state):
+        # TODO: Expire old states
+        data = self.row("select data from oidc_states where state = ?",
+                        (state,), default=(None,))[0]
+        self.execute("delete from oidc_states where state = ?", (state,))
+        return json.loads(data)
+
+    def user(self, id_token):
+        return self.row("""
+            select user, id_token, updated from oidc_users
+            where (issuer, subject) = (?, ?)
+        """, (id_token['iss'], id_token['sub']), default=(None, None, None))
+
+    def logins(self, user):
+        return [(json.loads(id_token), to_datetime(updated))
+                for id_token, updated in self.execute("""
+                    select id_token, updated from oidc_users
+                    where user = ?
+                """, (user,))]
+
+    def add_login(self, user, id_token):
+        self.execute("""
+            insert or replace into oidc_users
+                (issuer, subject, user, id_token, updated)
+            values (?, ?, ?, ?, ?)
+        """, (id_token['iss'], id_token['sub'], user, to_json(id_token),
+              time.time_ns()))
+
+    def remove_login(self, user, issuer, subject):
+        self.execute("""
+            delete from oidc_users where (issuer, subject, user) = (?, ?, ?))
+        """, (issuer, subject, user))
 
 
 class Groups(DbNamespace):
@@ -821,4 +880,34 @@ create table notifications (
     key text primary key,
     seq integer not null
 ) strict, without rowid;
+""")
+
+    def version_5(self, db, dev, now):
+        db.executescript("""
+-- Remove the uniqueness constraint on user names.
+create table users_ (
+    id integer primary key,
+    name text not null,
+    created integer not null
+) strict;
+insert into users_ select * from users;
+drop table users;
+alter table users_ rename to users;
+
+-- Create tables for OIDC.
+create table oidc_states (
+    state text primary key,
+    created integer not null,
+    data text not null
+) strict, without rowid;
+create table oidc_users (
+    issuer text not null,
+    subject text not null,
+    user integer not null,
+    id_token text not null,
+    updated integer not null,
+    primary key (issuer, subject),
+    foreign key (user) references users (id)
+) strict;
+create index user_oidcs on oidc_users (user);
 """)
