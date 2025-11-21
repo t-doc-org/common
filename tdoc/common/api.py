@@ -741,9 +741,11 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_logout(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        self.api.user(env, anon=False)
+        user = self.api.user(env, anon=False)
         token = wsgi.authorization(env)
         with self.api.db(env) as db:
-            # TODO: Remove only if there's at least one entry in oidc_users
-            db.tokens.remove([token])
+            # Remove the token if the user has at least one login.
+            count = sum(1 for id_token, _ in db.oidc.logins(user)
+                        if id_token['iss'] in self.issuers)
+            if count > 0: db.tokens.remove([token])
         return wsgi.respond_json(respond, {})
