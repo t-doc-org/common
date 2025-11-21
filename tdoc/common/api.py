@@ -574,10 +574,11 @@ class OidcAuthApi(wsgi.Dispatcher):
             iss, sub = args(remove, 'iss', 'sub')
             with self.api.db(env) as db:
                 db.oidc.remove_login(user, iss, sub)
-                # TODO: Filter out issuers that aren't enabled
-                if len(db.oidc.logins(user)) < 1:
+                count = sum(1 for id_token, _ in db.oidc.logins(user)
+                            if id_token['iss'] in self.issuers)
+                if count < 1:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
-                                     "The last login cannot be removed")
+                                     "At least one login is required")
         return wsgi.respond_json(respond, {})
 
     def get_key(self, disc, token):

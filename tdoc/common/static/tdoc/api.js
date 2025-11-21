@@ -108,7 +108,7 @@ class Auth extends EventTarget {
         });
         if (data.token) {
             if (!await this.setToken(data.token)) {
-                throw Error("Failed to set token.");
+                throw Error("Failed to set token");
             }
             return;
         }
