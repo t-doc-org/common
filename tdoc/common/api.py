@@ -528,12 +528,13 @@ class OidcAuthApi(wsgi.Dispatcher):
         self.api = api
 
     @functools.cached_property
-    def providers(self):
-        ps = util.get(self.api.config, 'oidc.providers', {})
-        return {p: i for p, i in ps.items() if i.get('enabled', True)}
+    def issuers(self):
+        # TODO: Use info['issuer'] as key
+        iss = util.get(self.api.config, 'oidc.issuers', {})
+        return {i: info for i, info in iss.items() if info.get('enabled', True)}
 
-    def provider(self, provider):
-        if (info := self.providers.get(provider)) is None:
+    def issuer(self, issuer):
+        if (info := self.issuers.get(issuer)) is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         return info, self.discovery(info)
 
@@ -544,26 +545,43 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_info(self, env, respond):
         wsgi.method(env, HTTPMethod.POST)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        ps = self.providers
+        issuers = self.issuers
         resp = {
-            'providers': [{'provider': p, 'label': i.get('label', p)}
-                          for p, i in ps.items()],
+            'issuers': [{'issuer': i, 'label': info.get('label', i)}
+                        for i, info in issuers.items()],
         }
         if (user := self.api.user(env)) is not None:
-            pids = [(i, self.discovery(i)) for i in ps.values()]
+            iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
             with self.api.db(env) as db:
                 for id_token, updated in db.oidc.logins(user):
-                    for pinfo, disc in pids:
+                    for iinfo, disc in iids:
                         if disc['issuer'] != id_token['iss']: continue
                         logins.append({
-                            'issuer': id_token['iss'],
-                            'label': pinfo['label'],
-                            'subject': id_token['sub'],
                             'email': id_token['email'],
+                            'issuer': iinfo['label'],
                             'updated': updated.date().isoformat(),
+                            'iss': id_token['iss'],
+                            'sub': id_token['sub'],
                         })
+            logins.sort(key=lambda i: (i['email'], i['issuer']))
         return wsgi.respond_json(respond, resp)
+
+    @wsgi.endpoint('update')
+    def handle_update(self, env, respond):
+        wsgi.method(env, HTTPMethod.POST)
+        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        user = self.api.user(env, anon=False)
+        req = wsgi.read_json(env)
+        if remove := req.get('remove'):
+            iss, sub = args(remove, 'iss', 'sub')
+            with self.api.db(env) as db:
+                db.oidc.remove_login(user, iss, sub)
+                # TODO: Filter out issuers that aren't enabled
+                if len(db.oidc.logins(user)) < 1:
+                    raise wsgi.Error(HTTPStatus.FORBIDDEN,
+                                     "The last login cannot be removed")
+        return wsgi.respond_json(respond, {})
 
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
@@ -606,24 +624,24 @@ class OidcAuthApi(wsgi.Dispatcher):
             return wsgi.respond_json(respond, {'token': token})
 
         # Handle OIDC login.
-        provider, href = args(req, 'provider', 'href')
+        issuer, href = args(req, 'issuer', 'href')
         href_origin = parse.urlunparse(parse.urlparse(href)._replace(
             path='', params='', query='', fragment=''))
         if href_origin != env.get('HTTP_ORIGIN'):
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
-        pinfo, disc = self.provider(provider)
+        iinfo, disc = self.issuer(issuer)
         state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
         # TODO: Add PKCE challenge
         user = self.api.user(env)
         with self.api.db(env) as db:
             db.oidc.create_state(state, {
-                'provider': provider, 'nonce': nonce, 'verifier': None,
+                'issuer': issuer, 'nonce': nonce, 'verifier': None,
                 'user': user, 'token': token, 'href': href,
             })
         auth = wsgi.request_uri(env).rsplit('/', 1)[0]
         parts = parse.urlparse(disc['authorization_endpoint'])
         parts = parts._replace(query=parse.urlencode({
-            'client_id': pinfo['client_id'],
+            'client_id': iinfo['client_id'],
             'nonce': nonce,
             'redirect_uri': f'{auth}/redirect',
             'response_type': 'code',
@@ -657,15 +675,15 @@ class OidcAuthApi(wsgi.Dispatcher):
 
     def _handle_redirect(self, env, qs, db, state):
         if (err := self.get_error(qs)) is not None:
-            raise Exception(err or "Unknown ID provider error")
+            raise Exception(err or "Unknown ID issuer error")
         if (code := qs.get('code')) is None: raise Exception("Missing code")
 
-        # Get the ID token from the provider.
-        pinfo, disc = self.provider(state['provider'])
+        # Get the ID token from the issuer.
+        iinfo, disc = self.issuer(state['issuer'])
         data = parse.urlencode({
             'code': code[0],
-            'client_id': pinfo['client_id'],
-            'client_secret': pinfo['client_secret'],
+            'client_id': iinfo['client_id'],
+            'client_secret': iinfo['client_secret'],
             'redirect_uri': wsgi.request_uri(env, include_query=False),
             'grant_type': 'authorization_code',
         }).encode('utf-8')
@@ -678,7 +696,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         # Validate the ID token.
         if (id_token := resp.get('id_token')) is None:
             raise Exception("No id_token returned")
-        id_token = self.verify_id_token(disc, id_token, pinfo['client_id'],
+        id_token = self.verify_id_token(disc, id_token, iinfo['client_id'],
                                         state['nonce'])
         print(id_token)
 
@@ -698,7 +716,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         # If the user isn't logged in, and the identity's domain is allowlisted,
         # create a new user.
         if user is None and (hd := id_token.get('hd')) is not None \
-                and hd in pinfo.get('create_users_for_domains', []):
+                and hd in iinfo.get('create_users_for_domains', []):
             if (email := id_token.get('email')) is None:
                 raise Exception(
                     "This identity doesn't specify an email address")
@@ -728,5 +746,6 @@ class OidcAuthApi(wsgi.Dispatcher):
         self.api.user(env, anon=False)
         token = wsgi.authorization(env)
         with self.api.db(env) as db:
+            # TODO: Remove only if there's at least one entry in oidc_users
             db.tokens.remove([token])
         return wsgi.respond_json(respond, {})

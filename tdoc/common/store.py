@@ -295,7 +295,7 @@ class Oidc(DbNamespace):
 
     def remove_login(self, user, issuer, subject):
         self.execute("""
-            delete from oidc_users where (issuer, subject, user) = (?, ?, ?))
+            delete from oidc_users where (issuer, subject, user) = (?, ?, ?)
         """, (issuer, subject, user))
 
 

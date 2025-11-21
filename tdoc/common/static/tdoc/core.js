@@ -159,6 +159,34 @@ export function addTooltip(el, opts) {
     });
 }
 
+// Show a modal dialog.
+export function showModal(el) {
+    const modal = new bootstrap.Modal(el);
+    on(el)['hide.bs.modal'](() => document.activeElement.blur());
+    on(el)['hidden.bs.modal'](() => {
+        modal.dispose();
+        el.remove();
+    });
+    modal.show();
+    return modal;
+}
+
+// Call the given function, and set its return value or any thrown exceptions as
+// text content of the .message element.
+export async function toModalMessage(modal, fn) {
+    let msg, err = false;
+    try {
+        msg = await fn();
+    } catch (e) {
+        msg = e.message;
+        err = true;
+    }
+    const el = qs(modal._element, '.message');
+    el.textContent = msg ?? "";
+    el.classList.toggle('text-danger', err);
+    el.classList.toggle('text-success', !err);
+}
+
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 export function inlineMath(value) {

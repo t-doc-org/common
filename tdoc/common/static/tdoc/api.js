@@ -3,8 +3,8 @@
 
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
-    fetchJson, FifoBuffer, handleHashParams, htmlData, on, page, qs, sleep,
-    Stored,
+    fetchJson, FifoBuffer, handleHashParams, htmlData, on, page, qs, qsa,
+    showModal, sleep, Stored, toModalMessage,
 } from './core.js';
 
 function handleApiBackend() {
@@ -98,9 +98,13 @@ class Auth extends EventTarget {
         return await this.fetchJson(`${url}/auth/info`);
     }
 
-    async login({provider, user}) {
+    async update(req) {
+        return await this.fetchJson(`${url}/auth/update`, {body: req});
+    }
+
+    async login({issuer, user}) {
         const data = await this.fetchJson(`${url}/auth/login`, {
-            body: {provider, user, href: location.href},
+            body: {issuer, user, href: location.href},
         });
         if (data.token) {
             if (!await this.setToken(data.token)) {
@@ -142,6 +146,7 @@ class Auth extends EventTarget {
             // TODO: Prevent CSRF via client-side nonce in sessionStorage.
             if (token) {
                 this.setToken(token);  // Background
+                // TODO: After setting the token, open the settings dialog
             }
             if (error) {
                 // TODO: Display notification or modal dialog
@@ -149,69 +154,26 @@ class Auth extends EventTarget {
             }
         });
     }
-}
 
-export const auth = await Auth.create();
-on(window).hashchange(() => auth.handleHashParams());
-
-// Handle login / logout.
-domLoaded.then(() => {
-    const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
-    el.classList.add('disabled');
-    auth.onChange(async () => {
-        const name = await auth.name();
-        qs(el, '.btn__text-container')
-            .replaceChildren(name !== undefined ? name : "Not logged in");
-    });
-});
-
-function showModal(el) {
-    const modal = new bootstrap.Modal(el);
-    on(el)['hide.bs.modal'](() => document.activeElement.blur());
-    on(el)['hidden.bs.modal'](() => {
-        modal.dispose();
-        el.remove();
-    });
-    modal.show();
-    return modal;
-}
-
-async function catchToMessage(modal, fn) {
-    try {
-        await fn();
-    } catch (e) {
-        const msg = qs(modal._element, '.message');
-        msg.textContent = e.message;
-        msg.classList.remove('hidden');
-    }
-}
-
-function addProviderButtons(modal, prefix, providers) {
-    const btns = qs(modal, '.providers');
-    if (providers.length === 0) btns.classList.add('d-none');
-    for (const {provider, label} of providers) {
-        const btn = btns.appendChild(elmt`\
-<div class="col-auto">\
-<button type="button" class="btn btn-outline-primary">${prefix} ${label}\
-</button>\
-</div>\
-`);
-        on(btn).click(async () => {
-            await catchToMessage(modal, async () => {
-                await auth.login({provider});
-            });
+    onDomLoaded() {
+        // Update the username shown in the user menu.
+        const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
+        el.classList.add('disabled');
+        this.onChange(async () => {
+            const name = await auth.name();
+            qs(el, '.btn__text-container')
+                .replaceChildren(name !== undefined ? name : "Not logged in");
         });
     }
-}
 
-tdoc.login = async () => {
-    const info = await auth.info();
-    const el = elmt`\
+    async showLoginModal() {
+        const info = await this.info();
+        const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
- aria-labelledby="tdoc-login-title">\
+ aria-labelledby="tdoc-modal-title">\
 <div class="modal-dialog"><div class="modal-content">\
 <div class="modal-header">\
-<h1 class="modal-title fs-5" id="tdoc-login-title">Log in</h1>\
+<h1 class="modal-title fs-5" id="tdoc-modal-title">Log in</h1>\
 <button type="button" class="btn-close" data-bs-dismiss="modal"\
  aria-label="Close"></button>\
 </div><div class="modal-body vstack gap-3">\
@@ -220,45 +182,48 @@ tdoc.login = async () => {
 <input type="text" class="form-control" id="tdoc-login-user" value="admin">\
 <button type="submit" class="btn btn-primary login" disabled>Log in</button>\
 </form>\
-<div class="hstack gap-2 text-nowrap providers"></div>\
+<div class="hstack gap-2 text-nowrap issuers"></div>\
 </div><div class="modal-footer">\
 <div class="flex-fill text-danger message"></div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
 </div></div></div>\
 `;
-    const loginForm = qs(el, 'form.login');
-    loginForm.classList.toggle('hidden', !tdoc.dev);
-    const input = qs(loginForm, 'input#tdoc-login-user');
-    const loginBtn = qs(loginForm, 'button.login');
-    enable(input.value, loginBtn);
-    addProviderButtons(el, "Log in with", info.providers);
+        const loginForm = qs(el, 'form.login');
+        loginForm.classList.toggle('hidden', !tdoc.dev);
+        const input = qs(loginForm, 'input#tdoc-login-user');
+        const loginBtn = qs(loginForm, 'button.login');
+        enable(input.value, loginBtn);
+        this.addIssuerButtons(el, "Log in with", info.issuers);
 
-    const modal = showModal(el);
-    on(input).input(() => enable(input.value, loginBtn));
-    on(loginForm).submit(async e => {
-        e.preventDefault();
-        if (!input.value) return;
-        await catchToMessage(modal, async () => {
-            await auth.login({user: input.value});
-            modal.hide();
+        const modal = showModal(el);
+        on(input).input(() => enable(input.value, loginBtn));
+        on(loginForm).submit(async e => {
+            e.preventDefault();
+            if (!input.value) return;
+            await toModalMessage(modal, async () => {
+                await this.login({user: input.value});
+                modal.hide();
+            });
         });
-    });
-};
+    }
 
-tdoc.settings = async () => {
-    const info = await auth.info();
-    console.log(info);
-    const el = elmt`\
+    async showSettingsModal() {
+        const info = await this.info();
+        const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
- aria-labelledby="tdoc-settings-title">\
-<div class="modal-dialog"><div class="modal-content">\
+ aria-labelledby="tdoc-modal-title">\
+<div class="modal-dialog modal-lg"><div class="modal-content">\
 <div class="modal-header">\
-<h1 class="modal-title fs-5" id="tdoc-settings-title">Settings</h1>\
+<h1 class="modal-title fs-5" id="tdoc-modal-title">Settings</h1>\
 <button type="button" class="btn-close" data-bs-dismiss="modal"\
  aria-label="Close"></button>\
 </div><div class="modal-body vstack gap-3">\
-<div class="hstack gap-2 text-nowrap providers"></div>\
+<table class="table table-sm mb-0 text-nowrap logins"><thead>\
+<tr class="px-2"><th class="w-100 px-2">Login</th><th class="px-2">Issuer</th>\
+<th class="px-2">Last used</th><th class="px-2"></th></tr>\
+</thead><tbody class="align-middle"></tbody></table>\
+<div class="hstack gap-2 text-nowrap issuers"></div>\
 </div><div class="modal-footer">\
 <button type="button" class="btn btn-danger logout">Log out</button>\
 <div class="flex-fill text-danger message"></div>\
@@ -266,16 +231,66 @@ tdoc.settings = async () => {
 </button>\
 </div></div></div>\
 `;
-    addProviderButtons(el, "Add login with", info.providers);
+        const logins = qs(el, 'table.logins > tbody');
+        if (info.logins.length === 0) {
+            logins.appendChild(elmt`\
+<tr><td class="px-2" colspan="4">No logins</td></tr>`);
+        }
+        for (const login of info.logins) {
+            const row = logins.appendChild(elmt`\
+<tr><td class="px-2">${login.email}</td><td class="px-2">${login.issuer}</td>\
+<td class="px-2">${login.updated}</td>\
+<td><button type="button" class="btn btn-outline-danger">Remove</button></td>\
+</tr>`);
+            const btn = qs(row, 'button');
+            if (info.logins.length < 2) enable(false, btn);
+            on(btn).click(async () => {
+                await toModalMessage(modal, async () => {
+                    await this.update({
+                        remove: {iss: login.iss, sub: login.sub},
+                    });
+                    row.remove();
+                    const btns = qsa(logins, 'button');
+                    if (btns.length < 2) enable(false, ...btns);
+                    return "Login removed";
+                });
+            });
+        }
+        this.addIssuerButtons(el, "Add login with", info.issuers);
 
-    const modal = showModal(el);
-    on(qs(el, '.logout')).click(async () => {
-        await catchToMessage(modal, async () => {
-            await auth.logout();
-            modal.hide();
+        const modal = showModal(el);
+        on(qs(el, '.logout')).click(async () => {
+            await toModalMessage(modal, async () => {
+                await this.logout();
+                modal.hide();
+            });
         });
-    });
-};
+    }
+
+    addIssuerButtons(modal, prefix, issuers) {
+        const btns = qs(modal, '.issuers');
+        if (issuers.length === 0) btns.classList.add('d-none');
+        for (const {issuer, label} of issuers) {
+            const btn = btns.appendChild(elmt`\
+<div class="col-auto">\
+<button type="button" class="btn btn-outline-primary">${prefix} ${label}\
+</button>\
+</div>\
+`);
+            on(btn).click(async () => {
+                await toModalMessage(modal, async () => {
+                    await auth.login({issuer});
+                });
+            });
+        }
+    }
+}
+
+export const auth = await Auth.create();
+on(window).hashchange(() => auth.handleHashParams());
+domLoaded.then(() => auth.onDomLoaded());
+tdoc.login = async () => await auth.showLoginModal();
+tdoc.settings = async () => await auth.showSettingsModal();
 
 export function log(session, data, options) {
     return fetchJson(`${url}/log`, {
