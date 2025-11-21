@@ -32,9 +32,7 @@ export const page = {
     }
 };
 
-// Handle the hash parameters with the given names, and remove them from the
-// page URL.
-export function handleHashParams(names, fn) {
+function handleHashParams(names, fn) {
     const params = page.hashParams
     if (!params) return;
     let found = false;
@@ -48,8 +46,18 @@ export function handleHashParams(names, fn) {
     });
     if (found) {
         page.hashParams = params;
-        fn(...vs);
+        return fn(...vs);
     }
+}
+
+// Register a handler for the hash parameters with the given names. Calls the
+// handler immediately if any of the hash parameters are currently present, and
+// returns the result of the handler. Also call the handler if the page hash
+// changes and any of the parameters are present.
+export function onHashParams(names, fn) {
+    const res = handleHashParams(names, fn);
+    on(window).hashchange(() => handleHashParams(names, fn));
+    return res;
 }
 
 // Resolves when the DOM content has loaded and deferred scripts have executed.

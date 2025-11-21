@@ -3,21 +3,16 @@
 
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
-    fetchJson, FifoBuffer, handleHashParams, htmlData, on, page, qs, qsa,
-    showModal, sleep, Stored, StoredJson, toBase64, toModalMessage,
+    fetchJson, FifoBuffer, htmlData, on, onHashParams, page, qs, qsa, showModal,
+    sleep, Stored, StoredJson, toBase64, toModalMessage,
 } from './core.js';
 import {random} from './crypto.js';
 
-function handleApiBackend() {
-    handleHashParams(['api'], api => {
-        backend.set(api);
-        location.reload();
-    });
-}
-
 const backend = Stored.create('tdoc:api:backend', undefined, sessionStorage);
-handleApiBackend();
-on(window).hashchange(() => handleApiBackend());
+onHashParams(['api'], api => {
+    backend.set(api);
+    location.reload();
+});
 
 export const url = (() => {
     if (tdoc.dev) return '/_api';
@@ -46,10 +41,37 @@ class Auth extends EventTarget {
                                        sessionStorage);
         this.stored = stored;
         ({promise: this.ready, resolve: this.rReady} = Promise.withResolvers());
-        this.handleHashParams();
-        if (!this.initialized) {
-            this.setToken(this.stored.get()?.token);  // Background
+        const found = onHashParams(['token', 'cnonce'],
+                                   (...args) => this.onToken(...args));
+        if (!found) {
+            this.data = this.stored.get();
+            this.setToken(this.data?.token);  // Background
         }
+        domLoaded.then(() => this.onDomLoaded());
+    }
+
+    onToken(token, cnonce) {
+        if (!token) return;
+        const hasToken = !!this.stored.get()?.token;
+        if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
+            this.state.set(undefined);
+            (async () => {
+                await this.setToken(token);
+                if (hasToken) await this.showSettingsModal();
+            })();  // Background
+            return true;
+        }
+    }
+
+    onDomLoaded() {
+        // Update the username shown in the user menu.
+        const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
+        el.classList.add('disabled');
+        this.onChange(async () => {
+            const name = await this.name();
+            qs(el, '.btn__text-container')
+                .replaceChildren(name !== undefined ? name : "Not logged in");
+        });
     }
 
     async name() {
@@ -85,6 +107,22 @@ class Auth extends EventTarget {
             delete this.ready, this.rReady;
         }
         this.dispatchEvent(new CustomEvent('change'));
+    }
+
+    async setToken(token) {
+        let data, res = true;
+        if (token) {
+            try {
+                data = await this.call(`/user`, {token});
+                data.token = token;
+            } catch (e) {
+                if (e.cause.status !== 401) data = this.data;  // !UNAUTHORIZED
+                res = false;
+            }
+        }
+        await this.stored.set(data);
+        this.set(data);
+        return res;
     }
 
     async call(path, opts) {
@@ -124,55 +162,6 @@ class Auth extends EventTarget {
         const token = await this.token();
         await this.setToken(undefined);
         await this.call(`/auth/logout`, {token});
-    }
-
-    async setToken(token) {
-        this.initialized = true;
-        if (!token) {
-            await this.stored.set(undefined);
-            this.set(undefined);
-            return true;
-        }
-        try {
-            const data = await this.call(`/user`, {token});
-            data.token = token;
-            await this.stored.set(data);
-            this.set(data);
-        } catch (e) {
-            if (e.cause.status === 401) {  // UNAUTHORIZED
-                await this.stored.set(undefined);
-                this.set(undefined);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    handleHashParams() {
-        handleHashParams(['token', 'cnonce'], async (token, cnonce) => {
-            if (!token) return;
-            const hasToken = !!this.stored.get()?.token;
-            if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
-                this.state.set(undefined);
-                await this.setToken(token);
-                if (hasToken) await this.showSettingsModal();
-            }
-        });
-        handleHashParams(['error'], error => {
-            // TODO: Display notification or modal dialog
-            alert(error);
-        });
-    }
-
-    onDomLoaded() {
-        // Update the username shown in the user menu.
-        const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
-        el.classList.add('disabled');
-        this.onChange(async () => {
-            const name = await auth.name();
-            qs(el, '.btn__text-container')
-                .replaceChildren(name !== undefined ? name : "Not logged in");
-        });
     }
 
     async showLoginModal() {
@@ -288,7 +277,7 @@ class Auth extends EventTarget {
 `);
             on(btn).click(async () => {
                 await toModalMessage(modal, async () => {
-                    await auth.login({issuer});
+                    await this.login({issuer});
                 });
             });
         }
@@ -296,10 +285,14 @@ class Auth extends EventTarget {
 }
 
 export const auth = await Auth.create();
-on(window).hashchange(() => auth.handleHashParams());
-domLoaded.then(() => auth.onDomLoaded());
-tdoc.login = async () => await auth.showLoginModal();
-tdoc.settings = async () => await auth.showSettingsModal();
+tdoc.login = () => auth.showLoginModal();
+tdoc.settings = () => auth.showSettingsModal();
+
+onHashParams(['error'], error => {
+    // TODO: If logged in, show settings with error in message
+    // TODO: If not logged in, show modal dialog with error message only
+    alert(error);
+});
 
 export function log(session, data, options) {
     return call(`/log`, {
