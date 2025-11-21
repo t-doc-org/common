@@ -45,7 +45,7 @@ class Auth extends EventTarget {
         this.state = StoredJson.create('tdoc:api:state', undefined,
                                        sessionStorage);
         this.stored = stored;
-        ({promise: this.pReady, resolve: this.ready} = Promise.withResolvers());
+        ({promise: this.ready, resolve: this.rReady} = Promise.withResolvers());
         this.handleHashParams();
         if (!this.initialized) {
             this.setToken(this.stored.get()?.token);  // Background
@@ -53,17 +53,17 @@ class Auth extends EventTarget {
     }
 
     async name() {
-        if (this.pReady) await this.pReady;
+        if (this.ready) await this.ready;
         return this.data?.name;
     }
 
     async token() {
-        if (this.pReady) await this.pReady;
+        if (this.ready) await this.ready;
         return this.data?.token;
     }
 
     async member_of(group) {
-        if (this.pReady) await this.pReady;
+        if (this.ready) await this.ready;
         const groups = this.data?.groups ?? [];
         return groups.includes(group) || groups.includes('*');
     }
@@ -80,9 +80,9 @@ class Auth extends EventTarget {
         } else {
             delete htmlData.tdocLoggedIn;
         }
-        if (this.ready) {
-            this.ready();
-            delete this.pReady, this.ready;
+        if (this.rReady) {
+            this.rReady();
+            delete this.ready, this.rReady;
         }
         this.dispatchEvent(new CustomEvent('change'));
     }
@@ -139,9 +139,10 @@ class Auth extends EventTarget {
             await this.stored.set(data);
             this.set(data);
         } catch (e) {
-            // TODO: Only reset the token on UNAUTHORIZED
-            await this.stored.set(undefined);
-            this.set(undefined);
+            if (e.cause.status === 401) {  // UNAUTHORIZED
+                await this.stored.set(undefined);
+                this.set(undefined);
+            }
             return false;
         }
         return true;
@@ -152,7 +153,7 @@ class Auth extends EventTarget {
             if (!token) return;
             const hasToken = !!this.stored.get()?.token;
             if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
-                this.state.set();
+                this.state.set(undefined);
                 await this.setToken(token);
                 if (hasToken) await this.showSettingsModal();
             }
