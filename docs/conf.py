@@ -24,7 +24,8 @@ html_theme_options = {
 intersphinx_mapping = {
     'python': (
         f'https://docs.python.org/{sys.version_info[0]}.{sys.version_info[1]}',
-        None,
+        ('_cached/python.inv', None),
     ),
-    'sphinx': ('https://www.sphinx-doc.org/en/master', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master',
+               ('_cached/sphinx.inv', None)),
 }
