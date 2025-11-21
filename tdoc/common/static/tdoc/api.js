@@ -4,18 +4,15 @@
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
     fetchJson, FifoBuffer, handleHashParams, htmlData, on, page, qs, qsa,
-    showModal, sleep, Stored, toModalMessage,
+    showModal, sleep, Stored, StoredJson, toBase64, toModalMessage,
 } from './core.js';
+import {random} from './crypto.js';
 
 function handleApiBackend() {
-    const params = page.hashParams;
-    if (!params) return;
-    const api = params.get('api');
-    if (api === null) return;
-    backend.set(api);
-    params.delete('api');
-    page.hashParams = params;
-    location.reload();
+    handleHashParams(['api'], api => {
+        backend.set(api);
+        location.reload();
+    });
 }
 
 const backend = Stored.create('tdoc:api:backend', undefined, sessionStorage);
@@ -34,6 +31,10 @@ export const url = (() => {
     return null;
 })();
 
+export async function call(path, opts) {
+    return await fetchJson(`${url}${path}`, opts);
+}
+
 class Auth extends EventTarget {
     static async create() {
         return new this(await AsyncStoredJson.create('tdoc:api:user'));
@@ -41,6 +42,8 @@ class Auth extends EventTarget {
 
     constructor(stored) {
         super();
+        this.state = StoredJson.create('tdoc:api:state', undefined,
+                                       sessionStorage);
         this.stored = stored;
         ({promise: this.pReady, resolve: this.ready} = Promise.withResolvers());
         this.handleHashParams();
@@ -84,41 +87,43 @@ class Auth extends EventTarget {
         this.dispatchEvent(new CustomEvent('change'));
     }
 
-    async fetchJson(url, opts) {
-        return await fetchJson(url, {
+    async call(path, opts) {
+        return await call(path, {
             ...opts,
             headers: {
                 ...bearerAuthorization(opts?.token ?? await this.token()),
-                ...opts?.headers ?? {},
+                ...opts?.headers,
             },
         });
     }
 
     async info() {
-        return await this.fetchJson(`${url}/auth/info`);
+        return await this.call(`/auth/info`);
     }
 
     async update(req) {
-        return await this.fetchJson(`${url}/auth/update`, {body: req});
+        return await this.call(`/auth/update`, {req});
     }
 
     async login({issuer, user}) {
-        const data = await this.fetchJson(`${url}/auth/login`, {
-            body: {issuer, user, href: location.href},
+        const cnonce = await toBase64(random(32));
+        this.state.set({cnonce});
+        const resp = await this.call(`/auth/login`, {
+            req: {issuer, user, cnonce, href: location.href},
         });
-        if (data.token) {
-            if (!await this.setToken(data.token)) {
+        if (resp.token) {
+            if (!await this.setToken(resp.token)) {
                 throw Error("Failed to set token");
             }
             return;
         }
-        if (data.redirect) location.assign(data.redirect);
+        if (resp.redirect) location.assign(resp.redirect);
     }
 
     async logout() {
         const token = await this.token();
         await this.setToken(undefined);
-        await this.fetchJson(`${url}/auth/logout`, {token});
+        await this.call(`/auth/logout`, {token});
     }
 
     async setToken(token) {
@@ -129,11 +134,12 @@ class Auth extends EventTarget {
             return true;
         }
         try {
-            const data = await this.fetchJson(`${url}/user`, {token});
+            const data = await this.call(`/user`, {token});
             data.token = token;
             await this.stored.set(data);
             this.set(data);
         } catch (e) {
+            // TODO: Only reset the token on UNAUTHORIZED
             await this.stored.set(undefined);
             this.set(undefined);
             return false;
@@ -142,16 +148,18 @@ class Auth extends EventTarget {
     }
 
     handleHashParams() {
-        handleHashParams(['token', 'error'], (token, error) => {
-            // TODO: Prevent CSRF via client-side nonce in sessionStorage.
-            if (token) {
-                this.setToken(token);  // Background
-                // TODO: After setting the token, open the settings dialog
+        handleHashParams(['token', 'cnonce'], async (token, cnonce) => {
+            if (!token) return;
+            const hasToken = !!this.stored.get()?.token;
+            if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
+                this.state.set();
+                await this.setToken(token);
+                if (hasToken) await this.showSettingsModal();
             }
-            if (error) {
-                // TODO: Display notification or modal dialog
-                alert(error);
-            }
+        });
+        handleHashParams(['error'], error => {
+            // TODO: Display notification or modal dialog
+            alert(error);
         });
     }
 
@@ -201,7 +209,7 @@ class Auth extends EventTarget {
         on(loginForm).submit(async e => {
             e.preventDefault();
             if (!input.value) return;
-            await toModalMessage(modal, async () => {
+            await toModalMessage(el, async () => {
                 await this.login({user: input.value});
                 modal.hide();
             });
@@ -245,7 +253,7 @@ class Auth extends EventTarget {
             const btn = qs(row, 'button');
             if (info.logins.length < 2) enable(false, btn);
             on(btn).click(async () => {
-                await toModalMessage(modal, async () => {
+                await toModalMessage(el, async () => {
                     await this.update({
                         remove: {iss: login.iss, sub: login.sub},
                     });
@@ -260,7 +268,7 @@ class Auth extends EventTarget {
 
         const modal = showModal(el);
         on(qs(el, '.logout')).click(async () => {
-            await toModalMessage(modal, async () => {
+            await toModalMessage(el, async () => {
                 await this.logout();
                 modal.hide();
             });
@@ -293,9 +301,9 @@ tdoc.login = async () => await auth.showLoginModal();
 tdoc.settings = async () => await auth.showSettingsModal();
 
 export function log(session, data, options) {
-    return fetchJson(`${url}/log`, {
+    return call(`/log`, {
         headers: bearerAuthorization(options?.token),
-        body: {
+        req: {
             'time': Date.now(),
             'location': page.origin + page.path,
             'session': session, 'data': data,
@@ -304,17 +312,15 @@ export function log(session, data, options) {
 }
 
 export async function poll(req) {
-    return await auth.fetchJson(`${url}/poll`, {body: req});
+    return await auth.call(`/poll`, {req});
 }
 
 export async function solutions(show) {
-    return await auth.fetchJson(`${url}/solutions`, {
-        body: {page: page.path, show},
-    });
+    return await auth.call(`/solutions`, {req: {page: page.path, show}});
 }
 
 export async function terminate(rc = 0) {
-    return await fetchJson(`${url}/terminate`, {body: {rc}});
+    return await call(`/terminate`, {req: {rc}});
 }
 
 export class Watch {
@@ -357,7 +363,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await auth.fetchJson(`${url}/events/sub`, {body: req});
+            const resp = await auth.call(`/events/sub`, {req: req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }

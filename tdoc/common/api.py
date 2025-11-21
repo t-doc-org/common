@@ -622,7 +622,7 @@ class OidcAuthApi(wsgi.Dispatcher):
             return wsgi.respond_json(respond, {'token': token})
 
         # Handle OIDC login.
-        issuer, href = args(req, 'issuer', 'href')
+        issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
         href_origin = parse.urlunparse(parse.urlparse(href)._replace(
             path='', params='', query='', fragment=''))
         if href_origin != env.get('HTTP_ORIGIN'):
@@ -633,8 +633,8 @@ class OidcAuthApi(wsgi.Dispatcher):
         user = self.api.user(env)
         with self.api.db(env) as db:
             db.oidc.create_state(state, {
-                'issuer': issuer, 'nonce': nonce, 'verifier': None,
-                'user': user, 'token': token, 'href': href,
+                'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
+                'verifier': None, 'user': user, 'token': token, 'href': href,
             })
         auth = wsgi.request_uri(env).rsplit('/', 1)[0]
         parts = parse.urlparse(disc['authorization_endpoint'])
@@ -728,7 +728,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if user is None: raise Exception("Not authorized")
         db.oidc.add_login(user, id_token)
         token, = db.tokens.create([user])
-        return {'token': token}
+        return {'token': token, 'cnonce': state['cnonce']}
 
     def get_error(self, qs):
         if (err := qs.get('error')) is None: return

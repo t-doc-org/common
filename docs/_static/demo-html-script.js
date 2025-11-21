@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './tdoc/api.js';
-import {bearerAuthorization, domLoaded, fetchJson, text, toBase64} from './tdoc/core.js';
+import {domLoaded, text, toBase64} from './tdoc/core.js';
 import {decryptSecret, pageKey, random} from './tdoc/crypto.js';
 
 const key = await pageKey('key', 'FJbV5IShbHru');

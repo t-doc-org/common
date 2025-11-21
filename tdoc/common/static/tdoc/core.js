@@ -181,7 +181,7 @@ export async function toModalMessage(modal, fn) {
         msg = e.message;
         err = true;
     }
-    const el = qs(modal._element, '.message');
+    const el = qs(modal, '.message');
     el.textContent = msg ?? "";
     el.classList.toggle('text-danger', err);
     el.classList.toggle('text-success', !err);
@@ -339,15 +339,12 @@ export async function fromBase64(data) {
 // Perform a fetch on a JSON API.
 export async function fetchJson(url, opts) {
     const resp = await fetch(url, {
-        method: 'POST',
-        cache: 'no-cache',
-        referrer: '',
-        ...opts,
+        method: 'POST', cache: 'no-cache', referrer: '', ...opts,
         headers: {
-            ...opts?.body ? {'Content-Type': 'application/json'} : {},
-            ...opts?.headers ?? {},
+            ...opts?.req ? {'Content-Type': 'application/json'} : {},
+            ...opts?.headers,
         },
-        ...opts?.body ? {body: JSON.stringify(opts.body)} : {},
+        ...opts?.req ? {body: JSON.stringify(opts.req)} : {},
     });
     if (!resp.ok) {
         let msg = await resp.text();
