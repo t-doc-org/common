@@ -14,16 +14,16 @@ onHashParams(['api'], api => {
     location.reload();
 });
 
-export const url = (() => {
-    if (tdoc.dev) return '/_api';
-    if (tdoc.api_url) return tdoc.api_url;
+export const [url, backendSuffix] = (() => {
+    if (tdoc.dev) return ['/_api', ''];
+    if (tdoc.api_url) return [tdoc.api_url, ''];
     const loc = new URL(location);
     if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
         const b = backend.get();
         const suffix = b ? '-' + b : '';
-        return `${loc.protocol}//api${suffix}.t-doc.org`;
+        return [`${loc.protocol}//api${suffix}.t-doc.org`, suffix];
     }
-    return null;
+    return ['/missing_api_url', ''];
 })();
 
 export async function call(path, opts) {
@@ -32,7 +32,8 @@ export async function call(path, opts) {
 
 class Auth extends EventTarget {
     static async create() {
-        return new this(await AsyncStoredJson.create('tdoc:api:user'));
+        return new this(
+            await AsyncStoredJson.create(`tdoc:api${backendSuffix}:user`));
     }
 
     constructor(stored) {
