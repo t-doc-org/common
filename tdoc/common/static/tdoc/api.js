@@ -254,8 +254,8 @@ Log in</button>\
         }
         for (const login of info.logins) {
             const row = logins.appendChild(elmt`\
-<tr><td class="px-2">${login.email}</td><td class="px-2">${login.issuer}</td>\
-<td class="px-2">${login.updated}</td>\
+<tr><td class="px-2">${login.email}</td><td class="px-2 text-nowrap">\
+${login.issuer}</td><td class="px-2 text-nowrap">${login.updated}</td>\
 <td><button type="button" class="btn btn-outline-danger">Remove</button></td>\
 </tr>`);
             const btn = qs(row, 'button');
@@ -289,8 +289,8 @@ Log in</button>\
         for (const {issuer, label} of issuers) {
             const btn = btns.appendChild(elmt`\
 <div class="col-auto">\
-<button type="button" class="btn btn-outline-primary">${prefix} ${label}\
-</button>\
+<button type="button" class="btn btn-outline-primary text-nowrap">\
+${prefix} ${label}</button>\
 </div>\
 `);
             on(btn).click(async () => {
