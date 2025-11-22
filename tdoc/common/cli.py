@@ -468,7 +468,7 @@ def cmd_token_create(opts):
     for user, token in zip(opts.user, tokens):
         opts.stdout.write(
             f"{o.CYAN}{user:{width}}{o.NORM} "
-            f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n")
+            f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
 def cmd_token_expire(opts):
@@ -487,7 +487,7 @@ def cmd_token_list(opts):
         if expires: expires = f", expires: {expires.isoformat(' ', 'seconds')}"
         opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} "
-            f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n"
+            f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n"
             f"  created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
 
 
@@ -537,7 +537,7 @@ def cmd_user_create(opts):
     o = opts.stdout
     for user, uid, token in zip(opts.user, uids, tokens):
         opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
-                         f"{o.LBLUE}{opts.origin}#?login={token}{o.NORM}\n")
+                         f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
 def cmd_user_list(opts):
