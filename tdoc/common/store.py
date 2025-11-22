@@ -260,16 +260,18 @@ class Tokens(DbNamespace):
 
 
 class Oidc(DbNamespace):
+    state_lifetime = 10 * 60 * 1_000_000_000
+
     def create_state(self, state, data):
         self.execute("""
             insert into oidc_states (state, created, data) values (?, ?, ?)
         """, (state, time.time_ns(), to_json(data)))
 
     def state(self, state):
-        # TODO: Expire old states
         data = self.row("select data from oidc_states where state = ?",
                         (state,), default=(None,))[0]
-        self.execute("delete from oidc_states where state = ?", (state,))
+        self.execute("delete from oidc_states where state = ? or created < ?",
+                     (state, time.time_ns() - self.state_lifetime))
         return json.loads(data)
 
     def user(self, id_token):
