@@ -3,8 +3,8 @@
 
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
-    fetchJson, FifoBuffer, htmlData, on, onHashParams, page, qs, qsa, showModal,
-    sleep, Stored, StoredJson, toBase64, toModalMessage,
+    fetchJson, FifoBuffer, htmlData, on, onHashParams, page, qs, qsa, showAlert,
+    showModal, sleep, Stored, StoredJson, toBase64, toModalMessage,
 } from './core.js';
 import {random} from './crypto.js';
 
@@ -47,6 +47,7 @@ class Auth extends EventTarget {
             this.data = this.stored.get();
             this.setToken(this.data?.token);  // Background
         }
+        onHashParams(['auth_error'], (...args) => this.onError(...args));
         domLoaded.then(() => this.onDomLoaded());
     }
 
@@ -57,9 +58,21 @@ class Auth extends EventTarget {
             this.state.set(undefined);
             (async () => {
                 await this.setToken(token);
-                if (hasToken) await this.showSettingsModal();
+                if (hasToken) {
+                    await this.showSettingsModal("Login added successfully");
+                } else {
+                    this.showSuccessAlert();
+                }
             })();  // Background
             return true;
+        }
+    }
+
+    async onError(msg) {
+        if (await this.token()) {
+            this.showSettingsModal(msg, 'danger');
+        } else {
+            showAlert(msg, 'danger');
         }
     }
 
@@ -153,6 +166,7 @@ class Auth extends EventTarget {
             if (!await this.setToken(resp.token)) {
                 throw Error("Failed to set token");
             }
+            this.showSuccessAlert();
             return;
         }
         if (resp.redirect) location.assign(resp.redirect);
@@ -163,6 +177,8 @@ class Auth extends EventTarget {
         await this.setToken(undefined);
         await this.call(`/auth/logout`, {token});
     }
+
+    showSuccessAlert() { showAlert("Logged in successfully."); }
 
     async showLoginModal() {
         const info = await this.info();
@@ -206,7 +222,7 @@ class Auth extends EventTarget {
         });
     }
 
-    async showSettingsModal() {
+    async showSettingsModal(message, kind = 'success') {
         const info = await this.info();
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
@@ -224,7 +240,7 @@ class Auth extends EventTarget {
 <div class="hstack gap-2 text-nowrap issuers"></div>\
 </div><div class="modal-footer">\
 <button type="button" class="btn btn-danger logout">Log out</button>\
-<div class="flex-fill text-danger message"></div>\
+<div class="flex-fill text-${kind} message">${message ?? ""}</div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
 </div></div></div>\
@@ -250,7 +266,7 @@ class Auth extends EventTarget {
                     row.remove();
                     const btns = qsa(logins, 'button');
                     if (btns.length < 2) enable(false, ...btns);
-                    return "Login removed";
+                    return "Login removed successfully";
                 });
             });
         }
@@ -287,12 +303,6 @@ class Auth extends EventTarget {
 export const auth = await Auth.create();
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
-
-onHashParams(['error'], error => {
-    // TODO: If logged in, show settings with error in message
-    // TODO: If not logged in, show modal dialog with error message only
-    alert(error);
-});
 
 export function log(session, data, options) {
     return call(`/log`, {

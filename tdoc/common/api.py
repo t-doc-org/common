@@ -666,7 +666,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 params = self._handle_redirect(env, qs, db, data)
             except Exception as e:
                 self.api.print_exception(limit=-1, chain=False)  # TODO: Remove
-                params = {'error': f"Login failed: {e}"}
+                params = {'auth_error': str(e)}
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
         return wsgi.redirect(respond, parse.urlunparse(parts))
@@ -707,7 +707,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if (state_user := state.get('user')) is not None:
             if user is not None and user != state_user:
                 raise Exception(
-                    "This identity is already assigned to another user")
+                    "This identity is already associated with another user")
             user = state_user
             if (t := state.get('token')) is not None: db.tokens.remove([t])
 
