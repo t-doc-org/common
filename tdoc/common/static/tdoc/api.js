@@ -182,7 +182,6 @@ class Auth extends EventTarget {
 
     async showLoginModal() {
         const info = await this.info();
-        // TODO: Avoid that long messages push the "Close" button down
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-modal-title">\
@@ -192,14 +191,15 @@ class Auth extends EventTarget {
 <button type="button" class="btn-close" data-bs-dismiss="modal"\
  aria-label="Close"></button>\
 </div><div class="modal-body vstack gap-3">\
-<form class="hstack gap-2 text-nowrap login hidden">
+<form class="hstack gap-2 login hidden">
 <label for="tdoc-login-user" class="col-form-label">User:</label>\
 <input type="text" class="form-control" id="tdoc-login-user" value="admin">\
-<button type="submit" class="btn btn-primary login" disabled>Log in</button>\
+<button type="submit" class="btn btn-primary text-nowrap login" disabled>\
+Log in</button>\
 </form>\
 <div class="hstack gap-2 text-nowrap issuers"></div>\
-</div><div class="modal-footer">\
-<div class="flex-fill text-danger message"></div>\
+</div><div class="modal-footer flex-nowrap">\
+<div class="flex-fill message"></div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
 </div></div></div>\
@@ -239,8 +239,9 @@ class Auth extends EventTarget {
 <th class="px-2">Last used</th><th class="px-2"></th></tr>\
 </thead><tbody class="align-middle"></tbody></table>\
 <div class="hstack gap-2 text-nowrap issuers"></div>\
-</div><div class="modal-footer">\
-<button type="button" class="btn btn-danger logout">Log out</button>\
+</div><div class="modal-footer flex-nowrap">\
+<button type="button" class="btn btn-danger text-nowrap logout">Log out\
+</button>\
 <div class="flex-fill text-${kind} message">${message ?? ""}</div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
