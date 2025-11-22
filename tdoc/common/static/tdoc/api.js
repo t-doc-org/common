@@ -157,7 +157,7 @@ class Auth extends EventTarget {
     }
 
     async login({issuer, user}) {
-        const cnonce = await toBase64(random(32));
+        const cnonce = (await toBase64(random(32))).replace('=', '');
         this.state.set({cnonce});
         const resp = await this.call(`/auth/login`, {
             req: {issuer, user, cnonce, href: location.href},
@@ -182,6 +182,7 @@ class Auth extends EventTarget {
 
     async showLoginModal() {
         const info = await this.info();
+        // TODO: Avoid that long messages push the "Close" button down
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-modal-title">\

@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import base64
 import contextlib
 import functools
 import hashlib
@@ -629,17 +630,24 @@ class OidcAuthApi(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
         info, disc = self.issuer(issuer)
         state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
-        # TODO: Add PKCE challenge
+        # Create the PKCE challenge as per RFC7636
+        # <https://datatracker.ietf.org/doc/html/rfc7636>.
+        verifier = secrets.token_urlsafe(32)
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(
+            verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
         user = self.api.user(env)
         with self.api.db(env) as db:
             db.oidc.create_state(state, {
                 'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
-                'verifier': None, 'user': user, 'token': token, 'href': href,
+                'verifier': verifier, 'user': user, 'token': token,
+                'href': href,
             })
         auth = wsgi.request_uri(env).rsplit('/', 1)[0]
         parts = parse.urlparse(disc['authorization_endpoint'])
         parts = parts._replace(query=parse.urlencode({
             'client_id': info['client_id'],
+            'code_challenge': challenge,
+            'code_challenge_method': 'S256',
             'nonce': nonce,
             'redirect_uri': f'{auth}/redirect',
             'response_type': 'code',
@@ -654,7 +662,6 @@ class OidcAuthApi(wsgi.Dispatcher):
         wsgi.method(env, HTTPMethod.GET)
         if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
         qs = parse.parse_qs(env['QUERY_STRING'])
-        print(qs)
         href = None
         with self.api.db(env) as db:
             if (state := qs.get('state')) is not None:
@@ -665,7 +672,6 @@ class OidcAuthApi(wsgi.Dispatcher):
             try:
                 params = self._handle_redirect(env, qs, db, data)
             except Exception as e:
-                self.api.print_exception(limit=-1, chain=False)  # TODO: Remove
                 params = {'auth_error': str(e)}
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
@@ -680,6 +686,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         info, disc = self.issuer(state['issuer'])
         data = parse.urlencode({
             'code': code[0],
+            'code_verifier': state['verifier'],
             'client_id': info['client_id'],
             'client_secret': info['client_secret'],
             'redirect_uri': wsgi.request_uri(env, include_query=False),
@@ -689,14 +696,12 @@ class OidcAuthApi(wsgi.Dispatcher):
             'Content-Type': 'application/x-www-form-urlencoded',
         })
         with request.urlopen(req, timeout=10) as f: resp = json.load(f)
-        print(resp)
 
         # Validate the ID token.
         if (id_token := resp.get('id_token')) is None:
             raise Exception("No id_token returned")
         id_token = self.verify_id_token(disc, id_token, info['client_id'],
                                         state['nonce'])
-        print(id_token)
 
         # Find the user for the returned identity, if it exists.
         user, _, _ = db.oidc.user(id_token)
