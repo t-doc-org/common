@@ -1,11 +1,14 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import contextlib
+from email import utils
 from http import HTTPStatus
 import json
 import re
 import sys
 import threading
+import time
 from urllib import request
 from wsgiref import util
 
@@ -172,17 +175,25 @@ def endpoint(name):
 
 
 class HttpCache:
-    default_lifetime = 10 * 60 * 1_000_000_000
-
-    def __init__(self):
+    def __init__(self, min_lifetime=10 * 60):
+        self.min_lifetime = min_lifetime
         self.lock = threading.Lock()
         self.cache = {}
 
     def get(self, url, timeout=None):
-        # TODO: Implement an actual cache; return stale data if request fails
-        # now = time.time_ns()
-        # with self.lock:
-        #     data, headers, until = self.cache.get(url, (None, None, None))
-        #     if until is not None and now < until: return data
-        with request.urlopen(url, timeout=timeout) as f:
-            return f.read(), f.headers
+        with self.lock:
+            data, exp = self.cache.get(url, (None, None))
+            now = time.time()
+            if data is not None and now < exp: return data
+            try:
+                with request.urlopen(url, timeout=timeout) as f:
+                    data = f.read()
+                exp = now + self.min_lifetime
+                with contextlib.suppress(Exception):
+                    if (v := f.headers.get('expires')) is not None:
+                        expires = utils.mktime_tz(utils.parsedate_tz(v))
+                        if expires > exp: exp = expires
+                self.cache[url] = (data, exp)
+            except Exception:
+                if data is None: raise
+            return data

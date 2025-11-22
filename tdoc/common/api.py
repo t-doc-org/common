@@ -540,7 +540,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         return info, self.discovery(info)
 
     def discovery(self, info):
-        return json.loads(self.api.cache.get(info['discovery'], timeout=10)[0])
+        return json.loads(self.api.cache.get(info['discovery'], timeout=10))
 
     @wsgi.endpoint('info')
     def handle_info(self, env, respond):
@@ -588,7 +588,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if alg not in util.get(self.api.config, 'oidc.token_algorithms', ()):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              f"Unsupported signing algorithm: {alg}")
-        resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10)[0])
+        resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10))
         for key in resp['keys']:
             if key['kid'] == kid and key['alg'] == alg: return jwt.PyJWK(key)
         raise wsgi.Error(HTTPStatus.FORBIDDEN, "No verification key found")
