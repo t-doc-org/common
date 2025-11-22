@@ -1031,6 +1031,7 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     display: inline-flex;
     align-items: center;
     padding-left: 0.5rem;
+    padding-right: var(--bs-dropdown-item-padding-x);
     cursor: pointer;
 }
 .dropdown-menu .btn__icon-container.tdoc:is([class^=fa-], [class*=" fa-"]) {
@@ -1051,39 +1052,6 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
 .sig {
     padding-left: 3rem;
     text-indent: -3rem;
-}
-
-/* Revert table styles changes from pydata_sphinx_theme in Bootstrap modals. */
-/* TODO: Move elsewhere */
-.modal .table {
-    --bs-table-bg: var(--bs-body-bg);
-    --bs-table-color: var(--bs-emphasis-color);
-    border-color: var(--bs-table-border-color);
-    border-style: inherit;
-    border-width: inherit;
-    color: var(--bs-table-color);
-}
-.modal .table thead tr {
-    background-color: inherit;
-    border-bottom-color: inherit;
-    border-bottom-style: inherit;
-    border-bottom-width: inherit;
-}
-.modal .table td ~ td, .modal .table td ~ th,
-.modal .table th ~ td, .modal .table th ~ th {
-    border-left-color: inherit;
-    border-left-style: inherit;
-    border-left-width: inherit;
-}
-.modal .table thead tr {
-    background-color: inherit;
-    border-bottom-color: inherit;
-    border-bottom-style: inherit;
-    border-bottom-width: inherit;
-}
-.modal .table tbody tr:nth-child(odd), .modal .table tbody tr:nth-child(even),
-.modal .table tbody tr:hover {
-    background-color: inherit;
 }
 
 /* Login functionality */
@@ -1107,6 +1075,38 @@ html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
     position: absolute;
     width: 0px;
     height: 0px;
+}
+
+/* Revert table style changes from pydata_sphinx_theme in Bootstrap modals. */
+.modal .table {
+    --bs-table-bg: var(--bs-body-bg);
+    --bs-table-color: var(--bs-emphasis-color);
+    border-color: var(--bs-table-border-color);
+    border-style: initial;
+    border-width: initial;
+    color: var(--bs-table-color);
+}
+.modal .table thead tr {
+    background-color: initial;
+    border-bottom-color: initial;
+    border-bottom-style: initial;
+    border-bottom-width: initial;
+}
+.modal .table td ~ td, .modal .table td ~ th,
+.modal .table th ~ td, .modal .table th ~ th {
+    border-left-color: initial;
+    border-left-style: initial;
+    border-left-width: initial;
+}
+.modal .table thead tr {
+    background-color: initial;
+    border-bottom-color: initial;
+    border-bottom-style: initial;
+    border-bottom-width: initial;
+}
+.modal .table tbody tr:nth-child(odd), .modal .table tbody tr:nth-child(even),
+.modal .table tbody tr:hover {
+    background-color: initial;
 }
 
 /* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
@@ -1190,7 +1190,7 @@ dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
 /* TODO(mathjax-4): Remove and use the svg.blacker config instead */
 mjx-container[jax="SVG"]:not(#¶) path[data-c],
 mjx-container[jax="SVG"]:not(#¶) use[data-c] {
-  stroke-width: 0;
+    stroke-width: 0;
 }
 
 /* Make align-* classes work on math blocks. */
