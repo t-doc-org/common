@@ -120,6 +120,14 @@ const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
 initBoard('sincos', {
     boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
     axis: true, grid: true,
+    defaultAxes: {
+        x: {
+            ticks: {
+                scale: Math.PI, scaleSymbol: '\\pi',
+                label: {toFraction: true, useMathJax: true},
+            },
+        },
+    },
     defaults: {
         functiongraph: {
             withLabel: true,
@@ -135,11 +143,11 @@ initBoard('sincos', {
     board.create('functiongraph',
         [x => Math.sin(x)],
         {name: `\\(sin(x)\\)`, strokeColor: JXG.palette.blue,
-         label: {position: '0.6fr left'}});
+         label: {position: '0.6fr left', strokeColor: JXG.palette.blue}});
     board.create('functiongraph',
         [x => Math.cos(x)],
         {name: `\\(cos(x)\\)`, strokeColor: JXG.palette.red,
-         label: {position: '0.69fr right'}});
+         label: {position: '0.69fr right', strokeColor: JXG.palette.red}});
 });
 
 initBoard('centroid', {

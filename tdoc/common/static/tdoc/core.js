@@ -263,6 +263,14 @@ export function focusIfVisible(el) {
     if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
 }
 
+// Return the greatest common divisor of two natural numbers.
+export function gcd(a, b) {
+    while (b != 0) {
+        [a, b] = [b, a % b]
+    }
+    return a;
+}
+
 // Generate a random integer within an inclusive range.
 export function randomInt(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));

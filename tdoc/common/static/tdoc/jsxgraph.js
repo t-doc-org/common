@@ -1,7 +1,9 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, findDyn, mathJaxReady, qs, qsa} from './core.js';
+import {domLoaded, findDyn, gcd, mathJaxReady, qs, qsa} from './core.js';
+
+export {gcd};
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
@@ -11,7 +13,24 @@ export const JXG = globalThis.JXG;
 
 function generateLabelText(...args) {
     let v = Object.getPrototypeOf(this).generateLabelText.call(this, ...args);
-    if (this.evalVisProp('label').usemathjax) v = v.replace(/\\[()]/g, '');
+    const label = this.evalVisProp('label');
+    if (label.usemathjax) {
+        v = v.replace(/\\[()]/g, '');
+        if (label.tofraction) {
+            // Replace e.g. "3 \\frac{1}{2}" with "\\frac{7}{2}".
+            let found = false;
+            v = v.replace(
+                /(?:(\d+) *)?\\frac\{(\d+)}{(\d+)}/,
+                (m, u, n, d) => {
+                    found = true;
+                    return `\\frac{${+(u ?? 0) * (+d) + (+n)}}{${d}}`;
+                });
+            if (!found && this.evalVisProp('scaleSymbol')) {
+                // Remove a leading "1" or "-1" before a symbol.
+                v = v.replace(/(^|\D)1(\D)/, (m, p, s) => `${p}${s}`);
+            }
+        }
+    }
     return `\\(${v}\\)`;
 }
 
