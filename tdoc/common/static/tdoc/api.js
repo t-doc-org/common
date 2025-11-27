@@ -123,6 +123,16 @@ class Auth extends EventTarget {
         this.dispatchEvent(new CustomEvent('change'));
     }
 
+    async call(path, opts) {
+        return await call(path, {
+            ...opts,
+            headers: {
+                ...bearerAuthorization(opts?.token ?? await this.token()),
+                ...opts?.headers,
+            },
+        });
+    }
+
     async setToken(token) {
         let data, res = true;
         if (token) {
@@ -137,16 +147,6 @@ class Auth extends EventTarget {
         await this.stored.set(data);
         this.set(data);
         return res;
-    }
-
-    async call(path, opts) {
-        return await call(path, {
-            ...opts,
-            headers: {
-                ...bearerAuthorization(opts?.token ?? await this.token()),
-                ...opts?.headers,
-            },
-        });
     }
 
     async info() {
@@ -165,7 +165,7 @@ class Auth extends EventTarget {
         });
         if (resp.token) {
             if (!await this.setToken(resp.token)) {
-                throw Error("Failed to set token");
+                throw new Error("Failed to set token");
             }
             this.showSuccessAlert();
             return;
@@ -370,7 +370,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await auth.call(`/events/sub`, {req: req});
+            const resp = await auth.call(`/events/sub`, {req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }

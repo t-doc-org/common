@@ -358,17 +358,17 @@ export async function fromBase64(data) {
 // Perform a fetch on a JSON API.
 export async function fetchJson(url, opts) {
     const resp = await fetch(url, {
-        method: 'POST', cache: 'no-cache', referrer: '', ...opts,
+        method: 'POST', cache: 'no-cache', referrer: '',
+        body: JSON.stringify(opts?.req ?? {}), ...opts,
         headers: {
-            ...opts?.req ? {'Content-Type': 'application/json'} : {},
+            'Content-Type': 'application/json',
             ...opts?.headers,
         },
-        ...opts?.req ? {body: JSON.stringify(opts.req)} : {},
     });
     if (!resp.ok) {
         let msg = await resp.text();
         if (!msg) msg = `${resp.status} ${resp.statusText}`;
-        throw Error(msg, {cause: {status: resp.status}});
+        throw new Error(msg, {cause: {status: resp.status}});
     }
     return await resp.json();
 }

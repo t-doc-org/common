@@ -80,6 +80,8 @@ def to_json(data, sort_keys=False):
 
 
 def read_json(env):
+    if env.get('CONTENT_TYPE') != 'application/json':
+        raise Error(HTTPStatus.BAD_REQUEST)
     try:
         data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
         return json.loads(data)
