@@ -75,15 +75,10 @@ class Api(wsgi.Dispatcher):
             with self.db(env) as db:
                 user = db.tokens.authenticate(token)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-        env['tdoc.user'] = user
-
-    def user(self, env, anon=True):
-        user = env.get('tdoc.user')
-        if user is None and not anon: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-        return user
+        wsgi.set_user(env, user)
 
     def member_of(self, env, db, group):
-        return db.users.member_of(wsgi.origin(env), self.user(env), group)
+        return db.users.member_of(wsgi.origin(env), wsgi.user(env), group)
 
     def check_acl(self, env, perm):
         token = wsgi.authorization(env)
@@ -108,18 +103,13 @@ class Api(wsgi.Dispatcher):
         finally:
             if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
 
-    @wsgi.endpoint('health')
-    def handle_health(self, env, respond):
-        wsgi.method(env, HTTPMethod.GET)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        return wsgi.respond_json(respond, {})
+    @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
+    def handle_health(self, env, user, req):
+        return {}
 
-    @wsgi.endpoint('log')
-    def handle_log(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.json_endpoint('log')
+    def handle_log(self, env, user, req):
         self.check_acl(env, 'log')
-        req = wsgi.read_json(env)
         with self.db(env) as db:
             db.execute("""
                 insert into log (time, location, session, data)
@@ -127,14 +117,11 @@ class Api(wsgi.Dispatcher):
             """, (int(req.get('time', time.time_ns() // 1_000_000)),
                   req['location'], req.get('session'),
                   wsgi.to_json(req['data'])))
-        return wsgi.respond_json(respond, {})
+        return {}
 
-    @wsgi.endpoint('poll')
-    def handle_poll(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.json_endpoint('poll')
+    def handle_poll(self, env, user, req):
         origin = wsgi.origin(env)
-        req = wsgi.read_json(env)
         with self.db(env) as db:
             if polls := req.get('open'):
                 check(self.member_of(env, db, 'polls:control'))
@@ -159,30 +146,23 @@ class Api(wsgi.Dispatcher):
             if 'vote' in req:
                 db.polls.vote(origin, *args(req, 'id', 'voter', 'answer',
                                             'vote'))
-        return wsgi.respond_json(respond, {})
+        return {}
 
-    @wsgi.endpoint('solutions')
-    def handle_solutions(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.json_endpoint('solutions')
+    def handle_solutions(self, env, user, req):
         origin = wsgi.origin(env)
-        req = wsgi.read_json(env)
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
         with self.db(env) as db:
             check(self.member_of(env, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
-        return wsgi.respond_json(respond, {})
+        return {}
 
-    @wsgi.endpoint('user')
-    def handle_user(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.json_endpoint('user', require_authn=True)
+    def handle_user(self, env, user, req):
         origin = wsgi.origin(env)
-        user = self.user(env, anon=False)
         with self.db(env) as db:
-            info = db.users.info(origin, user)
-        return wsgi.respond_json(respond, info)
+            return db.users.info(origin, user)
 
 
 class EventsApi(wsgi.Dispatcher):
@@ -244,10 +224,8 @@ class EventsApi(wsgi.Dispatcher):
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
-    @wsgi.endpoint('watch')
-    def handle_watch(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.endpoint('watch', methods=(HTTPMethod.POST,))
+    def handle_watch(self, env, user, respond):
         req = wsgi.read_json(env)
         with self.watcher() as watcher:
             respond(wsgi.http_status(HTTPStatus.OK), [
@@ -260,11 +238,8 @@ class EventsApi(wsgi.Dispatcher):
             yield wsgi.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
-    @wsgi.endpoint('sub')
-    def handle_sub(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        req = wsgi.read_json(env)
+    @wsgi.json_endpoint('sub')
+    def handle_sub(self, env, user, req):
         sid = arg(req, 'sid')
         with self.lock: watcher = self.watchers.get(sid)
         if watcher is None:
@@ -273,7 +248,7 @@ class EventsApi(wsgi.Dispatcher):
         for wid in req.get('remove', []): watcher.unwatch(wid)
         if failed := self.watch(watcher, req.get('add', []), env):
             resp['failed'] = failed
-        return wsgi.respond_json(respond, resp)
+        return resp
 
     def watch(self, watcher, adds, env):
         failed = []
@@ -542,14 +517,12 @@ class OidcAuthApi(wsgi.Dispatcher):
     def discovery(self, info):
         return json.loads(self.api.cache.get(info['discovery'], timeout=10))
 
-    @wsgi.endpoint('info')
-    def handle_info(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.json_endpoint('info')
+    def handle_info(self, env, user, req):
         issuers = self.issuers
         resp = {'issuers': [{'issuer': i, 'label': info.get('label', i)}
                             for i, info in issuers.items()]}
-        if (user := self.api.user(env)) is not None:
+        if user is not None:
             iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
             with self.api.db(env) as db:
@@ -563,14 +536,10 @@ class OidcAuthApi(wsgi.Dispatcher):
                         'sub': id_token['sub'],
                     })
             logins.sort(key=lambda i: (i['email'], i['issuer']))
-        return wsgi.respond_json(respond, resp)
+        return resp
 
-    @wsgi.endpoint('update')
-    def handle_update(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        user = self.api.user(env, anon=False)
-        req = wsgi.read_json(env)
+    @wsgi.json_endpoint('update', require_authn=True)
+    def handle_update(self, env, user, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
             with self.api.db(env) as db:
@@ -580,7 +549,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 if count < 1:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
                                      "At least one login is required")
-        return wsgi.respond_json(respond, {})
+        return {}
 
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
@@ -604,23 +573,20 @@ class OidcAuthApi(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.FORBIDDEN, "Nonce mismatch")
         return info
 
-    @wsgi.endpoint('login')
-    def handle_login(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        req = wsgi.read_json(env)
+    @wsgi.json_endpoint('login')
+    def handle_login(self, env, user, req):
         token = wsgi.authorization(env)
 
         # Handle "log in as" in dev mode.
-        if wsgi.is_dev(env) and (user := req.get('user')):
+        if wsgi.is_dev(env) and (ruser := req.get('user')):
             with self.api.db(env) as db:
                 try:
-                    uid = db.users.uid(user)
+                    uid = db.users.uid(ruser)
                 except Exception as e:
                     raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
                 if (token := db.tokens.find(uid)) is None:
                     token, = db.tokens.create([uid])
-            return wsgi.respond_json(respond, {'token': token})
+            return {'token': token}
 
         # Handle OIDC login.
         issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
@@ -635,7 +601,6 @@ class OidcAuthApi(wsgi.Dispatcher):
         verifier = secrets.token_urlsafe(32)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(
             verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
-        user = self.api.user(env)
         with self.api.db(env) as db:
             db.oidc.create_state(state, {
                 'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
@@ -655,13 +620,11 @@ class OidcAuthApi(wsgi.Dispatcher):
             'state': state,
             **({'prompt': 'select_account'} if user is not None else {}),
         }))
-        return wsgi.respond_json(respond, {'redirect': parse.urlunparse(parts)})
+        return {'redirect': parse.urlunparse(parts)}
 
-    @wsgi.endpoint('redirect')
-    def handle_redirect(self, env, respond):
-        wsgi.method(env, HTTPMethod.GET)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        qs = parse.parse_qs(env['QUERY_STRING'])
+    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,))
+    def handle_redirect(self, env, user, respond):
+        qs = parse.parse_qs(wsgi.query(env))
         href = None
         with self.api.db(env) as db:
             if (state := qs.get('state')) is not None:
@@ -742,15 +705,12 @@ class OidcAuthApi(wsgi.Dispatcher):
             err = f"{err}: {desc[0]}"
         return err
 
-    @wsgi.endpoint('logout')
-    def handle_logout(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
-        user = self.api.user(env, anon=False)
+    @wsgi.json_endpoint('logout', require_authn=True)
+    def handle_logout(self, env, user, req):
         token = wsgi.authorization(env)
         with self.api.db(env) as db:
             # Remove the token if the user has at least one login.
             count = sum(1 for id_token, _ in db.oidc.logins(user)
                         if id_token['iss'] in self.issuers)
             if count > 0: db.tokens.remove([token])
-        return wsgi.respond_json(respond, {})
+        return {}

@@ -3,7 +3,8 @@
 
 import contextlib
 from email import utils
-from http import HTTPStatus
+import functools
+from http import HTTPMethod, HTTPStatus
 import json
 import re
 import sys
@@ -52,14 +53,13 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
-def is_dev(env):
-    return env.get('tdoc.dev', False)
-
-
-def method(env, *allowed):
-    m = env['REQUEST_METHOD']
-    if allowed and m not in allowed: raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
-    return m
+def is_dev(env): return env.get('tdoc.dev', False)
+def set_dev(env, value): env['tdoc.dev'] = value
+def user(env): return env.get('tdoc.user')
+def set_user(env, user): env['tdoc.user'] = user
+def method(env): return env['REQUEST_METHOD']
+def path(env): return env['PATH_INFO']
+def query(env): return env['QUERY_STRING']
 
 
 def origin(env):
@@ -75,13 +75,17 @@ def authorization(env):
     return parts[1]
 
 
-def to_json(data, sort_keys=False):
-    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
+_content_methods = (HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH,
+                    HTTPMethod.OPTIONS, HTTPMethod.DELETE)
+
+def has_content(env):
+    return env['REQUEST_METHOD'] in _content_methods \
+           and env.get('CONTENT_TYPE') is not None
 
 
 def read_json(env):
     if env.get('CONTENT_TYPE') != 'application/json':
-        raise Error(HTTPStatus.BAD_REQUEST)
+        raise Error(HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
     try:
         data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
         return json.loads(data)
@@ -97,6 +101,10 @@ def respond_json(respond, data):
         ('Cache-Control', 'no-store'),
     ])
     return [body]
+
+
+def to_json(data, sort_keys=False):
+    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
 
 
 def cors(origins=(), methods=(), headers=(), max_age=None):
@@ -121,6 +129,7 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
         achs.append(('Access-Control-Max-Age', str(max_age)))
 
     def decorator(fn):
+        @functools.wraps(fn)
         def handle(env, respond):
             def respond_with_allow_origin(status, headers, exc_info=None):
                 return respond(
@@ -155,7 +164,7 @@ class Dispatcher:
         if (name := util.shift_path_info(env)) is not None:
             if (h := self._endpoints.get(name)) is not None: return h
             env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
-        if (h := self._endpoints.get(None)) is not None: return h
+        if (h := self._endpoints.get('/')) is not None: return h
         raise Error(HTTPStatus.NOT_FOUND)
 
     def __call__(self, env, respond):
@@ -169,11 +178,31 @@ class Dispatcher:
         return handler(env, respond)
 
 
-def endpoint(name):
-    def deco(fn):
-        fn._endpoint = name
-        return fn
-    return deco
+def endpoint(name, methods=None, final=True, require_authn=False):
+    if methods is None: raise TypeError("Missing methods")
+    def decorator(fn):
+        @functools.wraps(fn)
+        def dfn(self, /, env, respond):
+            if final and env['PATH_INFO']: raise Error(HTTPStatus.NOT_FOUND)
+            if env['REQUEST_METHOD'] not in methods:
+                raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
+            if (user := env.get('tdoc.user')) is None and require_authn:
+                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+            return fn(self, env, user, respond)
+        if name is not None: dfn._endpoint = name
+        return dfn
+    return decorator
+
+
+def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False):
+    def decorator(fn):
+        @endpoint(name, methods=methods, require_authn=require_authn)
+        @functools.wraps(fn)
+        def dfn(self, /, env, user, respond):
+            req = read_json(env) if has_content(env) else None
+            return respond_json(respond, fn(self, env, user, req))
+        return dfn
+    return decorator
 
 
 class HttpCache:

@@ -801,12 +801,13 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 """)
 
     def handle_request(self, handler, env, respond):
-        # TODO: Move to wsgi.py
-        env['tdoc.dev'] = True
+        env['wsgi.multithread'] = True
+        wsgi.set_dev(env, True)
         return handler(env, respond)
 
-    @wsgi.endpoint('_cache')
-    def handle_cache(self, env, respond):
+    @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
+                   final=False)
+    def handle_cache(self, env, user, respond):
         yield from self.handle_file(env, respond, self.opts.cache,
                                     self.on_cache_not_found)
 
@@ -828,15 +829,14 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         except Exception as e:
             self.opts.stderr.write(f"Cache: {e}\n")
 
-    @wsgi.endpoint(None)
-    def handle_default(self, env, respond):
+    @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False)
+    def handle_default(self, env, user, respond):
         with self.lock: base = self.directory
         yield from self.handle_file(env, respond, base)
 
     def handle_file(self, env, respond, base, on_not_found=None):
-        env['wsgi.multithread'] = True
-        method = wsgi.method(env, HTTPMethod.HEAD, HTTPMethod.GET)
-        path_info = env['PATH_INFO']
+        method = wsgi.method(env)
+        path_info = wsgi.path(env)
         path = self.file_path(path_info, base)
         path.relative_to(base)  # Ensure we're below base
         if (st := try_stat(path)) is None:
@@ -883,9 +883,8 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             res = res / part
         return res / '' if trailing else res
 
-    def handle_terminate(self, env, respond):
-        wsgi.method(env, HTTPMethod.POST)
-        if env['PATH_INFO']: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+    @wsgi.endpoint(None, methods=(HTTPMethod.POST,))
+    def handle_terminate(self, env, user, respond):
         req = wsgi.read_json(env)
         rc = req.get('rc', 0)
         yield from wsgi.respond_json(respond, {})
