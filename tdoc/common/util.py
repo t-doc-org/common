@@ -9,6 +9,7 @@ import os
 import pathlib
 import re
 import sys
+import tomllib
 
 from . import __project__
 
@@ -67,12 +68,37 @@ class AnsiStream:
             return getattr(self.__stream, name)
 
 
-def get(config, prop, default=None):
-    """Get a potentially nested value from a dict via its path."""
-    v = config
-    for p in prop.split('.'):
-        if (v := v.get(p)) is None: return default
-    return v
+class Config:
+    @classmethod
+    def read(cls, path):
+        if path is None: return cls({})
+        with path.open('rb') as f:
+            return cls(tomllib.load(f), path)
+
+    def __init__(self, data, path=None):
+        self._data = data
+        self._path = path
+
+    def get(self, key, default=None):
+        v = self._data
+        for p in key.split('.'):
+            if (v := v.get(p)) is None: return default
+        return v
+
+    def set(self, key, value):
+        parts = key.split('.')
+        d = self._data
+        for p in parts[:-1]: d = d.setdefault(p, {})
+        d[parts[-1]] = value
+
+    def path(self, key, default=None):
+        if (v := self.get(key, default)) is not None:
+            v = (self._path.parent / v).resolve() if self._path is not None \
+                else pathlib.Path(v).resolve()
+        return v
+
+    def sub(self, key):
+        return Config(self.get(key, {}), self._path)
 
 
 def get_arg_parser(stdin, stdout, stderr):

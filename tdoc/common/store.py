@@ -587,10 +587,12 @@ class WakerSet(set):
 
 
 class Store:
-    def __init__(self, path, timeout=10, poll_interval=1):
-        self.path = pathlib.Path(path).resolve() if path is not None else None
-        self.timeout = timeout
-        self.poll_interval = poll_interval
+    def __init__(self, config, allow_mem=False):
+        self.path = config.path('path')
+        if self.path is None and not allow_mem:
+            raise Exception("No store path defined")
+        self.timeout = config.get('timeout', 10)
+        self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
         self._wake = Seqs()

@@ -17,7 +17,7 @@ from urllib import parse, request
 
 import jwt
 
-from . import store, wsgi, util
+from . import store, wsgi
 
 missing = object()
 # TODO(py-3.13): Remove ShutDown
@@ -41,16 +41,16 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 
 class Api(wsgi.Dispatcher):
-    def __init__(self, store, *, config=None, stderr=None, db_pool_size=16):
+    def __init__(self, *, config, store, stderr=None):
         super().__init__()
-        self.config = config if config is not None else {}
-        if stderr is None: stderr = sys.stderr
-        self.stderr = stderr
-        self.cache = wsgi.HttpCache()
+        self.config = config
         self.store = store
-        self.pool = store.pool(size=db_pool_size)
+        self.stderr = stderr if stderr is not None else sys.stderr
+        self.cache = wsgi.HttpCache()
+        self.pool = store.pool(size=config.get('db_pool_size', 16))
         self.events = self.add_endpoint('events', EventsApi(self))
-        self.auth = self.add_endpoint('auth', OidcAuthApi(self))
+        self.auth = self.add_endpoint(
+            'auth', OidcAuthApi(self, config.sub('oidc')))
 
     def stop(self):
         self.events.stop()
@@ -478,13 +478,14 @@ class PollVotesObservable(DbObservable, name='poll/votes'):
 
 
 class OidcAuthApi(wsgi.Dispatcher):
-    def __init__(self, api):
+    def __init__(self, api, config):
         super().__init__()
         self.api = api
+        self.config = config
 
     @functools.cached_property
     def issuers(self):
-        issuers = util.get(self.api.config, 'oidc.issuers', [])
+        issuers = self.config.get('issuers', [])
         return {self.discovery(i)['issuer']: i
                 for i in issuers if i.get('enabled', True)}
 
@@ -533,7 +534,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
         alg, kid = header['alg'], header['kid']
-        if alg not in util.get(self.api.config, 'oidc.token_algorithms', ()):
+        if alg not in self.config.get('token_algorithms', ()):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              f"Unsupported signing algorithm: {alg}")
         resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10))

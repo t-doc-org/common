@@ -4,6 +4,7 @@ __pycache__
 
 syntax: regexp
 ^LICENSES.deps.txt$
+^local\.toml$
 ^_[^/]*/
 ^dist/
 ^node_modules/

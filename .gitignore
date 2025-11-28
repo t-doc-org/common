@@ -2,6 +2,7 @@
 __pycache__
 
 /LICENSES.deps.txt
+/local.toml
 /_*/
 /dist/
 /node_modules/

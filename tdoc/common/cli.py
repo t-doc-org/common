@@ -21,7 +21,6 @@ import sys
 import tempfile
 import threading
 import time
-import tomllib
 from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
@@ -31,7 +30,7 @@ from . import __project__, __version__, api, deps, store, util, wsgi
 # TODO: Split groups of sub-commands into separate modules
 
 default_port = 8000
-dev_store = pathlib.Path('tmp/store.sqlite')
+local_config = pathlib.Path('local.toml')
 
 
 @util.main
@@ -88,7 +87,6 @@ def main(argv, stdin, stdout, stderr):
              f"starting at {default_port}).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
-    add_store_option(arg)
     arg('--watch', metavar='PATH', type='path', action='append', dest='watch',
         default=[],
         help="Additional directories to watch for changes.")
@@ -103,13 +101,9 @@ def main(argv, stdin, stdout, stderr):
     add_options(p)
 
     opts = parser.parse_args(argv[1:])
-    opts.cfg = None
-    if opts.config is not None:
-        with opts.config.open('rb') as f: config = tomllib.load(f)
-        if opts.store is None \
-                and (p := util.get(config, 'store.path')) is not None:
-            opts.store = opts.config.parent / p
-        opts.cfg = config
+    if opts.config is None and (lc := local_config.resolve()).is_file():
+        opts.config = lc
+    opts.cfg = util.Config.read(opts.config)
     return opts.handler(opts)
 
 
@@ -136,19 +130,9 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
-def add_store_option(arg):
-    arg('--store', metavar='PATH', type='path', dest='store',
-        default=os.environ.get('TDOC_STORE'),
-        help="The path to the store database.")
-
-
 @contextlib.contextmanager
 def get_store(opts, allow_mem=False, check_latest=True):
-    if opts.store is None and (ds := dev_store.resolve()).exists():
-        opts.store = ds
-    if not allow_mem and not opts.store:
-        raise Exception("--store: No path specified")
-    with store.Store(opts.store) as st:
+    with store.Store(opts.cfg.sub('store'), allow_mem=allow_mem) as st:
         if check_latest:
             with contextlib.closing(st.connect()) as db:
                 version, latest = st.version(db)
@@ -174,15 +158,15 @@ def get_db(opts):
         yield db
 
 
-def store_backup_path(opts):
+def store_backup_path(store):
     suffix = datetime.datetime.now() \
                 .isoformat('.', 'seconds').replace(':', '-')
-    return opts.store.with_name(f'{opts.store.name}.{suffix}')
+    return store.path.with_name(f'{store.path.name}.{suffix}')
 
 
 def upgrade_store(opts, store, db, version, to_version):
     o = opts.stdout
-    backup = store_backup_path(opts)
+    backup = store_backup_path(store)
     o.write(f"Backing up store to {backup}\n")
     store.backup(db, backup)
     def on_version(v): o.write(f"Upgrading store to version {v}\n")
@@ -229,7 +213,6 @@ def add_group_commands(parser):
     arg = p.add_argument
     add_groups(arg)
     add_origin_option(arg)
-    add_store_option(arg)
     add_users(arg)
     arg('group', metavar='GROUP', nargs='+', help="The group to add to.")
     add_options(p)
@@ -237,7 +220,6 @@ def add_group_commands(parser):
     p = sp.add_parser('list', help="List groups.")
     p.set_defaults(handler=cmd_group_list)
     arg = p.add_argument
-    add_store_option(arg)
     add_groups_re(arg)
     add_options(p)
 
@@ -245,7 +227,6 @@ def add_group_commands(parser):
     p.set_defaults(handler=cmd_group_members)
     arg = p.add_argument
     add_origin_option(arg)
-    add_store_option(arg)
     arg('--transitive', action='store_true', dest='transitive',
         help="Include transitive memberships.")
     add_groups_re(arg)
@@ -255,7 +236,6 @@ def add_group_commands(parser):
     p.set_defaults(handler=cmd_group_memberships)
     arg = p.add_argument
     add_origin_option(arg)
-    add_store_option(arg)
     add_groups_re(arg)
     add_options(p)
 
@@ -264,7 +244,6 @@ def add_group_commands(parser):
     arg = p.add_argument
     add_groups(arg)
     add_origin_option(arg)
-    add_store_option(arg)
     add_users(arg)
     arg('group', metavar='GROUP', nargs='+', help="The group to remove from.")
     add_options(p)
@@ -339,7 +318,7 @@ def cmd_serve(opts):
 
     with Server(addr, RequestHandler) as srv, \
             get_store(opts, allow_mem=True) as store, \
-            api.Api(store, config=opts.cfg, stderr=opts.stderr) as api_, \
+            api.Api(config=opts.cfg, store=store, stderr=opts.stderr) as api_, \
             Application(opts, srv, api_) as app:
         srv.set_app(app)
         try:
@@ -363,7 +342,6 @@ def add_store_commands(parser):
     p = sp.add_parser('backup', help="Backup the store database.")
     p.set_defaults(handler=cmd_store_backup)
     arg = p.add_argument
-    add_store_option(arg)
     arg('destination', metavar='PATH', type='path', nargs='?', default=None,
         help="The path to the backup copy. Defaults to the source database "
              "file with a date + time suffix.")
@@ -374,7 +352,6 @@ def add_store_commands(parser):
     arg = p.add_argument
     arg('--dev', action='store_true', dest='dev',
         help="Create the store for dev mode.")
-    add_store_option(arg)
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
         help="The version at which to create the store (default: latest).")
     add_options(p)
@@ -382,7 +359,6 @@ def add_store_commands(parser):
     p = sp.add_parser('upgrade', help="Upgrade the store database.")
     p.set_defaults(handler=cmd_store_upgrade)
     arg = p.add_argument
-    add_store_option(arg)
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
         help="The version to which to upgrade the store (default: latest).")
     add_options(p)
@@ -391,14 +367,12 @@ def add_store_commands(parser):
 def cmd_store_backup(opts):
     with get_store(opts, check_latest=False) as store, \
             contextlib.closing(store.connect(params='mode=ro')) as db:
-        if opts.destination is None: opts.destination = store_backup_path(opts)
+        if opts.destination is None: opts.destination = store_backup_path(store)
         store.backup(db, opts.destination)
 
 
 def cmd_store_create(opts):
-    if opts.store is None and opts.dev: opts.store = dev_store.resolve()
-    if not opts.store: raise Exception("--store: No path specified")
-    st = store.Store(opts.store)
+    st = store.Store(opts.cfg.sub('store'))
     st.path.parent.mkdir(parents=True, exist_ok=True)
     version = st.create(version=opts.version, dev=opts.dev)
     opts.stdout.write(f"Store created (version: {version})\n")
@@ -427,7 +401,6 @@ def add_token_commands(parser):
     arg('--expire', metavar='TIME', type='timestamp', dest='expire',
         help="The token expiry timestamp.")
     add_origin_option(arg)
-    add_store_option(arg)
     arg('user', metavar='USER', nargs='+',
         help="The users for whom to create tokens.")
     add_options(p)
@@ -437,7 +410,6 @@ def add_token_commands(parser):
     arg = p.add_argument
     arg('--time', metavar='TIME', type='timestamp', dest='time',
         help="The time when the tokens should expire (default: now).")
-    add_store_option(arg)
     arg('token', metavar='TOKEN', nargs='+',
         help="The users and / or tokens to expire.")
     add_options(p)
@@ -448,7 +420,6 @@ def add_token_commands(parser):
     arg('--expired', action='store_true', dest='expired',
         help="Include expired tokens.")
     add_origin_option(arg)
-    add_store_option(arg)
     arg('users', metavar='REGEXP', nargs='?', default='',
         help="A regexp to limit the users to consider.")
     add_options(p)
@@ -504,7 +475,6 @@ def add_user_commands(parser):
     p.set_defaults(handler=cmd_user_create)
     arg = p.add_argument
     add_origin_option(arg)
-    add_store_option(arg)
     arg('--token-expire', metavar='TIME', type='timestamp', dest='token_expire',
         help="The expiry time of the users' token.")
     arg('user', metavar='USER', nargs='+',
@@ -514,7 +484,6 @@ def add_user_commands(parser):
     p = sp.add_parser('list', help="List users.")
     p.set_defaults(handler=cmd_user_list)
     arg = p.add_argument
-    add_store_option(arg)
     add_users_re(arg)
     add_options(p)
 
@@ -522,7 +491,6 @@ def add_user_commands(parser):
     p.set_defaults(handler=cmd_user_memberships)
     arg = p.add_argument
     add_origin_option(arg)
-    add_store_option(arg)
     arg('--transitive', action='store_true', dest='transitive',
         help="Include transitive memberships.")
     add_users_re(arg)
