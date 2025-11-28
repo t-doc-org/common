@@ -118,13 +118,19 @@ Millimeter grid (approximate) for precise drawing
 const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 initBoard('sincos', {
-    boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
-    axis: true, grid: true,
+    boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
     defaultAxes: {
         x: {
             ticks: {
                 scale: Math.PI, scaleSymbol: '\\pi',
+                majorHeight: -1, minorTicks: 3, minorHeight: 10,
+                strokeOpacity: 0.25,
                 label: {toFraction: true, useMathJax: true},
+            },
+        },
+        y: {
+            ticks: {
+                majorHeight: -1, minorHeight: 10, strokeOpacity: 0.25,
             },
         },
     },
