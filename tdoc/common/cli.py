@@ -103,7 +103,7 @@ def main(argv, stdin, stdout, stderr):
     opts = parser.parse_args(argv[1:])
     if opts.config is None and (lc := local_config.resolve()).is_file():
         opts.config = lc
-    opts.cfg = util.Config.read(opts.config)
+    opts.cfg = util.Config.load(opts.config)
     return opts.handler(opts)
 
 

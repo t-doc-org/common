@@ -70,7 +70,7 @@ class AnsiStream:
 
 class Config:
     @classmethod
-    def read(cls, path):
+    def load(cls, path):
         if path is None: return cls({})
         with path.open('rb') as f:
             return cls(tomllib.load(f), path)
