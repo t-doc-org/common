@@ -913,3 +913,10 @@ create table oidc_users (
 ) strict;
 create index user_oidcs on oidc_users (user);
 """)
+
+    def version_6(self, db, dev, now):
+        db.executescript("""
+-- Drop unused tables.
+drop table auth;
+drop table log;
+""")

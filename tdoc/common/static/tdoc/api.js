@@ -307,17 +307,6 @@ export const auth = await Auth.create();
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
-export function log(session, data, options) {
-    return call(`/log`, {
-        headers: bearerAuthorization(options?.token),
-        req: {
-            'time': Date.now(),
-            'location': page.origin + page.path,
-            'session': session, 'data': data,
-        },
-    });
-}
-
 export async function poll(req) {
     return await auth.call(`/poll`, {req});
 }

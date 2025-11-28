@@ -80,15 +80,6 @@ class Api(wsgi.Dispatcher):
     def member_of(self, env, db, group):
         return db.users.member_of(wsgi.origin(env), wsgi.user(env), group)
 
-    def check_acl(self, env, perm):
-        token = wsgi.authorization(env)
-        with self.db(env) as db:
-            for perms, in db.execute(
-                    "select perms from auth where token in (?, '*')", (token,)):
-                perms = perms.split(',')
-                if perm in perms or '*' in perms: return
-        raise wsgi.Error(HTTPStatus.FORBIDDEN)
-
     def handle_request(self, handler, env, respond):
         try:
             self.authenticate(env)
@@ -105,18 +96,6 @@ class Api(wsgi.Dispatcher):
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
     def handle_health(self, env, user, req):
-        return {}
-
-    @wsgi.json_endpoint('log')
-    def handle_log(self, env, user, req):
-        self.check_acl(env, 'log')
-        with self.db(env) as db:
-            db.execute("""
-                insert into log (time, location, session, data)
-                    values (?, ?, ?, json(?))
-            """, (int(req.get('time', time.time_ns() // 1_000_000)),
-                  req['location'], req.get('session'),
-                  wsgi.to_json(req['data'])))
         return {}
 
     @wsgi.json_endpoint('poll')
