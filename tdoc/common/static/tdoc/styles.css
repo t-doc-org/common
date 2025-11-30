@@ -878,6 +878,7 @@ div.tdoc-exec[data-tdoc-editor] div.highlight :is(pre, button.copybtn) {
 }
 div.tdoc-exec[data-tdoc-editor] div.cm-editor {
     height: 100%;
+    max-height: 80vh;
     border: 1px solid var(--pst-color-border);
     border-radius: 0.25rem;
     overflow: hidden;
