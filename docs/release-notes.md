@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-64)=
+## 0.64 *(2025-11-30)*
+
+- Improved the rendering of axis tick labels in {rst:dir}`jsxgraph` directives.
+- Added the {rst:dir}`{exec} :reset: <exec:reset>` option.
+- Added login functionality based on
+  [OpenID Connect](https://openid.net/developers/how-connect-works/).
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.63...0.64)
+
 (release-0-63)=
 ## 0.63 *(2025-10-04)*
 
