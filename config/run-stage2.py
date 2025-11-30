@@ -181,7 +181,6 @@ class Env:
     requirements_txt = 'requirements.txt'
     requirements_deps_txt = 'requirements-deps.txt'
     requirements_upgrade_txt = 'requirements-upgrade.txt'
-    upgrade_txt = 'upgrade.txt'
 
     env = contextvars.ContextVar('env')
 
@@ -257,11 +256,6 @@ class Env:
                 with write_atomic(
                         self.path / self.requirements_upgrade_txt, 'w') as f:
                     f.write(reqs)
-                # TODO(0.62): Remove
-                cur = self.builder.version_from(self.requirements)
-                new = self.builder.version_from(reqs)
-                (self.path / self.upgrade_txt).write_text(f'{cur} {new}',
-                                                          'utf-8')
         except Exception:
             if self.builder.debug: raise
 
