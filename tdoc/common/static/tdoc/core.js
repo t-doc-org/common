@@ -169,13 +169,13 @@ export function addTooltip(el, opts) {
 
 // Show an alert at the top of the article.
 export function showAlert(message, kind = 'success') {
-    const el = qs(document, 'article.bd-article');
-    el.insertBefore(elmt`\
-<div class="alert alert-${kind} alert-dismissible noprint" role="alert">\
+    const el = qs(document, '.bd-header-article');
+    el.appendChild(elmt`\
+<div class="alert alert-${kind} alert-dismissible" role="alert">\
 <div>${message}</div>\
 <button type="button" class="btn-close" data-bs-dismiss="alert"\
  aria-label="Close"></button>\
-`, el.firstChild);
+`);
 }
 
 // Show a modal dialog.

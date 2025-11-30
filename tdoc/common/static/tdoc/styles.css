@@ -1153,6 +1153,19 @@ html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
     background-color: var(--bs-dropdown-link-hover-bg);
 }
 
+/* Render alerts in the header. */
+.bd-header-article {
+    flex-direction: column;
+    row-gap: 0.5rem;
+    align-items: stretch;
+}
+.bd-header-article:has(.alert) {
+    padding-bottom: 0.5rem;
+}
+.bd-header-article > .alert {
+    --bs-alert-margin-bottom: 0;
+}
+
 /* Prevent the wrapper background set by pygments from being visible if the
    wrapper is larger than its content (visible in dark mode). */
 div.highlight.highlight.highlight {
