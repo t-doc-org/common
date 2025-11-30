@@ -134,6 +134,11 @@ def run_tests(tests, repo, label, wheel, write):
     # Create the store.
     # TODO: Create at version n > 1, then upgrade
     write(f"{label}Creating store\n")
+    (repo_dir / 'tmp').mkdir()
+    (repo_dir / 'local.toml').write_text("""\
+[store]
+path = "tmp/store.sqlite"
+""")
     vrun('tdoc', 'store', 'create', '--debug', '--dev')
 
     # TODO: Run various commands that access the store
