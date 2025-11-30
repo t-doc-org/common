@@ -52,6 +52,7 @@ class Exec(code.CodeBlock):
         'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
+        'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
         'style': directives.unchanged,
         'then': names_option,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
@@ -95,6 +96,7 @@ class Exec(code.CodeBlock):
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
+        if (v := self.options.get('reset')) and v != 'auto': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
@@ -198,6 +200,7 @@ def visit_exec(self, node):
             console_style=node.get('console-style'),
             editor=node.get('editor'),
             output_style=node.get('output-style'),
+            reset=node.get('reset'),
             then=' '.join(then) or None,
             env=node['env'] if node['when'] != 'never' else None,
             when=node['when'])

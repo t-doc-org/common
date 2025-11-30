@@ -136,6 +136,10 @@ def meta(app, docname, key, default=None):
     return v
 
 
+def to_json(value):
+    return json.dumps(value, separators=(',', ':'))
+
+
 def setup(app):
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
@@ -211,8 +215,7 @@ def on_config_inited(app, config):
 def on_builder_inited(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
-    app.config.html_context['tdoc'] = \
-        json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
+    app.config.html_context['tdoc'] = to_json(tdoc).replace('<', '\\x3c')
 
 
 def set_html_context(app, page, template, context, doctree):
@@ -250,7 +253,7 @@ def add_js(app, page, template, context, doctree):
         copy.deepcopy(app.config.mathjax3_config), cfg)
 
     # Set up early and on-load JavaScript.
-    tdoc = json.dumps(tdoc, separators=(',', ':')).replace('<', '\\x3c')
+    tdoc = to_json(tdoc).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')

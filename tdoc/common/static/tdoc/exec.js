@@ -146,7 +146,8 @@ export class Executor {
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
 
-        if (preText !== '' || editorId) {
+        const reset = this.node.dataset.tdocReset;
+        if (reset === 'show' || (reset === undefined && (preText !== ''))) {
             this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;
