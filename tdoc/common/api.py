@@ -47,7 +47,7 @@ class Api(wsgi.Dispatcher):
         self.store = store
         self.stderr = stderr if stderr is not None else sys.stderr
         self.cache = wsgi.HttpCache()
-        self.pool = store.pool(size=config.get('db_pool_size', 16))
+        self.pool = store.pool()
         self.events = self.add_endpoint('events', EventsApi(self))
         self.auth = self.add_endpoint(
             'auth', OidcAuthApi(self, config.sub('oidc')))

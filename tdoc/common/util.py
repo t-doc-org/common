@@ -86,10 +86,18 @@ class Config:
         return v
 
     def set(self, key, value):
+        d, k = self._resolve(key)
+        d[k] = value
+
+    def setdefault(self, key, value):
+        d, k = self._resolve(key)
+        return d.setdefault(k, value)
+
+    def _resolve(self, key):
         parts = key.split('.')
         d = self._data
         for p in parts[:-1]: d = d.setdefault(p, {})
-        d[parts[-1]] = value
+        return d, parts[-1]
 
     def path(self, key, default=None):
         if (v := self.get(key, default)) is not None:
@@ -98,7 +106,7 @@ class Config:
         return v
 
     def sub(self, key):
-        return Config(self.get(key, {}), self._path)
+        return Config(self.setdefault(key, {}), self._path)
 
 
 def get_arg_parser(stdin, stdout, stderr):

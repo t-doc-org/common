@@ -535,7 +535,7 @@ class Polls(DbNamespace):
 
 
 class ConnectionPool:
-    def __init__(self, store, size=None):
+    def __init__(self, store, size=0):
         self.store = store
         self.size = size
         self.lock = threading.Lock()
@@ -548,7 +548,7 @@ class ConnectionPool:
 
     def release(self, db):
         with self.lock:
-            if self.size is None or len(self.connections) < self.size:
+            if self.size <= 0 or len(self.connections) < self.size:
                 db.rollback()
                 self.connections.append(db)
             else:
@@ -588,6 +588,7 @@ class WakerSet(set):
 
 class Store:
     def __init__(self, config, allow_mem=False):
+        self.config = config
         self.path = config.path('path')
         if self.path is None and not allow_mem:
             raise Exception("No store path defined")
@@ -639,6 +640,7 @@ class Store:
         return db
 
     def pool(self, **kwargs):
+        kwargs.setdefault('size', self.config.get('pool_size', 16))
         return ConnectionPool(self, **kwargs)
 
     @contextlib.contextmanager
@@ -672,7 +674,7 @@ class Store:
 
     def dispatch(self):
         next_poll = None
-        if self.poll_interval is not None:
+        if self.poll_interval > 0:
             poll_interval = int(self.poll_interval * 1_000_000_000)
             next_poll = time.monotonic_ns() + poll_interval
         db = self.dispatcher_db
