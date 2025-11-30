@@ -58,11 +58,20 @@ class Auth extends EventTarget {
         if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
             this.state.set(undefined);
             (async () => {
-                await this.setToken(token);
-                if (hasToken) {
-                    await this.showSettingsModal("Login added successfully");
+                if (await this.setToken(token)) {
+                    if (hasToken) {
+                        await this.showSettingsModal(
+                            "The login has been added successfully.");
+                    } else {
+                        this.showSuccessAlert(await this.name());
+                    }
                 } else {
-                    this.showSuccessAlert();
+                    if (hasToken) {
+                        await this.showSettingsModal(
+                            "The login could not be added.", 'danger');
+                    } else {
+                        showAlert("Logging in has failed.", 'danger');
+                    }
                 }
             })();  // Background
             return true;
@@ -167,7 +176,7 @@ class Auth extends EventTarget {
             if (!await this.setToken(resp.token)) {
                 throw new Error("Failed to set token");
             }
-            this.showSuccessAlert();
+            this.showSuccessAlert(await this.name());
             return;
         }
         if (resp.redirect) location.assign(resp.redirect);
@@ -177,9 +186,12 @@ class Auth extends EventTarget {
         const token = await this.token();
         await this.setToken(undefined);
         await this.call(`/auth/logout`, {token});
+        showAlert("You have logged out successfully.", 'warning');
     }
 
-    showSuccessAlert() { showAlert("Logged in successfully."); }
+    showSuccessAlert(user) {
+        showAlert(`You have logged in successfully as "${user}".`);
+    }
 
     async showLoginModal() {
         const info = await this.info();
@@ -262,6 +274,10 @@ ${login.issuer}</td><td class="px-2 text-nowrap">${login.updated}</td>\
             const btn = qs(row, 'button');
             if (info.logins.length < 2) enable(false, btn);
             on(btn).click(async () => {
+                if (!confirm(`\
+Are you sure you want to remove the login ${login.email}?`)) {
+                    return;
+                }
                 await toModalMessage(el, async () => {
                     await this.update({
                         remove: {iss: login.iss, sub: login.sub},
@@ -269,7 +285,8 @@ ${login.issuer}</td><td class="px-2 text-nowrap">${login.updated}</td>\
                     row.remove();
                     const btns = qsa(logins, 'button');
                     if (btns.length < 2) enable(false, ...btns);
-                    return "Login removed successfully";
+                    return `\
+The login ${login.email} has been removed successfully.`;
                 });
             });
         }
