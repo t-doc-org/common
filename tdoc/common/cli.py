@@ -373,7 +373,6 @@ def cmd_store_backup(opts):
 
 def cmd_store_create(opts):
     st = store.Store(opts.cfg.sub('store'))
-    st.path.parent.mkdir(parents=True, exist_ok=True)
     version = st.create(version=opts.version, dev=opts.dev)
     opts.stdout.write(f"Store created (version: {version})\n")
 
