@@ -25,6 +25,7 @@ export const [url, backendSuffix] = (() => {
     }
     return ['/missing_api_url', ''];
 })();
+console.info(`[t-doc] API backend: ${url}`);
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, opts);
