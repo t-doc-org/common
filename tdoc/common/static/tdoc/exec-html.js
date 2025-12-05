@@ -28,7 +28,7 @@ class HtmlExecutor extends Executor {
 <button class="fa-arrow-left tdoc-back" title="Back"></button>\
 <button class="fa-arrow-right tdoc-forward" title="Forward"></button>\
 <button class="fa-rotate-right tdoc-reload" title="Reload"></button>\
-<div class="tdoc-stretch"></div>\
+<div class="tdoc-title"></div>\
 <button class="fa-expand tdoc-maximize" title="Maximize"></button>\
 <button class="fa-compress tdoc-restore" title="Restore"></button>\
 <button class="fa-xmark tdoc-close" title="Remove"></button>\
@@ -65,6 +65,20 @@ class HtmlExecutor extends Executor {
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');
+
+        const title = qs(navbar, '.tdoc-title');
+        function updateTitle() {
+            const text = iframe.contentDocument?.title ?? '';
+            if (title.textContent !== text) title.textContent = text;
+        }
+        const obs = new MutationObserver(updateTitle);
+        on(iframe).load(() => {
+            obs.disconnect();
+            updateTitle();
+            if (!iframe.contentDocument) return;  // Cross-origin content
+            obs.observe(iframe.contentDocument.documentElement,
+                        {subtree: true, childList: true, characterData: true});
+        });
     }
 
     async stop(run_id) {}

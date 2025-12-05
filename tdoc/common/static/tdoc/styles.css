@@ -839,8 +839,12 @@ div.tdoc-exec-output > .tdoc-navbar {
     column-gap: 0.3rem;
     background-color: var(--pst-color-background);
 }
-div.tdoc-exec-output > .tdoc-navbar > .tdoc-stretch {
-    width: 100%;
+div.tdoc-exec-output > .tdoc-navbar > .tdoc-title {
+    flex-basis: 100%;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 div.tdoc-exec-output > iframe {
     display: block;

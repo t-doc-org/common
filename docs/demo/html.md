@@ -25,6 +25,7 @@ aspect ratio, but its size can be adjusted with
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<title>This is the page title (counter: 0)</title>
 <style>
 h1 { margin: 0; font-size: 3rem; }
 </style>
@@ -32,6 +33,11 @@ h1 { margin: 0; font-size: 3rem; }
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('h1').appendChild(document.createTextNode('world!'));
 });
+const title = document.querySelector('title');
+let counter = 0;
+setInterval(() => {
+  title.textContent = title.textContent.replace(/\d+/, ++counter);
+}, 1000)
 </script>
 </head>
 <body>
@@ -66,8 +72,9 @@ Or scripts (with a `<script>` element):
 :console-style: max-height: 5rem;
 Please click <button>here</button>
 <script>
+let clicks = 0;
 document.querySelector('button')
-  .addEventListener('click', () => alert('Click!'));
+  .addEventListener('click', () => { document.title = `Clicks: ${++clicks}`; });
 </script>
 ```
 
@@ -78,5 +85,5 @@ scripts can be added with the `styles` and `scripts` entries of a
 {rst:dir}`metadata` directive.
 
 <div class="tdoc-web-app">
-  Please click <button>here</button> (count: <span>0</span>)
+  Please click <button>here</button> (clicks: <span>0</span>)
 </div>
