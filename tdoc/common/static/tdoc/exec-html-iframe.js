@@ -68,7 +68,7 @@
             msg = `${err.toString()}\n${msg.replace(/^@/mg, "    at ")}`;
         }
         if (ev.lineno !== undefined && ev.colno !== undefined
-                && !msg.includes(`about:srcdoc:${ev.lineno}:${ev.colno}`)) {
+                && !msg.includes(`at ${ev.filename}:${ev.lineno}:`)) {
             msg = `${msg} (at ${ev.filename}:${ev.lineno}:${ev.colno})`;
         }
         return msg;
