@@ -37,7 +37,6 @@ class HtmlExecutor extends Executor {
 <div class="tdoc-navbar">\
 <button class="fa-arrow-left tdoc-back" title="Back"></button>\
 <button class="fa-arrow-right tdoc-forward" title="Forward"></button>\
-<button class="fa-rotate-right tdoc-reload" title="Reload"></button>\
 <div class="tdoc-title"></div>\
 <button class="fa-expand tdoc-maximize" title="Maximize"></button>\
 <button class="fa-compress tdoc-restore" title="Restore"></button>\
@@ -45,11 +44,6 @@ class HtmlExecutor extends Executor {
 </div>`;
         on(qs(navbar, '.tdoc-back')).click(() => { history.back(); });
         on(qs(navbar, '.tdoc-forward')).click(() => { history.forward(); });
-        on(qs(navbar, '.tdoc-reload')).click(() => {
-            try {  // Try to reload if non-cross-origin
-                iframe.contentWindow.history.go();
-            } catch (e) {}
-        });
         on(qs(navbar, '.tdoc-maximize')).click(() => {
             document.documentElement.classList.add('tdoc-fullscreen');
             this.output.output.classList.add('tdoc-fullscreen');
