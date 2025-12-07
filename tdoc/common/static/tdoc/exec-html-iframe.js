@@ -27,16 +27,32 @@
     obs.observe(document.head,
                 {subtree: true, childList: true, characterData: true});
 
-    // Hook into console methods.
+    // Format console logging arguments.
     function formatArgs(args) {
-        return args.map(formatArg).join(" ");
+        if (typeof args[0] !== 'string') return args.map(formatArg).join(" ");
+        let i = 0;
+        return args[0].replace(/%([%oOdisfc])/g, (m, c) => {
+            if (c === '%') return "%";
+            if (++i >= args.length) return m;
+            const a = args[i];
+            switch (c) {
+            case 'o': case 'O': return formatArg(a);
+            case 'd': case 'i': return parseInt(a).toString();
+            case 's': return a.toString();
+            case 'f': return parseFloat(a).toString();
+            case 'c': return "";
+            }
+        });
     }
 
+    // Format a console logging argument.
     function formatArg(arg) {
         try {
             if (arg === undefined) return 'undefined';
             if (arg instanceof Element) return arg.outerHTML;
-            if (typeof arg === 'object') return JSON.stringify(arg);
+            if (['object', 'string'].includes(typeof arg)) {
+                return JSON.stringify(arg);
+            }
         } catch (e) {}
         return arg.toString();
     }
@@ -115,5 +131,6 @@
         trace(...args) { this.#c.trace(...args); }
     }
 
+    // Hook into console methods.
     globalThis.console = new Console(globalThis.console);
 })();
