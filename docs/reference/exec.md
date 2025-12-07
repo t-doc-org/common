@@ -179,7 +179,19 @@ select * from people;
 ### HTML
 
 The {rst:dir}`{exec} html <exec>` runner displays a complete HTML document as an
-`<iframe>`, with limited browsing functionality.
+`<iframe>`, with limited browsing functionality. Console output produced by
+[`console`](https://developer.mozilla.org/en-US/docs/Web/API/console) methods
+is displayed below the rendered HTML.
+
+```{admonition} Note
+:class: note
+Adblockers can interfere with {rst:dir}`{exec} html <exec>` blocks **served by
+the local server** if they prevent access to `localhost`, for example uBlock
+Origin with the "Block outsider intrusion into LAN" filter list. As a
+workaround, disable the corresponding filter list.
+
+This issue does not happen on the deployed site.
+```
 
 ### MicroPython
 
