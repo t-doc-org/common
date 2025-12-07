@@ -124,13 +124,14 @@ ${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
 <div class="tdoc-exec-output"><div class="pst-scrollable-table-container">\
 <table class="table"><thead><tr></tr></thead><tbody></tbody></table>\
 </div></div>`;
-        this.setOutputStyle(qs(output, '.pst-scrollable-table-container'));
+        const container = qs(output, '.pst-scrollable-table-container');
+        this.setOutputStyle(container);
         const tr = qs(output, 'tr');
         for (const col of columns) {
             tr.appendChild(elmt`<th class="text-center">${col}</th>`);
         }
         if (this.runCtrl) {
-            on(output.appendChild(elmt`\
+            on(container.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => { output.remove(); });
         }

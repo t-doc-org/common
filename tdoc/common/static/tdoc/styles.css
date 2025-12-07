@@ -768,6 +768,18 @@ div.tdoc-exec-output {
     position: relative;
     margin: 1rem 0;
 }
+div.tdoc-exec-output :has(> button.tdoc-remove) {
+    timeline-scope: --scroll-y;
+    animation: --scroll-y forwards;
+    animation-timeline: --scroll-y;
+    container-name: --scroll;
+}
+@keyframes --scroll-x {
+    0%,to { --scroll-x: 1; }
+}
+@keyframes --scroll-y {
+    0%,to { --scroll-y: 1; }
+}
 div.tdoc-exec-output button.tdoc-remove {
     position: absolute;
     top: 0.3rem;
@@ -775,6 +787,11 @@ div.tdoc-exec-output button.tdoc-remove {
     user-select: none;
     opacity: 0;
     transition: background-color 0.3s, opacity 0.3s;
+}
+@container --scroll style(--scroll-y: 1) {
+    div.tdoc-exec-output button.tdoc-remove {
+        right: 1.3rem;
+    }
 }
 div.tdoc-exec-output:hover button.tdoc-remove {
     opacity: 1;
@@ -807,6 +824,7 @@ div.tdoc-exec-output.tdoc-sectioned > .canvas > canvas {
 }
 div.tdoc-exec-output > div.tdoc-console > pre {
     max-height: 20rem;
+    scroll-timeline: --scroll-y y;
 }
 div.tdoc-exec-output > div.tdoc-console > pre span.err {
     color: var(--pst-color-danger);
@@ -1196,6 +1214,7 @@ code.literal.literal.literal {
    scrollbar. */
 .pst-scrollable-table-container {
     margin-bottom: 1rem;
+    scroll-timeline: --scroll-y y;
 }
 .pst-scrollable-table-container > .table {
     margin-bottom: 0;
