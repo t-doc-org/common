@@ -18,18 +18,40 @@ complete HTML document as an `<iframe>`. The `<iframe>` defaults to a 16/9
 aspect ratio, but its size can be adjusted with
 {rst:dir}`:output-style: <exec:output-style>`.
 
+Console output generated with e.g.
+[`console.log()`{l=js}](https://developer.mozilla.org/en-US/docs/Web/API/console/log_static)
+is displayed in a console output block. Its size can be controlled with
+{rst:dir}`:console-style: <exec:console-style>`.
+
 ```{exec} html
 :when: load
 :editor:
-:style: height: 20rem;
+:style: height: 17rem;
 :output-style: height: 10rem;
 :console-style: max-height: 25rem;
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>This is the page title (counter: 0)</title>
-<style>h1 { margin: 0; font-size: 3rem; }</style>
-<script>
+  <title>This is the page title (counter: 0)</title>
+  <style>h1 { margin: 0; font-size: 3rem; }</style>
+</head>
+<body>
+  <h1 id="top">Hello, </h1>
+  <p>Go to <a href="#sect-1">section 1</a>, <a href="#sect-2">section 2</a>,
+    <a href="#sect-3">section 3</a> or <a href="#sect-4">section 4</a>.</p>
+  <p>This site is managed with <a href="https://t-doc.org/">t-doc</a>.</p>
+  <br>
+
+  <h2 id="sect-1">Section 1</h2>
+  <p>This is section 1. Go back to the <a href="#top">top</a>.</p>
+  <h2 id="sect-2">Section 2</h2>
+  <p>This is section 2. Go back to the <a href="#top">top</a>.</p>
+  <h2 id="sect-3">Section 3</h2>
+  <p>This is section 3. Go back to the <a href="#top">top</a>.</p>
+  <h2 id="sect-4">Section 4</h2>
+  <p>This is section 4. Go back to the <a href="#top">top</a>.</p>
+
+  <script>
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('h1').appendChild(document.createTextNode('world!'));
 });
@@ -58,12 +80,8 @@ console.log("Styles: %cred %cgreen %cblue",
 console.log("Prefix & suffix: %% %% %d %d %d %d", 1, 2);
 (async () => { throw new Error("Async boom!"); })();
 throw new Error("Boom!");
-</script>
-<script>*Invalid JavaScript*</script>
-</head>
-<body>
-  <h1>Hello, </h1>
-  <p>A link to <a href="https://t-doc.org/">this site</a>.
+  </script>
+  <script>*Invalid JavaScript*</script>
 </body>
 </html>
 ```

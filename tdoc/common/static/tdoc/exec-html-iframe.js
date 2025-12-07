@@ -3,6 +3,10 @@
 
 'use strict';
 (() => {
+    // Set the base URL for relative links.
+    document.head.appendChild(document.createElement('base'))
+        .setAttribute('href', location.href);
+
     // Set up channel back to the parent.
     let connected = true;
     function send(data, disconnect = false) {
@@ -72,12 +76,10 @@
 
     // Handle top-level errors and unhandled promise rejections.
     addEventListener('error', e => {
-        // cons.log(e);
         const msg = `Uncaught ${formatError(e, e.error)}`;
         send({consoleLog: {msg, stream: 'err'}});
     });
     addEventListener('unhandledrejection', e => {
-        // cons.log(e);
         const msg = `Uncaught (in promise) ${formatError(e, e.reason)}`;
         send({consoleLog: {msg, stream: 'err'}});
     });
