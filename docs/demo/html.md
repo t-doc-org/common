@@ -22,6 +22,8 @@ aspect ratio, but its size can be adjusted with
 :when: load
 :editor:
 :style: height: 20rem;
+:output-style: height: 10rem;
+:console-style: max-height: 25rem;
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,8 +45,8 @@ console.warn("Warn");
 console.error("Error");
 console.log('\n');
 console.log();
-console.log(undefined, null, 42, 12.45, "A % string %% value %%%");
-console.log({a: 1, b: 2}, [1, 2, 3, 4]);
+console.log(undefined, null, 42, 12.45, "A % string %% value %%%", {a: 1, b: 2},
+            [1, 2, 3, 4]);
 console.log(document.querySelector('title'));
 console.log("A % string %% on %%% its %%%% own");
 console.log("Objects: %o %O %o %O", {a: 1}, {a: 1}, [1, 2], [1, 2]);
@@ -54,7 +56,10 @@ console.log("Floats: %f %f %f", 12.34, "-12.34a", "a");
 console.log("Styles: %cred %cgreen %cblue",
             'color: red', 'color: green', 'color: blue');
 console.log("Prefix & suffix: %% %% %d %d %d %d", 1, 2);
+(async () => { throw new Error("Async boom!"); })();
+throw new Error("Boom!");
 </script>
+<script>*Invalid JavaScript*</script>
 </head>
 <body>
   <h1>Hello, </h1>

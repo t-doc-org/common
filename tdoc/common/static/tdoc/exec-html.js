@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {elmt, on, qs} from './core.js';
+import {elmt, escape, on, qs} from './core.js';
 import {Executor} from './exec.js';
 
 const parser = new DOMParser();
@@ -74,14 +74,16 @@ class HtmlExecutor extends Executor {
         this.iframe = iframe;
         sources.set(iframe.contentWindow, this);
 
-        // Parse the HTML code, and inject the cross-origin communication code.
-        const blocks = [];
-        for (const {code} of this.codeBlocks()) blocks.push(code);
-        const doc = parser.parseFromString(blocks.join(''), 'text/html');
+        // Inject the cross-origin communication code at the beginning of the
+        // HTML code. It would be more correct to parse the HTML to a document,
+        // then add the <script> tag at the beginning of the <head>, and
+        // re-serialize the document, but this wouldn't preserve line numbers.
+        // In practice, browsers are smart enough to move the <script> tag to
+        // the beginning of the <head> anyway, so this works.
         const inject = import.meta.resolve('./exec-html-iframe.js');
-        doc.head.insertBefore(elmt`<script src="${inject}"></script>`,
-                              doc.head.firstElementChild);
-        iframe.srcdoc = doc.documentElement.outerHTML;
+        const blocks = [`<script src="${escape(inject)}"></script>`];
+        for (const {code} of this.codeBlocks()) blocks.push(code);
+        iframe.srcdoc = blocks.join('');
     }
 
     async stop(run_id) {}

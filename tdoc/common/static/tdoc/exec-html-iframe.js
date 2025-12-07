@@ -1,8 +1,6 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-// TODO: Capture JavaScript errors (Window.onerror)
-
 'use strict';
 (() => {
     // Set up channel back to the parent.
@@ -40,7 +38,7 @@
             case 'd': case 'i': return parseInt(a).toString();
             case 's': return a.toString();
             case 'f': return parseFloat(a).toString();
-            case 'c': return "";
+            case 'c': return "";  // Styling is a potential security issue
             }
         });
     }
@@ -56,6 +54,33 @@
         } catch (e) {}
         return arg.toString();
     }
+
+    // Format an error event.
+    function formatError(ev, err) {
+        let msg = err.stack;
+        if (msg === "") {  // Firefox
+            msg = err.toString();
+        } else if (msg.startsWith("@")) {  // Firefox
+            msg = `${err.toString()}\n${msg.replace(/^@/mg, "    at ")}`;
+        }
+        if (ev.lineno !== undefined && ev.colno !== undefined
+                && !msg.includes(`about:srcdoc:${ev.lineno}:${ev.colno}`)) {
+            msg = `${msg} (at ${ev.filename}:${ev.lineno}:${ev.colno})`;
+        }
+        return msg;
+    }
+
+    // Handle top-level errors and unhandled promise rejections.
+    addEventListener('error', e => {
+        // cons.log(e);
+        const msg = `Uncaught ${formatError(e, e.error)}`;
+        send({consoleLog: {msg, stream: 'err'}});
+    });
+    addEventListener('unhandledrejection', e => {
+        // cons.log(e);
+        const msg = `Uncaught (in promise) ${formatError(e, e.reason)}`;
+        send({consoleLog: {msg, stream: 'err'}});
+    });
 
     class Console {
         #c
@@ -132,5 +157,6 @@
     }
 
     // Hook into console methods.
+    const cons = console;
     globalThis.console = new Console(globalThis.console);
 })();
