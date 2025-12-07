@@ -4,6 +4,16 @@
 import {elmt, on, qs} from './core.js';
 import {Executor} from './exec.js';
 
+const parser = new DOMParser();
+
+// Dispatch messages from iframes.
+const sources = new Map();
+on(window).message(e => {
+    const exec = sources.get(e.source);
+    if (!exec) return;
+    exec.onMessage(e);
+});
+
 class HtmlExecutor extends Executor {
     static runner = 'html';
     static highlight = 'html';
@@ -11,8 +21,7 @@ class HtmlExecutor extends Executor {
     constructor(node) {
         super(node);
         this.output = this.sectionedOutput();
-        // TODO: Hook the console proxy up to the iframe
-        // this.console = new Console(this.output.consoleOut('990'));
+        this.out = this.output.consoleOut('990');
     }
 
     addControls(controls) {
@@ -23,6 +32,7 @@ class HtmlExecutor extends Executor {
     }
 
     async run(run_id) {
+        this.out.clear();
         const navbar = elmt`\
 <div class="tdoc-navbar">\
 <button class="fa-arrow-left tdoc-back" title="Back"></button>\
@@ -49,98 +59,53 @@ class HtmlExecutor extends Executor {
             this.output.output.classList.remove('tdoc-fullscreen');
         });
         on(qs(navbar, '.tdoc-close')).click(() => { this.output.remove(); });
+        this.title = qs(navbar, '.tdoc-title');
         this.output.render('000', navbar);
 
+        // Create the iframe.
+        if (this.iframe) sources.delete(this.iframe.contentWindow);
+        delete this.iframe;
         const iframe = elmt`\
 <iframe credentialless\
  allow="accelerometer; ambient-light-sensor; autoplay; bluetooth; camera;\
  clipboard-write; encrypted-media; fullscreen; gamepad; geolocation; gyroscope;\
  hid; idle-detection; local-fonts; magnetometer; microphone; midi;\
  picture-in-picture; screen-wake-lock; serial; usb; web-share"\
+ sandbox="allow-downloads allow-forms allow-modals allow-popups\
+ allow-popups-to-escape-sandbox allow-presentation allow-scripts"\
  referrerpolicy="no-referrer">\
 </iframe>`;
         this.setOutputStyle(iframe);
-        this.output.render('001', iframe)
+        this.output.render('001', iframe);
+        this.iframe = iframe;
+        sources.set(iframe.contentWindow, this);
 
+        // Parse the HTML code, and inject the cross-origin communication code.
         const blocks = [];
         for (const {code} of this.codeBlocks()) blocks.push(code);
-        iframe.srcdoc = blocks.join('');
-
-        const title = qs(navbar, '.tdoc-title');
-        function updateTitle() {
-            const text = iframe.contentDocument?.title ?? '';
-            if (title.textContent !== text) title.textContent = text;
-        }
-        const obs = new MutationObserver(updateTitle);
-        on(iframe).load(() => {
-            obs.disconnect();
-            updateTitle();
-            if (!iframe.contentDocument) return;  // Cross-origin content
-            obs.observe(iframe.contentDocument.documentElement,
-                        {subtree: true, childList: true, characterData: true});
-        });
+        const doc = parser.parseFromString(blocks.join(''), 'text/html');
+        const inject = import.meta.resolve('./exec-html-iframe.js');
+        doc.head.insertBefore(elmt`<script src="${inject}"></script>`,
+                              doc.head.firstElementChild);
+        iframe.srcdoc = doc.documentElement.outerHTML;
     }
 
     async stop(run_id) {}
-}
 
-class Console {
-    constructor(out) {
-        this.out = out;
-        this.counts = {};
-    }
-
-    _log({stream, prefix, args}) {
-        this.out.write(
-            stream ?? '', `\
-${prefix ?? ''}${(args ?? []).map(v => v.toString()).join(" ")}\n`);
-    }
-
-    assert(cond, ...args) {
-        console.assert(cond, ...args);
-        if (!cond) {
-            if (args.length === 0) args = ['console.assert'];
-            this._log({stream: 'err', args});
+    onMessage(e) {
+        const data = e.data;
+        if (data.unload !== undefined) {
+            this.title.textContent = '';
+            this.out.clear();
+        }
+        if (data.title !== undefined) this.title.textContent = data.title;
+        if (data.consoleClear !== undefined) this.out.clear();
+        const log = data.consoleLog;
+        if (log !== undefined) {
+            const eol = log.msg.endsWith('\n') ? '' : '\n';
+            this.out.write(log.stream ?? '', `${log.msg}${eol}`);
         }
     }
-
-    clear() {
-        console.clear();
-        this.out.write('', '\x0c');
-    }
-
-    count(label) {
-        console.count(label);
-        label ??= 'default';
-        const v = this.counts[label] = (this.counts[label] ?? 0) + 1;
-        this._log({args: [`${label}: ${v}`]});
-    }
-
-    countReset(label) {
-        console.countReset(label);
-        delete this.counts[label ?? 'default'];
-    }
-
-    debug(...args) { console.debug(...args); }
-    dir(...args) { console.dir(...args); }
-    dirxml(...args) { console.dirxml(...args); }
-    error(...args) { console.error(...args); }
-    group(...args) { console.group(...args); }
-    groupCollapsed(...args) { console.groupCollapsed(...args); }
-    groupEnd(...args) { console.groupEnd(...args); }
-    info(...args) { console.info(...args); }
-
-    log(...args) {
-        console.log(...args);
-        this._log({args});
-    }
-
-    table(...args) { console.table(...args); }
-    time(...args) { console.time(...args); }
-    timeEnd(...args) { console.timeEnd(...args); }
-    timeLog(...args) { console.timeLog(...args); }
-    trace(...args) { console.trace(...args); }
-    warn(...args) { console.warn(...args); }
 }
 
 Executor.apply(HtmlExecutor);  // Background

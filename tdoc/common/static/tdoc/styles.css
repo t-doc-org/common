@@ -811,6 +811,15 @@ div.tdoc-exec-output > div.tdoc-console > pre {
 div.tdoc-exec-output > div.tdoc-console > pre span.err {
     color: var(--pst-color-danger);
 }
+div.tdoc-exec-output > div.tdoc-console > pre span.warn {
+    color: var(--pst-color-warning);
+}
+div.tdoc-exec-output > div.tdoc-console > pre span.info {
+    color: var(--pst-color-info);
+}
+div.tdoc-exec-output > div.tdoc-console > pre span.debug {
+    color: var(--pst-color-text-muted);
+}
 div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input {
     display: flex;
     flex-direction: row;

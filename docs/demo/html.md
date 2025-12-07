@@ -21,23 +21,35 @@ aspect ratio, but its size can be adjusted with
 ```{exec} html
 :when: load
 :editor:
-:style: height: 14rem;
+:style: height: 20rem;
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <title>This is the page title (counter: 0)</title>
-<style>
-h1 { margin: 0; font-size: 3rem; }
-</style>
+<style>h1 { margin: 0; font-size: 3rem; }</style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('h1').appendChild(document.createTextNode('world!'));
 });
-const title = document.querySelector('title');
 let counter = 0;
 setInterval(() => {
-  title.textContent = title.textContent.replace(/\d+/, ++counter);
-}, 1000)
+  document.title = document.title.replace(/\d+/, ++counter);
+}, 1000);
+
+console.log("log");
+console.debug("debug");
+console.info("info");
+console.warn("Warn");
+console.error("Error");
+console.log('\n');
+console.log();
+console.log(undefined);
+console.log(null);
+console.log(1, 2, 3, 42);
+console.log("Some message");
+console.log({a: 1, b: 2});
+console.log([1, 2, 3, 4]);
+console.log(document.querySelector('title'));
 </script>
 </head>
 <body>
@@ -57,9 +69,7 @@ just an HTML snippet, and optionally styles (with a `<style>` element):
 :when: load
 :editor:
 :output-style: height: 7rem;
-<style>
-h1 { margin: 0; font-size: 5rem; }
-</style>
+<style>h1 { margin: 0; font-size: 5rem; }</style>
 <h1>Hello, world!</h1>
 ```
 
@@ -74,7 +84,10 @@ Please click <button>here</button>
 <script>
 let clicks = 0;
 document.querySelector('button')
-  .addEventListener('click', () => { document.title = `Clicks: ${++clicks}`; });
+  .addEventListener('click', () => {
+    document.title = `Clicks: ${++clicks}`;
+    console.log(`Clicks: ${clicks}`);
+  });
 </script>
 ```
 
