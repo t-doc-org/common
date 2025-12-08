@@ -17,7 +17,7 @@ info = {
     },
     'jsxgraph': {
         'name': 'jsxgraph',
-        'version': '1.11.1',
+        'version': '1.12.2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
     },
@@ -29,7 +29,7 @@ info = {
     },
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.12.0',
+        'version': '11.12.2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
@@ -41,7 +41,7 @@ info = {
     },
     'polyscript': {
         'name': 'polyscript',
-        'version': '0.18.14',
+        'version': '0.20.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'release_urls': [
@@ -50,7 +50,7 @@ info = {
     },
     'pyodide': {
         'name': 'pyodide',
-        'version': '0.28.3',
+        'version': '0.29.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [
@@ -59,7 +59,7 @@ info = {
     },
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        'version': '3.50.4-build1',
+        'version': '3.51.1-build2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
