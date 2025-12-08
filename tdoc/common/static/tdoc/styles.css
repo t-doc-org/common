@@ -984,6 +984,10 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     border-color: var(--pst-color-border);
     border-radius: 0.25rem;
 }
+:fullscreen > .tdoc-dyn[data-type=jsxgraph] {
+    border: none;
+    border-radius: 0;
+}
 .tdoc-dyn[data-type=jsxgraph].align-left {
     margin-left: 0;
 }

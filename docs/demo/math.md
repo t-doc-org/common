@@ -119,6 +119,7 @@ const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 initBoard('sincos', {
     boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
+    zoom: {factorY: 1}, showFullscreen: true,
     defaultAxes: {
         x: {
             ticks: {

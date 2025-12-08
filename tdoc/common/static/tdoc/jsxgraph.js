@@ -41,6 +41,7 @@ JXG.merge(JXG.Options, {
         showCopyright: false,
         showNavigation: false,
         keepAspectRatio: true,
+        fullscreen: {scale: 1},
         defaultAxes: {
             x: {
                 name: '\\(x\\)',
