@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-65)=
+## 0.65 *(2025-12-08)*
+
+- Added the page title to the navigation bar of
+  [`{exec} html`](/reference/exec.md#html) blocks.
+- Added console output to [`{exec} html`](/reference/exec.md#html) blocks.
+- Fixed issues with relative links in [`{exec} html`](/reference/exec.md#html)
+  blocks.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.64...0.65)
+
 (release-0-64)=
 ## 0.64 *(2025-11-30)*
 
