@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-66)=
+## 0.66 *(2025-12-08)*
+
+- Updated all dependencies.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.65...0.66)
+
 (release-0-65)=
 ## 0.65 *(2025-12-08)*
 
