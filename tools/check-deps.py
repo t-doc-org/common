@@ -229,9 +229,9 @@ class PythonPackage(Package):
         if self._add_project_url('release'): return
         if self._add_project_url('change'): return
         if self._add_project_url('news'): return
-        for url in itertools.chain(
-                self.info.info.get('project_urls', {}).values(),
-                [self.info.info.get('home_page', '')]):
+        urls = list(self.info.info.get('project_urls', {}).values())
+        if u := self.info.info.get('home_page'): urls.append(u)
+        for url in urls:
             if (m := gh_repo_re.search(url)) is None: continue
             self.urls.append(f'https://github.com/{m[1]}/releases')
             return
