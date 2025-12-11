@@ -1,18 +1,10 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {elmt, escape, on, qs} from './core.js';
+import {elmt, escape, on, onMessage, qs} from './core.js';
 import {Executor} from './exec.js';
 
 const parser = new DOMParser();
-
-// Dispatch messages from iframes.
-const sources = new Map();
-on(window).message(e => {
-    const exec = sources.get(e.source);
-    if (!exec) return;
-    exec.onMessage(e);
-});
 
 class HtmlExecutor extends Executor {
     static runner = 'html';
@@ -53,26 +45,53 @@ class HtmlExecutor extends Executor {
             this.output.output.classList.remove('tdoc-fullscreen');
         });
         on(qs(navbar, '.tdoc-close')).click(() => { this.output.remove(); });
-        this.title = qs(navbar, '.tdoc-title');
+        const title = qs(navbar, '.tdoc-title');
         this.output.render('000', navbar);
 
-        // Create the iframe.
-        if (this.iframe) sources.delete(this.iframe.contentWindow);
-        delete this.iframe;
+        // Create the iframe. Ideally, it would be cross-origin and use
+        // allow-same-origin, but it's surprisingly difficult to do so:
+        //
+        //  - data: URLs make the iframe cross-origin, but they disable some
+        //    functionality (e.g. storage APIs) and may have size limitations.
+        //  - It doesn't seem to be possible to create cross-origin blob URLs.
+        //  - The only possibility seems to be to serve the HTML code from a
+        //    sandbox origin, e.g. via the API. This would require storing it
+        //    at least temporarily, and wouldn't work with the local server,
+        //    since the API is same-origin in this case.
+        //  - Maybe some day we'll have allow-unique-origin for this very use
+        //    case <https://github.com/whatwg/html/issues/9623>.
+        //
+        // So for now we err on the safe side and don't allow-same-origin.
+        //
+        // Some links on the topic:
+        //  - https://security.googleblog.com/2023/04/securely-hosting-user-data-in-modern.html
         const iframe = elmt`\
-<iframe credentialless\
+<iframe\
  allow="accelerometer; ambient-light-sensor; autoplay; bluetooth; camera;\
- clipboard-write; encrypted-media; fullscreen; gamepad; geolocation; gyroscope;\
- hid; idle-detection; local-fonts; magnetometer; microphone; midi;\
- picture-in-picture; screen-wake-lock; serial; usb; web-share"\
- sandbox="allow-downloads allow-forms allow-modals allow-popups\
- allow-popups-to-escape-sandbox allow-presentation allow-scripts"\
+ encrypted-media; fullscreen; gamepad; geolocation; gyroscope; hid;\
+ idle-detection; local-fonts; magnetometer; microphone; midi;\
+ picture-in-picture; screen-wake-lock; serial; usb; xr-spatial-tracking"\
+ sandbox="allow-downloads allow-forms allow-modals allow-pointer-lock\
+ allow-popups allow-popups-to-escape-sandbox allow-presentation\
+ allow-scripts"\
  referrerpolicy="no-referrer">\
 </iframe>`;
         this.setOutputStyle(iframe);
         this.output.render('001', iframe);
-        this.iframe = iframe;
-        sources.set(iframe.contentWindow, this);
+        onMessage(iframe.contentWindow, e => {
+            const data = e.data;
+            if (data.unload !== undefined) {
+                title.textContent = '';
+                this.out.clear();
+            }
+            if (data.title !== undefined) title.textContent = data.title;
+            if (data.consoleClear !== undefined) this.out.clear();
+            const log = data.consoleLog;
+            if (log !== undefined) {
+                const eol = log.msg.endsWith('\n') ? '' : '\n';
+                this.out.write(log.stream ?? '', `${log.msg}${eol}`);
+            }
+        });
 
         // Inject the cross-origin communication code at the beginning of the
         // HTML code. It would be more correct to parse the HTML to a document,
@@ -87,21 +106,6 @@ class HtmlExecutor extends Executor {
     }
 
     async stop(run_id) {}
-
-    onMessage(e) {
-        const data = e.data;
-        if (data.unload !== undefined) {
-            this.title.textContent = '';
-            this.out.clear();
-        }
-        if (data.title !== undefined) this.title.textContent = data.title;
-        if (data.consoleClear !== undefined) this.out.clear();
-        const log = data.consoleLog;
-        if (log !== undefined) {
-            const eol = log.msg.endsWith('\n') ? '' : '\n';
-            this.out.write(log.stream ?? '', `${log.msg}${eol}`);
-        }
-    }
 }
 
 Executor.apply(HtmlExecutor);  // Background

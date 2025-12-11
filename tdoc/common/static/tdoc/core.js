@@ -148,6 +148,15 @@ const onHandler = {
 // Return a proxy object whose methods set event handlers.
 export function on(node) { return new Proxy(node, onHandler); }
 
+const messageSources = new WeakMap();
+on(window).message(e => messageSources.get(e.source)?.(e));
+
+// Register a handler for window messages from a given source. At most one
+// handler can be registered per source.
+export function onMessage(source, fn) {
+    messageSources.set(source, fn);
+}
+
 // Return true iff the given element is within the root viewport.
 //
 // WARNING: This function may force a reflow, and may therefore be expensive.

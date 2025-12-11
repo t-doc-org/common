@@ -39,8 +39,7 @@ is displayed in a console output block. Its size can be controlled with
   <h1 id="top">Hello, </h1>
   <p>Go to <a href="#sect-1">section 1</a>, <a href="#sect-2">section 2</a>,
     <a href="#sect-3">section 3</a> or <a href="#sect-4">section 4</a>.</p>
-  <p>This site is managed with <a href="https://t-doc.org/">t-doc</a>.</p>
-  <br>
+  <br><br><br><br>
 
   <h2 id="sect-1">Section 1</h2>
   <p>This is section 1. Go back to the <a href="#top">top</a>.</p>
