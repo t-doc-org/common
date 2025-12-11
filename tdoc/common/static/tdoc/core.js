@@ -1,6 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+console.info(`[t-doc] Page origin: ${location.origin}`);
+
 // UTF-8 text encoder and decoder.
 export const enc = new TextEncoder();
 export const dec = new TextDecoder();
