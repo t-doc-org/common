@@ -47,7 +47,9 @@ class Api(wsgi.Dispatcher):
         self.store = store
         self.stderr = stderr if stderr is not None else sys.stderr
         self.cache = wsgi.HttpCache()
-        self.pool = store.pool()
+        self._read_db_pool = store.pool(params='mode=ro')
+        self._write_db_lock = threading.Lock()
+        self._write_db = store.connect(check_same_thread=False)
         self.events = self.add_endpoint('events', EventsApi(self))
         self.auth = self.add_endpoint(
             'auth', OidcAuthApi(self, config.sub('oidc')))
@@ -64,15 +66,21 @@ class Api(wsgi.Dispatcher):
         if e is None: e = sys.exception()
         traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
-    def db(self, env):
+    def read_db(self, env):
         if (db := env.get('tdoc.db')) is not None: return db
-        db = env['tdoc.db'] = self.pool.get()
+        db = env['tdoc.db'] = self._read_db_pool.get()
         return db
+
+    @property
+    @contextlib.contextmanager
+    def write_db(self):
+        with self._write_db_lock, self._write_db as db:
+            yield db
 
     def authenticate(self, env):
         user = None
         if token := wsgi.authorization(env):
-            with self.db(env) as db:
+            with self.read_db(env) as db:
                 user = db.tokens.authenticate(token)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
         wsgi.set_user(env, user)
@@ -92,7 +100,8 @@ class Api(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
         finally:
-            if (db := env.get('tdoc.db')) is not None: self.pool.release(db)
+            if (db := env.pop('tdoc.db')) is not None:
+                self._read_db_pool.release(db)
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
     def handle_health(self, env, user, req):
@@ -101,7 +110,7 @@ class Api(wsgi.Dispatcher):
     @wsgi.json_endpoint('poll')
     def handle_poll(self, env, user, req):
         origin = wsgi.origin(env)
-        with self.db(env) as db:
+        with self.write_db as db:
             if polls := req.get('open'):
                 check(self.member_of(env, db, 'polls:control'))
                 for poll in polls:
@@ -132,7 +141,7 @@ class Api(wsgi.Dispatcher):
         origin = wsgi.origin(env)
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
-        with self.db(env) as db:
+        with self.write_db as db:
             check(self.member_of(env, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
@@ -140,7 +149,7 @@ class Api(wsgi.Dispatcher):
     @wsgi.json_endpoint('user', require_authn=True)
     def handle_user(self, env, user, req):
         origin = wsgi.origin(env)
-        with self.db(env) as db:
+        with self.read_db(env) as db:
             return db.users.info(origin, user)
 
 
@@ -505,7 +514,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if user is not None:
             iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
-            with self.api.db(env) as db:
+            with self.api.read_db(env) as db:
                 for id_token, updated in db.oidc.logins(user):
                     if (info := issuers.get(id_token['iss'])) is None: continue
                     logins.append({
@@ -522,7 +531,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_update(self, env, user, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
-            with self.api.db(env) as db:
+            with self.api.write_db as db:
                 db.oidc.remove_login(user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(user)
                             if id_token['iss'] in self.issuers)
@@ -559,7 +568,7 @@ class OidcAuthApi(wsgi.Dispatcher):
 
         # Handle "log in as" in dev mode.
         if wsgi.is_dev(env) and (ruser := req.get('user')):
-            with self.api.db(env) as db:
+            with self.api.write_db as db:
                 try:
                     uid = db.users.uid(ruser)
                 except Exception as e:
@@ -581,7 +590,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         verifier = secrets.token_urlsafe(32)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(
             verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
-        with self.api.db(env) as db:
+        with self.api.write_db as db:
             db.oidc.create_state(state, {
                 'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
                 'verifier': verifier, 'user': user, 'token': token,
@@ -606,7 +615,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_redirect(self, env, user, respond):
         qs = parse.parse_qs(wsgi.query(env))
         href = None
-        with self.api.db(env) as db:
+        with self.api.write_db as db:
             if (state := qs.get('state')) is not None:
                 data = db.oidc.state(state[0])
             if data is None:
@@ -688,7 +697,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     @wsgi.json_endpoint('logout', require_authn=True)
     def handle_logout(self, env, user, req):
         token = wsgi.authorization(env)
-        with self.api.db(env) as db:
+        with self.api.write_db as db:
             # Remove the token if the user has at least one login.
             count = sum(1 for id_token, _ in db.oidc.logins(user)
                         if id_token['iss'] in self.issuers)

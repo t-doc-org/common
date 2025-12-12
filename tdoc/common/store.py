@@ -535,16 +535,17 @@ class Polls(DbNamespace):
 
 
 class ConnectionPool:
-    def __init__(self, store, size=0):
+    def __init__(self, store, size=0, params='mode=rw'):
         self.store = store
         self.size = size
+        self.params = params
         self.lock = threading.Lock()
         self.connections = []
 
     def get(self):
         with self.lock:
             if self.connections: return self.connections.pop()
-        return self.store.connect(check_same_thread=False)
+        return self.store.connect(params=self.params, check_same_thread=False)
 
     def release(self, db):
         with self.lock:
@@ -769,7 +770,7 @@ class Store:
         return version, latest
 
     def check_version(self):
-        with contextlib.closing(self.connect()) as db, db:
+        with contextlib.closing(self.connect(params='mode=ro')) as db, db:
             version, latest = self.version(db)
         if version != latest:
             raise Exception("Store version mismatch "
