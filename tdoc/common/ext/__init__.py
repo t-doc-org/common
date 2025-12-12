@@ -2,18 +2,23 @@
 # SPDX-License-Identifier: MIT
 
 import base64
+import contextlib
 import copy
 import functools
 import html
 import json
 import pathlib
+import posixpath
 import re
+import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx import config, locale
+from sphinx.builders import html as sphinx_html
 from sphinx.environment import collectors
-from sphinx.util import docutils, fileutil, logging
+from sphinx.ext.intersphinx import _load
+from sphinx.util import display, docutils, fileutil, logging
 
 from . import patch
 from .. import __version__, deps
@@ -157,7 +162,8 @@ def setup(app):
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
-    app.connect('builder-inited', on_builder_inited)
+    app.connect('builder-inited', update_intersphinx, priority=499.9)
+    app.connect('builder-inited', set_base_html_context)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
@@ -212,7 +218,35 @@ def on_config_inited(app, config):
     opts.setdefault('use_download_button', False)
 
 
-def on_builder_inited(app):
+def update_intersphinx(app):
+    cl = app.config.intersphinx_cache_limit
+    cache_time = time.time() - cl * 24 * 3600 if cl >= 0 else 0
+    inv_config = _load._InvConfig.from_config(app.config)
+    for name, (uri, locations) in app.config.intersphinx_mapping.values():
+        dest = None
+        for loc in locations:
+            if loc is None:
+                loc = posixpath.join(uri, sphinx_html.INVENTORY_FILENAME)
+            if '://' not in loc:
+                if dest is None and not pathlib.Path(loc).is_absolute():
+                    dest = app.srcdir / loc
+                continue
+            if dest is None: break
+            cur_data = None
+            with contextlib.suppress(OSError):
+                if dest.stat().st_mtime >= cache_time: break
+                cur_data = dest.read_bytes()
+            with contextlib.suppress(Exception), \
+                    display.progress_message(
+                        f"updating intersphinx inventory '{name}'"
+                        f" from {_load._get_safe_url(loc)}..."):
+                data = _load._fetch_inventory_url(
+                    target_uri=uri, inv_location=loc, config=inv_config)[0]
+                if data != cur_data: dest.write_bytes(data)
+                break
+
+
+def set_base_html_context(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
     app.config.html_context['tdoc'] = to_json(tdoc).replace('<', '\\x3c')

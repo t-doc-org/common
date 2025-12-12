@@ -1,8 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import sys
-
 from tdoc.common.defaults import *
 
 project = "t-doc"
@@ -23,8 +21,7 @@ html_theme_options = {
 
 intersphinx_mapping = {
     'python': (
-        f'https://docs.python.org/{sys.version_info[0]}.{sys.version_info[1]}',
-        ('_cached/python.inv', None),
+        f'https://docs.python.org/3', ('_cached/python.inv', None),
     ),
     'sphinx': ('https://www.sphinx-doc.org/en/master',
                ('_cached/sphinx.inv', None)),
