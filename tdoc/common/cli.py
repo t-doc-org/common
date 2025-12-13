@@ -165,7 +165,7 @@ def write_db(opts): return get_db(opts, 'rw')
 
 def store_backup_path(store):
     suffix = datetime.datetime.now() \
-                .isoformat('.', 'seconds').replace(':', '-')
+                .isoformat('.', 'microseconds').replace(':', '-')
     return store.path.with_name(f'{store.path.name}.{suffix}')
 
 
@@ -373,6 +373,7 @@ def cmd_store_backup(opts):
     with get_store(opts, check_latest=False) as store, \
             contextlib.closing(store.connect(mode='ro')) as db, db:
         if opts.destination is None: opts.destination = store_backup_path(store)
+        opts.stdout.write(f"Backing up store to {opts.destination}\n")
         store.backup(db, opts.destination)
 
 

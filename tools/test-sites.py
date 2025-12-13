@@ -101,23 +101,27 @@ def run_tests(tests, repo, label, wheel, write):
     repo_dir = tests / repo
     write(f"{label}Cloning\n")
     if repo.endswith('-private'):
-        run('hg', 'clone', '--updaterev', 'main', f'{cspace_net}/{repo}',
+        run('hg', 'clone', '--updaterev=main', f'{cspace_net}/{repo}',
             repo_dir)
     else:
-        run('git', 'clone', '--branch', 'main', f'{github_org}/{repo}',
+        run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
             repo_dir)
 
-    def vrun(*args, wait=True, **kwargs):
+    def vrun(*args, wait=True, out=(), **kwargs):
         p = subprocess.Popen(
             (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
              '--') + args,
             cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        if wait:
-            out, _ = p.communicate()
-            if p.wait() != 0:
-                raise Error(f"Command failed: {shlex.join(args)}\n\n{out}")
-        return p
+        if not wait: return p
+        pout, _ = p.communicate()
+        if p.wait() != 0:
+            raise Error(f"Command: {shlex.join(args)}\nOutput:\n{pout}")
+        for regex in out:
+            if not re.search(regex, pout, re.MULTILINE):
+                raise Error(f"Command: {shlex.join(args)}\nRegex: {regex}\n"
+                            f"Output:\n{pout}")
+        return pout
 
     # Get version information. This creates the venv.
     write(f"{label}Getting version information\n")
@@ -132,16 +136,53 @@ def run_tests(tests, repo, label, wheel, write):
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
-    # TODO: Create at version n > 1, then upgrade
     write(f"{label}Creating store\n")
     (repo_dir / 'tmp').mkdir()
     (repo_dir / 'local.toml').write_text("""\
 [store]
 path = "tmp/store.sqlite"
 """)
-    vrun('tdoc', 'store', 'create', '--debug', '--dev')
+    vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3')
+    vrun('tdoc', 'store', 'upgrade', '--debug', '--version=4')
+    vrun('tdoc', 'store', 'upgrade', '--debug')
 
-    # TODO: Run various commands that access the store
+    # Run commands interacting with the store.
+    write(f"{label}Interacting with store\n")
+    vrun('tdoc', 'user', 'create', '--debug', 'test-user')
+    vrun('tdoc', 'user', 'list', '--debug', out=[
+        r'^admin +\([0-9a-f]+\) +created: ',
+        r'^test-user +\([0-9a-f]+\) +created: ',
+    ])
+    vrun('tdoc', 'group', 'add', '--debug', '--users=admin,test-user',
+         '--groups=users', 'test-group')
+    vrun('tdoc', 'user', 'memberships', '--debug', out=[
+        r'^admin +\*\n +test-group\n',
+        r'^test-user +test-group\n',
+    ])
+    vrun('tdoc', 'group', 'list', '--debug', out=[
+        r'^\*\ntest-group\nusers\n',
+    ])
+    vrun('tdoc', 'group', 'members', '--debug', out=[
+        r'^\* +user +admin\n',
+        r'^test-group +group +users\n +user +admin\n +user +test-user\n',
+    ])
+    vrun('tdoc', 'group', 'memberships', '--debug', out=[
+        r'^users +test-group\n',
+    ])
+    vrun('tdoc', 'group', 'remove', '--debug', '--users=admin,test-user',
+         '--groups=users', 'test-group')
+
+    vrun('tdoc', 'token', 'create', '--debug', 'test-user')
+    vrun('tdoc', 'token', 'list', '--debug', out=[
+        r'^admin +#\?token=admin\n +created: ',
+        r'^(test-user +#\?token=[a-zA-Z0-9-_]{43,}\n +created: .*\n){2}',
+    ])
+    vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
+
+    vrun('tdoc', 'store', 'backup', '--debug', out=[
+        r'^Backing up store to .*store\.sqlite'
+            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}\n',
+    ])
 
     # Run the local server, wait for it to serve or exit.
     write(f"{label}Running local server\n")
