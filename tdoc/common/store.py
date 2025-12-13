@@ -789,6 +789,14 @@ class Store:
         latest = max(v for v, _ in self.versions())
         return version, latest
 
+    def check_version(self):
+        # This method is used by WSGI scripts.
+        with contextlib.closing(self.connect(mode='ro')) as db, db:
+            version, latest = self.version(db)
+        if version != latest:
+            raise Exception("Store version mismatch "
+                            f"(current: {version}, want: {latest})")
+
     def version_1(self, db, dev, now):
         db.execute("""
             create table meta (
