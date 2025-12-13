@@ -47,9 +47,9 @@ class Api(wsgi.Dispatcher):
         self.store = store
         self.stderr = stderr if stderr is not None else sys.stderr
         self.cache = wsgi.HttpCache()
-        self._read_db_pool = store.pool(params='mode=ro')
+        self._read_db_pool = store.pool(mode='ro')
         self._write_db_lock = threading.Lock()
-        self._write_db = store.connect(check_same_thread=False)
+        self._write_db = store.connect(mode='rw')
         self.events = self.add_endpoint('events', EventsApi(self))
         self.auth = self.add_endpoint(
             'auth', OidcAuthApi(self, config.sub('oidc')))
@@ -100,7 +100,7 @@ class Api(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
         finally:
-            if (db := env.pop('tdoc.db')) is not None:
+            if (db := env.pop('tdoc.db', None)) is not None:
                 self._read_db_pool.release(db)
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
@@ -417,7 +417,7 @@ class DbObservable(DynObservable):
     def poll(self):
         try:
             store = self.events.api.store
-            with contextlib.closing(store.connect(params='mode=ro')) as db, \
+            with contextlib.closing(store.connect(mode='ro')) as db, \
                     store.waker(self.lock, self.wake_keys(db), db,
                                 self._limit) as waker:
                 while True:

@@ -134,8 +134,8 @@ def add_sphinx_options(parser):
 def get_store(opts, allow_mem=False, check_latest=True):
     with store.Store(opts.cfg.sub('store'), allow_mem=allow_mem) as st:
         if check_latest:
-            with contextlib.closing(st.connect()) as db:
-                version, latest = st.version(db)
+            with contextlib.closing(st.connect(mode='rw')) as db:
+                with db: version, latest = st.version(db)
                 if version != latest:
                     o = opts.stdout
                     o.write(f"""\
@@ -153,9 +153,14 @@ Would you like to perform the upgrade (y/n)? """)
 
 
 @contextlib.contextmanager
-def get_db(opts):
-    with get_store(opts) as store, contextlib.closing(store.connect()) as db:
+def get_db(opts, mode):
+    with get_store(opts) as store, \
+            contextlib.closing(store.connect(mode=mode)) as db, db:
         yield db
+
+
+def read_db(opts): return get_db(opts, 'ro')
+def write_db(opts): return get_db(opts, 'rw')
 
 
 def store_backup_path(store):
@@ -170,7 +175,7 @@ def upgrade_store(opts, store, db, version, to_version):
     o.write(f"Backing up store to {backup}\n")
     store.backup(db, backup)
     def on_version(v): o.write(f"Upgrading store to version {v}\n")
-    store.upgrade(db, version=to_version, on_version=on_version)
+    store.upgrade(version=to_version, on_version=on_version)
     o.write("Store upgraded successfully\n")
 
 
@@ -250,14 +255,14 @@ def add_group_commands(parser):
 
 
 def cmd_group_add(opts):
-    with get_db(opts) as db, db:
+    with write_db(opts) as db:
         db.groups.modify(opts.origin, opts.group,
                          add_users=comma_separated(opts.users),
                          add_groups=comma_separated(opts.groups))
 
 
 def cmd_group_list(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         groups = db.groups.list(opts.groups)
     groups.sort()
     o = opts.stdout
@@ -265,7 +270,7 @@ def cmd_group_list(opts):
 
 
 def cmd_group_members(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         members = db.groups.members(opts.origin, opts.groups,
                                     transitive=opts.transitive)
     members.sort()
@@ -286,7 +291,7 @@ def cmd_group_members(opts):
 
 
 def cmd_group_memberships(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         memberships = db.groups.memberships(opts.origin, opts.groups)
     memberships.sort()
     wmember = max((len(m[0]) for m in memberships), default=0)
@@ -300,7 +305,7 @@ def cmd_group_memberships(opts):
 
 
 def cmd_group_remove(opts):
-    with get_db(opts) as db, db:
+    with write_db(opts) as db:
         db.groups.modify(opts.origin, opts.group,
                          remove_users=comma_separated(opts.users),
                          remove_groups=comma_separated(opts.groups))
@@ -366,7 +371,7 @@ def add_store_commands(parser):
 
 def cmd_store_backup(opts):
     with get_store(opts, check_latest=False) as store, \
-            contextlib.closing(store.connect(params='mode=ro')) as db:
+            contextlib.closing(store.connect(mode='ro')) as db, db:
         if opts.destination is None: opts.destination = store_backup_path(store)
         store.backup(db, opts.destination)
 
@@ -379,8 +384,8 @@ def cmd_store_create(opts):
 
 def cmd_store_upgrade(opts):
     with get_store(opts, check_latest=False) as store, \
-            contextlib.closing(store.connect()) as db:
-        version, latest = store.version(db)
+            contextlib.closing(store.connect(mode='rw')) as db:
+        with db: version, latest = store.version(db)
         if version == latest:
             opts.stdout.write(
                 f"Store is already up-to-date (version: {version})\n")
@@ -430,7 +435,7 @@ def add_origin_option(arg):
 
 
 def cmd_token_create(opts):
-    with get_db(opts) as db, db:
+    with write_db(opts) as db:
         uids = [db.users.uid(u) for u in opts.user]
         tokens = db.tokens.create(uids, opts.expire)
     width = max((len(u) for u in opts.user), default=0)
@@ -442,12 +447,12 @@ def cmd_token_create(opts):
 
 
 def cmd_token_expire(opts):
-    with get_db(opts) as db, db:
+    with write_db(opts) as db:
         db.tokens.expire(opts.token, opts.time)
 
 
 def cmd_token_list(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         tokens = db.tokens.list(opts.users, expired=opts.expired)
     epoch = datetime.datetime.fromtimestamp(0)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
@@ -497,7 +502,7 @@ def add_user_commands(parser):
 
 
 def cmd_user_create(opts):
-    with get_db(opts) as db, db:
+    with write_db(opts) as db:
         uids = db.users.create(opts.user)
         tokens = db.tokens.create(uids, opts.token_expire)
     wuser = max((len(u) for u in opts.user), default=0)
@@ -508,7 +513,7 @@ def cmd_user_create(opts):
 
 
 def cmd_user_list(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         users = db.users.list(opts.users)
     users.sort(key=lambda r: r[0])
     wuser = max((len(u[0]) for u in users), default=0)
@@ -520,7 +525,7 @@ def cmd_user_list(opts):
 
 
 def cmd_user_memberships(opts):
-    with get_db(opts) as db, db:
+    with read_db(opts) as db:
         memberships = db.users.memberships(opts.origin, opts.users,
                                            transitive=opts.transitive)
     memberships.sort()

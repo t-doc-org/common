@@ -33,15 +33,6 @@ def to_json(data, sort_keys=False):
 def placeholders(args): return ', '.join('?' * len(args))
 
 
-@contextlib.contextmanager
-def autocommit(db, value):
-    saved, db.autocommit = db.autocommit, value
-    try:
-        yield
-    finally:
-        db.autocommit = saved
-
-
 class Error(Exception): pass
 client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
@@ -61,24 +52,13 @@ class Seqs(dict):
 
 
 class Connection(sqlite3.Connection):
-    def __enter__(self):
-        self._notify = Seqs()
-        return super().__enter__()
-
-    def __exit__(self, typ, value, tb):
-        res = super().__exit__(typ, value, tb)
-        if typ is None and self._notify:
-            self._store.notify(self._notify)
-        del self._notify
-        return res
+    def executescript(self, *args, **kwargs):
+        # executescript() executes a COMMIT first if autocommit is
+        # LEGACY_TRANSACTION_CONTROL and there is a pending transaction.
+        raise NotImplementedError("executescript")
 
     def notify(self, *keys):
-        for key in keys:
-            self._notify[key], = self.row("""
-                insert into notifications (key, seq) values (?, 1)
-                on conflict do update set seq = (seq + 1) & ?
-                returning seq
-            """, (key, Seqs.mask))
+        raise TypeError("Notification on read-only connection")
 
     def notifications(self, keys):
         return Seqs(self.execute(f"""
@@ -91,8 +71,8 @@ class Connection(sqlite3.Connection):
         return default
 
     def meta(self, key, default=None):
-        for value, in self.execute(
-                "select value from meta where key = ?", (key,)):
+        for value, in self.execute("select value from meta where key = ?",
+                                   (key,)):
             return value
         return default
 
@@ -144,6 +124,34 @@ class Connection(sqlite3.Connection):
 
     @functools.cached_property
     def polls(self): return Polls(self)
+
+
+class WriteConnection(Connection):
+    def __enter__(self):
+        self._notify = Seqs()
+        db = super().__enter__()
+        if self.autocommit == sqlite3.LEGACY_TRANSACTION_CONTROL:
+            try:
+                db.execute(f"begin {db.isolation_level or ''}")
+            except BaseException:
+                db.rollback()
+                raise
+        return db
+
+    def __exit__(self, typ, value, tb):
+        res = super().__exit__(typ, value, tb)
+        if typ is None and self._notify:
+            self._store.notify(self._notify)
+        del self._notify
+        return res
+
+    def notify(self, *keys):
+        for key in keys:
+            self._notify[key], = self.row("""
+                insert into notifications (key, seq) values (?, 1)
+                on conflict do update set seq = (seq + 1) & ?
+                returning seq
+            """, (key, Seqs.mask))
 
 
 class DbNamespace:
@@ -535,17 +543,17 @@ class Polls(DbNamespace):
 
 
 class ConnectionPool:
-    def __init__(self, store, size=0, params='mode=rw'):
+    def __init__(self, store, size=0, **kwargs):
         self.store = store
         self.size = size
-        self.params = params
+        self.kwargs = kwargs
         self.lock = threading.Lock()
         self.connections = []
 
     def get(self):
         with self.lock:
             if self.connections: return self.connections.pop()
-        return self.store.connect(params=self.params, check_same_thread=False)
+        return self.store.connect(**self.kwargs)
 
     def release(self, db):
         with self.lock:
@@ -593,15 +601,16 @@ class Store:
         self.path = config.path('path')
         if self.path is None and not allow_mem:
             raise Exception("No store path defined")
-        self.timeout = config.get('timeout', 10)
+        self.write_isolation_level = config.get('write_isolation_level',
+                                                'immediate')
+        self.timeout = config.get('timeout', 5)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
         self._wake = Seqs()
 
     def start(self):
-        self.dispatcher_db = self.connect(params='mode=ro',
-                                          check_same_thread=False)
+        self.dispatcher_db = self.connect(mode='ro')
         if self.path is None: self.create(dev=True)  # Create in-memory DB
         self.dispatcher = threading.Thread(target=self.dispatch)
         with self.lock: self._stop = False
@@ -621,23 +630,32 @@ class Store:
     def __exit__(self, typ, value, tb):
         self.stop()
 
-    def connect(self, *, path=False, params='mode=rw', check_same_thread=True):
+    def connect(self, *, mode, path=False, isolation_level=None):
         if path is False: path = self.path
-        uri = f'{path.as_uri()}?{params}' if path is not None \
+        if isolation_level is None: isolation_level = self.write_isolation_level
+        uri = f'{path.as_uri()}?mode={mode}' if path is not None \
               else 'file:store?mode=memory&cache=shared'
+        factory = WriteConnection if 'rw' in mode else Connection
         # Some pragmas cannot be used or are ineffective within a transaction,
         # and autocommit=False always has a transaction open. Open the
         # connection with autocommit=True, then switch after configuration.
         db = sqlite3.connect(uri, uri=True, timeout=self.timeout,
-                             factory=Connection, autocommit=True,
-                             check_same_thread=check_same_thread)
+                             factory=factory, autocommit=True,
+                             isolation_level=isolation_level,
+                             check_same_thread=False)
+        db._store = self
         db.execute("pragma journal_mode = wal")
+        # TODO: Make some of these configurable
+        # db.execute("pragma synchronous = normal")
+        # db.execute("pragma temp_store = memory")
+        # db.execute("pragma cache_size = -250000")
         db.execute("pragma foreign_keys = on")
-        db.autocommit = False
+        db.autocommit = sqlite3.LEGACY_TRANSACTION_CONTROL \
+                        if 'rw' in mode and db.isolation_level \
+                        else False
         db.create_function(
             'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
             deterministic=True)
-        db._store = self
         return db
 
     def pool(self, **kwargs):
@@ -706,24 +724,31 @@ class Store:
     def backup(self, db, dest):
         if dest.exists():
             raise Exception("Backup destination already exists")
-        with contextlib.closing(
-                self.connect(path=dest, params='mode=rwc')) as ddb:
+        with contextlib.closing(self.connect(path=dest, mode='rwc')) as ddb:
             db.backup(ddb)
 
     def create(self, version=None, dev=False):
         self._check_version(version)
         if self.path is not None and self.path.exists():
             raise Exception("Store database already exists")
-        with contextlib.closing(self.connect(params='mode=rwc')) as db:
-            return self._upgrade(db, from_version=0, to_version=version,
-                                 dev=dev)
+        with contextlib.closing(
+                self.connect(mode='rwc', isolation_level='immediate')) as db:
+            db.execute("pragma foreign_keys = off")
+            with db:
+                to_version = self._upgrade(db, from_version=0,
+                                           to_version=version, dev=dev)
+            return to_version
 
-    def upgrade(self, db, version=None, on_version=None):
+    def upgrade(self, version=None, on_version=None):
         self._check_version(version)
-        from_version = db.meta('version')
-        to_version = self._upgrade(db, from_version=from_version,
-                                   to_version=version, dev=db.dev,
-                                   on_version=on_version)
+        with contextlib.closing(
+                self.connect(mode='rw', isolation_level='immediate')) as db:
+            db.execute("pragma foreign_keys = off")
+            with db:
+                from_version = db.meta('version')
+                to_version = self._upgrade(db, from_version=from_version,
+                                           to_version=version, dev=db.dev,
+                                           on_version=on_version)
         return from_version, to_version
 
     def _check_version(self, version):
@@ -740,21 +765,13 @@ class Store:
             if on_version is not None: on_version(v)
             # For complex schema upgrades, follow:
             # https://sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes
-            with autocommit(db, True):
-                db.execute("pragma foreign_keys = off")
-            try:
-                with db:
-                    fn(db, dev, now)
-                    db.execute("""
-                        insert or replace into meta (key, value)
-                            values ('version', ?)
-                    """, (v,))
-                    db.check_foreign_keys()
-                    db.check_integrity()
-                version = v
-            finally:
-                with autocommit(db, True):
-                    db.execute("pragma foreign_keys = on")
+            fn(db, dev, now)
+            db.execute("""
+                insert or replace into meta (key, value) values ('version', ?)
+            """, (v,))
+            db.check_foreign_keys()
+            db.check_integrity()
+            version = v
         return version
 
     def versions(self, version=1):
@@ -770,158 +787,178 @@ class Store:
         return version, latest
 
     def check_version(self):
-        with contextlib.closing(self.connect(params='mode=ro')) as db, db:
+        with contextlib.closing(self.connect(mode='ro')) as db, db:
             version, latest = self.version(db)
         if version != latest:
             raise Exception("Store version mismatch "
                             f"(current: {version}, want: {latest})")
 
     def version_1(self, db, dev, now):
-        db.executescript("""
-create table meta (
-    key text primary key,
-    value any
-) strict;
-create table auth (
-    token text primary key,
-    perms text not null
-) strict;
-create table log (
-    time int not null,
-    location text not null,
-    session text,
-    data text
-) strict;
-""")
+        db.execute("""
+            create table meta (
+                key text primary key,
+                value any
+            ) strict
+        """)
+        db.execute("""
+            create table auth (
+                token text primary key,
+                perms text not null
+            ) strict
+        """)
+        db.execute("""
+            create table log (
+                time int not null,
+                location text not null,
+                session text,
+                data text
+            ) strict
+        """)
         db.execute("insert into meta values ('dev', ?)", (bool(dev),))
         if not dev: return
         db.execute("insert into auth (token, perms) values ('*', '*')")
 
     def version_2(self, db, dev, now):
-        db.executescript("""
--- Convert the meta table to "without rowid".
-create table meta_ (
-    key text primary key,
-    value any
-) strict, without rowid;
-insert into meta_ select * from meta;
-drop table meta;
-alter table meta_ rename to meta;
+        # Convert the meta table to "without rowid".
+        db.execute("""
+            create table meta_ (
+                key text primary key,
+                value any
+            ) strict, without rowid
+        """)
+        db.execute("insert into meta_ select * from meta")
+        db.execute("drop table meta")
+        db.execute("alter table meta_ rename to meta")
 
--- Create tables for user management.
-create table users (
-    id integer primary key,
-    name text not null unique,
-    created integer not null
-) strict;
-create table user_tokens (
-    token text primary key,
-    user integer not null,
-    created integer not null,
-    expires integer,
-    foreign key (user) references users (id)
-) strict, without rowid;
+        # Create tables for user management.
+        db.execute("""
+            create table users (
+                id integer primary key,
+                name text not null unique,
+                created integer not null
+            ) strict
+        """)
+        db.execute("""
+            create table user_tokens (
+                token text primary key,
+                user integer not null,
+                created integer not null,
+                expires integer,
+                foreign key (user) references users (id)
+            ) strict, without rowid
+        """)
 
--- Create tables for group management.
-create table user_memberships (
-    origin text not null,
-    user integer not null,
-    group_ text not null,
-    transitive integer not null,
-    primary key (origin, user, group_),
-    foreign key (user) references users (id)
-) strict, without rowid;
-create table group_memberships (
-    origin text not null,
-    member text not null,
-    group_ text not null,
-    primary key (origin, member, group_)
-) strict, without rowid;
+        # Create tables for group management.
+        db.execute("""
+            create table user_memberships (
+                origin text not null,
+                user integer not null,
+                group_ text not null,
+                transitive integer not null,
+                primary key (origin, user, group_),
+                foreign key (user) references users (id)
+            ) strict, without rowid
+        """)
+        db.execute("""
+            create table group_memberships (
+                origin text not null,
+                member text not null,
+                group_ text not null,
+                primary key (origin, member, group_)
+            ) strict, without rowid
+        """)
 
--- Create table for solutions state management.
-create table solutions (
-    origin text not null,
-    page text not null,
-    show text not null,
-    primary key (origin, page)
-) strict, without rowid;
-""")
+        # Create table for solutions state management.
+        db.execute("""
+            create table solutions (
+                origin text not null,
+                page text not null,
+                show text not null,
+                primary key (origin, page)
+            ) strict, without rowid
+        """)
+
         if not dev: return
         db.execute("""
-insert into users (id, name, created) values (1, 'admin', ?)
-""", (now,))
+            insert into users (id, name, created) values (1, 'admin', ?)
+        """, (now,))
         db.execute("""
-insert into user_tokens (token, user, created) values ('admin', 1, ?)
-""", (now,))
+            insert into user_tokens (token, user, created)
+                values ('admin', 1, ?)
+        """, (now,))
         db.execute("""
-insert into user_memberships (origin, user, group_, transitive)
-    values ('', 1, '*', false)
-""")
+            insert into user_memberships (origin, user, group_, transitive)
+                values ('', 1, '*', false)
+        """)
 
     def version_3(self, db, dev, now):
-        db.executescript("""
--- Create tables for poll state.
-create table polls (
-    origin text not null,
-    id text not null,
-    mode text,
-    answers integer not null default 0,
-    expires integer,
-    results integer not null default 0,
-    solutions integer not null default 0,
-    primary key (origin, id)
-) strict;
-create table poll_votes (
-    origin text not null,
-    poll text not null,
-    voter text not null,
-    answer integer not null,
-    primary key (origin, poll, voter, answer),
-    foreign key (origin, poll) references polls (origin, id)
-) strict;
-""")
+        # Create tables for poll state.
+        db.execute("""
+            create table polls (
+                origin text not null,
+                id text not null,
+                mode text,
+                answers integer not null default 0,
+                expires integer,
+                results integer not null default 0,
+                solutions integer not null default 0,
+                primary key (origin, id)
+            ) strict
+        """)
+        db.execute("""
+            create table poll_votes (
+                origin text not null,
+                poll text not null,
+                voter text not null,
+                answer integer not null,
+                primary key (origin, poll, voter, answer),
+                foreign key (origin, poll) references polls (origin, id)
+            ) strict
+        """)
 
     def version_4(self, db, dev, now):
-        db.executescript("""
-create table notifications (
-    key text primary key,
-    seq integer not null
-) strict, without rowid;
-""")
+        db.execute("""
+            create table notifications (
+                key text primary key,
+                seq integer not null
+            ) strict, without rowid
+        """)
 
     def version_5(self, db, dev, now):
-        db.executescript("""
--- Remove the uniqueness constraint on user names.
-create table users_ (
-    id integer primary key,
-    name text not null,
-    created integer not null
-) strict;
-insert into users_ select * from users;
-drop table users;
-alter table users_ rename to users;
+        # Remove the uniqueness constraint on user names.
+        db.execute("""
+            create table users_ (
+                id integer primary key,
+                name text not null,
+                created integer not null
+            ) strict
+        """)
+        db.execute("insert into users_ select * from users")
+        db.execute("drop table users")
+        db.execute("alter table users_ rename to users")
 
--- Create tables for OIDC.
-create table oidc_states (
-    state text primary key,
-    created integer not null,
-    data text not null
-) strict, without rowid;
-create table oidc_users (
-    issuer text not null,
-    subject text not null,
-    user integer not null,
-    id_token text not null,
-    updated integer not null,
-    primary key (issuer, subject),
-    foreign key (user) references users (id)
-) strict;
-create index user_oidcs on oidc_users (user);
-""")
+        # Create tables for OIDC.
+        db.execute("""
+            create table oidc_states (
+                state text primary key,
+                created integer not null,
+                data text not null
+            ) strict, without rowid
+        """)
+        db.execute("""
+            create table oidc_users (
+                issuer text not null,
+                subject text not null,
+                user integer not null,
+                id_token text not null,
+                updated integer not null,
+                primary key (issuer, subject),
+                foreign key (user) references users (id)
+            ) strict
+        """)
+        db.execute("create index user_oidcs on oidc_users (user)")
 
     def version_6(self, db, dev, now):
-        db.executescript("""
--- Drop unused tables.
-drop table auth;
-drop table log;
-""")
+        # Drop unused tables.
+        db.execute("drop table auth")
+        db.execute("drop table log")
