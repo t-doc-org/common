@@ -601,9 +601,14 @@ class Store:
         self.path = config.path('path')
         if self.path is None and not allow_mem:
             raise Exception("No store path defined")
+        self.timeout = config.get('timeout', 5)
+        self.pragma = config.get('pragma', {})
+        # The defaults are based on <https://kerkour.com/sqlite-for-servers>.
+        self.pragma.setdefault('synchronous', 'normal')
+        self.pragma.setdefault('cache_size', -250000)
+        self.pragma.setdefault('temp_store', 'memory')
         self.write_isolation_level = config.get('write_isolation_level',
                                                 'immediate')
-        self.timeout = config.get('timeout', 5)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
@@ -645,11 +650,9 @@ class Store:
                              check_same_thread=False)
         db._store = self
         db.execute("pragma journal_mode = wal")
-        # TODO: Make some of these configurable
-        # db.execute("pragma synchronous = normal")
-        # db.execute("pragma temp_store = memory")
-        # db.execute("pragma cache_size = -250000")
         db.execute("pragma foreign_keys = on")
+        for k, v in self.pragma.items():
+            db.execute(f"pragma {k} = {v}")
         db.autocommit = sqlite3.LEGACY_TRANSACTION_CONTROL \
                         if 'rw' in mode and db.isolation_level \
                         else False
@@ -785,13 +788,6 @@ class Store:
         version = db.meta('version')
         latest = max(v for v, _ in self.versions())
         return version, latest
-
-    def check_version(self):
-        with contextlib.closing(self.connect(mode='ro')) as db, db:
-            version, latest = self.version(db)
-        if version != latest:
-            raise Exception("Store version mismatch "
-                            f"(current: {version}, want: {latest})")
 
     def version_1(self, db, dev, now):
         db.execute("""
