@@ -602,7 +602,7 @@ class Store:
         if self.path is None and not allow_mem:
             raise Exception("No store path defined")
         self.timeout = config.get('timeout', 5)
-        self.pragma = config.get('pragma', {})
+        self.pragma = config.get('pragma', {}).copy()
         # The defaults are based on <https://kerkour.com/sqlite-for-servers>.
         self.pragma.setdefault('synchronous', 'normal')
         self.pragma.setdefault('cache_size', -250000)
