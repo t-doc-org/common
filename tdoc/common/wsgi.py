@@ -76,7 +76,12 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
     return decorator
 
 
+_unset = object()
+
+
 class Request:
+    __slots__ = ('env', 'respond')
+
     def __init__(self, env, respond):
         self.env = env
         self.respond = respond
@@ -113,23 +118,25 @@ class Request:
         return self.env['REQUEST_METHOD'] in self._content_methods \
                and self.env.get('CONTENT_TYPE') is not None
 
-    @property
-    def dev(self): return self.env.get('tdoc.dev', False)
+    @classmethod
+    def attr(cls, name, default=None):
+        pname = f'tdoc.{name}'
+        gname = f'tdoc.{name}.get'
+        dname = f'tdoc.{name}.del'
+        def fget(self):
+            if (v := self.env.get(pname, _unset)) is _unset:
+                fn = self.env.get(gname)
+                v = self.env[pname] = fn() if fn is not None else default
+            return v
+        def fset(self, v): self.env[pname] = v
+        def fdel(self):
+            if (v := self.env.pop(pname, None)) is not None:
+                if (fn := self.env.get(dname)) is not None: fn(v)
+        setattr(cls, name, property(fget, fset, fdel))
 
-    @dev.setter
-    def dev(self, v): self.env['tdoc.dev'] = v
-
-    @property
-    def user(self): return self.env.get('tdoc.user')
-
-    @user.setter
-    def user(self, v): self.env['tdoc.user'] = v
-
-    @property
-    def db(self): return self.env.get('tdoc.db')
-
-    @db.setter
-    def db(self, v): self.env['tdoc.db'] = v
+    def attr_handlers(self, name, fget=None, fdel=None):
+        if fget is not None: self.env[f'tdoc.{name}.get'] = fget
+        if fdel is not None: self.env[f'tdoc.{name}.del'] = fdel
 
     @property
     def json(self):
@@ -169,6 +176,9 @@ class Request:
             ('Cache-Control', 'no-store'),
         ])
         return [body]
+
+
+Request.attr('dev')
 
 
 class Dispatcher:

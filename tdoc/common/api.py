@@ -40,6 +40,10 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
     if not cond: raise wsgi.Error(code, msg)
 
 
+wsgi.Request.attr('user')
+wsgi.Request.attr('read_db')
+
+
 class Api(wsgi.Dispatcher):
     def __init__(self, *, config, store, stderr=None):
         super().__init__()
@@ -66,31 +70,23 @@ class Api(wsgi.Dispatcher):
         if e is None: e = sys.exception()
         traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
-    def read_db(self, wr):
-        if (db := wr.db) is not None: return db
-        db = wr.db = self._read_db_pool.get()
-        return db
-
     @property
     @contextlib.contextmanager
     def write_db(self):
         with self._write_db_lock, self._write_db as db:
             yield db
 
-    def authenticate(self, wr):
-        user = None
-        if token := wr.token:
-            with self.read_db(wr) as db:
-                user = db.tokens.authenticate(token)
-            if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-        wr.user = user
-
     def member_of(self, wr, db, group):
         return db.users.member_of(wr.origin, wr.user, group)
 
     def handle_request(self, handler, wr):
+        wr.attr_handlers('read_db', fget=self._read_db_pool.get,
+                         fdel=self._read_db_pool.release)
         try:
-            self.authenticate(wr)
+            if token := wr.token:
+                with wr.read_db as db: user = db.tokens.authenticate(token)
+                if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+                wr.user = user
             yield from handler(wr.env, wr.respond, wr)
         except store.client_errors:
             self.print_exception(limit=-1, chain=False)
@@ -100,9 +96,7 @@ class Api(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
         finally:
-            if (db := wr.db) is not None:
-                wr.db = None
-                self._read_db_pool.release(db)
+            del wr.read_db
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
     def handle_health(self, wr, req):
@@ -150,8 +144,7 @@ class Api(wsgi.Dispatcher):
     @wsgi.json_endpoint('user', require_authn=True)
     def handle_user(self, wr, req):
         origin = wr.origin
-        with self.read_db(wr) as db:
-            return db.users.info(origin, wr.user)
+        with wr.read_db as db: return db.users.info(origin, wr.user)
 
 
 class EventsApi(wsgi.Dispatcher):
@@ -516,7 +509,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if wr.user is not None:
             iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
-            with self.api.read_db(wr) as db:
+            with wr.read_db as db:
                 for id_token, updated in db.oidc.logins(wr.user):
                     if (info := issuers.get(id_token['iss'])) is None: continue
                     logins.append({
