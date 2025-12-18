@@ -42,6 +42,7 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 wsgi.Request.attr('user')
 wsgi.Request.attr('read_db')
+wsgi.Request.attr('write_db', cache=False)
 
 
 class Api(wsgi.Dispatcher):
@@ -70,7 +71,6 @@ class Api(wsgi.Dispatcher):
         if e is None: e = sys.exception()
         traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
-    @property
     @contextlib.contextmanager
     def write_db(self):
         with self._write_db_lock, self._write_db as db:
@@ -82,6 +82,7 @@ class Api(wsgi.Dispatcher):
     def handle_request(self, handler, wr):
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
                          fdel=self._read_db_pool.release)
+        wr.attr_handlers('write_db', fget=self.write_db)
         try:
             if token := wr.token:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
@@ -105,7 +106,7 @@ class Api(wsgi.Dispatcher):
     @wsgi.json_endpoint('poll')
     def handle_poll(self, wr, req):
         origin = wr.origin
-        with self.write_db as db:
+        with wr.write_db as db:
             if polls := req.get('open'):
                 check(self.member_of(wr, db, 'polls:control'))
                 for poll in polls:
@@ -136,7 +137,7 @@ class Api(wsgi.Dispatcher):
         origin = wr.origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
-        with self.write_db as db:
+        with wr.write_db as db:
             check(self.member_of(wr, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
@@ -526,7 +527,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_update(self, wr, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
-            with self.api.write_db as db:
+            with wr.write_db as db:
                 db.oidc.remove_login(wr.user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                             if id_token['iss'] in self.issuers)
@@ -563,7 +564,7 @@ class OidcAuthApi(wsgi.Dispatcher):
 
         # Handle "log in as" in dev mode.
         if wr.dev and (ruser := req.get('user')):
-            with self.api.write_db as db:
+            with wr.write_db as db:
                 try:
                     uid = db.users.uid(ruser)
                 except Exception as e:
@@ -585,7 +586,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         verifier = secrets.token_urlsafe(32)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(
             verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
-        with self.api.write_db as db:
+        with wr.write_db as db:
             db.oidc.create_state(state, {
                 'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
                 'verifier': verifier, 'user': wr.user, 'token': token,
@@ -610,7 +611,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         href = None
-        with self.api.write_db as db:
+        with wr.write_db as db:
             if (state := qs.get('state')) is not None:
                 data = db.oidc.state(state[0])
             if data is None:
@@ -692,7 +693,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     @wsgi.json_endpoint('logout', require_authn=True)
     def handle_logout(self, wr, req):
         token = wr.token
-        with self.api.write_db as db:
+        with wr.write_db as db:
             # Remove the token if the user has at least one login.
             count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                         if id_token['iss'] in self.issuers)

@@ -119,9 +119,12 @@ class Request:
                and self.env.get('CONTENT_TYPE') is not None
 
     @classmethod
-    def attr(cls, name, default=None):
-        pname = f'tdoc.{name}'
+    def attr(cls, name, default=None, cache=True):
         gname = f'tdoc.{name}.get'
+        if not cache:
+            setattr(cls, name, property(lambda self: self.env[gname]()))
+            return
+        pname = f'tdoc.{name}'
         dname = f'tdoc.{name}.del'
         def fget(self):
             if (v := self.env.get(pname, _unset)) is _unset:
@@ -130,8 +133,8 @@ class Request:
             return v
         def fset(self, v): self.env[pname] = v
         def fdel(self):
-            if (v := self.env.pop(pname, None)) is not None:
-                if (fn := self.env.get(dname)) is not None: fn(v)
+            if (v := self.env.pop(pname, _unset)) is _unset: return
+            if (fn := self.env.get(dname)) is not None: fn(v)
         setattr(cls, name, property(fget, fset, fdel))
 
     def attr_handlers(self, name, fget=None, fdel=None):
