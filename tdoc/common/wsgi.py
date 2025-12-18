@@ -23,25 +23,6 @@ def http_status(status):
     return f'{status} {status.phrase}'
 
 
-def error(respond, status, msg=None, exc_info=None):
-    if msg is None: msg = status.description
-    body = msg.encode('utf-8')
-    respond(http_status(status), [
-        ('Content-Type', 'text/plain; charset=utf-8'),
-        ('Content-Length', str(len(body))),
-    ], exc_info)
-    return [body]
-
-
-def redirect(respond, url):
-    respond(http_status(HTTPStatus.FOUND), [
-        ('Content-Type', 'text/plain; charset=utf-8'),
-        ('Content-Length', '0'),
-        ('Location', url),
-    ])
-    return []
-
-
 class Error(Exception):
     def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR, msg=None):
         super().__init__(status, msg)
@@ -51,56 +32,6 @@ class Error(Exception):
 
     @property
     def message(self): return self.args[1]
-
-
-def is_dev(env): return env.get('tdoc.dev', False)
-def set_dev(env, value): env['tdoc.dev'] = value
-def user(env): return env.get('tdoc.user')
-def set_user(env, user): env['tdoc.user'] = user
-def method(env): return env['REQUEST_METHOD']
-def path(env): return env['PATH_INFO']
-def query(env): return env['QUERY_STRING']
-
-
-def origin(env):
-    if (v := env.get('HTTP_ORIGIN')) is None:
-        raise Error(HTTPStatus.PRECONDITION_FAILED, "Missing Origin: header")
-    return v if not is_dev(env) else ''
-
-
-def authorization(env):
-    if (auth := env.get('HTTP_AUTHORIZATION')) is None: return ''
-    parts = auth.split()
-    if len(parts) != 2 or parts[0].lower() != 'bearer': return ''
-    return parts[1]
-
-
-_content_methods = (HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH,
-                    HTTPMethod.OPTIONS, HTTPMethod.DELETE)
-
-def has_content(env):
-    return env['REQUEST_METHOD'] in _content_methods \
-           and env.get('CONTENT_TYPE') is not None
-
-
-def read_json(env):
-    if env.get('CONTENT_TYPE') != 'application/json':
-        raise Error(HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
-    try:
-        data = env['wsgi.input'].read(int(env.get('CONTENT_LENGTH', -1)))
-        return json.loads(data)
-    except Exception as e:
-        raise Error(HTTPStatus.BAD_REQUEST)
-
-
-def respond_json(respond, data):
-    body = to_json(data).encode('utf-8')
-    respond(http_status(HTTPStatus.OK), [
-        ('Content-Type', 'application/json'),
-        ('Content-Length', str(len(body))),
-        ('Cache-Control', 'no-store'),
-    ])
-    return [body]
 
 
 def to_json(data, sort_keys=False):
@@ -145,6 +76,101 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
     return decorator
 
 
+class Request:
+    def __init__(self, env, respond):
+        self.env = env
+        self.respond = respond
+
+    method = property(lambda self: self.env['REQUEST_METHOD'])
+    path = property(lambda self: self.env['PATH_INFO'])
+    query = property(lambda self: self.env['QUERY_STRING'])
+    content_type = property(lambda self: self.env.get('CONTENT_TYPE'))
+    file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
+                                                      util.FileWrapper))
+
+    @property
+    def origin(self):
+        if (v := self.env.get('HTTP_ORIGIN')) is None:
+            raise Error(HTTPStatus.PRECONDITION_FAILED,
+                        "Missing Origin: header")
+        return v if not self.dev else ''
+
+    @property
+    def token(self):
+        if (auth := self.env.get('HTTP_AUTHORIZATION')) is None: return ''
+        parts = auth.split()
+        return parts[1] if len(parts) == 2 and parts[0].lower() == 'bearer' \
+               else ''
+
+    def uri(self, **kwargs):
+        return util.request_uri(self.env, **kwargs)
+
+    _content_methods = (HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH,
+                        HTTPMethod.OPTIONS, HTTPMethod.DELETE)
+
+    @property
+    def has_content(self):
+        return self.env['REQUEST_METHOD'] in self._content_methods \
+               and self.env.get('CONTENT_TYPE') is not None
+
+    @property
+    def dev(self): return self.env.get('tdoc.dev', False)
+
+    @dev.setter
+    def dev(self, v): self.env['tdoc.dev'] = v
+
+    @property
+    def user(self): return self.env.get('tdoc.user')
+
+    @user.setter
+    def user(self, v): self.env['tdoc.user'] = v
+
+    @property
+    def db(self): return self.env.get('tdoc.db')
+
+    @db.setter
+    def db(self, v): self.env['tdoc.db'] = v
+
+    @property
+    def json(self):
+        if (v := self.env.get('tdoc.input.json')) is not None: return v
+        if self.env.get('CONTENT_TYPE') != 'application/json':
+            raise Error(HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+        try:
+            data = self.env['wsgi.input'].read(
+                int(self.env.get('CONTENT_LENGTH', -1)))
+            v = self.env['tdoc.input.json'] = json.loads(data)
+            return v
+        except Exception as e:
+            raise Error(HTTPStatus.BAD_REQUEST)
+
+    def error(self, status, msg=None, exc_info=None):
+        if msg is None: msg = status.description
+        body = msg.encode('utf-8')
+        self.respond(http_status(status), [
+            ('Content-Type', 'text/plain; charset=utf-8'),
+            ('Content-Length', str(len(body))),
+        ], exc_info)
+        return [body]
+
+    def redirect(self, url):
+        self.respond(http_status(HTTPStatus.FOUND), [
+            ('Content-Type', 'text/plain; charset=utf-8'),
+            ('Content-Length', '0'),
+            ('Location', url),
+        ])
+        return []
+
+    def respond_json(self, data):
+        body = to_json(data).encode('utf-8')
+        self.respond(http_status(HTTPStatus.OK), [
+            ('Content-Type', 'application/json'),
+            ('Content-Length', str(len(body))),
+            ('Cache-Control', 'no-store'),
+        ])
+        return [body]
+
+
 class Dispatcher:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,28 +193,28 @@ class Dispatcher:
         if (h := self._endpoints.get('/')) is not None: return h
         raise Error(HTTPStatus.NOT_FOUND)
 
-    def __call__(self, env, respond):
+    def __call__(self, env, respond, wr=None):
+        if wr is None: wr = Request(env, respond)
         try:
-            yield from self.handle_request(self.get_handler(env), env, respond)
+            yield from self.handle_request(self.get_handler(wr.env), wr)
         except Error as e:
-            yield from error(respond, e.status, e.message,
-                             exc_info=sys.exc_info())
+            yield from wr.error(e.status, e.message, exc_info=sys.exc_info())
 
-    def handle_request(self, handler, env, respond):
-        return handler(env, respond)
+    def handle_request(self, handler, wr):
+        return handler(wr.env, wr.respond, wr)
 
 
 def endpoint(name, methods=None, final=True, require_authn=False):
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
-        def dfn(self, /, env, respond):
-            if final and env['PATH_INFO']: raise Error(HTTPStatus.NOT_FOUND)
-            if env['REQUEST_METHOD'] not in methods:
+        def dfn(self, /, env, respond, wr):
+            if final and wr.path: raise Error(HTTPStatus.NOT_FOUND)
+            if wr.method not in methods:
                 raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
-            if (user := env.get('tdoc.user')) is None and require_authn:
+            if require_authn and wr.user is None:
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-            return fn(self, env, user, respond)
+            return fn(self, wr)
         if name is not None: dfn._endpoint = name
         return dfn
     return decorator
@@ -198,9 +224,9 @@ def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False):
     def decorator(fn):
         @endpoint(name, methods=methods, require_authn=require_authn)
         @functools.wraps(fn)
-        def dfn(self, /, env, user, respond):
-            req = read_json(env) if has_content(env) else None
-            return respond_json(respond, fn(self, env, user, req))
+        def dfn(self, /, wr):
+            return wr.respond_json(
+                fn(self, wr, wr.json if wr.has_content else None))
         return dfn
     return decorator
 

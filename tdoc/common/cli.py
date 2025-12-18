@@ -773,15 +773,15 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
 
-    def handle_request(self, handler, env, respond):
-        env['wsgi.multithread'] = True
-        wsgi.set_dev(env, True)
-        return handler(env, respond)
+    def handle_request(self, handler, wr):
+        wr.env['wsgi.multithread'] = True
+        wr.dev = True
+        return handler(wr.env, wr.respond, wr)
 
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
                    final=False)
-    def handle_cache(self, env, user, respond):
-        yield from self.handle_file(env, respond, self.opts.cache,
+    def handle_cache(self, wr):
+        yield from self.handle_file(wr, self.opts.cache,
                                     self.on_cache_not_found)
 
     def on_cache_not_found(self, path_info, path):
@@ -803,13 +803,13 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             self.opts.stderr.write(f"Cache: {e}\n")
 
     @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False)
-    def handle_default(self, env, user, respond):
+    def handle_default(self, wr):
         with self.lock: base = self.directory
-        yield from self.handle_file(env, respond, base)
+        yield from self.handle_file(wr, base)
 
-    def handle_file(self, env, respond, base, on_not_found=None):
-        method = wsgi.method(env)
-        path_info = wsgi.path(env)
+    def handle_file(self, wr, base, on_not_found=None):
+        method = wr.method
+        path_info = wr.path
         path = self.file_path(path_info, base)
         path.relative_to(base)  # Ensure we're below base
         if (st := try_stat(path)) is None:
@@ -823,7 +823,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
-                respond(wsgi.http_status(HTTPStatus.MOVED_PERMANENTLY), [
+                wr.respond(wsgi.http_status(HTTPStatus.MOVED_PERMANENTLY), [
                     ('Location', location),
                     ('Content-Length', '0'),
                 ])
@@ -835,13 +835,12 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         if not stat.S_ISREG(st.st_mode):
             raise wsgi.Error(HTTPStatus.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
-        respond(wsgi.http_status(HTTPStatus.OK), [
+        wr.respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
         ])
         if method == HTTPMethod.HEAD: return
-        wrapper = env.get('wsgi.file_wrapper', wsgiutil.FileWrapper)
-        yield from wrapper(open(path, 'rb'))
+        yield from wr.file_wrapper(open(path, 'rb'))
 
     def file_path(self, path, base):
         trailing = path.rstrip().endswith('/')
@@ -857,10 +856,9 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         return res / '' if trailing else res
 
     @wsgi.endpoint(None, methods=(HTTPMethod.POST,))
-    def handle_terminate(self, env, user, respond):
-        req = wsgi.read_json(env)
-        rc = req.get('rc', 0)
-        yield from wsgi.respond_json(respond, {})
+    def handle_terminate(self, wr):
+        rc = wr.json.get('rc', 0)
+        yield from wr.respond_json({})
         try:
             self.returncode = int(rc)
         except ValueError:

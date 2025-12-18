@@ -66,9 +66,9 @@ class Api(wsgi.Dispatcher):
         if e is None: e = sys.exception()
         traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
-    def read_db(self, env):
-        if (db := env.get('tdoc.db')) is not None: return db
-        db = env['tdoc.db'] = self._read_db_pool.get()
+    def read_db(self, wr):
+        if (db := wr.db) is not None: return db
+        db = wr.db = self._read_db_pool.get()
         return db
 
     @property
@@ -77,21 +77,21 @@ class Api(wsgi.Dispatcher):
         with self._write_db_lock, self._write_db as db:
             yield db
 
-    def authenticate(self, env):
+    def authenticate(self, wr):
         user = None
-        if token := wsgi.authorization(env):
-            with self.read_db(env) as db:
+        if token := wr.token:
+            with self.read_db(wr) as db:
                 user = db.tokens.authenticate(token)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-        wsgi.set_user(env, user)
+        wr.user = user
 
-    def member_of(self, env, db, group):
-        return db.users.member_of(wsgi.origin(env), wsgi.user(env), group)
+    def member_of(self, wr, db, group):
+        return db.users.member_of(wr.origin, wr.user, group)
 
-    def handle_request(self, handler, env, respond):
+    def handle_request(self, handler, wr):
         try:
-            self.authenticate(env)
-            yield from handler(env, respond)
+            self.authenticate(wr)
+            yield from handler(wr.env, wr.respond, wr)
         except store.client_errors:
             self.print_exception(limit=-1, chain=False)
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
@@ -100,19 +100,20 @@ class Api(wsgi.Dispatcher):
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
         finally:
-            if (db := env.pop('tdoc.db', None)) is not None:
+            if (db := wr.db) is not None:
+                wr.db = None
                 self._read_db_pool.release(db)
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
-    def handle_health(self, env, user, req):
+    def handle_health(self, wr, req):
         return {}
 
     @wsgi.json_endpoint('poll')
-    def handle_poll(self, env, user, req):
-        origin = wsgi.origin(env)
+    def handle_poll(self, wr, req):
+        origin = wr.origin
         with self.write_db as db:
             if polls := req.get('open'):
-                check(self.member_of(env, db, 'polls:control'))
+                check(self.member_of(wr, db, 'polls:control'))
                 for poll in polls:
                     mode = arg(poll, 'mode', lambda v: v in ('single', 'multi'))
                     expires = None if (exp := poll.get('exp')) is None \
@@ -120,16 +121,16 @@ class Api(wsgi.Dispatcher):
                     db.polls.open(origin, arg(poll, 'id'), mode,
                                   arg(poll, 'answers'), expires)
             if ids := req.get('close'):
-                check(self.member_of(env, db, 'polls:control'))
+                check(self.member_of(wr, db, 'polls:control'))
                 db.polls.close(origin, ids)
             if ids := req.get('results'):
-                check(self.member_of(env, db, 'polls:control'))
+                check(self.member_of(wr, db, 'polls:control'))
                 db.polls.results(origin, ids, arg(req, 'value'))
             if ids := req.get('solutions'):
-                check(self.member_of(env, db, 'polls:control'))
+                check(self.member_of(wr, db, 'polls:control'))
                 db.polls.solutions(origin, ids, arg(req, 'value'))
             if ids := req.get('clear'):
-                check(self.member_of(env, db, 'polls:control'))
+                check(self.member_of(wr, db, 'polls:control'))
                 db.polls.clear(origin, ids)
             if 'vote' in req:
                 db.polls.vote(origin, *args(req, 'id', 'voter', 'answer',
@@ -137,20 +138,20 @@ class Api(wsgi.Dispatcher):
         return {}
 
     @wsgi.json_endpoint('solutions')
-    def handle_solutions(self, env, user, req):
-        origin = wsgi.origin(env)
+    def handle_solutions(self, wr, req):
+        origin = wr.origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
         with self.write_db as db:
-            check(self.member_of(env, db, 'solutions:write'))
+            check(self.member_of(wr, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
 
     @wsgi.json_endpoint('user', require_authn=True)
-    def handle_user(self, env, user, req):
-        origin = wsgi.origin(env)
-        with self.read_db(env) as db:
-            return db.users.info(origin, user)
+    def handle_user(self, wr, req):
+        origin = wr.origin
+        with self.read_db(wr) as db:
+            return db.users.info(origin, wr.user)
 
 
 class EventsApi(wsgi.Dispatcher):
@@ -174,13 +175,13 @@ class EventsApi(wsgi.Dispatcher):
     def remove_observable(self, obs):
         with self.lock: self.observables.pop(obs.key, None)
 
-    def find_observable(self, req, env):
+    def find_observable(self, req, wr):
         key = Observable.hash(req)
         with self.lock:
             if (obs := self.observables.get(key)) is not None:
                 if not obs.stopping: return obs
             if (cls := DynObservable.lookup(req['name'])) is not None:
-                obs = cls(req, self, env)
+                obs = cls(req, self, wr)
                 self.observables[obs.key] = obs
                 return obs
         raise Exception("Observable not found")
@@ -213,37 +214,37 @@ class EventsApi(wsgi.Dispatcher):
                         self._last_watcher = time.time_ns()
 
     @wsgi.endpoint('watch', methods=(HTTPMethod.POST,))
-    def handle_watch(self, env, user, respond):
-        req = wsgi.read_json(env)
+    def handle_watch(self, wr):
+        req = wr.json
         with self.watcher() as watcher:
-            respond(wsgi.http_status(HTTPStatus.OK), [
+            wr.respond(wsgi.http_status(HTTPStatus.OK), [
                 ('Content-Type', 'text/plain; charset=utf-8'),
                 ('Cache-Control', 'no-store'),
             ])
             resp = {'sid': watcher.sid}
-            if failed := self.watch(watcher, req.get('add', []), env):
+            if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
             yield wsgi.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
     @wsgi.json_endpoint('sub')
-    def handle_sub(self, env, user, req):
+    def handle_sub(self, wr, req):
         sid = arg(req, 'sid')
         with self.lock: watcher = self.watchers.get(sid)
         if watcher is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Unknown stream ID")
         resp = {}
         for wid in req.get('remove', []): watcher.unwatch(wid)
-        if failed := self.watch(watcher, req.get('add', []), env):
+        if failed := self.watch(watcher, req.get('add', []), wr):
             resp['failed'] = failed
         return resp
 
-    def watch(self, watcher, adds, env):
+    def watch(self, watcher, adds, wr):
         failed = []
         for add in adds:
             if (wid := add.get('wid')) is None: continue
             try:
-                watcher.watch(wid, self.find_observable(add['req'], env))
+                watcher.watch(wid, self.find_observable(add['req'], wr))
             except Exception:
                 failed.append(wid)
         return failed
@@ -443,8 +444,9 @@ class DbObservable(DynObservable):
 
 
 class SolutionsObservable(DbObservable, name='solutions'):
-    def __init__(self, req, events, env):
-        self._origin = wsgi.origin(env)
+    def __init__(self, req, events, wr):
+        # TODO
+        self._origin = wr.origin
         self._page = arg(req, 'page')
         super().__init__(req, events)
 
@@ -456,8 +458,8 @@ class SolutionsObservable(DbObservable, name='solutions'):
 
 
 class PollObservable(DbObservable, name='poll'):
-    def __init__(self, req, events, env):
-        self._origin = wsgi.origin(env)
+    def __init__(self, req, events, wr):
+        self._origin = wr.origin
         self._id = arg(req, 'id')
         super().__init__(req, events)
 
@@ -472,8 +474,8 @@ class PollObservable(DbObservable, name='poll'):
 
 
 class PollVotesObservable(DbObservable, name='poll/votes'):
-    def __init__(self, req, events, env):
-        self._origin = wsgi.origin(env)
+    def __init__(self, req, events, wr):
+        self._origin = wr.origin
         self._voter, self._ids = args(req, 'voter', 'ids')
         self._ids.sort()
         super().__init__(req, events)
@@ -507,15 +509,15 @@ class OidcAuthApi(wsgi.Dispatcher):
         return json.loads(self.api.cache.get(info['discovery'], timeout=10))
 
     @wsgi.json_endpoint('info')
-    def handle_info(self, env, user, req):
+    def handle_info(self, wr, req):
         issuers = self.issuers
         resp = {'issuers': [{'issuer': i, 'label': info.get('label', i)}
                             for i, info in issuers.items()]}
-        if user is not None:
+        if wr.user is not None:
             iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
-            with self.api.read_db(env) as db:
-                for id_token, updated in db.oidc.logins(user):
+            with self.api.read_db(wr) as db:
+                for id_token, updated in db.oidc.logins(wr.user):
                     if (info := issuers.get(id_token['iss'])) is None: continue
                     logins.append({
                         'email': id_token['email'],
@@ -528,12 +530,12 @@ class OidcAuthApi(wsgi.Dispatcher):
         return resp
 
     @wsgi.json_endpoint('update', require_authn=True)
-    def handle_update(self, env, user, req):
+    def handle_update(self, wr, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
             with self.api.write_db as db:
-                db.oidc.remove_login(user, iss, sub)
-                count = sum(1 for id_token, _ in db.oidc.logins(user)
+                db.oidc.remove_login(wr.user, iss, sub)
+                count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                             if id_token['iss'] in self.issuers)
                 if count < 1:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
@@ -563,11 +565,11 @@ class OidcAuthApi(wsgi.Dispatcher):
         return info
 
     @wsgi.json_endpoint('login')
-    def handle_login(self, env, user, req):
-        token = wsgi.authorization(env)
+    def handle_login(self, wr, req):
+        token = wr.token
 
         # Handle "log in as" in dev mode.
-        if wsgi.is_dev(env) and (ruser := req.get('user')):
+        if wr.dev and (ruser := req.get('user')):
             with self.api.write_db as db:
                 try:
                     uid = db.users.uid(ruser)
@@ -581,7 +583,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
         href_origin = parse.urlunparse(parse.urlparse(href)._replace(
             path='', params='', query='', fragment=''))
-        if href_origin != env.get('HTTP_ORIGIN'):
+        if href_origin != wr.env.get('HTTP_ORIGIN'):
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
         info, disc = self.issuer(issuer)
         state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
@@ -593,10 +595,10 @@ class OidcAuthApi(wsgi.Dispatcher):
         with self.api.write_db as db:
             db.oidc.create_state(state, {
                 'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
-                'verifier': verifier, 'user': user, 'token': token,
+                'verifier': verifier, 'user': wr.user, 'token': token,
                 'href': href,
             })
-        auth = wsgi.request_uri(env).rsplit('/', 1)[0]
+        auth = wr.uri().rsplit('/', 1)[0]
         parts = parse.urlparse(disc['authorization_endpoint'])
         parts = parts._replace(query=parse.urlencode({
             'client_id': info['client_id'],
@@ -607,13 +609,13 @@ class OidcAuthApi(wsgi.Dispatcher):
             'response_type': 'code',
             'scope': 'openid profile email',
             'state': state,
-            **({'prompt': 'select_account'} if user is not None else {}),
+            **({'prompt': 'select_account'} if wr.user is not None else {}),
         }))
         return {'redirect': parse.urlunparse(parts)}
 
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,))
-    def handle_redirect(self, env, user, respond):
-        qs = parse.parse_qs(wsgi.query(env))
+    def handle_redirect(self, wr):
+        qs = parse.parse_qs(wr.query)
         href = None
         with self.api.write_db as db:
             if (state := qs.get('state')) is not None:
@@ -622,14 +624,14 @@ class OidcAuthApi(wsgi.Dispatcher):
                 raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
             href = data['href']
             try:
-                params = self._handle_redirect(env, qs, db, data)
+                params = self._handle_redirect(wr, qs, db, data)
             except Exception as e:
                 params = {'auth_error': str(e)}
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
-        return wsgi.redirect(respond, parse.urlunparse(parts))
+        return wr.redirect(parse.urlunparse(parts))
 
-    def _handle_redirect(self, env, qs, db, state):
+    def _handle_redirect(self, wr, qs, db, state):
         if (err := self.get_error(qs)) is not None:
             raise Exception(err or "Unknown ID issuer error")
         if (code := qs.get('code')) is None: raise Exception("Missing code")
@@ -641,7 +643,7 @@ class OidcAuthApi(wsgi.Dispatcher):
             'code_verifier': state['verifier'],
             'client_id': info['client_id'],
             'client_secret': info['client_secret'],
-            'redirect_uri': wsgi.request_uri(env, include_query=False),
+            'redirect_uri': wr.uri(include_query=False),
             'grant_type': 'authorization_code',
         }).encode('utf-8')
         req = request.Request(disc['token_endpoint'], data, headers={
@@ -695,11 +697,11 @@ class OidcAuthApi(wsgi.Dispatcher):
         return err
 
     @wsgi.json_endpoint('logout', require_authn=True)
-    def handle_logout(self, env, user, req):
-        token = wsgi.authorization(env)
+    def handle_logout(self, wr, req):
+        token = wr.token
         with self.api.write_db as db:
             # Remove the token if the user has at least one login.
-            count = sum(1 for id_token, _ in db.oidc.logins(user)
+            count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                         if id_token['iss'] in self.issuers)
             if count > 0: db.tokens.remove([token])
         return {}
