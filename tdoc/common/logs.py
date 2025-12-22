@@ -9,6 +9,7 @@ import gzip
 import logging
 from logging import handlers
 import os
+import queue
 import shutil
 import threading
 import traceback
@@ -29,21 +30,32 @@ class CtxFilter(logging.Filter):
         return True
 
 
+def format_exception(rec):
+    if rec.exc_info and not rec.exc_text:
+        parts = traceback.format_exception(
+            *rec.exc_info, limit=getattr(rec, 'exc_limit', None),
+            chain=getattr(rec, 'exc_chain', True))
+        if parts and (last := parts[-1])[-1:] == "\n": parts[-1] = last[:-1]
+        rec.exc_text = "".join(parts)
+        rec.exc_info = None
+
+
 class Formatter(logging.Formatter):
     def format(self, rec):
-        if rec.exc_info and not rec.exc_text:
-            # This needs to be done here instead of formatException(), because
-            # the latter doesn't have access to the LogRecord.
-            parts = traceback.format_exception(
-                *rec.exc_info, limit=getattr(rec, 'exc_limit', None),
-                chain=getattr(rec, 'exc_chain', True))
-            if parts and (last := parts[-1])[-1:] == "\n": parts[-1] = last[:-1]
-            rec.exc_text = "".join(parts)
+        # This needs to be done here instead of formatException(), because the
+        # latter doesn't have access to the LogRecord.
+        format_exception(rec)
         return super().format(rec).replace("\n", "\n| ")
 
     def formatTime(self, rec, datefmt=None):
         dt = datetime.datetime.utcfromtimestamp(rec.created)
         return dt.isoformat(timespec='microseconds')
+
+
+class QueueHandler(handlers.QueueHandler):
+    def prepare(self, rec):
+        format_exception(rec)
+        return rec
 
 
 def compress(src, dst):
@@ -55,6 +67,7 @@ def compress(src, dst):
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False):
     if config is None: config = _config.Config({})
+    transport = config.get('transport', 'queue')
 
     logging.raiseExceptions = False
     logging.lastResort = logging.NullHandler()
@@ -65,16 +78,16 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
 
     with contextlib.ExitStack() as stack:
         stack.callback(logging.shutdown)
+        hs = []
 
         if stderr is not None and \
                 (c := config.sub('stream')).get('enabled', stream):
             sh = logging.StreamHandler(stream=stderr)
             sh.setLevel(c.get('level', NOTSET))
             stack.callback(sh.flush)
-            sh.addFilter(ctx_filter)
             sh.setFormatter(Formatter(
                 c.get('format', '{ilevel} [{ctx:20}] {message}'), style='{'))
-            root.addHandler(sh)
+            hs.append(sh)
 
         if (c := config.sub('file')).get('enabled', False) \
                 and (path := c.path('path')) is not None:
@@ -86,10 +99,28 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
                 fh.namer = lambda n: f'{n}.gz'
                 fh.rotator = compress
             fh.setLevel(c.get('level', NOTSET))
-            fh.addFilter(ctx_filter)
             fh.setFormatter(Formatter(
                 c.get('format', '{asctime} {ilevel} [{ctx:20}] {message}'),
                 style='{'))
-            root.addHandler(fh)
+            hs.append(fh)
+
+        if not hs:
+            pass
+        elif transport == 'none':
+            for h in hs:
+                h.addFilter(ctx_filter)
+                root.addHandler(h)
+        elif transport == 'queue':
+            q = queue.Queue()
+            # TODO(py-3.14): Use QueueListener as a context manager
+            ql = handlers.QueueListener(q, *hs, respect_handler_level=True)
+            ql.start()
+            stack.callback(ql.stop)
+            qh = QueueHandler(q)
+            qh.setLevel(min(h.level for h in hs))
+            qh.addFilter(ctx_filter)
+            root.addHandler(qh)
+        else:
+            raise Exception(f"Invalid log transport: {transport}")
 
         yield
