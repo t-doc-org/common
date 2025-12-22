@@ -18,6 +18,7 @@ from . import config as _config
 
 globals().update(logging.getLevelNamesMapping())
 logger = logging.getLogger
+log = logger(__name__)
 
 ctx = contextvars.ContextVar('ctx', default=None)
 
@@ -122,5 +123,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
             root.addHandler(qh)
         else:
             raise Exception(f"Invalid log transport: {transport}")
+
+        log.debug("Logs: transport=%s", transport)
+        stack.callback(lambda: log.debug("Logs: stopping"))
 
         yield
