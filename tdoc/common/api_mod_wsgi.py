@@ -3,6 +3,7 @@
 
 import contextlib
 import mod_wsgi
+import sys
 import threading
 
 from tdoc.common import api, store, logs, util, wsgi
@@ -21,7 +22,8 @@ def application(config_path, origins, events_level=logs.NOTSET):
     store_config.setdefault('pool_size', mod_wsgi.threads_per_process)
 
     stack = contextlib.ExitStack()
-    stack.enter_context(logs.configure(config=config.sub('logging')))
+    stack.enter_context(logs.configure(config=config.sub('logging'),
+                                       stderr=sys.stderr))
 
     @mod_wsgi.subscribe_shutdown
     def on_shutdown(event, **kwargs):
