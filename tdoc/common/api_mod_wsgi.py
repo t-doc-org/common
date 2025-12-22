@@ -6,7 +6,7 @@ import mod_wsgi
 import sys
 import threading
 
-from tdoc.common import api, store, logs, util, wsgi
+from tdoc.common import api, config, store, logs, wsgi
 
 log = logs.logger(__name__)
 
@@ -15,14 +15,14 @@ def application(config_path, origins, events_level=logs.NOTSET):
     threading.current_thread().name = 'main'
 
     # Load the config and set defaults.
-    config = util.Config.load(config_path)
-    store_config = config.sub('store')
+    cfg = config.Config.load(config_path)
+    store_config = cfg.sub('store')
     store_config.setdefault('poll_interval',
                             1 if mod_wsgi.maximum_processes > 1 else 0)
     store_config.setdefault('pool_size', mod_wsgi.threads_per_process)
 
     stack = contextlib.ExitStack()
-    stack.enter_context(logs.configure(config=config.sub('logging'),
+    stack.enter_context(logs.configure(config=cfg.sub('logging'),
                                        stderr=sys.stderr))
 
     @mod_wsgi.subscribe_shutdown
@@ -37,7 +37,7 @@ def application(config_path, origins, events_level=logs.NOTSET):
 
     # Instantiate the store and the API.
     st = stack.enter_context(store.Store(store_config, check_version=True))
-    app = stack.enter_context(api.Api(config=config, store=st))
+    app = stack.enter_context(api.Api(config=cfg, store=st))
 
     return wsgi.cors(
         origins=origins,

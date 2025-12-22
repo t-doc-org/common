@@ -13,7 +13,7 @@ import shutil
 import threading
 import traceback
 
-from . import config as tconfig
+from . import config as _config
 
 globals().update(logging.getLevelNamesMapping())
 logger = logging.getLogger
@@ -54,7 +54,7 @@ def compress(src, dst):
 
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False):
-    if config is None: config = tconfig.Config({})
+    if config is None: config = _config.Config({})
 
     logging.raiseExceptions = False
     logging.lastResort = logging.NullHandler()
