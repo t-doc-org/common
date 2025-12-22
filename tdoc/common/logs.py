@@ -3,10 +3,17 @@
 
 import contextlib
 import contextvars
+import datetime
 import functools
+import gzip
 import logging
+from logging import handlers
+import os
+import shutil
 import threading
 import traceback
+
+from . import config as tconfig
 
 globals().update(logging.getLevelNamesMapping())
 logger = logging.getLogger
@@ -34,30 +41,55 @@ class Formatter(logging.Formatter):
             rec.exc_text = "".join(parts)
         return super().format(rec).replace("\n", "\n| ")
 
+    def formatTime(self, rec, datefmt=None):
+        dt = datetime.datetime.utcfromtimestamp(rec.created)
+        return dt.isoformat(timespec='microseconds')
+
+
+def compress(src, dst):
+    with open(src, 'rb') as inp, gzip.open(dst, 'wb') as out:
+        shutil.copyfileobj(inp, out)
+    os.remove(src)
+
 
 @contextlib.contextmanager
-def configure(config=None, stderr=None, level=logging.WARNING, stream=False,
-              stream_format='{ilevel} [{ctx:20}] {message}'):
-    if config is None: config = {}
-    level = config.get('level', level)
-    stream = config.get('stream', stream)
-    stream_format = config.get('stream_format', stream_format)
+def configure(config=None, stderr=None, level=WARNING, stream=False):
+    if config is None: config = tconfig.Config({})
 
     logging.raiseExceptions = False
     logging.lastResort = logging.NullHandler()
 
     root = logging.getLogger()
-    root.setLevel(level)
+    root.setLevel(config.get('level', level))
     ctx_filter = CtxFilter()
 
     with contextlib.ExitStack() as stack:
         stack.callback(logging.shutdown)
 
-        if stream and stderr is not None:
+        if stderr is not None and \
+                (c := config.sub('stream')).get('enabled', stream):
             sh = logging.StreamHandler(stream=stderr)
+            sh.setLevel(c.get('level', NOTSET))
             stack.callback(sh.flush)
             sh.addFilter(ctx_filter)
-            sh.setFormatter(Formatter(stream_format, style='{'))
+            sh.setFormatter(Formatter(
+                c.get('format', '{ilevel} [{ctx:20}] {message}'), style='{'))
             root.addHandler(sh)
+
+        if (c := config.sub('file')).get('enabled', False) \
+                and (path := c.path('path')) is not None:
+            fh = handlers.TimedRotatingFileHandler(
+                path, encoding='utf-8', utc=True,
+                when=c.get('when', 'W6'), interval=c.get('interval', 1),
+                backupCount=c.get('keep', 4), )
+            if c.get('compress', True):
+                fh.namer = lambda n: f'{n}.gz'
+                fh.rotator = compress
+            fh.setLevel(c.get('level', NOTSET))
+            fh.addFilter(ctx_filter)
+            fh.setFormatter(Formatter(
+                c.get('format', '{asctime} {ilevel} [{ctx:20}] {message}'),
+                style='{'))
+            root.addHandler(fh)
 
         yield

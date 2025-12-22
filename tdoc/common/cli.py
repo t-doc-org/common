@@ -25,7 +25,8 @@ from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, deps, logs, store, util, wsgi
+from . import __project__, __version__, api, config, deps, logs, store, util, \
+              wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
@@ -105,7 +106,7 @@ def main(argv, stdin, stdout, stderr):
     opts = parser.parse_args(argv[1:])
     if opts.config is None and (lc := local_config.resolve()).is_file():
         opts.config = lc
-    opts.cfg = util.Config.load(opts.config)
+    opts.cfg = config.Config.load(opts.config)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True):
         return opts.handler(opts)

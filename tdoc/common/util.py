@@ -9,7 +9,6 @@ import os
 import pathlib
 import re
 import sys
-import tomllib
 
 from . import __project__
 
@@ -66,47 +65,6 @@ class AnsiStream:
             return self.__tags[name]
         except KeyError:
             return getattr(self.__stream, name)
-
-
-class Config:
-    @classmethod
-    def load(cls, path):
-        if path is None: return cls({})
-        with path.open('rb') as f:
-            return cls(tomllib.load(f), path)
-
-    def __init__(self, data, path=pathlib.Path()):
-        self._data = data
-        self._path = path
-
-    def get(self, key, default=None):
-        v = self._data
-        for p in key.split('.'):
-            if (v := v.get(p)) is None: return default
-        return v
-
-    def set(self, key, value):
-        d, k = self._resolve(key)
-        d[k] = value
-
-    def setdefault(self, key, value):
-        d, k = self._resolve(key)
-        return d.setdefault(k, value)
-
-    def _resolve(self, key):
-        parts = key.split('.')
-        d = self._data
-        for p in parts[:-1]: d = d.setdefault(p, {})
-        return d, parts[-1]
-
-    def path(self, key, default=None):
-        if (v := self.get(key, default)) is not None:
-            v = (self._path.parent / v).resolve() if self._path is not None \
-                else pathlib.Path(v).resolve()
-        return v
-
-    def sub(self, key):
-        return Config(self.setdefault(key, {}), self._path)
 
 
 def get_arg_parser(stdin, stdout, stderr):
