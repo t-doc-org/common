@@ -16,6 +16,9 @@ import traceback
 
 from . import config as _config
 
+# TODO: Allow multiple file handlers
+# TODO: Allow per-handler filters
+
 globals().update(logging.getLevelNamesMapping())
 logger = logging.getLogger
 log = logger(__name__)
@@ -101,7 +104,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
                 fh.rotator = compress
             fh.setLevel(c.get('level', NOTSET))
             fh.setFormatter(Formatter(
-                c.get('format', '{asctime} {ilevel} [{ctx:20}] {message}'),
+                c.get('format',
+                      '{asctime} {ilevel} [{ctx:20}] [{module:6}] {message}'),
                 style='{'))
             hs.append(fh)
 
