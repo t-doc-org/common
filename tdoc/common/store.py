@@ -599,7 +599,7 @@ class WakerSet(set):
 
 
 class Store:
-    def __init__(self, config, allow_mem=False):
+    def __init__(self, config, allow_mem=False, check_version=False):
         self.config = config
         self.path = config.path('path')
         if self.path is None and not allow_mem:
@@ -616,31 +616,27 @@ class Store:
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
         self._wake = Seqs()
+        if check_version: self.check_version()
 
-    def start(self):
-        log.debug("Start: Store")
+    def __enter__(self):
+        log.info("Store: %s",
+                  self.path if self.path is not None else 'in-memory')
         self.dispatcher_db = self.connect(mode='ro')
         if self.path is None: self.create(dev=True)  # Create in-memory DB
         self.dispatcher = threading.Thread(target=self.dispatch,
                                            name='store:dispatcher')
         with self.lock: self._stop = False
         self.dispatcher.start()
+        return self
 
-    def stop(self):
-        log.debug("Stop: Store")
+    def __exit__(self, typ, value, tb):
+        log.debug("Store: stopping")
         with self.lock:
             self._stop = True
             self.lock.notify()
         self.dispatcher.join()
         self.dispatcher_db.close()
-        log.debug("Done: Store")
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, typ, value, tb):
-        self.stop()
+        log.debug("Store: done")
 
     def connect(self, *, mode, path=False, isolation_level=None):
         if path is False: path = self.path
@@ -706,7 +702,6 @@ class Store:
         if self.poll_interval > 0:
             poll_interval = int(self.poll_interval * 1_000_000_000)
             next_poll = time.monotonic_ns() + poll_interval
-        db = self.dispatcher_db
         while True:
             with self.lock:
                 timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000 \
@@ -719,7 +714,8 @@ class Store:
                 self._wake.clear()
                 if next_poll is not None and time.monotonic_ns() >= next_poll:
                     if self.wakers:
-                        with db: seqs = db.notifications(list(self.wakers))
+                        with self.dispatcher_db as db:
+                            seqs = db.notifications(list(self.wakers))
                         self._update_waker_seqs(seqs, wakers)
                     next_poll = time.monotonic_ns() + poll_interval
             for w in wakers: w.wake()
@@ -797,7 +793,6 @@ class Store:
         return version, latest
 
     def check_version(self):
-        # This method is used by WSGI scripts.
         with contextlib.closing(self.connect(mode='ro')) as db, db:
             version, latest = self.version(db)
         if version != latest:

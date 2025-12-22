@@ -134,26 +134,25 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
-@contextlib.contextmanager
 def get_store(opts, allow_mem=False, check_latest=True):
-    with store.Store(opts.cfg.sub('store'), allow_mem=allow_mem) as st:
-        if check_latest:
-            with contextlib.closing(st.connect(mode='rw')) as db:
-                with db: version, latest = st.version(db)
-                if version != latest:
-                    o = opts.stdout
-                    o.write(f"""\
+    st = store.Store(opts.cfg.sub('store'), allow_mem=allow_mem)
+    if check_latest and st.path is not None:
+        with contextlib.closing(st.connect(mode='rw')) as db:
+            with db: version, latest = st.version(db)
+            if version != latest:
+                o = opts.stdout
+                o.write(f"""\
 {o.LYELLOW}The store database must be upgraded:{o.NORM} version\
  {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
 Would you like to perform the upgrade (y/n)? """)
-                    o.flush()
-                    resp = input().lower()
-                    o.write("\n")
-                    if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-                        raise Exception("Store version mismatch "
-                                        f"(current: {version}, want: {latest})")
-                    upgrade_store(opts, st, db, version, latest)
-        yield st
+                o.flush()
+                resp = input().lower()
+                o.write("\n")
+                if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
+                    raise Exception("Store version mismatch "
+                                    f"(current: {version}, want: {latest})")
+                upgrade_store(opts, st, db, version, latest)
+    return st
 
 
 @contextlib.contextmanager

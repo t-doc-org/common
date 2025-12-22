@@ -54,7 +54,7 @@ def event_wait(timeout=None):
         core.sleep(min(0.02, end - now))
 
 
-import pygame  # noqa
+import pygame  # noqa: E402
 pygame.time.Clock = pygame.Clock = Clock
 pygame.time.get_ticks = get_ticks
 pygame.time.wait = pygame.time.delay = wait

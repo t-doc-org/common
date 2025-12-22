@@ -47,7 +47,6 @@ wsgi.Request.attr('write_db', cache=False)
 
 class Api(wsgi.Dispatcher):
     def __init__(self, *, config, store):
-        log.debug("Start: Api")
         super().__init__()
         self.config = config
         self.store = store
@@ -59,15 +58,12 @@ class Api(wsgi.Dispatcher):
         self.auth = self.add_endpoint(
             'auth', OidcAuthApi(self, config.sub('oidc')))
 
-    def stop(self):
-        log.debug("Stop: Api")
-        self.events.stop()
-        log.debug("Done: Api")
-
     def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
-        self.stop()
+        log.debug("Api: stopping")
+        self.events.stop()
+        log.debug("Api: done")
 
     @contextlib.contextmanager
     def write_db(self):

@@ -8,7 +8,7 @@ from polyscript import xworker
 from pyodide_js import version
 
 sys.path.append('/lib/tdoc.zip')
-import tdoc.core  # noqa
+import tdoc.core  # noqa: E402
 
 xworker.sync.ready(f"{platform.python_implementation()}"
                    f" {'.'.join(platform.python_version_tuple())}"
