@@ -30,10 +30,10 @@ def application(config_path, origins, events_level=logs.NOTSET):
         log.info("Shutdown: %s", kwargs)
         stack.close()
 
-    if events != logs.NOTSET:
+    if events_level != logs.NOTSET:
         @mod_wsgi.subscribe_events
         def on_event(event, **kwargs):
-            log.log(events, "Event %s: %s", event, kwargs)
+            log.log(events_level, "Event %s: %s", event, kwargs)
 
     # Instantiate the store and the API.
     st = stack.enter_context(store.Store(store_config, check_version=True))
