@@ -105,7 +105,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
             fh.setLevel(c.get('level', NOTSET))
             fh.setFormatter(Formatter(
                 c.get('format',
-                      '{asctime} {ilevel} [{ctx:20}] [{module:6}] {message}'),
+                      '{asctime} {ilevel} [{ctx:20}] [{module}] {message}'),
                 style='{'))
             hs.append(fh)
 
