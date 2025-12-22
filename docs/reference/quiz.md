@@ -1,7 +1,7 @@
 % Copyright 2024 Remy Blank <remy@c-space.org>
 % SPDX-License-Identifier: MIT
 
-# Quiz
+# Quizzes
 
 ````{rst:directive} .. quiz:: [type [arg ...]]
 This directive adds an interactive quiz. The quiz questions are laid out with

@@ -75,7 +75,7 @@ class Config:
         with path.open('rb') as f:
             return cls(tomllib.load(f), path)
 
-    def __init__(self, data, path=None):
+    def __init__(self, data, path=pathlib.Path()):
         self._data = data
         self._path = path
 

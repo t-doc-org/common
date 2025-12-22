@@ -1,7 +1,7 @@
 % Copyright 2024 Remy Blank <remy@c-space.org>
 % SPDX-License-Identifier: MIT
 
-# Poll
+# Polls
 
 ````{rst:directive} .. poll:: id
 This directive adds a live audience poll. The poll identifier `id` is required

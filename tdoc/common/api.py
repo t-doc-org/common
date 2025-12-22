@@ -9,7 +9,6 @@ from http import HTTPMethod, HTTPStatus
 import json
 import queue
 import secrets
-import sys
 import threading
 import time
 import traceback
@@ -17,8 +16,9 @@ from urllib import parse, request
 
 import jwt
 
-from . import store, wsgi
+from . import logs, store, wsgi
 
+log = logs.logger(__name__)
 missing = object()
 # TODO(py-3.13): Remove ShutDown
 ShutDown = getattr(queue, 'ShutDown', queue.Empty)
@@ -46,11 +46,11 @@ wsgi.Request.attr('write_db', cache=False)
 
 
 class Api(wsgi.Dispatcher):
-    def __init__(self, *, config, store, stderr=None):
+    def __init__(self, *, config, store):
+        log.debug("Start: Api")
         super().__init__()
         self.config = config
         self.store = store
-        self.stderr = stderr if stderr is not None else sys.stderr
         self.cache = wsgi.HttpCache()
         self._read_db_pool = store.pool(mode='ro')
         self._write_db_lock = threading.Lock()
@@ -60,16 +60,14 @@ class Api(wsgi.Dispatcher):
             'auth', OidcAuthApi(self, config.sub('oidc')))
 
     def stop(self):
+        log.debug("Stop: Api")
         self.events.stop()
+        log.debug("Done: Api")
 
     def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
         self.stop()
-
-    def print_exception(self, e=None, limit=None, chain=True):
-        if e is None: e = sys.exception()
-        traceback.print_exception(e, limit=limit, chain=chain, file=self.stderr)
 
     @contextlib.contextmanager
     def write_db(self):
@@ -90,10 +88,12 @@ class Api(wsgi.Dispatcher):
                 wr.user = user
             yield from handler(wr.env, wr.respond, wr)
         except store.client_errors:
-            self.print_exception(limit=-1, chain=False)
+            log.exception("Store client error",
+                          extra={'exc_limit': -1, 'exc_chain': False})
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         except store.Error as e:
-            self.print_exception(limit=-1, chain=False)
+            log.exception("Store error",
+                          extra={'exc_limit': -1, 'exc_chain': False})
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
         finally:
@@ -362,9 +362,6 @@ class DynObservable(Observable):
     def remove(self):
         self.events.remove_observable(self)
 
-    def print_exception(self, e=None, limit=None, chain=True):
-        self.events.api.print_exception(e=e, limit=limit, chain=chain)
-
 
 def limit_interval(interval, burst=1):
     interval = int(interval * 1_000_000_000)
@@ -390,7 +387,8 @@ class DbObservable(DynObservable):
         self._data = data
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stop = False
-        self._poller = threading.Thread(target=self.poll)
+        self._poller = threading.Thread(target=self.poll,
+                                        name=f'obs:{self.key.hex()}')
         self._poller.start()
 
     def _msg(self):
@@ -410,6 +408,7 @@ class DbObservable(DynObservable):
     def wake_keys(self, db): return None
 
     def poll(self):
+        log.debug("Start: %s", self.__class__.__name__)
         try:
             store = self.events.api.store
             with contextlib.closing(store.connect(mode='ro')) as db, \
@@ -421,7 +420,7 @@ class DbObservable(DynObservable):
                         with db: data, until = self.query(db)
                         queried = True
                     except Exception:
-                        self.print_exception()
+                        log.exception("Exception")
                     with self.lock:
                         if queried and data != self._data:
                             self._data = data
@@ -431,7 +430,9 @@ class DbObservable(DynObservable):
         except Exception:
             with self.lock: self._stop = True
             self.remove()
-            self.print_exception()
+            log.exception("Done: exception")
+        else:
+            log.debug("Done")
 
     def query(self, db):
         raise NotImplementedError()
@@ -439,7 +440,6 @@ class DbObservable(DynObservable):
 
 class SolutionsObservable(DbObservable, name='solutions'):
     def __init__(self, req, events, wr):
-        # TODO
         self._origin = wr.origin
         self._page = arg(req, 'page')
         super().__init__(req, events)

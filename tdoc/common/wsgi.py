@@ -7,16 +7,20 @@ import functools
 from http import HTTPMethod, HTTPStatus
 import json
 import re
+import secrets
 import sys
 import threading
 import time
 from urllib import request
 from wsgiref import util
 
+from . import logs
+
+log = logs.logger(__name__)
+_missing = object()
+
 # A regexp matching a hostname component.
 hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
-
-request_uri = util.request_uri
 
 
 def http_status(status):
@@ -61,12 +65,11 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
 
     def decorator(fn):
         @functools.wraps(fn)
-        def handle(env, respond):
+        def handle(env, respond, wr=None):
             def respond_with_allow_origin(status, headers, exc_info=None):
                 return respond(
                     status, headers + allow_origin(env.get('HTTP_ORIGIN', '')),
                     exc_info)
-
             if (env['REQUEST_METHOD'] == 'OPTIONS' and
                     env.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD') is not None):
                 respond_with_allow_origin(http_status(HTTPStatus.OK), achs)
@@ -74,9 +77,6 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
             return fn(env, respond_with_allow_origin)
         return handle
     return decorator
-
-
-_unset = object()
 
 
 class Request:
@@ -119,7 +119,7 @@ class Request:
                and self.env.get('CONTENT_TYPE') is not None
 
     @classmethod
-    def attr(cls, name, default=None, cache=True):
+    def attr(cls, name, *, default=None, cache=True):
         gname = f'tdoc.{name}.get'
         if not cache:
             setattr(cls, name, property(lambda self: self.env[gname]()))
@@ -127,13 +127,13 @@ class Request:
         pname = f'tdoc.{name}'
         dname = f'tdoc.{name}.del'
         def fget(self):
-            if (v := self.env.get(pname, _unset)) is _unset:
+            if (v := self.env.get(pname, _missing)) is _missing:
                 fn = self.env.get(gname)
                 v = self.env[pname] = fn() if fn is not None else default
             return v
         def fset(self, v): self.env[pname] = v
         def fdel(self):
-            if (v := self.env.pop(pname, _unset)) is _unset: return
+            if (v := self.env.pop(pname, _missing)) is _missing: return
             if (fn := self.env.get(dname)) is not None: fn(v)
         setattr(cls, name, property(fget, fset, fdel))
 
@@ -208,16 +208,41 @@ class Dispatcher:
 
     def __call__(self, env, respond, wr=None):
         if wr is None: wr = Request(env, respond)
+        token = None
+        if logs.ctx.get() is None:
+            token = logs.ctx.set('req:' + secrets.token_hex(8))
+        log_level = logs.NOTSET
         try:
-            yield from self.handle_request(self.get_handler(wr.env), wr)
+            handler = self.get_handler(wr.env)
+            log_level = getattr(handler, '_log_level', logs.NOTSET)
+            if log_level != logs.NOTSET:
+                # TODO: Log more request attributes: user, remote address
+                log.log(log_level, "Start: %s", wr.uri())
+                chained_respond = wr.respond
+                log_status = '<unknown>'
+                def respond_log(status, headers, exc_info=None):
+                    nonlocal log_status
+                    log_status = status
+                    return chained_respond(status, headers, exc_info)
+                wr.respond = respond_log
+            yield from self.handle_request(handler, wr)
         except Error as e:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info())
+        except Exception as e:
+            log.exception("Uncaught exception")
+            yield from wr.error(HTTPStatus.INTERNAL_SERVER_ERROR,
+                                exc_info=sys.exc_info())
+        finally:
+            if log_level != logs.NOTSET:
+                log.log(log_level, "Done: %s", log_status)
+            if token is not None: logs.ctx.reset(token)
 
     def handle_request(self, handler, wr):
         return handler(wr.env, wr.respond, wr)
 
 
-def endpoint(name, methods=None, final=True, require_authn=False):
+def endpoint(name, methods=None, final=True, require_authn=False,
+             log_level=logs.INFO):
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
@@ -229,13 +254,16 @@ def endpoint(name, methods=None, final=True, require_authn=False):
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             return fn(self, wr)
         if name is not None: dfn._endpoint = name
+        dfn._log_level = log_level
         return dfn
     return decorator
 
 
-def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False):
+def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
+                  log_level=logs.INFO):
     def decorator(fn):
-        @endpoint(name, methods=methods, require_authn=require_authn)
+        @endpoint(name, methods=methods, require_authn=require_authn,
+                  log_level=log_level)
         @functools.wraps(fn)
         def dfn(self, /, wr):
             return wr.respond_json(

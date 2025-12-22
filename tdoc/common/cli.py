@@ -25,10 +25,11 @@ from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, deps, store, util, wsgi
+from . import __project__, __version__, api, deps, logs, store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
+log = logs.logger(__name__)
 default_port = 8000
 local_config = pathlib.Path('local.toml')
 
@@ -36,6 +37,7 @@ local_config = pathlib.Path('local.toml')
 @util.main
 def main(argv, stdin, stdout, stderr):
     """Run the command."""
+    threading.current_thread().name = 'main'
     parser = util.get_arg_parser(stdin, stdout, stderr)(
         prog=pathlib.Path(argv[0]).name, description="Manage a t-doc book.")
     root = parser.add_subparsers(title='Sub-commands')
@@ -104,7 +106,9 @@ def main(argv, stdin, stdout, stderr):
     if opts.config is None and (lc := local_config.resolve()).is_file():
         opts.config = lc
     opts.cfg = util.Config.load(opts.config)
-    return opts.handler(opts)
+    with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
+                        level=logs.WARNING, stream=True):
+        return opts.handler(opts)
 
 
 def add_options(parser, sphinx=False):
@@ -323,7 +327,7 @@ def cmd_serve(opts):
 
     with Server(addr, RequestHandler) as srv, \
             get_store(opts, allow_mem=True) as store, \
-            api.Api(config=opts.cfg, store=store, stderr=opts.stderr) as api_, \
+            api.Api(config=opts.cfg, store=store) as api_, \
             Application(opts, srv, api_) as app:
         srv.set_app(app)
         try:
@@ -592,13 +596,10 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
 
 
 class RequestHandler(simple_server.WSGIRequestHandler):
-    def log_request(self, code='-', size='-'):
-        pass
+    def log_request(self, code='-', size='-'): pass
 
     def log_message(self, format, *args):
-        self.server.application.opts.stderr.write("%s - - [%s] %s\n" % (
-            self.address_string(), self.log_date_time_string(),
-            (format % args).translate(self._control_char_table)))
+        log.debug((format % args).translate(self._control_char_table))
 
 
 def try_stat(path):
@@ -633,7 +634,8 @@ class Application(wsgi.Dispatcher):
         self.build_mtime = None
         self.build_obs = api.ValueObservable('build', self.build_mtime)
         self.api.events.add_observable(self.build_obs)
-        self.builder = threading.Thread(target=self.watch_and_build)
+        self.builder = threading.Thread(target=self.watch_and_build,
+                                        name='builder')
         self.builder.start()
 
     def __enter__(self): return self
@@ -701,8 +703,7 @@ class Application(wsgi.Dispatcher):
         self.remove(build_next)
 
     def latest_mtime(self):
-        def on_error(e):
-            self.opts.stderr.write(f"Scan: {e}\n")
+        def on_error(e): log.error("Scan: %s", e)
         mtime = self.min_mtime
         for path in itertools.chain([self.opts.source], self.opts.watch):
             for base, dirs, files in path.walk(on_error=on_error):
@@ -728,7 +729,7 @@ class Application(wsgi.Dispatcher):
                                tags=['tdoc-dev'])
             if res.returncode == 0: return True
         except Exception as e:
-            self.opts.stderr.write(f"Build: {e}\n")
+            log.error("Build: %s", e)
         if self.opts.exit_on_failure:
             self.returncode = 1
             self.server.shutdown()
@@ -737,8 +738,7 @@ class Application(wsgi.Dispatcher):
     def remove(self, build):
         build.relative_to(self.opts.build)  # Ensure we're below the build dir
         if not build.exists(): return
-        def on_error(fn, path, e):
-            self.opts.stderr.write(f"Removal: {fn}: {path}: {e}\n")
+        def on_error(fn, path, e): log.error("Remove: %s: %s: %s", fn, path, e)
         shutil.rmtree(build, onexc=on_error)
 
     def remove_all(self):
@@ -779,18 +779,19 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         return handler(wr.env, wr.respond, wr)
 
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
-                   final=False)
+                   final=False, log_level=logs.DEBUG)
     def handle_cache(self, wr):
         yield from self.handle_file(wr, self.opts.cache,
                                     self.on_cache_not_found)
 
     def on_cache_not_found(self, path_info, path):
+        url = ''
         try:
             parts = path_info.split('/', 3)
             if parts[0] != '' or len(parts) < 4: return
             if (d := deps.info.get(parts[1])) is None: return
             url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
-            self.opts.stderr.write(f"Caching {url}\n")
+            log.debug("Caching: %s", url)
             with request.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
@@ -800,9 +801,10 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 f.close()
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
-            self.opts.stderr.write(f"Cache: {e}\n")
+            log.error("Cache [%s]: %s", url, e)
 
-    @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False)
+    @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
+                   log_level=logs.DEBUG)
     def handle_default(self, wr):
         with self.lock: base = self.directory
         yield from self.handle_file(wr, base)

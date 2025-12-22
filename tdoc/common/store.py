@@ -12,6 +12,9 @@ import sqlite3
 import threading
 import time
 
+from . import logs
+
+log = logs.logger(__name__)
 max_id_len = 64  # Maximum length of globally-unique identifiers
 max_voters_per_poll = 100  # Maximum number of voters per poll
 
@@ -615,18 +618,22 @@ class Store:
         self._wake = Seqs()
 
     def start(self):
+        log.debug("Start: Store")
         self.dispatcher_db = self.connect(mode='ro')
         if self.path is None: self.create(dev=True)  # Create in-memory DB
-        self.dispatcher = threading.Thread(target=self.dispatch)
+        self.dispatcher = threading.Thread(target=self.dispatch,
+                                           name='store:dispatcher')
         with self.lock: self._stop = False
         self.dispatcher.start()
 
     def stop(self):
+        log.debug("Stop: Store")
         with self.lock:
             self._stop = True
             self.lock.notify()
         self.dispatcher.join()
         self.dispatcher_db.close()
+        log.debug("Done: Store")
 
     def __enter__(self):
         self.start()
