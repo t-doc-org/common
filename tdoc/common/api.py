@@ -81,7 +81,7 @@ class Api(wsgi.Dispatcher):
             try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
             except Exception as e:
-                log.exception("Authentication failure")
+                log.exception("Authentication failure", event='auth:error')
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
@@ -91,10 +91,11 @@ class Api(wsgi.Dispatcher):
             yield from handler(wr.env, wr.respond, wr)
         except store.client_errors:
             log.exception("Store client error", exc_limit=-1, exc_chain=False,
-                          extra={'exc_limit': -1, 'exc_chain': False})
+                          event='store:error:client')
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         except store.Error as e:
-            log.exception("Store error", exc_limit=-1, exc_chain=False)
+            log.exception("Store error", exc_limit=-1, exc_chain=False,
+                          event='store:error')
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
 
@@ -410,7 +411,8 @@ class DbObservable(DynObservable):
     def wake_keys(self, db): return None
 
     def poll(self):
-        log.debug("Start: %(cls)s", cls=self.__class__.__name__)
+        log.debug("Start: %(cls)s", cls=self.__class__.__name__,
+                  event='obs:start')
         try:
             store = self.events.api.store
             with contextlib.closing(store.connect(mode='ro')) as db, \
@@ -432,9 +434,9 @@ class DbObservable(DynObservable):
         except Exception:
             with self.lock: self._stop = True
             self.remove()
-            log.exception("Done: exception")
-        else:
-            log.debug("Done")
+            log.exception("Uncaught exception", event='obs:exception')
+        finally:
+            log.debug("Done", event='obs:end')
 
     def query(self, db):
         raise NotImplementedError()
