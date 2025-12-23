@@ -16,6 +16,8 @@ import traceback
 
 from . import config as _config
 
+# TODO: Allow arbitrary keyword arguments in Logger._log(), and using them
+#       when computing message
 # TODO: Allow multiple file handlers
 # TODO: Allow per-handler filters
 
@@ -49,7 +51,7 @@ class Formatter(logging.Formatter):
         # This needs to be done here instead of formatException(), because the
         # latter doesn't have access to the LogRecord.
         format_exception(rec)
-        return super().format(rec).replace("\n", "\n| ")
+        return super().format(rec).replace("\n", "\n  ")
 
     def formatTime(self, rec, datefmt=None):
         dt = datetime.datetime.utcfromtimestamp(rec.created)

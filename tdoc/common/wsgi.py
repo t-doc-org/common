@@ -90,6 +90,7 @@ class Request:
     path = property(lambda self: self.env['PATH_INFO'])
     query = property(lambda self: self.env['QUERY_STRING'])
     content_type = property(lambda self: self.env.get('CONTENT_TYPE'))
+    remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       util.FileWrapper))
 
@@ -212,20 +213,25 @@ class Dispatcher:
         if logs.ctx.get() is None:
             token = logs.ctx.set('req:' + secrets.token_hex(8))
         log_level = logs.NOTSET
+        log_status = '<unknown>'
         try:
             handler = self.get_handler(wr.env)
-            log_level = getattr(handler, '_log_level', logs.NOTSET)
-            if log_level != logs.NOTSET:
-                # TODO: Log more request attributes: user, remote address
-                log.log(log_level, "Start: %s", wr.uri())
-                chained_respond = wr.respond
-                log_status = '<unknown>'
-                def respond_log(status, headers, exc_info=None):
-                    nonlocal log_status
-                    log_status = status
-                    return chained_respond(status, headers, exc_info)
-                wr.respond = respond_log
-            yield from self.handle_request(handler, wr)
+            try:
+                self.pre_request(wr)
+                log_level = getattr(handler, '_log_level', logs.NOTSET)
+                if log_level != logs.NOTSET:
+                    # TODO: Log more request attributes
+                    log.log(log_level, "Start: %s %s\nremote=%s user=%s",
+                            wr.method, wr.uri(), wr.remote_addr, wr.user)
+                    chained_respond = wr.respond
+                    def respond_log(status, headers, exc_info=None):
+                        nonlocal log_status
+                        log_status = status
+                        return chained_respond(status, headers, exc_info)
+                    wr.respond = respond_log
+                yield from self.handle_request(handler, wr)
+            finally:
+                self.post_request(wr)
         except Error as e:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info())
         except Exception as e:
@@ -237,8 +243,12 @@ class Dispatcher:
                 log.log(log_level, "Done: %s", log_status)
             if token is not None: logs.ctx.reset(token)
 
+    def pre_request(self, wr): pass
+
     def handle_request(self, handler, wr):
         return handler(wr.env, wr.respond, wr)
+
+    def post_request(self, wr): pass
 
 
 def endpoint(name, methods=None, final=True, require_authn=False,

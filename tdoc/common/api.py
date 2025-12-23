@@ -73,15 +73,21 @@ class Api(wsgi.Dispatcher):
     def member_of(self, wr, db, group):
         return db.users.member_of(wr.origin, wr.user, group)
 
-    def handle_request(self, handler, wr):
+    def pre_request(self, wr):
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
                          fdel=self._read_db_pool.release)
         wr.attr_handlers('write_db', fget=self.write_db)
-        try:
-            if token := wr.token:
+        if token := wr.token:
+            try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
-                if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-                wr.user = user
+            except Exception as e:
+                log.exception("Authentication failure")
+                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+            if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+            wr.user = user
+
+    def handle_request(self, handler, wr):
+        try:
             yield from handler(wr.env, wr.respond, wr)
         except store.client_errors:
             log.exception("Store client error",
@@ -92,8 +98,9 @@ class Api(wsgi.Dispatcher):
                           extra={'exc_limit': -1, 'exc_chain': False})
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
-        finally:
-            del wr.read_db
+
+    def post_request(self, wr):
+        del wr.read_db
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
     def handle_health(self, wr, req):
