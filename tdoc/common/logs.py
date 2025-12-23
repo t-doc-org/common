@@ -17,8 +17,8 @@ import traceback
 
 from . import config as _config
 
-# TODO: Allow multiple file handlers
 # TODO: Allow per-handler filters
+# TODO: Add a DB log handler, logging to a separate database
 
 globals().update(logging.getLevelNamesMapping())
 
@@ -119,8 +119,9 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
                 c.get('format', '{ilevel} [{ctx:20}] {message}'), style='{'))
             hs.append(sh)
 
-        if (c := config.sub('file')).get('enabled', False) \
-                and (path := c.path('path')) is not None:
+        for c in config.subs('file'):
+            if not c.get('enabled', False): continue
+            if (path := c.path('path')) is None: continue
             fh = handlers.TimedRotatingFileHandler(
                 path, encoding='utf-8', utc=True,
                 when=c.get('when', 'W6'), interval=c.get('interval', 1),

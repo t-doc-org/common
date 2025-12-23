@@ -47,3 +47,7 @@ class Config:
 
     def sub(self, key):
         return Config(self.setdefault(key, {}), self._path)
+
+    def subs(self, key):
+        for it in self.setdefault(key, []):
+            yield Config(it, self._path)
