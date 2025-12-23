@@ -619,8 +619,8 @@ class Store:
         if check_version: self.check_version()
 
     def __enter__(self):
-        log.info("Store: %s",
-                  self.path if self.path is not None else 'in-memory')
+        log.info("Store: %(path)s",
+                  path=self.path if self.path is not None else ':in-memory:')
         self.dispatcher_db = self.connect(mode='ro')
         if self.path is None: self.create(dev=True)  # Create in-memory DB
         self.dispatcher = threading.Thread(target=self.dispatch,
@@ -654,8 +654,7 @@ class Store:
         db._store = self
         db.execute("pragma journal_mode = wal")
         db.execute("pragma foreign_keys = on")
-        for k, v in self.pragma.items():
-            db.execute(f"pragma {k} = {v}")
+        for k, v in self.pragma.items(): db.execute(f"pragma {k} = {v}")
         db.autocommit = sqlite3.LEGACY_TRANSACTION_CONTROL \
                         if 'rw' in mode and db.isolation_level \
                         else False

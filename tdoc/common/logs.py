@@ -1,6 +1,7 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from collections import abc
 import contextlib
 import contextvars
 import datetime
@@ -16,16 +17,32 @@ import traceback
 
 from . import config as _config
 
-# TODO: Allow arbitrary keyword arguments in Logger._log(), and using them
-#       when computing message
 # TODO: Allow multiple file handlers
 # TODO: Allow per-handler filters
 
 globals().update(logging.getLevelNamesMapping())
+
+
+class Logger(logging.Logger):
+    def _log(self, level, msg, args, exc_info=None, extra=None,
+             stack_info=False, stacklevel=1, **kwargs):
+        if kwargs: args = (kwargs,)
+        super()._log(level, msg, args, exc_info=exc_info, extra=extra,
+                     stack_info=stack_info, stacklevel=stacklevel)
+
+logging.setLoggerClass(Logger)
 logger = logging.getLogger
 log = logger(__name__)
 
 ctx = contextvars.ContextVar('ctx', default=None)
+
+def push_ctx(fn, replace=False):
+    if not replace and ctx.get() is not None: return
+    return ctx.set(fn())
+
+
+def pop_ctx(token):
+    if token is not None: ctx.reset(token)
 
 
 class CtxFilter(logging.Filter):
@@ -36,11 +53,17 @@ class CtxFilter(logging.Filter):
         return True
 
 
+def get_kwarg(rec, name, default=None):
+    if (args := rec.args) and isinstance(args, abc.Mapping):
+        return args.get(name, default)
+    return default
+
+
 def format_exception(rec):
     if rec.exc_info and not rec.exc_text:
         parts = traceback.format_exception(
-            *rec.exc_info, limit=getattr(rec, 'exc_limit', None),
-            chain=getattr(rec, 'exc_chain', True))
+            *rec.exc_info, limit=get_kwarg(rec, 'exc_limit', None),
+            chain=get_kwarg(rec, 'exc_chain', True))
         if parts and (last := parts[-1])[-1:] == "\n": parts[-1] = last[:-1]
         rec.exc_text = "".join(parts)
         rec.exc_info = None
@@ -71,11 +94,12 @@ def compress(src, dst):
 
 
 @contextlib.contextmanager
-def configure(config=None, stderr=None, level=WARNING, stream=False):
+def configure(config=None, stderr=None, level=WARNING, stream=False,
+              raise_exc=False):
     if config is None: config = _config.Config({})
     transport = config.get('transport', 'queue')
 
-    logging.raiseExceptions = False
+    logging.raiseExceptions = raise_exc
     logging.lastResort = logging.NullHandler()
 
     root = logging.getLogger()
@@ -130,7 +154,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False):
         else:
             raise Exception(f"Invalid log transport: {transport}")
 
-        log.debug("Logs: transport=%s", transport)
+        log.debug("Logs: transport=%(transport)s", transport=transport)
         stack.callback(lambda: log.debug("Logs: stopping"))
 
         yield

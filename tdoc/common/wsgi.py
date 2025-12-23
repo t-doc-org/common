@@ -209,9 +209,7 @@ class Dispatcher:
 
     def __call__(self, env, respond, wr=None):
         if wr is None: wr = Request(env, respond)
-        token = None
-        if logs.ctx.get() is None:
-            token = logs.ctx.set('req:' + secrets.token_hex(8))
+        ctoken = logs.push_ctx(lambda: 'req:' + secrets.token_hex(8))
         log_level = logs.NOTSET
         log_status = '<unknown>'
         try:
@@ -220,9 +218,11 @@ class Dispatcher:
                 self.pre_request(wr)
                 log_level = getattr(handler, '_log_level', logs.NOTSET)
                 if log_level != logs.NOTSET:
-                    # TODO: Log more request attributes
-                    log.log(log_level, "Start: %s %s\nremote=%s user=%s",
-                            wr.method, wr.uri(), wr.remote_addr, wr.user)
+                    log.log(log_level,
+                            "Start: %(method)s %(uri)s\n"
+                            "remote=%(remote)s user=%(user)s",
+                            method=wr.method, uri=wr.uri(),
+                            remote=wr.remote_addr, user=wr.user)
                     chained_respond = wr.respond
                     def respond_log(status, headers, exc_info=None):
                         nonlocal log_status
@@ -240,8 +240,8 @@ class Dispatcher:
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
-                log.log(log_level, "Done: %s", log_status)
-            if token is not None: logs.ctx.reset(token)
+                log.log(log_level, "Done: %(status)s", status=log_status)
+            logs.pop_ctx(ctoken)
 
     def pre_request(self, wr): pass
 

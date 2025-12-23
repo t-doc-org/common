@@ -108,7 +108,7 @@ def main(argv, stdin, stdout, stderr):
         opts.config = lc
     opts.cfg = config.Config.load(opts.config)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
-                        level=logs.WARNING, stream=True):
+                        level=logs.WARNING, stream=True, raise_exc=opts.debug):
         return opts.handler(opts)
 
 
@@ -703,7 +703,7 @@ class Application(wsgi.Dispatcher):
         self.remove(build_next)
 
     def latest_mtime(self):
-        def on_error(e): log.error("Scan: %s", e)
+        def on_error(e): log.error("Scan: %(exc)s", exc=e)
         mtime = self.min_mtime
         for path in itertools.chain([self.opts.source], self.opts.watch):
             for base, dirs, files in path.walk(on_error=on_error):
@@ -729,7 +729,7 @@ class Application(wsgi.Dispatcher):
                                tags=['tdoc-dev'])
             if res.returncode == 0: return True
         except Exception as e:
-            log.error("Build: %s", e)
+            log.error("Build: %(exc)s", exc=e)
         if self.opts.exit_on_failure:
             self.returncode = 1
             self.server.shutdown()
@@ -738,7 +738,9 @@ class Application(wsgi.Dispatcher):
     def remove(self, build):
         build.relative_to(self.opts.build)  # Ensure we're below the build dir
         if not build.exists(): return
-        def on_error(fn, path, e): log.error("Remove: %s: %s: %s", fn, path, e)
+        def on_error(fn, path, e):
+            log.error("Remove: %(func)s: %(path)s: %(exc)s", func=fn, path=path,
+                      exc=e)
         shutil.rmtree(build, onexc=on_error)
 
     def remove_all(self):
@@ -791,7 +793,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if parts[0] != '' or len(parts) < 4: return
             if (d := deps.info.get(parts[1])) is None: return
             url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
-            log.debug("Caching: %s", url)
+            log.debug("Caching: %(url)s", url=url)
             with request.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
@@ -801,7 +803,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 f.close()
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
-            log.error("Cache [%s]: %s", url, e)
+            log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
     @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
                    log_level=logs.DEBUG)
