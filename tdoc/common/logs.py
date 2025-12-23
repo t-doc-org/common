@@ -28,7 +28,7 @@ class Logger(logging.Logger):
              stack_info=False, stacklevel=1, **kwargs):
         if kwargs: args = (kwargs,)
         super()._log(level, msg, args, exc_info=exc_info, extra=extra,
-                     stack_info=stack_info, stacklevel=stacklevel)
+                     stack_info=stack_info, stacklevel=stacklevel + 1)
 
 logging.setLoggerClass(Logger)
 logger = logging.getLogger
