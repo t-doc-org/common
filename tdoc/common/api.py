@@ -16,7 +16,7 @@ from urllib import parse, request
 
 import jwt
 
-from . import logs, store, wsgi
+from . import database, logs, store, wsgi
 
 log = logs.logger(__name__)
 missing = object()
@@ -89,11 +89,11 @@ class Api(wsgi.Dispatcher):
     def handle_request(self, handler, wr):
         try:
             yield from handler(wr.env, wr.respond, wr)
-        except store.client_errors:
+        except database.client_errors:
             log.exception("Store client error", exc_limit=-1, exc_chain=False,
                           event='store:error:client')
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
-        except store.Error as e:
+        except database.Error as e:
             log.exception("Store error", exc_limit=-1, exc_chain=False,
                           event='store:error')
             raise wsgi.Error(HTTPStatus.FORBIDDEN,

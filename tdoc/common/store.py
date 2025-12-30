@@ -2,42 +2,17 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
-import datetime
 import functools
 import json
-import pathlib
-import re
 import secrets
-import sqlite3
 import threading
 import time
 
-from . import logs
+from . import database, logs
 
 log = logs.logger(__name__)
 max_id_len = 64  # Maximum length of globally-unique identifiers
 max_voters_per_poll = 100  # Maximum number of voters per poll
-
-
-def to_datetime(nsec):
-    if nsec is None: return
-    return datetime.datetime.fromtimestamp(nsec / 1e9)
-
-
-def to_nsec(dt, default=None):
-    if dt is None: return default
-    return int(dt.timestamp() * 1e9)
-
-
-def to_json(data, sort_keys=False):
-    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
-
-
-def placeholders(args): return ', '.join('?' * len(args))
-
-
-class Error(Exception): pass
-client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
 
 class Seqs(dict):
@@ -54,61 +29,19 @@ class Seqs(dict):
             if self.newer_than(seq, self.get(key)): self[key] = seq
 
 
-class Connection(sqlite3.Connection):
-    def executescript(self, *args, **kwargs):
-        # executescript() executes a COMMIT first if autocommit is
-        # LEGACY_TRANSACTION_CONTROL and there is a pending transaction.
-        raise NotImplementedError("executescript")
-
+class Connection(database.Connection):
     def notify(self, *keys):
         raise TypeError("Notification on read-only connection")
 
     def notifications(self, keys):
         return Seqs(self.execute(f"""
             select key, seq from notifications
-            where key in ({placeholders(keys)})
+            where key in ({database.placeholders(keys)})
         """, keys))
-
-    def row(self, sql, params=(), default=None):
-        for row in self.execute(sql, params): return row
-        return default
-
-    def meta(self, key, default=None):
-        for value, in self.execute("select value from meta where key = ?",
-                                   (key,)):
-            return value
-        return default
-
-    @property
-    def dev(self):
-        return bool(self.meta('dev', False))
 
     def check_origin(self, origin):
         if not origin and not self.dev:
             raise Exception("No origin specified")
-
-    def check_foreign_keys(self):
-        violations = []
-        cursor = self.cursor()
-        cursor.row_factory = sqlite3.Row
-        for r, i, t, c in self.execute("pragma foreign_key_check"):
-            rcs, tcs = [], []
-            for row in cursor.execute(f"pragma foreign_key_list({r})"):
-                if row['id'] != c: continue
-                rcs.append(row['from'])
-                tcs.append(row['to'])
-            rowid = f"[{i}]" if i is not None else ''
-            rcs = ", ".join(rcs)
-            tcs = ", ".join(tcs)
-            violations.append(f"{r}{rowid} ({rcs}) references {t} ({tcs})")
-        if violations:
-            raise Exception(
-                f"Foreign key check failed:\n  {"\n  ".join(violations)}")
-
-    def check_integrity(self):
-        issues = [i for i, in self.execute("PRAGMA integrity_check")]
-        if issues == ['ok']: return
-        raise Exception(f"Integrity check failed:\n  {"\n  ".join(issues)}")
 
     @functools.cached_property
     def users(self): return Users(self)
@@ -132,19 +65,12 @@ class Connection(sqlite3.Connection):
 class WriteConnection(Connection):
     def __enter__(self):
         self._notify = Seqs()
-        db = super().__enter__()
-        if self.autocommit == sqlite3.LEGACY_TRANSACTION_CONTROL:
-            try:
-                db.execute(f"begin {db.isolation_level or ''}")
-            except BaseException:
-                db.rollback()
-                raise
-        return db
+        return super().__enter__()
 
     def __exit__(self, typ, value, tb):
         res = super().__exit__(typ, value, tb)
         if typ is None and self._notify:
-            self._store.notify(self._notify)
+            self.database.notify(self._notify)
         del self._notify
         return res
 
@@ -157,12 +83,7 @@ class WriteConnection(Connection):
             """, (key, Seqs.mask))
 
 
-class DbNamespace:
-    def __init__(self, db): self.db = db
-    def __getattr__(self, name): return getattr(self.db, name)
-
-
-class Users(DbNamespace):
+class Users(database.ConnNamespace):
     def member_of(self, origin, uid, group):
         if uid is None: return False
         return bool(self.row("""
@@ -184,13 +105,13 @@ class Users(DbNamespace):
         uids = [u for u, in self.execute("select id from users where name = ?",
                                          (name,))]
         if len(uids) == 1: return uids[0]
-        if not uids: raise Error(f"User not found: {name}")
+        if not uids: raise database.Error(f"User not found: {name}")
         uids.sort()
-        raise Error(
+        raise database.Error(
             f"Ambiguous user name %r: {" ".join(f"#{u}" for u in uids)}")
 
     def list(self, name_re=''):
-        return [(name, uid, to_datetime(created))
+        return [(name, uid, database.to_datetime(created))
                 for uid, name, created in self.execute("""
                     select id, name, created from users
                     where name regexp ?
@@ -198,7 +119,7 @@ class Users(DbNamespace):
 
     def create(self, names):
         if invalid := [n for n in names if n.startswith('#')]:
-            raise Error(f"Invalid user names: {" ".join(invalid)}")
+            raise database.Error(f"Invalid user names: {" ".join(invalid)}")
         now = time.time_ns()
         uids = [secrets.randbelow(1 << 63) for _ in names]
         self.executemany("""
@@ -216,7 +137,7 @@ class Users(DbNamespace):
         """, (origin, name_re, transitive)))
 
 
-class Tokens(DbNamespace):
+class Tokens(database.ConnNamespace):
     min_generated_token_len = 16
 
     def authenticate(self, token):
@@ -234,7 +155,8 @@ class Tokens(DbNamespace):
 
     def list(self, user_re='', expired=False):
         now = time.time_ns()
-        return [(name, uid, token, to_datetime(created), to_datetime(expires))
+        return [(name, uid, token, database.to_datetime(created),
+                 database.to_datetime(expires))
                 for token, uid, name, created, expires in self.execute("""
                     select token, users.id, users.name, user_tokens.created,
                            expires
@@ -246,7 +168,7 @@ class Tokens(DbNamespace):
 
     def create(self, uids, expires=None):
         now = time.time_ns()
-        expires = to_nsec(expires)
+        expires = database.to_nsec(expires)
         tokens = [secrets.token_urlsafe() for _ in uids]
         self.executemany("""
             insert into user_tokens (token, user, created, expires)
@@ -256,7 +178,7 @@ class Tokens(DbNamespace):
         return tokens
 
     def expire(self, tokens, expires=None):
-        expires = to_nsec(expires, time.time_ns())
+        expires = database.to_nsec(expires, time.time_ns())
         self.executemany("""
             update user_tokens set expires = ?
             where token = ?
@@ -270,13 +192,13 @@ class Tokens(DbNamespace):
                           if len(t) >= self.min_generated_token_len])
 
 
-class Oidc(DbNamespace):
+class Oidc(database.ConnNamespace):
     state_lifetime = 10 * 60 * 1_000_000_000
 
     def create_state(self, state, data):
         self.execute("""
             insert into oidc_states (state, created, data) values (?, ?, ?)
-        """, (state, time.time_ns(), to_json(data)))
+        """, (state, time.time_ns(), database.to_json(data)))
 
     def state(self, state):
         data = self.row("select data from oidc_states where state = ?",
@@ -292,7 +214,7 @@ class Oidc(DbNamespace):
         """, (id_token['iss'], id_token['sub']), default=(None, None, None))
 
     def logins(self, user):
-        return [(json.loads(id_token), to_datetime(updated))
+        return [(json.loads(id_token), database.to_datetime(updated))
                 for id_token, updated in self.execute("""
                     select id_token, updated from oidc_users
                     where user = ?
@@ -303,8 +225,8 @@ class Oidc(DbNamespace):
             insert or replace into oidc_users
                 (issuer, subject, user, id_token, updated)
             values (?, ?, ?, ?, ?)
-        """, (id_token['iss'], id_token['sub'], user, to_json(id_token),
-              time.time_ns()))
+        """, (id_token['iss'], id_token['sub'], user,
+              database.to_json(id_token), time.time_ns()))
 
     def remove_login(self, user, issuer, subject):
         self.execute("""
@@ -312,7 +234,7 @@ class Oidc(DbNamespace):
         """, (issuer, subject, user))
 
 
-class Groups(DbNamespace):
+class Groups(database.ConnNamespace):
     def list(self, name_re=''):
         return [g for g, in self.execute("""
                     select distinct group_ from user_memberships
@@ -403,7 +325,7 @@ class Groups(DbNamespace):
         """, [(origin, uid, group) for uid, group in trans])
 
 
-class Solutions(DbNamespace):
+class Solutions(database.ConnNamespace):
     @staticmethod
     def show_key(origin, page):
         return f'solutions:{origin}:{page}'
@@ -421,7 +343,7 @@ class Solutions(DbNamespace):
         """, (origin, page), default=(None,))[0]
 
 
-class Polls(DbNamespace):
+class Polls(database.ConnNamespace):
     @staticmethod
     def poll_key(origin, poll):
         return f'polls:{origin}:{poll}'
@@ -468,7 +390,7 @@ class Polls(DbNamespace):
         self.notify(*(self.poll_key(origin, p) for p in ids))
 
     def clear(self, origin, ids):
-        phs = placeholders(ids)
+        phs = database.placeholders(ids)
         args = (origin, *ids)
         voters = list(self.execute(f"""
             select distinct poll, voter from poll_votes
@@ -481,14 +403,15 @@ class Polls(DbNamespace):
                     *(self.voter_key(origin, p, v) for p, v in voters))
 
     def vote(self, origin, poll, voter, answer, vote):
-        if len(voter) > max_id_len: raise Error("Invalid voter ID")
+        if len(voter) > max_id_len: raise database.Error("Invalid voter ID")
         mode, exp, answers = self.row("""
             select mode, expires, answers from polls
             where (origin, id) = (?, ?)
         """, (origin, poll), default=(None, None, 0))
         if mode is None or (exp is not None and time.time_ns() >= exp):
-            raise Error("Voting is closed")
-        if answer < 0 or answer >= answers: raise Error("Invalid answer")
+            raise database.Error("Voting is closed")
+        if answer < 0 or answer >= answers:
+            raise database.Error("Invalid answer")
         self.notify(self.poll_key(origin, poll),
                     self.voter_key(origin, poll, voter))
         if not vote:
@@ -510,7 +433,7 @@ class Polls(DbNamespace):
             select count(distinct voter) from poll_votes
             where (origin, poll) = (?, ?)
         """, (origin, poll))
-        if voters > max_voters_per_poll: raise Error("Too many voters")
+        if voters > max_voters_per_poll: raise database.Error("Too many voters")
 
     def poll_data(self, origin, poll, force_results=False):
         mode, exp, results, solutions = self.row("""
@@ -538,33 +461,11 @@ class Polls(DbNamespace):
         for p, a in self.execute(f"""
                     select poll, answer from poll_votes
                     where (origin, voter) = (?, ?)
-                      and poll in ({placeholders(pids)})
+                      and poll in ({database.placeholders(pids)})
                     order by poll, answer
                 """, (origin, voter, *pids)):
             votes.setdefault(p, []).append(a)
         return {'votes': votes}
-
-
-class ConnectionPool:
-    def __init__(self, store, size=0, **kwargs):
-        self.store = store
-        self.size = size
-        self.kwargs = kwargs
-        self.lock = threading.Lock()
-        self.connections = []
-
-    def get(self):
-        with self.lock:
-            if self.connections: return self.connections.pop()
-        return self.store.connect(**self.kwargs)
-
-    def release(self, db):
-        with self.lock:
-            if self.size <= 0 or len(self.connections) < self.size:
-                db.rollback()
-                self.connections.append(db)
-            else:
-                db.close()
 
 
 class Waker:
@@ -598,31 +499,23 @@ class WakerSet(set):
         self.seq = None
 
 
-class Store:
+class Store(database.Database):
+    Connection = Connection
+    WriteConnection = WriteConnection
+
     def __init__(self, config, allow_mem=False, check_version=False):
-        self.config = config
-        self.path = config.path('path')
-        if self.path is None and not allow_mem:
-            raise Exception("No store path defined")
-        self.timeout = config.get('timeout', 5)
-        self.pragma = config.get('pragma', {}).copy()
-        # The defaults are based on <https://kerkour.com/sqlite-for-servers>.
-        self.pragma.setdefault('synchronous', 'normal')
-        self.pragma.setdefault('cache_size', -250000)
-        self.pragma.setdefault('temp_store', 'memory')
-        self.write_isolation_level = config.get('write_isolation_level',
-                                                'immediate')
+        super().__init__(config, allow_mem=allow_mem,
+                         check_version=check_version)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
         self._wake = Seqs()
-        if check_version: self.check_version()
 
     def __enter__(self):
         log.info("Store: %(path)s",
                   path=self.path if self.path is not None else ':in-memory:')
-        self.dispatcher_db = self.connect(mode='ro')
-        if self.path is None: self.create(dev=True)  # Create in-memory DB
+        super().__enter__()
+        self.dispatcher_db = self.mem_db or self.connect(mode='ro')
         self.dispatcher = threading.Thread(target=self.dispatch,
                                            name='store:dispatcher')
         with self.lock: self._stop = False
@@ -635,37 +528,9 @@ class Store:
             self._stop = True
             self.lock.notify()
         self.dispatcher.join()
-        self.dispatcher_db.close()
+        if self.dispatcher_db != self.mem_db: self.dispatcher_db.close()
+        super().__exit__(typ, value, tb)
         log.debug("Store: done")
-
-    def connect(self, *, mode, path=False, isolation_level=None):
-        if path is False: path = self.path
-        if isolation_level is None: isolation_level = self.write_isolation_level
-        uri = f'{path.as_uri()}?mode={mode}' if path is not None \
-              else 'file:store?mode=memory&cache=shared'
-        factory = WriteConnection if 'rw' in mode else Connection
-        # Some pragmas cannot be used or are ineffective within a transaction,
-        # and autocommit=False always has a transaction open. Open the
-        # connection with autocommit=True, then switch after configuration.
-        db = sqlite3.connect(uri, uri=True, timeout=self.timeout,
-                             factory=factory, autocommit=True,
-                             isolation_level=isolation_level,
-                             check_same_thread=False)
-        db._store = self
-        db.execute("pragma journal_mode = wal")
-        db.execute("pragma foreign_keys = on")
-        for k, v in self.pragma.items(): db.execute(f"pragma {k} = {v}")
-        db.autocommit = sqlite3.LEGACY_TRANSACTION_CONTROL \
-                        if 'rw' in mode and db.isolation_level \
-                        else False
-        db.create_function(
-            'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
-            deterministic=True)
-        return db
-
-    def pool(self, **kwargs):
-        kwargs.setdefault('size', self.config.get('pool_size', 16))
-        return ConnectionPool(self, **kwargs)
 
     @contextlib.contextmanager
     def waker(self, cv, keys, db, limit=None):
@@ -725,78 +590,6 @@ class Store:
                     and Seqs.newer_than(seq, ws.seq):
                 ws.seq = seq
                 updated.update(ws)
-
-    def backup(self, db, dest):
-        if dest.exists():
-            raise Exception("Backup destination already exists")
-        with contextlib.closing(self.connect(path=dest, mode='rwc')) as ddb:
-            db.backup(ddb)
-
-    def create(self, version=None, dev=False):
-        self._check_version(version)
-        if self.path is not None and self.path.exists():
-            raise Exception("Store database already exists")
-        with contextlib.closing(
-                self.connect(mode='rwc', isolation_level='immediate')) as db:
-            db.execute("pragma foreign_keys = off")
-            with db:
-                to_version = self._upgrade(db, from_version=0,
-                                           to_version=version, dev=dev)
-            return to_version
-
-    def upgrade(self, version=None, on_version=None):
-        self._check_version(version)
-        with contextlib.closing(
-                self.connect(mode='rw', isolation_level='immediate')) as db:
-            db.execute("pragma foreign_keys = off")
-            with db:
-                from_version = db.meta('version')
-                to_version = self._upgrade(db, from_version=from_version,
-                                           to_version=version, dev=db.dev,
-                                           on_version=on_version)
-        return from_version, to_version
-
-    def _check_version(self, version):
-        if version is None: return
-        for v, _ in self.versions():
-            if v == version: return
-        raise Exception(f"Invalid store version: {version}")
-
-    def _upgrade(self, db, from_version, to_version, dev, on_version=None):
-        now = time.time_ns()
-        version = from_version
-        for v, fn in self.versions(from_version + 1):
-            if to_version is not None and v > to_version: break
-            if on_version is not None: on_version(v)
-            # For complex schema upgrades, follow:
-            # https://sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes
-            fn(db, dev, now)
-            db.execute("""
-                insert or replace into meta (key, value) values ('version', ?)
-            """, (v,))
-            db.check_foreign_keys()
-            db.check_integrity()
-            version = v
-        return version
-
-    def versions(self, version=1):
-        while True:
-            if (fn := getattr(self, f'version_{version}', None)) is None:
-                return
-            yield version, fn
-            version += 1
-
-    def version(self, db):
-        version = db.meta('version')
-        latest = max(v for v, _ in self.versions())
-        return version, latest
-
-    def check_version(self):
-        with contextlib.closing(self.connect(mode='ro')) as db, db:
-            version, latest = self.version(db)
-        if version != latest:
-            raise Exception("Store version mismatch "
-                            f"(current: {version}, want: {latest})")
 
     def version_1(self, db, dev, now):
         db.execute("""
