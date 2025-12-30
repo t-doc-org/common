@@ -218,10 +218,12 @@ class Dispatcher:
                 self.pre_request(wr)
                 log_level = getattr(handler, '_log_level', logs.NOTSET)
                 if log_level != logs.NOTSET:
+                    log_query = getattr(handler, '_log_query', True)
                     log.log(log_level,
                             "Start: %(method)s %(uri)s\n"
                             "remote=%(remote)s user=%(user)s",
-                            method=wr.method, uri=wr.uri(),
+                            method=wr.method,
+                            uri=wr.uri(include_query=log_query),
                             remote=wr.remote_addr, user=wr.user,
                             event='req:start')
                     chained_respond = wr.respond
@@ -254,7 +256,7 @@ class Dispatcher:
 
 
 def endpoint(name, methods=None, final=True, require_authn=False,
-             log_level=logs.INFO):
+             log_level=logs.INFO, log_query=True):
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
@@ -267,15 +269,16 @@ def endpoint(name, methods=None, final=True, require_authn=False,
             return fn(self, wr)
         if name is not None: dfn._endpoint = name
         dfn._log_level = log_level
+        dfn._log_query = log_query
         return dfn
     return decorator
 
 
 def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
-                  log_level=logs.INFO):
+                  log_level=logs.INFO, log_query=True):
     def decorator(fn):
         @endpoint(name, methods=methods, require_authn=require_authn,
-                  log_level=log_level)
+                  log_level=log_level, log_query=log_query)
         @functools.wraps(fn)
         def dfn(self, /, wr):
             return wr.respond_json(

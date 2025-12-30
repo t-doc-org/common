@@ -611,7 +611,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         }))
         return {'redirect': parse.urlunparse(parts)}
 
-    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,))
+    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), log_query=False)
     def handle_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         href = None
