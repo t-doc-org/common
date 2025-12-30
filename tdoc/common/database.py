@@ -116,15 +116,14 @@ class Database:
     Connection = Connection
     WriteConnection = Connection
 
-    # TODO: allow_mem => mem_name
-
-    def __init__(self, config, allow_mem=False, check_version=False):
+    def __init__(self, config, mem_name=None, check_version=False):
         # TODO: Change check_version into an on_upgrade callback that is called
         #       when an upgrade is needed. Then either perform the upgrade or
         #       raise.
         self.config = config
+        self.mem_name = mem_name
         self.path = config.path('path')
-        if self.path is None and not allow_mem:
+        if self.path is None and not mem_name:
             raise Exception("No database path defined")
         self.timeout = config.get('timeout', 5)
         self.pragma = config.get('pragma', {}).copy()
@@ -152,7 +151,7 @@ class Database:
         if path is False: path = self.path
         if isolation_level is None: isolation_level = self.write_isolation_level
         uri = f'{path.as_uri()}?mode={mode}' if path is not None \
-              else 'file:store?mode=memory&cache=shared'
+              else f'file:{self.mem_name}?mode=memory&cache=shared'
         factory = self.WriteConnection if 'rw' in mode else self.Connection
         # Some pragmas cannot be used or are ineffective within a transaction,
         # and autocommit=False always has a transaction open. Open the

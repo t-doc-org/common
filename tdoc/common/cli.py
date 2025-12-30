@@ -136,7 +136,8 @@ def add_sphinx_options(parser):
 
 
 def get_store(opts, allow_mem=False, check_latest=True):
-    st = store.Store(opts.cfg.sub('store'), allow_mem=allow_mem)
+    st = store.Store(opts.cfg.sub('store'),
+                     mem_name='store' if allow_mem else None)
     if check_latest and st.path is not None:
         with contextlib.closing(st.connect(mode='rw')) as db:
             with db: version, latest = st.version(db)
