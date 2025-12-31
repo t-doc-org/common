@@ -36,7 +36,9 @@ def application(config_path, origins, events_level=logs.NOTSET):
             log.log(events_level, "Event %s: %s", event, kwargs)
 
     # Instantiate the store and the API.
-    st = stack.enter_context(store.Store(store_config, check_version=True))
+    st = store.Store(store_config)
+    st.check_version()
+    stack.enter_context(st)
     app = stack.enter_context(api.Api(config=cfg, store=st))
 
     return wsgi.cors(

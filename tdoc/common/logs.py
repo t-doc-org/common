@@ -18,6 +18,7 @@ import traceback
 from . import config as _config
 
 # TODO: Allow per-handler filters
+# TODO: Allow unset LogRecord fields in formats
 # TODO: Add a DB log handler, logging to a separate database
 
 globals().update(logging.getLevelNamesMapping())
@@ -119,7 +120,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
                 c.get('format', '{ilevel} [{ctx:20}] {message}'), style='{'))
             hs.append(sh)
 
-        for c in config.subs('file'):
+        for c in config.subs('files'):
             if not c.get('enabled', False): continue
             if (path := c.path('path')) is None: continue
             fh = handlers.TimedRotatingFileHandler(

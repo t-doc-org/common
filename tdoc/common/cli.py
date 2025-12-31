@@ -135,32 +135,30 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
-def get_store(opts, allow_mem=False, check_latest=True):
+def get_store(opts, allow_mem=False):
     st = store.Store(opts.cfg.sub('store'),
                      mem_name='store' if allow_mem else None)
-    if check_latest and st.path is not None:
-        with contextlib.closing(st.connect(mode='rw')) as db:
-            with db: version, latest = st.version(db)
-            if version != latest:
-                o = opts.stdout
-                o.write(f"""\
+    @st.check_version
+    def on_upgrade(st, db, version, latest):
+        o = opts.stdout
+        o.write(f"""\
 {o.LYELLOW}The store database must be upgraded:{o.NORM} version\
  {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
+  {st.path}
 Would you like to perform the upgrade (y/n)? """)
-                o.flush()
-                resp = input().lower()
-                o.write("\n")
-                if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-                    raise Exception("Store version mismatch "
-                                    f"(current: {version}, want: {latest})")
-                upgrade_store(opts, st, db, version, latest)
+        o.flush()
+        resp = input().lower()
+        o.write("\n")
+        if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return
+        upgrade_database(opts, st, db, version, latest)
+        return True
     return st
 
 
 @contextlib.contextmanager
 def get_db(opts, mode):
-    with get_store(opts) as store, \
-            contextlib.closing(store.connect(mode=mode)) as db, db:
+    with get_store(opts) as st, \
+            contextlib.closing(st.connect(mode=mode)) as db, db:
         yield db
 
 
@@ -168,20 +166,20 @@ def read_db(opts): return get_db(opts, 'ro')
 def write_db(opts): return get_db(opts, 'rw')
 
 
-def store_backup_path(store):
+def backup_path(st):
     suffix = datetime.datetime.now() \
                 .isoformat('.', 'microseconds').replace(':', '-')
-    return store.path.with_name(f'{store.path.name}.{suffix}')
+    return st.path.with_name(f'{st.path.name}.{suffix}')
 
 
-def upgrade_store(opts, store, db, version, to_version):
+def upgrade_database(opts, database, db, version, to_version):
     o = opts.stdout
-    backup = store_backup_path(store)
-    o.write(f"Backing up store to {backup}\n")
-    store.backup(db, backup)
-    def on_version(v): o.write(f"Upgrading store to version {v}\n")
-    store.upgrade(version=to_version, on_version=on_version)
-    o.write("Store upgraded successfully\n")
+    backup = backup_path(database)
+    o.write(f"Backing up database to: {backup}\n")
+    database.backup(db, backup)
+    def on_version(v): o.write(f"Upgrading database to version {v}\n")
+    database.upgrade(version=to_version, on_version=on_version)
+    o.write("Database upgraded successfully\n")
 
 
 def comma_separated(s):
@@ -327,8 +325,8 @@ def cmd_serve(opts):
                          else socket.AF_INET
 
     with Server(addr, RequestHandler) as srv, \
-            get_store(opts, allow_mem=True) as store, \
-            api.Api(config=opts.cfg, store=store) as api_, \
+            get_store(opts, allow_mem=True) as st, \
+            api.Api(config=opts.cfg, store=st) as api_, \
             Application(opts, srv, api_) as app:
         srv.set_app(app)
         try:
@@ -375,11 +373,11 @@ def add_store_commands(parser):
 
 
 def cmd_store_backup(opts):
-    with get_store(opts, check_latest=False) as store, \
-            contextlib.closing(store.connect(mode='ro')) as db, db:
-        if opts.destination is None: opts.destination = store_backup_path(store)
-        opts.stdout.write(f"Backing up store to {opts.destination}\n")
-        store.backup(db, opts.destination)
+    st = store.Store(opts.cfg.sub('store'))
+    if opts.destination is None: opts.destination = backup_path(st)
+    with contextlib.closing(st.connect(mode='ro')) as db, db:
+        opts.stdout.write(f"Backing up store to: {opts.destination}\n")
+        st.backup(db, opts.destination)
 
 
 def cmd_store_create(opts):
@@ -389,15 +387,15 @@ def cmd_store_create(opts):
 
 
 def cmd_store_upgrade(opts):
-    with get_store(opts, check_latest=False) as store, \
-            contextlib.closing(store.connect(mode='rw')) as db:
-        with db: version, latest = store.version(db)
+    st = store.Store(opts.cfg.sub('store'))
+    with contextlib.closing(st.connect(mode='rw')) as db:
+        with db: version, latest = st.version(db)
         if version == latest:
             opts.stdout.write(
                 f"Store is already up-to-date (version: {version})\n")
             return
-        upgrade_store(opts, store, db, version,
-                      opts.version if opts.version is not None else latest)
+        upgrade_database(opts, st, db, version,
+                         opts.version if opts.version is not None else latest)
 
 
 def add_token_commands(parser):

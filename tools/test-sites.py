@@ -180,7 +180,7 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
 
     vrun('tdoc', 'store', 'backup', '--debug', out=[
-        r'^Backing up store to .*store\.sqlite'
+        r'^Backing up store to: .*store\.sqlite'
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}\n',
     ])
 

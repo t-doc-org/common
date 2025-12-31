@@ -503,8 +503,8 @@ class Store(database.Database):
     Connection = Connection
     WriteConnection = WriteConnection
 
-    def __init__(self, config, mem_name=None, check_version=False):
-        super().__init__(config, mem_name=mem_name, check_version=check_version)
+    def __init__(self, config, mem_name=None):
+        super().__init__(config, mem_name=mem_name)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}

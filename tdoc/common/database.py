@@ -116,10 +116,7 @@ class Database:
     Connection = Connection
     WriteConnection = Connection
 
-    def __init__(self, config, mem_name=None, check_version=False):
-        # TODO: Change check_version into an on_upgrade callback that is called
-        #       when an upgrade is needed. Then either perform the upgrade or
-        #       raise.
+    def __init__(self, config, mem_name=None):
         self.config = config
         self.mem_name = mem_name
         self.path = config.path('path')
@@ -133,8 +130,25 @@ class Database:
         self.pragma.setdefault('temp_store', 'memory')
         self.write_isolation_level = config.get('write_isolation_level',
                                                 'immediate')
-        if check_version: self.check_version()
         self.mem_db = None
+
+    @property
+    def exists(self): return self.path is not None and self.path.exists()
+
+    def version(self, db):
+        version = db.meta('version')
+        latest = max(v for v, _ in self.versions())
+        return version, latest
+
+    def check_version(self, on_upgrade=None):
+        if self.path is None: return
+        with contextlib.closing(self.connect(mode='rw')) as db:
+            with db: version, latest = self.version(db)
+            if version == latest: return
+            if on_upgrade is not None and on_upgrade(self, db, version, latest):
+                return
+        raise Exception("Database version mismatch "
+                        f"(current: {version}, want: {latest})")
 
     def __enter__(self):
         if self.path is None:
@@ -177,15 +191,13 @@ class Database:
         return ConnectionPool(self, **kwargs)
 
     def backup(self, db, dest):
-        if dest.exists():
-            raise Exception("Backup destination already exists")
+        if dest.exists(): raise Exception("Backup destination already exists")
         with contextlib.closing(self.connect(path=dest, mode='rwc')) as ddb:
             db.backup(ddb)
 
     def create(self, version=None, dev=False):
-        self._check_version(version)
-        if self.path is not None and self.path.exists():
-            raise Exception("Store database already exists")
+        self._version_valid(version)
+        if self.exists: raise Exception(f"Database already exists: {self.path}")
         with contextlib.closing(
                 self.connect(mode='rwc', isolation_level='immediate')) as db:
             db.execute("pragma foreign_keys = off")
@@ -195,7 +207,7 @@ class Database:
             return to_version
 
     def upgrade(self, version=None, on_version=None):
-        self._check_version(version)
+        self._version_valid(version)
         with contextlib.closing(
                 self.connect(mode='rw', isolation_level='immediate')) as db:
             db.execute("pragma foreign_keys = off")
@@ -206,7 +218,7 @@ class Database:
                                            on_version=on_version)
         return from_version, to_version
 
-    def _check_version(self, version):
+    def _version_valid(self, version):
         if version is None: return
         for v, _ in self.versions():
             if v == version: return
@@ -235,18 +247,6 @@ class Database:
                 return
             yield version, fn
             version += 1
-
-    def version(self, db):
-        version = db.meta('version')
-        latest = max(v for v, _ in self.versions())
-        return version, latest
-
-    def check_version(self):
-        with contextlib.closing(self.connect(mode='ro')) as db, db:
-            version, latest = self.version(db)
-        if version != latest:
-            raise Exception("Store version mismatch "
-                            f"(current: {version}, want: {latest})")
 
     def version_1(self, db, dev, now):
         db.execute("""
