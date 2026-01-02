@@ -41,20 +41,27 @@ class SqlExecutor extends Executor {
         if (envs.length === 0) return;
 
         // Web worker URLs must satisfy the same-origin policy, and the default
-        // config creates a worker from sqlite3-worker1-bundler-friendly.mjs,
-        // which may be served from a different origin. So we start the worker
-        // on a data: URL that imports the worker module.
+        // config creates a worker from sqlite3-worker1.mjs, which may be served
+        // from a different origin. So we start the worker on a data: URL that
+        // imports the worker module.
         const {default: sqlite3_init} = await import(`\
 ${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
         promiser = await sqlite3_init({
             worker: () => {
-                const url = import.meta.resolve(`\
-${tdoc.versions.sqlite}\
-/sqlite-wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs`);
-                return new Worker(
-                    dataUrl('application/javascript',
-                            `await import(${JSON.stringify(url)});`),
-                    {type: 'module'});
+                // BUG(sqlite-wasm): 3.51.0 and above have a broken
+                // sqlite3-worker1.mjs
+                // <https://github.com/sqlite/sqlite-wasm/issues/123>,
+                // and prior versions don't even have the .mjs file. Since the
+                // module is a very thin wrapper around sqlite3.mjs, we include
+                // its content here as a data: URL.
+                const url = import.meta.resolve(
+                    `${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3.mjs`);
+                const mod = `\
+import {default as sqlite3InitModule} from ${JSON.stringify(url)};
+sqlite3InitModule().then((sqlite3) => sqlite3.initWorker1API());
+`;
+                return new Worker(dataUrl('application/javascript', mod),
+                                  {type: 'module'});
             },
             // debug: console.debug,
         });

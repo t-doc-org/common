@@ -59,10 +59,7 @@ info = {
     },
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        # 3.51.1-build1 and later are missing the file
-        # sqlite3-bundler-friendly.mjs.
-        # 'version': '3.51.1-build2',
-        'version': '3.50.4-build1',
+        'version': '3.51.1-build2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
