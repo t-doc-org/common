@@ -7,6 +7,8 @@
 ## 0.66 *(2025-12-08)*
 
 - Updated all dependencies.
+- **This release breaks [`{exec} sql`](/reference/exec.md#sql)** due to a
+  missing file in the default version of `@sqlite.org/sqlite-wasm`.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.65...0.66)
 
 (release-0-65)=
