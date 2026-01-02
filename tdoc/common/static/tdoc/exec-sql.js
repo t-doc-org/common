@@ -40,16 +40,17 @@ class SqlExecutor extends Executor {
     static async init(envs) {
         if (envs.length === 0) return;
 
-        // Web worker URLs must be satisfy the same-origin policy. If the worker
+        // Web worker URLs must satisfy the same-origin policy. If the worker
         // module is in a different origin, we start the worker on a data: URL
         // that imports the worker module.
         const url = import.meta.resolve(`\
 ${tdoc.versions.sqlite}\
 /sqlite-wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs`);
         const worker = sameOrigin(url) ? undefined
-                       : new Worker(dataUrl('application/javascript',
-                                            `import(${JSON.stringify(url)});`),
-                                    {type: 'module'});
+                       : new Worker(
+                           dataUrl('application/javascript',
+                                   `await import(${JSON.stringify(url)});`),
+                           {type: 'module'});
 
         const {default: sqlite3_init} = await import(`\
 ${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
