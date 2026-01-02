@@ -906,6 +906,8 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         wr.respond(wsgi.http_status(HTTPStatus.OK), [
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
+            ('Access-Control-Allow-Origin', '*'),
+            ('Access-Control-Expose-Headers', '*'),
         ])
         if method == HTTPMethod.HEAD: return
         yield from wr.file_wrapper(open(path, 'rb'))
