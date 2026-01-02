@@ -60,7 +60,7 @@ function updateSolutionsTooltip() {
     const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                   "Show solutions" : "Hide solutions";
     bootstrap.Tooltip.getInstance(toggleSolutionsBtn)
-        .setContent({'.tooltip-inner': title});
+        ?.setContent?.({'.tooltip-inner': title});
 }
 if (toggleSolutionsBtn) {
     on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
