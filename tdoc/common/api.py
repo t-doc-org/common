@@ -295,8 +295,7 @@ class Watcher:
 class Observable:
     @staticmethod
     def hash(req):
-        return hashlib.sha256(
-            wsgi.to_json(req, sort_keys=True).encode('utf-8')).digest()
+        return hashlib.sha256(wsgi.to_json_sorted(req).encode('utf-8')).digest()
 
     def __init__(self, req):
         self.key = self.hash(req)

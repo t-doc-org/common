@@ -141,8 +141,7 @@ def meta(app, docname, key, default=None):
     return v
 
 
-def to_json(value):
-    return json.dumps(value, separators=(',', ':'))
+to_json = json.JSONEncoder(separators=(',', ':')).encode
 
 
 def setup(app):

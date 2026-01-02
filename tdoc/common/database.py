@@ -9,6 +9,8 @@ import sqlite3
 import threading
 import time
 
+# TODO: Dedent multi-line table creation statements (textwrap.dedent)
+
 
 def to_datetime(nsec):
     if nsec is None: return
@@ -20,8 +22,7 @@ def to_nsec(dt, default=None):
     return int(dt.timestamp() * 1e9)
 
 
-def to_json(data, sort_keys=False):
-    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
+to_json = json.JSONEncoder(separators=(',', ':')).encode
 
 
 def placeholders(args): return ', '.join('?' * len(args))
@@ -116,7 +117,7 @@ class Database:
     Connection = Connection
     WriteConnection = Connection
 
-    def __init__(self, config, mem_name=None):
+    def __init__(self, config, *, mem_name=None):
         self.config = config
         self.mem_name = mem_name
         self.path = config.path('path')

@@ -7,6 +7,7 @@ import contextvars
 import datetime
 import functools
 import gzip
+import json
 import logging
 from logging import handlers
 import os
@@ -15,11 +16,10 @@ import shutil
 import threading
 import traceback
 
-from . import config as _config
+from . import database, config as _config
 
 # TODO: Allow per-handler filters
 # TODO: Allow unset LogRecord fields in formats
-# TODO: Add a DB log handler, logging to a separate database
 
 globals().update(logging.getLevelNamesMapping())
 
@@ -48,9 +48,10 @@ def pop_ctx(token):
 
 class CtxFilter(logging.Filter):
     def filter(self, rec):
-        rec.ilevel = rec.levelname[0]
-        if (v := ctx.get()) is None: v = threading.current_thread().name
-        rec.ctx = v[:20]
+        if not hasattr(rec, 'ctx'):
+            rec.ilevel = rec.levelname[0]
+            if (v := ctx.get()) is None: v = threading.current_thread().name
+            rec.ctx = v[:20]
         return True
 
 
@@ -60,7 +61,8 @@ def get_kwarg(rec, name, default=None):
     return default
 
 
-def format_exception(rec):
+def normalize_record(rec):
+    if not hasattr(rec, 'message'): rec.message = rec.getMessage()
     if rec.exc_info and not rec.exc_text:
         parts = traceback.format_exception(
             *rec.exc_info, limit=get_kwarg(rec, 'exc_limit', None),
@@ -72,20 +74,12 @@ def format_exception(rec):
 
 class Formatter(logging.Formatter):
     def format(self, rec):
-        # This needs to be done here instead of formatException(), because the
-        # latter doesn't have access to the LogRecord.
-        format_exception(rec)
+        normalize_record(rec)
         return super().format(rec).replace("\n", "\n  ")
 
     def formatTime(self, rec, datefmt=None):
         dt = datetime.datetime.utcfromtimestamp(rec.created)
         return dt.isoformat(timespec='microseconds')
-
-
-class QueueHandler(handlers.QueueHandler):
-    def prepare(self, rec):
-        format_exception(rec)
-        return rec
 
 
 def compress(src, dst):
@@ -137,6 +131,16 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
                 style='{'))
             hs.append(fh)
 
+        for c in config.subs('databases'):
+            if not c.get('enabled', False): continue
+            st = LogStore(c, stderr=stderr)
+            # TODO: Handle upgrades
+            stack.enter_context(st)
+            dbh = DatabaseHandler(st)
+            dbh.setLevel(c.get('level', NOTSET))
+            stack.callback(dbh.flush)  # TODO: May not be needed
+            hs.append(dbh)
+
         if not hs:
             pass
         elif transport == 'none':
@@ -149,7 +153,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             ql = handlers.QueueListener(q, *hs, respect_handler_level=True)
             ql.start()
             stack.callback(ql.stop)
-            qh = QueueHandler(q)
+            qh = handlers.QueueHandler(q)
             qh.setLevel(min(h.level for h in hs))
             qh.addFilter(ctx_filter)
             root.addHandler(qh)
@@ -160,3 +164,138 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
         stack.callback(lambda: log.debug("Logs: stopping"))
 
         yield
+
+
+class DatabaseHandler(logging.Handler):
+    def __init__(self, store):
+        super().__init__()
+        self.store = store
+
+    def emit(self, rec):
+        try:
+            normalize_record(rec)
+            self.store.log(rec)
+        except Exception:
+            self.handleError(rec)
+
+    def flush(self):
+        self.store.flush()
+
+
+def safe_time_ns(v):
+    try: return int(v * 1e9)
+    except Exception: return time.time_ns()
+
+
+def safe_int(v):
+    if v is None: return None
+    try: return int(v)
+    except Exception: return None
+
+
+def safe_str(v):
+    if v is None: return None
+    try: return str(v)
+    except Exception: return None
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, v):
+        if isinstance(v, set): return tuple(v)
+        try: return str(v)
+        except Exception: pass
+        try: return repr(v)
+        except Exception: pass
+        return f'<{v.__class__.__name__}>'
+
+to_json = JSONEncoder(skipkeys=True, separators=(',', ':')).encode
+
+
+class Connection(database.Connection):
+    def log(self, recs):
+        rows = [(safe_time_ns(r.created), to_json(r.__dict__),
+                 safe_int(r.levelno), safe_str(r.message), safe_str(r.msg),
+                 to_json(r.args), safe_str(r.exc_text), safe_str(r.stack_info),
+                 safe_str(r.logger), safe_str(getattr(r, 'ctx', None)),
+                 safe_str(r.pathname), safe_int(r.lineno), safe_str(r.funcName))
+                for r in recs]
+        self.executemany("""
+            insert into log (time, record, level, message, msg, args, exception,
+                             stack_info, logger, ctx, file, line, function)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, rows)
+
+
+class LogStore(database.Database):
+    WriteConnection = Connection = Connection
+
+    def __init__(self, config, *, stderr=None, **kwargs):
+        super().__init__(config, **kwargs)
+        self.stderr = stderr
+        self.flush_interval = config.get('flush_interval', 5)
+        self.lock = threading.Condition(threading.Lock())
+        self.queue = []
+
+    def __enter__(self):
+        res = super().__enter__()
+        self.db = self.connect(mode='rw')
+        self.flusher = threading.Thread(target=self._flush, name='log:flusher')
+        with self.lock: self._stop = self._wake = False
+        self.flusher.start()
+        return res
+
+    def __exit__(self, typ, value, tb):
+        with self.lock:
+            self._stop = True
+            self.lock.notify()
+        self.flusher.join()
+        self.db.close()
+        return super().__exit__(typ, value, tb)
+
+    def log(self, rec):
+        with self.lock: self.queue.append(rec)
+
+    def flush(self):
+        with self.lock:
+            self._wake = True
+            self.lock.notify()
+
+    def _flush(self):
+        recs = None
+        while True:
+            with self.lock:
+                self.lock.wait_for(lambda: self._stop or self._wake,
+                                   timeout=self.flush_interval)
+                self._wake = False
+                stop = self._stop
+                if self.queue: recs, self.queue = self.queue, []
+            if recs:
+                try:
+                    with self.db as db: db.log(recs)
+                except Exception as e:
+                    if self.stderr is not None:
+                        self.stderr.write(
+                            f"Failed to insert {len(recs)} log rows: {e}\n")
+                recs = None
+            if stop: break
+
+    def version_1(self, db, dev, now):
+        super().version_1(db, dev, now)
+        db.execute("""
+            create table log (
+                time int not null,
+                record text not null,
+                level int,
+                message text,
+                msg text,
+                args text,
+                exception text,
+                stack_info text,
+                logger text,
+                ctx text,
+                file text,
+                line int,
+                function text
+            ) strict
+        """)
+        db.execute("create index log_time on log (time)")

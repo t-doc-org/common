@@ -55,6 +55,7 @@ def main(argv, stdin, stdout, stderr):
     add_options(p, sphinx=True)
 
     add_group_commands(root)
+    add_log_commands(root)
 
     p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
@@ -172,14 +173,14 @@ def backup_path(st):
     return st.path.with_name(f'{st.path.name}.{suffix}')
 
 
-def upgrade_database(opts, database, db, version, to_version):
+def upgrade_database(opts, database, db, version, to_version, indent=""):
     o = opts.stdout
     backup = backup_path(database)
-    o.write(f"Backing up database to: {backup}\n")
+    o.write(f"{indent}Backing up database to: {backup}\n")
     database.backup(db, backup)
-    def on_version(v): o.write(f"Upgrading database to version {v}\n")
+    def on_version(v): o.write(f"{indent}Upgrading database to version {v}\n")
     database.upgrade(version=to_version, on_version=on_version)
-    o.write("Database upgraded successfully\n")
+    o.write(f"{indent}Database upgraded successfully\n")
 
 
 def comma_separated(s):
@@ -312,6 +313,70 @@ def cmd_group_remove(opts):
         db.groups.modify(opts.origin, opts.group,
                          remove_users=comma_separated(opts.users),
                          remove_groups=comma_separated(opts.groups))
+
+
+def add_log_commands(parser):
+    p = parser.add_parser('log', help="Log-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('backup', help="Backup log databases.")
+    p.set_defaults(handler=cmd_log_backup)
+    add_options(p)
+
+    p = sp.add_parser('create', help="Create log databases.")
+    p.set_defaults(handler=cmd_log_create)
+    arg = p.add_argument
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version at which to create the databases (default: latest).")
+    add_options(p)
+
+    p = sp.add_parser('upgrade', help="Upgrade log databases.")
+    p.set_defaults(handler=cmd_log_upgrade)
+    arg = p.add_argument
+    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+        help="The version to which to upgrade the databases (default: latest).")
+    add_options(p)
+
+
+def cmd_log_backup(opts):
+    for c in opts.cfg.subs('logging.databases'):
+        lst = logs.LogStore(c)
+        dest = backup_path(lst)
+        with contextlib.closing(lst.connect(mode='ro')) as db, db:
+            opts.stdout.write(f"Backing up database to: {dest}\n")
+            lst.backup(db, dest)
+
+
+def cmd_log_create(opts):
+    for c in opts.cfg.subs('logging.databases'):
+        lst = logs.LogStore(c)
+        if lst.exists:
+            opts.stdout.write(f"""\
+Already exists: {lst.path}
+""")
+            continue
+        version = lst.create(version=opts.version)
+        opts.stdout.write(f"""\
+Created (version: {version}): {lst.path}
+""")
+
+
+def cmd_log_upgrade(opts):
+    for c in opts.cfg.subs('logging.databases'):
+        lst = logs.LogStore(c)
+        with contextlib.closing(lst.connect(mode='rw')) as db:
+            with db: version, latest = lst.version(db)
+            if version == latest:
+                opts.stdout.write(f"""\
+Already up-to-date (version: {version}): {lst.path}
+""")
+                continue
+            to_version = opts.version if opts.version is not None else latest
+            opts.stdout.write(f"""\
+Upgrading (version: {version}): {lst.path}
+""")
+            upgrade_database(opts, lst, db, version, to_version, indent="  ")
 
 
 def cmd_serve(opts):

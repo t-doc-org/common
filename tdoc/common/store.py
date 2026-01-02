@@ -503,8 +503,8 @@ class Store(database.Database):
     Connection = Connection
     WriteConnection = WriteConnection
 
-    def __init__(self, config, mem_name=None):
-        super().__init__(config, mem_name=mem_name)
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
@@ -513,13 +513,13 @@ class Store(database.Database):
     def __enter__(self):
         log.info("Store: %(path)s",
                   path=self.path if self.path is not None else ':in-memory:')
-        super().__enter__()
+        res = super().__enter__()
         self.dispatcher_db = self.mem_db or self.connect(mode='ro')
         self.dispatcher = threading.Thread(target=self.dispatch,
                                            name='store:dispatcher')
         with self.lock: self._stop = False
         self.dispatcher.start()
-        return self
+        return res
 
     def __exit__(self, typ, value, tb):
         log.debug("Store: stopping")
@@ -528,8 +528,9 @@ class Store(database.Database):
             self.lock.notify()
         self.dispatcher.join()
         if self.dispatcher_db != self.mem_db: self.dispatcher_db.close()
-        super().__exit__(typ, value, tb)
+        res = super().__exit__(typ, value, tb)
         log.debug("Store: done")
+        return res
 
     @contextlib.contextmanager
     def waker(self, cv, keys, db, limit=None):
@@ -561,6 +562,7 @@ class Store(database.Database):
             self.lock.notify()
 
     def dispatch(self):
+        # TODO: Make more resilient against DB errors
         next_poll = None
         if self.poll_interval > 0:
             poll_interval = int(self.poll_interval * 1_000_000_000)
@@ -577,6 +579,7 @@ class Store(database.Database):
                 self._wake.clear()
                 if next_poll is not None and time.monotonic_ns() >= next_poll:
                     if self.wakers:
+                        # TODO: Perform DB query outside of the lock
                         with self.dispatcher_db as db:
                             seqs = db.notifications(list(self.wakers))
                         self._update_waker_seqs(seqs, wakers)

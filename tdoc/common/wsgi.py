@@ -38,8 +38,8 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
-def to_json(data, sort_keys=False):
-    return json.dumps(data, separators=(',', ':'), sort_keys=sort_keys)
+to_json = json.JSONEncoder(separators=(',', ':')).encode
+to_json_sorted = json.JSONEncoder(separators=(',', ':'), sort_keys=True).encode
 
 
 def cors(origins=(), methods=(), headers=(), max_age=None):
