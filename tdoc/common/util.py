@@ -117,26 +117,27 @@ def _parse_regexp(v):
 
 def _parse_timestamp(v):
     try:
-        dt = datetime.datetime.fromisoformat(v)
-        if dt.tzinfo is None: dt = dt.astimezone()
-        return dt
+        return parse_time(v)
     except ValueError as e:
         raise ValueError("Invalid timestamp") from e
 
 
 def _parse_nreltimestamp(v):
-    try:
-        d = parse_duration(v)
-        return datetime.datetime.now(datetime.UTC) - d
-    except ValueError:
-        pass
-    try:
-        dt = datetime.datetime.fromisoformat(v)
-        if dt.tzinfo is None: dt = dt.astimezone()
-        return dt
-    except ValueError:
-        pass
+    try: return -parse_duration(v) + datetime.datetime.now(datetime.UTC)
+    except ValueError: pass
+    try: return parse_time(v)
+    except ValueError: pass
     raise ValueError("Invalid relative or absolute time")
+
+
+def local_time(dt, sep=' ', timespec='seconds'):
+    return dt.astimezone().replace(tzinfo=None).isoformat(sep, timespec)
+
+
+def parse_time(v):
+    dt = datetime.datetime.fromisoformat(v)
+    if dt.tzinfo is None: dt = dt.astimezone()
+    return dt
 
 
 _duration_unit_re = re.compile('(us|ms|s|m|h|d|w)')

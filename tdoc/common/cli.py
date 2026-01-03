@@ -433,16 +433,6 @@ def cmd_log_query(opts):
             time.sleep(1)
 
 
-def abs_rel_time(v, now):
-    with contextlib.suppress(ValueError):
-        return now - util.parse_duration(v)
-    with contextlib.suppress(ValueError):
-        dt = datetime.datetime.fromisoformat(v)
-        if dt.tzinfo is None: dt = dt.astimezone()
-        return dt
-    raise ValueError(f"Invalid relative or absolute time: {v}")
-
-
 @disable_log_upgrades
 def cmd_log_upgrade(opts):
     for c in opts.cfg.subs('logging.databases'):
@@ -604,16 +594,16 @@ def cmd_token_expire(opts):
 def cmd_token_list(opts):
     with read_db(opts) as db:
         tokens = db.tokens.list(opts.users, expired=opts.expired)
-    epoch = datetime.datetime.fromtimestamp(0)
+    epoch = datetime.datetime.fromtimestamp(0, datetime.UTC)
     tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
     wuser = max((len(u) for u, *_ in tokens), default=0)
     o = opts.stdout
     for user, uid, token, created, expires in tokens:
-        if expires: expires = f", expires: {expires.isoformat(' ', 'seconds')}"
+        if expires: expires = f", expires: {util.local_time(expires)}"
         opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} "
             f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n"
-            f"  created: {created.isoformat(' ', 'seconds')}{expires or ""}\n")
+            f"  created: {util.local_time(created)}{expires or ""}\n")
 
 
 def add_user_commands(parser):
@@ -671,7 +661,7 @@ def cmd_user_list(opts):
     for user, uid, created in users:
         opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
-            f"created: {created.isoformat(' ', 'seconds')}\n")
+            f"created: {util.local_time(created)}\n")
 
 
 def cmd_user_memberships(opts):
