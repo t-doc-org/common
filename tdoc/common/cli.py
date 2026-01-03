@@ -362,9 +362,9 @@ def add_log_commands(parser):
     p.set_defaults(handler=cmd_log_query)
     arg = p.add_argument
     arg('--begin', metavar='TIME', type='nreltimestamp', dest='begin',
-        default=None,
+        default='1h',
         help="Output entries logged at or after the given relative or absolute "
-             "time.")
+             "time (default: %(default)s).")
     arg('--end', metavar='TIME', dest='end', type='nreltimestamp', default=None,
         help="Output entries logged before the given relative or absolute "
              "time.")
