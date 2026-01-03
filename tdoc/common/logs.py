@@ -119,7 +119,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             hs.append(sh)
 
         for c in config.subs('files'):
-            if not c.get('enabled', False): continue
+            if not c.get('enabled', True): continue
             if (path := c.path('path')) is None: continue
             fh = handlers.TimedRotatingFileHandler(
                 path, encoding='utf-8', utc=True,
@@ -136,7 +136,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             hs.append(fh)
 
         for c in config.subs('databases'):
-            if not c.get('enabled', False): continue
+            if not c.get('enabled', True): continue
             lst = LogStore(c, stderr=stderr)
             lst.check_version(on_upgrade)
             stack.enter_context(lst)
