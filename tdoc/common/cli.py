@@ -13,6 +13,7 @@ import os
 import pathlib
 import posixpath
 import re
+import shlex
 import shutil
 import socket
 import socketserver
@@ -112,6 +113,8 @@ def main(argv, stdin, stdout, stderr):
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True, raise_exc=opts.debug,
                         on_upgrade=functools.partial(on_upgrade, opts)):
+        log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
+                 argv=argv)
         return opts.handler(opts)
 
 

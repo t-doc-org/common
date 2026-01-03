@@ -511,7 +511,7 @@ class Store(database.Database):
         self._wake = Seqs()
 
     def __enter__(self):
-        log.info("Store: %(path)s",
+        log.debug("Store: %(path)s",
                   path=self.path if self.path is not None else ':in-memory:')
         res = super().__enter__()
         self.dispatcher_db = self.mem_db or self.connect(mode='ro')
