@@ -281,7 +281,7 @@ class LogStore(database.Database):
 
     def version_1(self, db, dev, now):
         super().version_1(db, dev, now)
-        db.execute("""
+        db.create("""
             create table log (
                 time int not null,
                 record text not null,
@@ -298,4 +298,4 @@ class LogStore(database.Database):
                 function text
             ) strict
         """)
-        db.execute("create index log_time on log (time)")
+        db.create("create index log_time on log (time)")

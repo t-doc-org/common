@@ -6,10 +6,9 @@ import datetime
 import json
 import re
 import sqlite3
+import textwrap
 import threading
 import time
-
-# TODO: Dedent multi-line table creation statements (textwrap.dedent)
 
 
 def to_datetime(nsec):
@@ -47,6 +46,11 @@ class Connection(sqlite3.Connection):
         # executescript() executes a COMMIT first if autocommit is
         # LEGACY_TRANSACTION_CONTROL and there is a pending transaction.
         raise NotImplementedError("executescript")
+
+    def create(self, sql, params=()):
+        sql = textwrap.dedent(sql.lstrip('\n').rstrip())
+        if not sql.endswith(';'): sql += ';'
+        return self.execute(sql, params)
 
     def row(self, sql, params=(), default=None):
         for row in self.execute(sql, params): return row
@@ -250,7 +254,7 @@ class Database:
             version += 1
 
     def version_1(self, db, dev, now):
-        db.execute("""
+        db.create("""
             create table meta (
                 key text primary key,
                 value any

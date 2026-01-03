@@ -594,19 +594,19 @@ class Store(database.Database):
                 updated.update(ws)
 
     def version_1(self, db, dev, now):
-        db.execute("""
+        db.create("""
             create table meta (
                 key text primary key,
                 value any
             ) strict
         """)
-        db.execute("""
+        db.create("""
             create table auth (
                 token text primary key,
                 perms text not null
             ) strict
         """)
-        db.execute("""
+        db.create("""
             create table log (
                 time int not null,
                 location text not null,
@@ -620,7 +620,7 @@ class Store(database.Database):
 
     def version_2(self, db, dev, now):
         # Convert the meta table to "without rowid".
-        db.execute("""
+        db.create("""
             create table meta_ (
                 key text primary key,
                 value any
@@ -631,14 +631,14 @@ class Store(database.Database):
         db.execute("alter table meta_ rename to meta")
 
         # Create tables for user management.
-        db.execute("""
+        db.create("""
             create table users (
                 id integer primary key,
                 name text not null unique,
                 created integer not null
             ) strict
         """)
-        db.execute("""
+        db.create("""
             create table user_tokens (
                 token text primary key,
                 user integer not null,
@@ -649,7 +649,7 @@ class Store(database.Database):
         """)
 
         # Create tables for group management.
-        db.execute("""
+        db.create("""
             create table user_memberships (
                 origin text not null,
                 user integer not null,
@@ -659,7 +659,7 @@ class Store(database.Database):
                 foreign key (user) references users (id)
             ) strict, without rowid
         """)
-        db.execute("""
+        db.create("""
             create table group_memberships (
                 origin text not null,
                 member text not null,
@@ -669,7 +669,7 @@ class Store(database.Database):
         """)
 
         # Create table for solutions state management.
-        db.execute("""
+        db.create("""
             create table solutions (
                 origin text not null,
                 page text not null,
@@ -693,7 +693,7 @@ class Store(database.Database):
 
     def version_3(self, db, dev, now):
         # Create tables for poll state.
-        db.execute("""
+        db.create("""
             create table polls (
                 origin text not null,
                 id text not null,
@@ -705,7 +705,7 @@ class Store(database.Database):
                 primary key (origin, id)
             ) strict
         """)
-        db.execute("""
+        db.create("""
             create table poll_votes (
                 origin text not null,
                 poll text not null,
@@ -717,7 +717,7 @@ class Store(database.Database):
         """)
 
     def version_4(self, db, dev, now):
-        db.execute("""
+        db.create("""
             create table notifications (
                 key text primary key,
                 seq integer not null
@@ -726,7 +726,7 @@ class Store(database.Database):
 
     def version_5(self, db, dev, now):
         # Remove the uniqueness constraint on user names.
-        db.execute("""
+        db.create("""
             create table users_ (
                 id integer primary key,
                 name text not null,
@@ -738,14 +738,14 @@ class Store(database.Database):
         db.execute("alter table users_ rename to users")
 
         # Create tables for OIDC.
-        db.execute("""
+        db.create("""
             create table oidc_states (
                 state text primary key,
                 created integer not null,
                 data text not null
             ) strict, without rowid
         """)
-        db.execute("""
+        db.create("""
             create table oidc_users (
                 issuer text not null,
                 subject text not null,
@@ -756,7 +756,7 @@ class Store(database.Database):
                 foreign key (user) references users (id)
             ) strict
         """)
-        db.execute("create index user_oidcs on oidc_users (user)")
+        db.create("create index user_oidcs on oidc_users (user)")
 
     def version_6(self, db, dev, now):
         # Drop unused tables.
