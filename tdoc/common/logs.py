@@ -56,12 +56,11 @@ class CtxFilter(logging.Filter):
 
 
 def to_level(v):
-    try:
-        return int(v)
-    except ValueError:
-        ln = logging.getLevelName(v.upper())
-        if isinstance(ln, int): return ln
-        raise ValueError(f"Invalid level: {v}")
+    try: return int(v)
+    except ValueError: pass
+    ln = logging.getLevelName(v.upper())
+    if isinstance(ln, int): return ln
+    raise ValueError(f"Invalid level: {v}")
 
 
 def get_kwarg(rec, name, default=None):

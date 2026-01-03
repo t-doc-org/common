@@ -78,7 +78,8 @@ def get_arg_parser(stdin, stdout, stderr):
             super().__init__(*args, **kwargs)
             self.register('type', 'path', _parse_path)
             self.register('type', 'regexp', _parse_regexp)
-            self.register('type', 'timestamp', datetime.datetime.fromisoformat)
+            self.register('type', 'timestamp', _parse_timestamp)
+            self.register('type', 'nreltimestamp', _parse_nreltimestamp)
             self._positionals.title = "Positional arguments"
             self._optionals.title = "Options"
             if help_description:
@@ -104,14 +105,38 @@ def _parse_path(v):
     try:
         return pathlib.Path(v).resolve()
     except OSError as e:
-        raise TypeError("Invalid path") from e
+        raise ValueError("Invalid path") from e
 
 
 def _parse_regexp(v):
     try:
         return re.compile(v)
     except re.error as e:
-        raise TypeError("Invalid regexp") from e
+        raise ValueError("Invalid regexp") from e
+
+
+def _parse_timestamp(v):
+    try:
+        dt = datetime.datetime.fromisoformat(v)
+        if dt.tzinfo is None: dt = dt.astimezone()
+        return dt
+    except ValueError as e:
+        raise ValueError("Invalid timestamp") from e
+
+
+def _parse_nreltimestamp(v):
+    try:
+        d = parse_duration(v)
+        return datetime.datetime.now(datetime.UTC) - d
+    except ValueError:
+        pass
+    try:
+        dt = datetime.datetime.fromisoformat(v)
+        if dt.tzinfo is None: dt = dt.astimezone()
+        return dt
+    except ValueError:
+        pass
+    raise ValueError("Invalid relative or absolute time")
 
 
 _duration_unit_re = re.compile('(us|ms|s|m|h|d|w)')

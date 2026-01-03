@@ -361,10 +361,11 @@ def add_log_commands(parser):
     p = sp.add_parser('query', help="Query a log database.")
     p.set_defaults(handler=cmd_log_query)
     arg = p.add_argument
-    arg('--begin', metavar='TIME', dest='begin', default=None,
+    arg('--begin', metavar='TIME', type='nreltimestamp', dest='begin',
+        default=None,
         help="Output entries logged at or after the given relative or absolute "
              "time.")
-    arg('--end', metavar='TIME', dest='end', default=None,
+    arg('--end', metavar='TIME', dest='end', type='nreltimestamp', default=None,
         help="Output entries logged before the given relative or absolute "
              "time.")
     arg('--format', metavar='FORMAT', dest='format',
@@ -373,7 +374,8 @@ def add_log_commands(parser):
     arg('--index', metavar='N', type=int, dest='index', default=0,
         help="The index of the database handler in the config (default: "
              "%(default)s).")
-    arg('--level', metavar='LEVEL', dest='level', default=None,
+    arg('--level', metavar='LEVEL', type=logs.to_level, dest='level',
+        default=None,
         help="Output entries with a log level equal to or above the given "
              "level.")
     arg('--utc', action='store_true', dest='utc',
@@ -414,10 +416,6 @@ def cmd_log_create(opts):
 
 def cmd_log_query(opts):
     # TODO: Allow field queries as arguments
-    if opts.level is not None: opts.level = logs.to_level(opts.level)
-    now = datetime.datetime.now(datetime.UTC)
-    if opts.begin is not None: opts.begin = abs_rel_time(opts.begin, now)
-    if opts.end is not None: opts.end = abs_rel_time(opts.end, now)
     fmt = logs.Formatter(opts.format, style='{', utc=opts.utc)
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i == opts.index: break
