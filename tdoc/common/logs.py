@@ -92,6 +92,9 @@ def compress(src, dst):
     os.remove(src)
 
 
+class DisableHandler(Exception): pass
+
+
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False,
               raise_exc=False, on_upgrade=None):
@@ -138,7 +141,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
         for c in config.subs('databases'):
             if not c.get('enabled', True): continue
             lst = LogStore(c, stderr=stderr)
-            lst.check_version(on_upgrade)
+            try: lst.check_version(on_upgrade)
+            except DisableHandler: continue
             stack.enter_context(lst)
             dbh = DatabaseHandler(lst)
             dbh.setLevel(c.get('level', NOTSET))

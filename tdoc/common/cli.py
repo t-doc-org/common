@@ -143,7 +143,15 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
+def disable_log_upgrades(fn):
+    fn._disable_log_upgrades = True
+    return fn
+
+
 def on_upgrade(opts, st, db, version, latest):
+    if getattr(opts.handler, '_disable_log_upgrades', False) \
+            and isinstance(st, logs.LogStore):
+        raise logs.DisableHandler()
     o = opts.stdout
     if db is None:
         o.write(f"""\
@@ -359,6 +367,7 @@ def add_log_commands(parser):
     add_options(p)
 
 
+@disable_log_upgrades
 def cmd_log_backup(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
@@ -368,6 +377,7 @@ def cmd_log_backup(opts):
             lst.backup(db, dest)
 
 
+@disable_log_upgrades
 def cmd_log_create(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
@@ -378,6 +388,7 @@ def cmd_log_create(opts):
         opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
 
 
+@disable_log_upgrades
 def cmd_log_upgrade(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
