@@ -358,6 +358,30 @@ def add_log_commands(parser):
              "latest).")
     add_options(p)
 
+    p = sp.add_parser('query', help="Query a log database.")
+    p.set_defaults(handler=cmd_log_query)
+    arg = p.add_argument
+    arg('--begin', metavar='TIME', dest='begin', default=None,
+        help="Output entries logged at or after the given relative or absolute "
+             "time.")
+    arg('--end', metavar='TIME', dest='end', default=None,
+        help="Output entries logged before the given relative or absolute "
+             "time.")
+    arg('--format', metavar='FORMAT', dest='format',
+        default=logs.default_file_format,
+        help="The format to use for log entries (default: %(default)r).")
+    arg('--index', metavar='N', type=int, dest='index', default=0,
+        help="The index of the database handler in the config (default: "
+             "%(default)s).")
+    arg('--level', metavar='LEVEL', dest='level', default=None,
+        help="Output entries with a log level equal to or above the given "
+             "level.")
+    arg('--utc', action='store_true', dest='utc',
+        help="Format times in UTC instead of local time.")
+    arg('--watch', action='store_true', dest='watch',
+        help="Output new log entries as they appear.")
+    add_options(p)
+
     p = sp.add_parser('upgrade', help="Upgrade log databases.")
     p.set_defaults(handler=cmd_log_upgrade)
     arg = p.add_argument
@@ -386,6 +410,39 @@ def cmd_log_create(opts):
             continue
         version = lst.create(version=opts.version, dev=opts.dev)
         opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
+
+
+def cmd_log_query(opts):
+    # TODO: Allow field queries as arguments
+    if opts.level is not None: opts.level = logs.to_level(opts.level)
+    now = datetime.datetime.now(datetime.UTC)
+    if opts.begin is not None: opts.begin = abs_rel_time(opts.begin, now)
+    if opts.end is not None: opts.end = abs_rel_time(opts.end, now)
+    fmt = logs.Formatter(opts.format, style='{', utc=opts.utc)
+    for i, c in enumerate(opts.cfg.subs('logging.databases')):
+        if i == opts.index: break
+    else:
+        raise Exception("Invalid log database index")
+    lst = logs.LogStore(c)
+    with contextlib.closing(lst.connect(mode='ro')) as db:
+        rid = None
+        while True:
+            with db:
+                for rec, rid in db.query(row_id=rid, level=opts.level,
+                                         begin=opts.begin, end=opts.end):
+                    opts.stdout.write(f"{fmt.format(rec)}\n")
+            if not opts.watch: break
+            time.sleep(1)
+
+
+def abs_rel_time(v, now):
+    with contextlib.suppress(ValueError):
+        return now - util.parse_duration(v)
+    with contextlib.suppress(ValueError):
+        dt = datetime.datetime.fromisoformat(v)
+        if dt.tzinfo is None: dt = dt.astimezone()
+        return dt
+    raise ValueError(f"Invalid relative or absolute time: {v}")
 
 
 @disable_log_upgrades

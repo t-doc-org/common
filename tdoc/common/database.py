@@ -14,6 +14,8 @@ import time
 def to_datetime(nsec):
     if nsec is None: return
     return datetime.datetime.fromtimestamp(nsec / 1e9)
+    # TODO: Use aware datetime instances
+    # return datetime.datetime.fromtimestamp(nsec / 1e9, datetime.UTC)
 
 
 def to_nsec(dt, default=None):

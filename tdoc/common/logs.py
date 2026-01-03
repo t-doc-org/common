@@ -55,6 +55,15 @@ class CtxFilter(logging.Filter):
         return True
 
 
+def to_level(v):
+    try:
+        return int(v)
+    except ValueError:
+        ln = logging.getLevelName(v.upper())
+        if isinstance(ln, int): return ln
+        raise ValueError(f"Invalid level: {v}")
+
+
 def get_kwarg(rec, name, default=None):
     if (args := rec.args) and isinstance(args, abc.Mapping):
         return args.get(name, default)
@@ -73,13 +82,19 @@ def normalize_record(rec):
 
 
 class Formatter(logging.Formatter):
+    def __init__(self, *args, utc=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.utc = utc
+
     def format(self, rec):
         normalize_record(rec)
         return super().format(rec).replace("\n", "\n  ")
 
     def formatTime(self, rec, datefmt=None):
-        dt = datetime.datetime.utcfromtimestamp(rec.created)
-        return dt.isoformat(timespec='microseconds')
+        dt = datetime.datetime.fromtimestamp(rec.created, datetime.UTC)
+        if not self.utc:
+            return dt.astimezone().isoformat(timespec='microseconds')
+        return dt.replace(tzinfo=None).isoformat(timespec='microseconds') + 'Z'
 
 
 class QueueHandler(handlers.QueueHandler):
@@ -91,6 +106,9 @@ def compress(src, dst):
         shutil.copyfileobj(inp, out)
     os.remove(src)
 
+
+default_stream_format = '{ilevel} [{ctx:20}] {message}'
+default_file_format = '{asctime} {ilevel} [{ctx:20}] [{module}] {message}'
 
 class DisableHandler(Exception): pass
 
@@ -117,8 +135,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             sh = logging.StreamHandler(stream=stderr)
             sh.setLevel(c.get('level', NOTSET))
             stack.callback(sh.flush)
-            sh.setFormatter(Formatter(
-                c.get('format', '{ilevel} [{ctx:20}] {message}'), style='{'))
+            sh.setFormatter(Formatter(c.get('format', default_stream_format),
+                                      style='{'))
             hs.append(sh)
 
         for c in config.subs('files'):
@@ -132,10 +150,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
                 fh.namer = lambda n: f'{n}.gz'
                 fh.rotator = compress
             fh.setLevel(c.get('level', NOTSET))
-            fh.setFormatter(Formatter(
-                c.get('format',
-                      '{asctime} {ilevel} [{ctx:20}] [{module}] {message}'),
-                style='{'))
+            fh.setFormatter(Formatter(c.get('format', default_file_format),
+                                      style='{'))
             hs.append(fh)
 
         for c in config.subs('databases'):
@@ -230,6 +246,20 @@ class Connection(database.Connection):
                              stack_info, logger, ctx, file, line, function)
             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, rows)
+
+    def query(self, *, row_id=None, level=None, begin=None, end=None):
+        terms, args = [], []
+        def add_term(sql, arg):
+            terms.append(sql)
+            args.append(arg)
+        if row_id is not None: add_term('rowid > ?', row_id)
+        if level is not None: add_term('level >= ?', level)
+        if begin is not None: add_term('time >= ?', database.to_nsec(begin))
+        if end is not None: add_term('time < ?', database.to_nsec(end))
+        terms = f' where {' and '.join(terms)}' if terms else ''
+        for rid, rec in self.execute(
+                f"select rowid, record from log {terms} order by time", args):
+            yield logging.makeLogRecord(json.loads(rec)), rid
 
 
 class LogStore(database.Database):
