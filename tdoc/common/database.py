@@ -147,13 +147,17 @@ class Database:
 
     def check_version(self, on_upgrade=None):
         if self.path is None: return
+        if not self.exists:
+            if on_upgrade is not None and on_upgrade(self, None, None, None):
+                return
+            raise Exception(f"Database not found: {self.path}")
         with contextlib.closing(self.connect(mode='rw')) as db:
             with db: version, latest = self.version(db)
             if version == latest: return
             if on_upgrade is not None and on_upgrade(self, db, version, latest):
                 return
         raise Exception("Database version mismatch "
-                        f"(current: {version}, want: {latest})")
+                        f"(current: {version}, want: {latest}): {self.path}")
 
     def __enter__(self):
         if self.path is None:

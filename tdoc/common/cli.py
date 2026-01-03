@@ -5,6 +5,7 @@ import argparse
 import contextlib
 import datetime
 import errno
+import functools
 from http import HTTPMethod, HTTPStatus
 import itertools
 import mimetypes
@@ -109,7 +110,8 @@ def main(argv, stdin, stdout, stderr):
         opts.config = lc
     opts.cfg = config.Config.load(opts.config)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
-                        level=logs.WARNING, stream=True, raise_exc=opts.debug):
+                        level=logs.WARNING, stream=True, raise_exc=opts.debug,
+                        on_upgrade=functools.partial(on_upgrade, opts)):
         return opts.handler(opts)
 
 
@@ -124,6 +126,8 @@ def add_options(parser, sphinx=False):
         help="The path to the config file.")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
+    arg('--dev', action='store_true', dest='dev',
+        help="Create databases for dev mode.")
 
 
 def add_sphinx_options(parser):
@@ -136,23 +140,34 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
-def get_store(opts, allow_mem=False):
-    st = store.Store(opts.cfg.sub('store'),
-                     mem_name='store' if allow_mem else None)
-    @st.check_version
-    def on_upgrade(st, db, version, latest):
-        o = opts.stdout
+def on_upgrade(opts, st, db, version, latest):
+    o = opts.stdout
+    if db is None:
         o.write(f"""\
-{o.LYELLOW}The store database must be upgraded:{o.NORM} version\
+{o.LYELLOW}A database needs to be created:{o.NORM} dev={opts.dev}
+  {st.path}
+Would you like to create it (y/n)? """)
+    else:
+        o.write(f"""\
+{o.LYELLOW}A database needs to be upgraded:{o.NORM} version\
  {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
   {st.path}
 Would you like to perform the upgrade (y/n)? """)
-        o.flush()
-        resp = input().lower()
-        o.write("\n")
-        if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return
+    o.flush()
+    resp = input().lower()
+    o.write("\n")
+    if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return
+    if db is None:
+        st.create(dev=opts.dev)
+    else:
         upgrade_database(opts, st, db, version, latest)
-        return True
+    return True
+
+
+def get_store(opts, allow_mem=False):
+    st = store.Store(opts.cfg.sub('store'),
+                     mem_name='store' if allow_mem else None)
+    st.check_version(functools.partial(on_upgrade, opts))
     return st
 
 
@@ -328,14 +343,16 @@ def add_log_commands(parser):
     p.set_defaults(handler=cmd_log_create)
     arg = p.add_argument
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version at which to create the databases (default: latest).")
+        help="The version at which to create the log databases (default: "
+             "latest).")
     add_options(p)
 
     p = sp.add_parser('upgrade', help="Upgrade log databases.")
     p.set_defaults(handler=cmd_log_upgrade)
     arg = p.add_argument
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version to which to upgrade the databases (default: latest).")
+        help="The version to which to upgrade the log databases (default: "
+             "latest).")
     add_options(p)
 
 
@@ -344,7 +361,7 @@ def cmd_log_backup(opts):
         lst = logs.LogStore(c)
         dest = backup_path(lst)
         with contextlib.closing(lst.connect(mode='ro')) as db, db:
-            opts.stdout.write(f"Backing up database to: {dest}\n")
+            opts.stdout.write(f"Backing up to: {dest}\n")
             lst.backup(db, dest)
 
 
@@ -352,14 +369,10 @@ def cmd_log_create(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
         if lst.exists:
-            opts.stdout.write(f"""\
-Already exists: {lst.path}
-""")
+            opts.stdout.write(f"Already exists: {lst.path}\n")
             continue
-        version = lst.create(version=opts.version)
-        opts.stdout.write(f"""\
-Created (version: {version}): {lst.path}
-""")
+        version = lst.create(version=opts.version, dev=opts.dev)
+        opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
 
 
 def cmd_log_upgrade(opts):
@@ -368,18 +381,16 @@ def cmd_log_upgrade(opts):
         with contextlib.closing(lst.connect(mode='rw')) as db:
             with db: version, latest = lst.version(db)
             if version == latest:
-                opts.stdout.write(f"""\
-Already up-to-date (version: {version}): {lst.path}
-""")
+                opts.stdout.write(
+                    f"Already up-to-date (version: {version}): {lst.path}\n")
                 continue
+            opts.stdout.write(f"Upgrading (version: {version}): {lst.path}\n")
             to_version = opts.version if opts.version is not None else latest
-            opts.stdout.write(f"""\
-Upgrading (version: {version}): {lst.path}
-""")
             upgrade_database(opts, lst, db, version, to_version, indent="  ")
 
 
 def cmd_serve(opts):
+    opts.dev = True
     addr = (opts.bind if opts.bind != 'ALL' else '', opts.port)
     families = {info[0] for info in socket.getaddrinfo(
                     addr[0] or None, opts.port, type=socket.SOCK_STREAM,
@@ -423,17 +434,17 @@ def add_store_commands(parser):
     p = sp.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument
-    arg('--dev', action='store_true', dest='dev',
-        help="Create the store for dev mode.")
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version at which to create the store (default: latest).")
+        help="The version at which to create the store database (default: "
+             "latest).")
     add_options(p)
 
     p = sp.add_parser('upgrade', help="Upgrade the store database.")
     p.set_defaults(handler=cmd_store_upgrade)
     arg = p.add_argument
     arg('--version', metavar='VERSION', type=int, dest='version', default=None,
-        help="The version to which to upgrade the store (default: latest).")
+        help="The version to which to upgrade the store database (default: "
+             "latest).")
     add_options(p)
 
 
@@ -441,14 +452,14 @@ def cmd_store_backup(opts):
     st = store.Store(opts.cfg.sub('store'))
     if opts.destination is None: opts.destination = backup_path(st)
     with contextlib.closing(st.connect(mode='ro')) as db, db:
-        opts.stdout.write(f"Backing up store to: {opts.destination}\n")
+        opts.stdout.write(f"Backing up to: {opts.destination}\n")
         st.backup(db, opts.destination)
 
 
 def cmd_store_create(opts):
     st = store.Store(opts.cfg.sub('store'))
     version = st.create(version=opts.version, dev=opts.dev)
-    opts.stdout.write(f"Store created (version: {version})\n")
+    opts.stdout.write(f"Created (version: {version}): {st.path}\n")
 
 
 def cmd_store_upgrade(opts):
@@ -457,10 +468,11 @@ def cmd_store_upgrade(opts):
         with db: version, latest = st.version(db)
         if version == latest:
             opts.stdout.write(
-                f"Store is already up-to-date (version: {version})\n")
+                f"Already up-to-date (version: {version}): {st.path}\n")
             return
-        upgrade_database(opts, st, db, version,
-                         opts.version if opts.version is not None else latest)
+        opts.stdout.write(f"Upgrading (version: {version}): {st.path}\n")
+        to_version = opts.version if opts.version is not None else latest
+        upgrade_database(opts, st, db, version, to_version, indent="  ")
 
 
 def add_token_commands(parser):

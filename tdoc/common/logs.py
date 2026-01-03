@@ -82,6 +82,10 @@ class Formatter(logging.Formatter):
         return dt.isoformat(timespec='microseconds')
 
 
+class QueueHandler(handlers.QueueHandler):
+    def prepare(self, rec): return rec
+
+
 def compress(src, dst):
     with open(src, 'rb') as inp, gzip.open(dst, 'wb') as out:
         shutil.copyfileobj(inp, out)
@@ -90,7 +94,7 @@ def compress(src, dst):
 
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False,
-              raise_exc=False):
+              raise_exc=False, on_upgrade=None):
     if config is None: config = _config.Config({})
     transport = config.get('transport', 'queue')
 
@@ -133,12 +137,11 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
 
         for c in config.subs('databases'):
             if not c.get('enabled', False): continue
-            st = LogStore(c, stderr=stderr)
-            # TODO: Handle upgrades
-            stack.enter_context(st)
-            dbh = DatabaseHandler(st)
+            lst = LogStore(c, stderr=stderr)
+            lst.check_version(on_upgrade)
+            stack.enter_context(lst)
+            dbh = DatabaseHandler(lst)
             dbh.setLevel(c.get('level', NOTSET))
-            stack.callback(dbh.flush)  # TODO: May not be needed
             hs.append(dbh)
 
         if not hs:
@@ -153,7 +156,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             ql = handlers.QueueListener(q, *hs, respect_handler_level=True)
             ql.start()
             stack.callback(ql.stop)
-            qh = handlers.QueueHandler(q)
+            qh = QueueHandler(q)
             qh.setLevel(min(h.level for h in hs))
             qh.addFilter(ctx_filter)
             root.addHandler(qh)
@@ -162,7 +165,6 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
 
         log.debug("Logs: transport=%(transport)s", transport=transport)
         stack.callback(lambda: log.debug("Logs: stopping"))
-
         yield
 
 
@@ -216,7 +218,7 @@ class Connection(database.Connection):
         rows = [(safe_time_ns(r.created), to_json(r.__dict__),
                  safe_int(r.levelno), safe_str(r.message), safe_str(r.msg),
                  to_json(r.args), safe_str(r.exc_text), safe_str(r.stack_info),
-                 safe_str(r.logger), safe_str(getattr(r, 'ctx', None)),
+                 safe_str(r.name), safe_str(getattr(r, 'ctx', None)),
                  safe_str(r.pathname), safe_int(r.lineno), safe_str(r.funcName))
                 for r in recs]
         self.executemany("""

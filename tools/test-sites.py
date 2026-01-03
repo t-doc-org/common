@@ -142,9 +142,20 @@ def run_tests(tests, repo, label, wheel, write):
 [store]
 path = "tmp/store.sqlite"
 """)
-    vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3')
-    vrun('tdoc', 'store', 'upgrade', '--debug', '--version=4')
-    vrun('tdoc', 'store', 'upgrade', '--debug')
+    vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3', out=[
+        r'^Created \(version: 3\): .*store\.sqlite$',
+    ])
+    vrun('tdoc', 'store', 'upgrade', '--debug', '--version=4', out=[
+        r'^Upgrading \(version: 3\): .*store\.sqlite$',
+        r'^ *Backing up database to: .*store\.sqlite'
+            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
+    ])
+    vrun('tdoc', 'store', 'upgrade', '--debug', out=[
+        r'^Upgrading \(version: 4+\): .*store\.sqlite$',
+    ])
+    vrun('tdoc', 'store', 'upgrade', '--debug', out=[
+        r'^Already up-to-date \(version: \d+\): .*store\.sqlite$',
+    ])
 
     # Run commands interacting with the store.
     write(f"{label}Interacting with store\n")
@@ -180,8 +191,8 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
 
     vrun('tdoc', 'store', 'backup', '--debug', out=[
-        r'^Backing up store to: .*store\.sqlite'
-            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}\n',
+        r'^Backing up to: .*store\.sqlite'
+            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
     ])
 
     # Run the local server, wait for it to serve or exit.
