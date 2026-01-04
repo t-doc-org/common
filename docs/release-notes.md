@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-67)=
+## 0.67 *(2026-01-04)*
+
+- Fixed [`{exec} sql`](/reference/exec.md#sql).
+- Added a logging subsystem to the API backend.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.66...0.67)
+
 (release-0-66)=
 ## 0.66 *(2025-12-08)*
 
