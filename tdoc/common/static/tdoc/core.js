@@ -337,6 +337,14 @@ export function strToInt(s, radix = 10) {
     return sign * res;
 }
 
+// Return the date of a Date in local time in ISO format.
+export function localIso(d) {
+    return `\
+${d.getFullYear().toString().padStart(4, '0')}\
+-${(d.getMonth() + 1).toString().padStart(2, '0')}\
+-${d.getDate().toString().padStart(2, '0')}`;
+}
+
 // Return true iff the given URL is in the same origin as the page.
 export function sameOrigin(url) {
     return new URL(url).origin === location.origin;

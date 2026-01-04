@@ -3,8 +3,9 @@
 
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
-    fetchJson, FifoBuffer, htmlData, on, onHashParams, page, qs, qsa, showAlert,
-    showModal, sleep, Stored, StoredJson, toBase64, toModalMessage,
+    fetchJson, FifoBuffer, htmlData, localIso, on, onHashParams, page, qs,
+    qsa, showAlert, showModal, sleep, Stored, StoredJson, toBase64,
+    toModalMessage,
 } from './core.js';
 import {random} from './crypto.js';
 
@@ -267,9 +268,12 @@ Log in</button>\
 <tr><td class="px-2" colspan="4">No logins</td></tr>`);
         }
         for (const login of info.logins) {
+            // TODO(0.68): Remove the fallback for string values.
+            const updated = typeof login.updated === 'string' ? login.updated
+                            : localIso(new Date(login.updated * 1e3));
             const row = logins.appendChild(elmt`\
 <tr><td class="px-2">${login.email}</td><td class="px-2 text-nowrap">\
-${login.issuer}</td><td class="px-2 text-nowrap">${login.updated}</td>\
+${login.issuer}</td><td class="px-2 text-nowrap">${updated}</td>\
 <td><button type="button" class="btn btn-outline-danger">Remove</button></td>\
 </tr>`);
             const btn = qs(row, 'button');

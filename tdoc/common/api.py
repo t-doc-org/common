@@ -519,7 +519,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                     logins.append({
                         'email': id_token['email'],
                         'issuer': info['label'],
-                        'updated': updated.date().isoformat(),
+                        'updated': updated.timestamp(),
                         'iss': id_token['iss'],
                         'sub': id_token['sub'],
                     })
