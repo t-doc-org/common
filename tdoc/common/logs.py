@@ -246,7 +246,8 @@ class Connection(database.Connection):
             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, rows)
 
-    def query(self, *, row_id=None, level=None, begin=None, end=None):
+    def query(self, *, row_id=None, level=None, begin=None, end=None,
+              where=None):
         terms, args = [], []
         def add_term(sql, arg):
             terms.append(sql)
@@ -255,6 +256,7 @@ class Connection(database.Connection):
         if level is not None: add_term('level >= ?', level)
         if begin is not None: add_term('time >= ?', database.to_nsec(begin))
         if end is not None: add_term('time < ?', database.to_nsec(end))
+        if where is not None: terms.append(f'({where})')
         terms = f' where {' and '.join(terms)}' if terms else ''
         for rid, rec in self.execute(
                 f"select rowid, record from log {terms} order by time", args):

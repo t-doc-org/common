@@ -382,6 +382,9 @@ def add_log_commands(parser):
         help="Format times in UTC instead of local time.")
     arg('--watch', action='store_true', dest='watch',
         help="Output new log entries as they appear.")
+    arg('--where', metavar='EXPR', dest='where', default=None,
+        help="An additional SQL expression to add to the WHERE clause of the "
+             "database query.")
     add_options(p)
 
     p = sp.add_parser('upgrade', help="Upgrade log databases.")
@@ -415,7 +418,6 @@ def cmd_log_create(opts):
 
 
 def cmd_log_query(opts):
-    # TODO: Allow field queries as arguments
     fmt = logs.Formatter(opts.format, style='{', utc=opts.utc)
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i == opts.index: break
@@ -427,7 +429,8 @@ def cmd_log_query(opts):
         while True:
             with db:
                 for rec, rid in db.query(row_id=rid, level=opts.level,
-                                         begin=opts.begin, end=opts.end):
+                                         begin=opts.begin, end=opts.end,
+                                         where=opts.where):
                     opts.stdout.write(f"{fmt.format(rec)}\n")
             if not opts.watch: break
             time.sleep(1)
