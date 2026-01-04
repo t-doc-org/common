@@ -226,7 +226,7 @@ path = "tmp/store.sqlite"
         '--format={asctime} {ilevel} {ctx} {module} {message}',
         out=[
             r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z I main cli CLI: .*'
-                r'tdoc store create',
+                r' store create ',
         ])
     vrun('tdoc', 'log', 'backup', '--debug', out=[
         r'^Backing up to: .*log\.sqlite'
