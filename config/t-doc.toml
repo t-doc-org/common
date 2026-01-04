@@ -6,8 +6,8 @@ version = 'stable'
 hermetic = true
 
 [tags]
-testing = '0.66'
-stable = '0.65'
+testing = '0.67'
+stable = '0.67'
 previous = '0.65'
 
 [defaults]
