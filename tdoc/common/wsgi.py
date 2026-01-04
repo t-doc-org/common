@@ -90,12 +90,13 @@ class Request:
     path = property(lambda self: self.env['PATH_INFO'])
     query = property(lambda self: self.env['QUERY_STRING'])
     content_type = property(lambda self: self.env.get('CONTENT_TYPE'))
+    origin = property(lambda self: self.env.get('HTTP_ORIGIN'))
     remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       util.FileWrapper))
 
     @property
-    def origin(self):
+    def required_origin(self):
         if (v := self.env.get('HTTP_ORIGIN')) is None:
             raise Error(HTTPStatus.PRECONDITION_FAILED,
                         "Missing Origin: header")
@@ -221,11 +222,11 @@ class Dispatcher:
                     log_query = getattr(handler, '_log_query', True)
                     log.log(log_level,
                             "Start: %(method)s %(uri)s\n"
-                            "remote=%(remote)s user=%(user)s",
+                            "origin=%(origin)s remote=%(remote)s user=%(user)s",
                             method=wr.method,
                             uri=wr.uri(include_query=log_query),
-                            remote=wr.remote_addr, user=wr.user,
-                            event='req:start')
+                            origin=wr.origin, remote=wr.remote_addr,
+                            user=wr.user, event='req:start')
                     chained_respond = wr.respond
                     def respond_log(status, headers, exc_info=None):
                         nonlocal log_status

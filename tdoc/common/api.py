@@ -71,7 +71,7 @@ class Api(wsgi.Dispatcher):
             yield db
 
     def member_of(self, wr, db, group):
-        return db.users.member_of(wr.origin, wr.user, group)
+        return db.users.member_of(wr.required_origin, wr.user, group)
 
     def pre_request(self, wr):
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
@@ -108,7 +108,7 @@ class Api(wsgi.Dispatcher):
 
     @wsgi.json_endpoint('poll')
     def handle_poll(self, wr, req):
-        origin = wr.origin
+        origin = wr.required_origin
         with wr.write_db as db:
             if polls := req.get('open'):
                 check(self.member_of(wr, db, 'polls:control'))
@@ -137,7 +137,7 @@ class Api(wsgi.Dispatcher):
 
     @wsgi.json_endpoint('solutions')
     def handle_solutions(self, wr, req):
-        origin = wr.origin
+        origin = wr.required_origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
         with wr.write_db as db:
@@ -147,7 +147,7 @@ class Api(wsgi.Dispatcher):
 
     @wsgi.json_endpoint('user', require_authn=True)
     def handle_user(self, wr, req):
-        origin = wr.origin
+        origin = wr.required_origin
         with wr.read_db as db: return db.users.info(origin, wr.user)
 
 
@@ -443,7 +443,7 @@ class DbObservable(DynObservable):
 
 class SolutionsObservable(DbObservable, name='solutions'):
     def __init__(self, req, events, wr):
-        self._origin = wr.origin
+        self._origin = wr.required_origin
         self._page = arg(req, 'page')
         super().__init__(req, events)
 
@@ -456,7 +456,7 @@ class SolutionsObservable(DbObservable, name='solutions'):
 
 class PollObservable(DbObservable, name='poll'):
     def __init__(self, req, events, wr):
-        self._origin = wr.origin
+        self._origin = wr.required_origin
         self._id = arg(req, 'id')
         super().__init__(req, events)
 
@@ -472,7 +472,7 @@ class PollObservable(DbObservable, name='poll'):
 
 class PollVotesObservable(DbObservable, name='poll/votes'):
     def __init__(self, req, events, wr):
-        self._origin = wr.origin
+        self._origin = wr.required_origin
         self._voter, self._ids = args(req, 'voter', 'ids')
         self._ids.sort()
         super().__init__(req, events)
