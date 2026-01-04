@@ -136,12 +136,35 @@ def run_tests(tests, repo, label, wheel, write):
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
-    write(f"{label}Creating store\n")
+    write(f"{label}Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
     (repo_dir / 'local.toml').write_text("""\
+[logging]
+level = "DEBUG"
+
+[logging.stream]
+enabled = true
+level = "WARNING"
+
+[[logging.files]]
+path = "tmp/t-doc.log"
+
+[[logging.databases]]
+path = "tmp/log.sqlite"
+
 [store]
 path = "tmp/store.sqlite"
 """)
+    vrun('tdoc', 'log', 'create', '--debug', '--version=1', out=[
+        r'^Created \(version: 1\): .*log\.sqlite$',
+    ])
+    # TODO: Test a log database upgrade
+    vrun('tdoc', 'log', 'upgrade', '--debug', out=[
+        r'^Already up-to-date \(version: \d+\): .*log\.sqlite$',
+    ])
+
+    # Create the store.
+    write(f"{label}Creating store\n")
     vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3', out=[
         r'^Created \(version: 3\): .*store\.sqlite$',
     ])
@@ -192,6 +215,21 @@ path = "tmp/store.sqlite"
 
     vrun('tdoc', 'store', 'backup', '--debug', out=[
         r'^Backing up to: .*store\.sqlite'
+            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
+    ])
+
+    # Query the log database.
+    write(f"{label}Querying log database\n")
+    vrun(
+        'tdoc', 'log', 'query', '--debug', '--utc', '--begin=10m', '--end=0s',
+        '--level=info', "--where=record ->> '$.module' = 'cli'",
+        '--format={asctime} {ilevel} {ctx} {module} {message}',
+        out=[
+            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z I main cli CLI: .*'
+                r'tdoc store create',
+        ])
+    vrun('tdoc', 'log', 'backup', '--debug', out=[
+        r'^Backing up to: .*log\.sqlite'
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
     ])
 
