@@ -151,7 +151,7 @@ class Auth extends EventTarget {
                 data = await this.call(`/user`, {token});
                 data.token = token;
             } catch (e) {
-                if (e.cause.status !== 401) data = this.data;  // !UNAUTHORIZED
+                if (e.cause?.status !== 401) data = this.data;  // !UNAUTHORIZED
                 res = false;
             }
         }
