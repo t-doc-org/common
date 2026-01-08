@@ -57,7 +57,7 @@ ${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
                 const url = import.meta.resolve(
                     `${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3.mjs`);
                 const mod = `\
-import {default as sqlite3InitModule} from ${JSON.stringify(url)};
+import sqlite3InitModule from ${JSON.stringify(url)};
 sqlite3InitModule().then((sqlite3) => sqlite3.initWorker1API());
 `;
                 return new Worker(dataUrl('application/javascript', mod),
