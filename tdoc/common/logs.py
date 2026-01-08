@@ -81,19 +81,48 @@ def normalize_record(rec):
 
 
 class Formatter(logging.Formatter):
-    def __init__(self, *args, utc=True, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, fmt, *args, utc=True, **kwargs):
+        super().__init__(fmt, *args, style='{', **kwargs)
+        self.fmt = fmt
         self.utc = utc
 
     def format(self, rec):
         normalize_record(rec)
         return super().format(rec).replace("\n", "\n  ")
 
+    def formatMessage(self, rec):
+        return self.fmt.format_map(SafeFormat(rec.__dict__))
+
     def formatTime(self, rec, datefmt=None):
         dt = datetime.datetime.fromtimestamp(rec.created, datetime.UTC)
         if not self.utc:
             return dt.astimezone().isoformat(timespec='microseconds')
         return dt.replace(tzinfo=None).isoformat(timespec='microseconds') + 'Z'
+
+
+class Missing:
+    def __str__(self): return '<missing>'
+    def __repr__(self): return '<missing>'
+    def __format__(self, fmt): return '<missing>'
+
+
+class SafeFormat:
+    __slots__ = ('__v',)
+
+    def __init__(self, v): self.__v = v
+    def __str__(self): return str(self.__v)
+    def __repr__(self): return repr(self.__v)
+    def __format__(self, fmt): return format(self.__v, fmt)
+
+    def __getitem__(self, key):
+        try: return SafeFormat(self.__v[key])
+        except Exception: return _missing
+
+    def __getattr__(self, key):
+        try: return SafeFormat(getattr(self.__v, key))
+        except Exception: return _missing
+
+_missing = SafeFormat(Missing())
 
 
 class QueueHandler(handlers.QueueHandler):
@@ -134,8 +163,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             sh = logging.StreamHandler(stream=stderr)
             sh.setLevel(c.get('level', NOTSET))
             stack.callback(sh.flush)
-            sh.setFormatter(Formatter(c.get('format', default_stream_format),
-                                      style='{'))
+            sh.setFormatter(Formatter(c.get('format', default_stream_format)))
             hs.append(sh)
 
         for c in config.subs('files'):
@@ -150,8 +178,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
                 fh.namer = lambda n: f'{n}.gz'
                 fh.rotator = compress
             fh.setLevel(c.get('level', NOTSET))
-            fh.setFormatter(Formatter(c.get('format', default_file_format),
-                                      style='{'))
+            fh.setFormatter(Formatter(c.get('format', default_file_format)))
             hs.append(fh)
 
         for c in config.subs('databases'):

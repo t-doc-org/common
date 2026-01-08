@@ -418,7 +418,7 @@ def cmd_log_create(opts):
 
 
 def cmd_log_query(opts):
-    fmt = logs.Formatter(opts.format, style='{', utc=opts.utc)
+    fmt = logs.Formatter(opts.format, utc=opts.utc)
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i == opts.index: break
     else:
