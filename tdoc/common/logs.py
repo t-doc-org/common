@@ -19,8 +19,6 @@ import traceback
 
 from . import database, config as _config, util
 
-# TODO: Allow unset LogRecord fields in formats
-
 globals().update(logging.getLevelNamesMapping())
 
 
