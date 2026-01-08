@@ -18,7 +18,6 @@ import traceback
 
 from . import database, config as _config
 
-# TODO: Allow per-handler filters
 # TODO: Allow unset LogRecord fields in formats
 
 globals().update(logging.getLevelNamesMapping())
@@ -143,8 +142,9 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             if (path := c.path('path')) is None: continue
             fh = handlers.TimedRotatingFileHandler(
                 path, encoding='utf-8', utc=True,
-                when=c.get('when', 'W6'), interval=c.get('interval', 1),
-                backupCount=c.get('keep', 4), )
+                when=c.get('rotate.when', 'W6'),
+                interval=c.get('rotate.interval', 1),
+                backupCount=c.get('rotate.keep', 4), )
             if c.get('compress', True):
                 fh.namer = lambda n: f'{n}.gz'
                 fh.rotator = compress
