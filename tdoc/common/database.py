@@ -10,15 +10,15 @@ import textwrap
 import threading
 import time
 
+from . import util
+
 
 def to_datetime(nsec):
-    if nsec is None: return
-    return datetime.datetime.fromtimestamp(nsec / 1e9, datetime.UTC)
+    return None if nsec is None else util.nsec_to_datetime(nsec)
 
 
 def to_nsec(dt, default=None):
-    if dt is None: return default
-    return int(dt.timestamp() * 1e9)
+    return None if dt is None else util.datetime_to_nsec(dt)
 
 
 to_json = json.JSONEncoder(separators=(',', ':')).encode

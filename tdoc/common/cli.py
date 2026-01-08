@@ -27,8 +27,8 @@ from urllib import parse, request
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, config, deps, logs, store, util, \
-              wsgi
+from . import __project__, __version__, api, config, console, deps, logs, \
+              store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
@@ -37,11 +37,11 @@ default_port = 8000
 local_config = pathlib.Path('local.toml')
 
 
-@util.main
+@console.main
 def main(argv, stdin, stdout, stderr):
     """Run the command."""
     threading.current_thread().name = 'main'
-    parser = util.get_arg_parser(stdin, stdout, stderr)(
+    parser = console.get_arg_parser(stdin, stdout, stderr)(
         prog=pathlib.Path(argv[0]).name, description="Manage a t-doc book.")
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True

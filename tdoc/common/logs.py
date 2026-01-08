@@ -14,9 +14,10 @@ import os
 import queue
 import shutil
 import threading
+import time
 import traceback
 
-from . import database, config as _config
+from . import database, config as _config, util
 
 # TODO: Allow unset LogRecord fields in formats
 
@@ -252,15 +253,18 @@ class Connection(database.Connection):
         def add_term(sql, arg):
             terms.append(sql)
             args.append(arg)
-        if row_id is not None: add_term('rowid > ?', row_id)
-        if level is not None: add_term('level >= ?', level)
-        if begin is not None: add_term('time >= ?', database.to_nsec(begin))
-        if end is not None: add_term('time < ?', database.to_nsec(end))
-        if where is not None: terms.append(f'({where})')
-        terms = f' where {' and '.join(terms)}' if terms else ''
+        if row_id is not None: add_term("rowid > ?", row_id)
+        if level is not None: add_term("level >= ?", level)
+        if begin is not None: add_term("time >= ?", database.to_nsec(begin))
+        if end is not None: add_term("time < ?", database.to_nsec(end))
+        if where is not None: terms.append(f"({where})")
+        terms = f" where {" and ".join(terms)}" if terms else ""
         for rid, rec in self.execute(
                 f"select rowid, record from log {terms} order by time", args):
             yield logging.makeLogRecord(json.loads(rec)), rid
+
+    def purge(self, where):
+        self.execute(f"delete from log where {where}", {'now': time.time_ns()})
 
 
 class LogStore(database.Database):
@@ -270,8 +274,22 @@ class LogStore(database.Database):
         super().__init__(config, **kwargs)
         self.stderr = stderr
         self.flush_interval = config.get('flush_interval', 5)
+        self.purge_interval = util.timedelta_to_nsec(util.parse_duration(
+            config.get('purge_interval', '1h')))
+        self.purge_specs = self.parse_retain(config.get('retain', '90d'))
         self.lock = threading.Condition(threading.Lock())
         self.queue = []
+
+    @staticmethod
+    def parse_retain(specs):
+        if isinstance(specs, str): specs = [{'for': specs}]
+        terms = []
+        for spec in specs:
+            d = util.timedelta_to_nsec(util.parse_duration(spec['for']))
+            term = f"time < :now - {d}"
+            if (v := spec.get('where')) is not None: term += f" and ({v})"
+            terms.append(f"({term})")
+        return " or ".join(terms)
 
     def __enter__(self):
         res = super().__enter__()
@@ -299,6 +317,8 @@ class LogStore(database.Database):
 
     def _flush(self):
         recs = None
+        next_purge = time.monotonic_ns() \
+                     if self.purge_specs and self.purge_interval > 0 else None
         while True:
             with self.lock:
                 self.lock.wait_for(lambda: self._stop or self._wake,
@@ -315,6 +335,14 @@ class LogStore(database.Database):
                             f"Failed to insert {len(recs)} log rows: {e}\n")
                 recs = None
             if stop: break
+            if next_purge is None or (now := time.monotonic_ns()) < next_purge:
+                continue
+            try:
+                with self.db as db: db.purge(self.purge_specs)
+            except Exception as e:
+                if self.stderr is not None:
+                    self.stderr.write(f"Failed to purge log table: {e}\n")
+            next_purge = now + self.purge_interval
 
     def version_1(self, db, dev, now):
         super().version_1(db, dev, now)
