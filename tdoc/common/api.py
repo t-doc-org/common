@@ -410,8 +410,8 @@ class DbObservable(DynObservable):
     def wake_keys(self, db): return None
 
     def poll(self):
-        log.debug("Start: %(cls)s", cls=self.__class__.__name__,
-                  event='obs:start')
+        log.debug("Start: %(cls)s", event='obs:start',
+                  cls=self.__class__.__name__)
         try:
             store = self.events.api.store
             with contextlib.closing(store.connect(mode='ro')) as db, \
@@ -433,9 +433,10 @@ class DbObservable(DynObservable):
         except Exception:
             with self.lock: self._stop = True
             self.remove()
-            log.exception("Uncaught exception", event='obs:exception')
+            log.exception("Uncaught exception", event='obs:exception',
+                          cls=self.__class__.__name__)
         finally:
-            log.debug("Done", event='obs:end')
+            log.debug("End", event='obs:end', cls=self.__class__.__name__)
 
     def query(self, db):
         raise NotImplementedError()
