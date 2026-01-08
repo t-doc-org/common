@@ -24,6 +24,9 @@ def application(config_path, origins, events_level=logs.NOTSET):
     stack = contextlib.ExitStack()
     stack.enter_context(logs.configure(config=cfg.sub('logging'),
                                        stderr=sys.stderr))
+    log.info("Starting (processes: %(processes)s, threads: %(threads)s)",
+             processes=mod_wsgi.maximum_processes,
+             threads=mod_wsgi.threads_per_process)
 
     @mod_wsgi.subscribe_shutdown
     def on_shutdown(event, **kwargs):
