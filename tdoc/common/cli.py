@@ -651,7 +651,7 @@ def cmd_user_create(opts):
     wuser = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
     for user, uid, token in zip(opts.user, uids, tokens):
-        opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
+        opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
                          f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
@@ -663,7 +663,7 @@ def cmd_user_list(opts):
     o = opts.stdout
     for user, uid, created in users:
         opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:016x})  "
+            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
             f"created: {util.local_time(created)}\n")
 
 
