@@ -125,7 +125,6 @@ To deploy the site to [`tdoc.org`](https://t-doc.org/):
   the build fails, GitHub should send you an email notification. It contains a
   link to the build log, which should allow figuring out what went wrong.
 
-{#troubleshooting}
 ## Troubleshooting
 
 ### Changes don't show up on the deployed site

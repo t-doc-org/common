@@ -145,7 +145,6 @@ available.
   [release notes](release-notes.md).
 - Restart the local server. When prompted, accept the upgrade.
 
-{#troubleshooting}
 ## Troubleshooting
 
 ### Force a clean install
