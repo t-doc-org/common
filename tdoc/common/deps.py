@@ -8,7 +8,7 @@ jsdelivr = 'https://cdn.jsdelivr.net'
 info = {
     'drauu': {
         'name': '@drauu/core',
-        'version': '0.4.3',
+        'version': '1.0.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'release_urls': [
