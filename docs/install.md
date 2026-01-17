@@ -102,8 +102,8 @@ winget upgrade --id Microsoft.WindowsTerminal
 - Edit the Mercurial configuration for your user. If the file doesn't exist yet,
   create it as an empty plain-text file.
 
-  - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME`)
-  - **macOS, Linux:** `$HOME\.hgrc` (typically `/home/USERNAME`)
+  - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME\.hgrc`)
+  - **macOS, Linux:** `$HOME\.hgrc` (typically `/home/USERNAME/.hgrc`)
 
   Copy the `[auth]` section from the dialog above (if you generated a new
   password) or from another install (if you already had a password), and paste
