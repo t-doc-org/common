@@ -823,6 +823,7 @@ name = "t-doc-common"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
+    { name = "certifi" },
     { name = "colorama", marker = "sys_platform == 'win32'" },
     { name = "markupsafe" },
     { name = "mdit-py-plugins" },
@@ -839,6 +840,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
+    { name = "certifi", specifier = ">=2026.1.4" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = ">=0.4.6" },
     { name = "markupsafe", specifier = ">=3.0.2" },
     { name = "mdit-py-plugins", specifier = ">=0.4.2" },

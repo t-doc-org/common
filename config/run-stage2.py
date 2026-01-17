@@ -23,6 +23,13 @@ import venv
 # The URL of the config directory.
 CONFIG = 'https://github.com/t-doc-org/common/raw/refs/heads/main/config'
 
+# Use certifi if it's available.
+ssl_ctx = None
+with contextlib.suppress(ImportError):
+    import ssl
+    import certifi
+    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+
 
 def main(*args, **kwargs):
     try:
@@ -300,7 +307,8 @@ class EnvBuilder(venv.EnvBuilder):
 
     def fetch(self, name):
         if self.config_url.startswith('https://'):
-            with request.urlopen(f'{self.config_url}/{name}', timeout=30) as f:
+            with request.urlopen(f'{self.config_url}/{name}', context=ssl_ctx,
+                                 timeout=30) as f:
                 return f.read()
         return (pathlib.Path(self.config_url) / name).read_bytes()
 

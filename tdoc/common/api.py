@@ -16,7 +16,7 @@ from urllib import parse, request
 
 import jwt
 
-from . import database, logs, store, wsgi
+from . import database, logs, store, util, wsgi
 
 log = logs.logger(__name__)
 missing = object()
@@ -664,7 +664,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         req = request.Request(disc['token_endpoint'], data, headers={
             'Content-Type': 'application/x-www-form-urlencoded',
         })
-        with request.urlopen(req, timeout=10) as f: resp = json.load(f)
+        with util.urlopen(req, timeout=10) as f: resp = json.load(f)
 
         # Validate the ID token.
         if (id_token := resp.get('id_token')) is None:

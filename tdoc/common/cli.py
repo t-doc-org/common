@@ -23,7 +23,7 @@ import sys
 import tempfile
 import threading
 import time
-from urllib import parse, request
+from urllib import parse
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
@@ -932,7 +932,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if (d := deps.info.get(parts[1])) is None: return
             url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
             log.debug("Caching: %(url)s", url=url)
-            with request.urlopen(url) as f: data = f.read()
+            with util.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                     dir=path.parent, prefix=path.name + '.',

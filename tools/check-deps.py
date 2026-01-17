@@ -157,8 +157,16 @@ class Namespace(dict):
         return self[name]
 
 
+# Use certifi if it's available.
+ssl_ctx = None
+with contextlib.suppress(ImportError):
+    import ssl
+    import certifi
+    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+
+
 def fetch_json(url):
-    with request.urlopen(url, timeout=30) as f:
+    with request.urlopen(url, context=ssl_ctx, timeout=30) as f:
         return json.load(f, object_pairs_hook=Namespace)
 
 

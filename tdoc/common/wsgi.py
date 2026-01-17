@@ -11,10 +11,9 @@ import secrets
 import sys
 import threading
 import time
-from urllib import request
-from wsgiref import util
+from wsgiref import util as wsgiutil
 
-from . import logs
+from . import logs, util
 
 log = logs.logger(__name__)
 _missing = object()
@@ -93,7 +92,7 @@ class Request:
     origin = property(lambda self: self.env.get('HTTP_ORIGIN'))
     remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
-                                                      util.FileWrapper))
+                                                      wsgiutil.FileWrapper))
 
     @property
     def required_origin(self):
@@ -110,7 +109,7 @@ class Request:
                else ''
 
     def uri(self, include_query=True):
-        return util.request_uri(self.env, include_query)
+        return wsgiutil.request_uri(self.env, include_query)
 
     _content_methods = (HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH,
                         HTTPMethod.OPTIONS, HTTPMethod.DELETE)
@@ -202,7 +201,7 @@ class Dispatcher:
 
     def get_handler(self, env):
         script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
-        if (name := util.shift_path_info(env)) is not None:
+        if (name := wsgiutil.shift_path_info(env)) is not None:
             if (h := self._endpoints.get(name)) is not None: return h
             env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
         if (h := self._endpoints.get('/')) is not None: return h
@@ -305,8 +304,7 @@ class HttpCache:
             now = time.time()
             if data is not None and now < exp: return data
             try:
-                with request.urlopen(url, timeout=timeout) as f:
-                    data = f.read()
+                with util.urlopen(url, timeout=timeout) as f: data = f.read()
                 exp = now + self.min_lifetime
                 with contextlib.suppress(Exception):
                     if (v := f.headers.get('expires')) is not None:

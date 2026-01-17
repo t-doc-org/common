@@ -2,8 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
+from http import client
 import itertools
 import re
+import ssl
+from urllib import request
+
+import certifi
 
 usec = datetime.timedelta(microseconds=1)
 
@@ -58,3 +63,20 @@ def datetime_to_nsec(dt):
 
 def timedelta_to_nsec(td):
     return (td // usec) * 1000
+
+
+# Use certifi instead of the system CA store for portability.
+#  - Recent SSL certificates from Sectigo used by GitHub aren't trusted on
+#    Windows 10.
+# The default context is configured like request.urlopen(context=None) does it
+# via http.client._create_https_context().
+ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+if client.HTTPSConnection._http_vsn == 11:
+    ssl_ctx.set_alpn_protocols(['http/1.1'])
+if ssl_ctx.post_handshake_auth is not None:
+    ssl_ctx.post_handshake_auth = True
+
+
+def urlopen(*args, **kwargs):
+    if 'context' not in kwargs: kwargs['context'] = ssl_ctx
+    return request.urlopen(*args, **kwargs)
