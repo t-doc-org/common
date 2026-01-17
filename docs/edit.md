@@ -12,7 +12,7 @@ Each site is tracked as a Mercurial repository.
 - Clone the repository with (substitute `SITE` with the name of the site):
 
   ```{code-block} shell-session
-  hg clone -u main https://c-space.net/rc/hg/t-doc/SITE
+  hg clone -u main https://rc.t-doc.org/hg/t-doc/SITE
   ```
 
   If the command asks for a username and password, ensure you have set up the
