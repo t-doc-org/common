@@ -100,11 +100,11 @@ def run_tests(tests, repo, label, wheel, write):
     # Clone the document repository.
     repo_dir = tests / repo
     write(f"{label}Cloning\n")
-    if repo.endswith('-private'):
-        run('hg', 'clone', '--updaterev=main', f'{cspace_net}/{repo}',
-            repo_dir)
-    else:
+    try:
         run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
+            repo_dir)
+    except CommandFailed:
+        run('hg', 'clone', '--updaterev=main', f'{cspace_net}/{repo}',
             repo_dir)
 
     def vrun(*args, wait=True, out=(), **kwargs):
@@ -184,8 +184,8 @@ path = "tmp/store.sqlite"
     write(f"{label}Interacting with store\n")
     vrun('tdoc', 'user', 'create', '--debug', 'test-user')
     vrun('tdoc', 'user', 'list', '--debug', out=[
-        r'^admin +\([0-9a-f]+\) +created: ',
-        r'^test-user +\([0-9a-f]+\) +created: ',
+        r'^admin +\([ 0-9]+\) +created: ',
+        r'^test-user +\([ 0-9]+\) +created: ',
     ])
     vrun('tdoc', 'group', 'add', '--debug', '--users=admin,test-user',
          '--groups=users', 'test-group')
