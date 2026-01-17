@@ -109,7 +109,7 @@ class Auth extends EventTarget {
         return this.data?.token;
     }
 
-    async member_of(group) {
+    async memberOf(group) {
         if (this.ready) await this.ready;
         const groups = this.data?.groups ?? [];
         return groups.includes(group) || groups.includes('*');
@@ -239,7 +239,10 @@ Log in</button>\
     }
 
     async showSettingsModal(message, kind = 'success') {
-        const info = await this.info();
+        const [info, auth] = await Promise.all([
+            this.info(),
+            this.call(`/repo`, {req: {info: true}}),
+        ]);
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-modal-title">\
@@ -254,6 +257,23 @@ Log in</button>\
 <th class="px-2">Last used</th><th class="px-2"></th></tr>\
 </thead><tbody class="align-middle"></tbody></table>\
 <div class="hstack gap-2 text-nowrap issuers"></div>\
+<div class="accordion repo hidden"><div class="accordion-item">\
+<h2 class="accordion-header m-0">\
+<button type="button" class="accordion-button collapsed p-2 fw-bold"\
+ data-bs-toggle="collapse" data-bs-target="#tdoc-repo"\
+ aria-controls="tdoc-repo">Repository access</button>\
+</h2>\
+<div class="accordion-collapse collapse rounded-0 overflow-hidden"\
+ style="position: relative;" id="tdoc-repo">\
+<pre class="hgrc m-0 border-0 p-2">\
+[auth]
+t-doc.prefix = ${tdoc.repos}
+t-doc.username = <span class="user user-select-all"></span>
+t-doc.password = <span class="pass user-select-all"></span>
+</pre>\
+<button type="button" class="reset btn btn-danger"\
+ style="position: absolute; top: 0.5rem; right: 0.5rem;">Reset</button>
+</div></div></div>\
 </div><div class="modal-footer flex-nowrap">\
 <button type="button" class="btn btn-danger text-nowrap logout">Log out\
 </button>\
@@ -296,8 +316,36 @@ The login ${login.email} has been removed successfully.`;
             });
         }
         this.addIssuerButtons(el, "Add login with", info.issuers);
+        const repo = qs(el, '.repo');
+        const hgrc = qs(repo, '.hgrc');
+        const user = qs(hgrc, '.user');
+        const pass = qs(hgrc, '.pass');
+        if (auth.prefix !== undefined) {
+            user.textContent = auth.user;
+            pass.textContent = auth.prefix !== null ?
+                               auth.prefix + '*'.repeat(48 - auth.prefix.length)
+                               : "[no password set]";
+            pass.classList.toggle('fst-italic', auth.prefix === null);
+            repo.classList.remove('hidden');
+        }
 
         const modal = showModal(el);
+        on(qs(repo, '.reset')).click(async e => {
+            if (auth.prefix !== null && !confirm(`\
+Are you sure you want to reset the repository access password?
+
+You will need to set the new password in your Mercurial configuration.`)) {
+                return;
+            }
+            await toModalMessage(el, async () => {
+                const resp = await this.call(`/repo`, {req: {reset: true}});
+                user.textContent = resp.user;
+                pass.textContent = resp.password;
+                auth.prefix = '';
+                return `\
+The password has been reset. Copy it now, as it won't be shown again.`;
+            });
+        });
         on(qs(el, '.logout')).click(async () => {
             await toModalMessage(el, async () => {
                 await this.logout();

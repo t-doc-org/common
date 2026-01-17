@@ -8,6 +8,8 @@ import secrets
 import threading
 import time
 
+import bcrypt
+
 from . import database, logs
 
 log = logs.logger(__name__)
@@ -53,6 +55,9 @@ class Connection(database.Connection):
     def oidc(self): return Oidc(self)
 
     @functools.cached_property
+    def repo(self): return Repo(self)
+
+    @functools.cached_property
     def groups(self): return Groups(self)
 
     @functools.cached_property
@@ -86,11 +91,14 @@ class WriteConnection(Connection):
 class Users(database.ConnNamespace):
     def member_of(self, origin, uid, group):
         if uid is None: return False
+        if origin is None:
+            return bool(self.row("""
+                select exists(select 1 from user_memberships
+                              where user = ? and group_ in (?, '*'))
+            """, (uid, group))[0])
         return bool(self.row("""
-            select exists(
-                select 1 from user_memberships
-                where (origin, user) = (?, ?) and (group_ = ? or group_ = '*')
-            )
+            select exists(select 1 from user_memberships
+                          where (origin, user) = (?, ?) and group_ in (?, '*'))
         """, (origin, uid, group))[0])
 
     def info(self, origin, uid):
@@ -232,6 +240,24 @@ class Oidc(database.ConnNamespace):
         self.execute("""
             delete from oidc_users where (issuer, subject, user) = (?, ?, ?)
         """, (issuer, subject, user))
+
+
+class Repo(database.ConnNamespace):
+    def auth_prefix(self, uid):
+        return self.row("select prefix from repo_auth where user = ?",
+                        (uid,), default=(None,))[0]
+
+    def reset_auth(self, uid, *, rounds=None):
+        prefix = 4
+        password = secrets.token_urlsafe(secrets.DEFAULT_ENTROPY + prefix)[:71]
+        kwargs = {'rounds': rounds} if rounds is not None else {}
+        hashed = bcrypt.hashpw(password.encode('ascii'),
+                               bcrypt.gensalt(**kwargs))
+        self.execute("""
+            insert or replace into repo_auth (user, password, prefix)
+                values (?, ?, ?)
+        """, (uid, hashed.decode('ascii'), password[:prefix]))
+        return password
 
 
 class Groups(database.ConnNamespace):
@@ -762,3 +788,14 @@ class Store(database.Database):
         # Drop unused tables.
         db.execute("drop table auth")
         db.execute("drop table log")
+
+    def version_7(self, db, dev, now):
+        # Create table for repository authentication.
+        db.create("""
+            create table repo_auth (
+                user integer primary key,
+                password text not null,
+                prefix text,
+                foreign key (user) references users (id)
+            ) strict
+        """)

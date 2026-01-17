@@ -135,7 +135,24 @@ class Api(wsgi.Dispatcher):
                                             'vote'))
         return {}
 
-    @wsgi.json_endpoint('solutions')
+    @wsgi.json_endpoint('repo', require_authn=True)
+    def handle_repo(self, wr, req):
+        if req.get('info'):
+            with wr.read_db as db:
+                if not db.users.member_of(None, wr.user, 'repo:push'):
+                    return {'user': str(wr.user)}
+                prefix = db.repo.auth_prefix(wr.user)
+            return {'user': str(wr.user), 'prefix': prefix}
+        if req.get('reset'):
+            with wr.write_db as db:
+                if not db.users.member_of(None, wr.user, 'repo:push'):
+                    raise wsgi.Error(HTTPStatus.FORBIDDEN)
+                rounds = self.config.get('repo.bcrypt_rounds', 10)
+                password = db.repo.reset_auth(wr.user, rounds=rounds)
+            return {'user': str(wr.user), 'password': password}
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+
+    @wsgi.json_endpoint('solutions', require_authn=True)
     def handle_solutions(self, wr, req):
         origin = wr.required_origin
         page = arg(req, 'page')

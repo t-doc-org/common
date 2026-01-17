@@ -100,6 +100,38 @@ winget upgrade --id Microsoft.WindowsTerminal
 ## Install
 
 - Install the [required packages](#requirements).
+
+- If this is the first time you access a t-doc repository, generate a repository
+  access password.
+  - Go to [`tdoc.org`](https://t-doc.org/) and ensure you are logged in.
+  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
+    <span class="fa fa-gear"></span> Settings", then open "Repository access".
+  - Click "Reset" to generate the password. Keep the dialog open for the next
+    step.
+
+- Edit the Mercurial configuration for your user. If the file doesn't exist yet,
+  create it as an empty plain-text file.
+
+  - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME`)
+  - **macOS, Linux:** `$HOME\.hgrc` (typically `/home/USERNAME`)
+
+  Copy the `[auth]` section from the dialog above (if you generated a new
+  password) or from another install (if you already had a password), and paste
+  it into the configuration. Also, add a `[ui]` section and specify your
+  username (substitute `FIRST` and `LAST` with your first and last name, and
+  `EMAIL` with your email address, e.g. `Joe Smith <joe@example.com>`). Save the
+  file.
+
+  ```{code-block} ini
+  [auth]
+  t-doc.prefix = https://rc.t-doc.org/
+  t-doc.username = USER_ID
+  t-doc.password = PASSWORD
+
+  [ui]
+  username = FIRST LAST <EMAIL>
+  ```
+
 - Everything else will be installed automatically when
   [starting the local server](edit.md#edit-documents).
 

@@ -6,38 +6,26 @@
 {#clone}
 ## Clone a repository
 
-Documents are grouped into **repositories**, which represent the unit of
-deployment. Each document repository is tracked as a Mercurial repository.
+Documents are grouped into **sites**, which represent the unit of deployment.
+Each site is tracked as a Mercurial repository.
 
-- Clone the repository with (substitute `REPO` with the name of the repository):
+- Clone the repository with (substitute `SITE` with the name of the site):
 
   ```{code-block} shell-session
-  hg clone -u main https://c-space.net/rc/hg/t-doc/REPO
+  hg clone -u main https://c-space.net/rc/hg/t-doc/SITE
   ```
 
-- Edit the file `.hg/hgrc` in the cloned repository and **add the following
-  lines** (substitute `USER` with your username, `PASSWORD` with your password,
-  `FIRST` and `LAST` with your first and last name, and `EMAIL` with your email
-  address, e.g. `Joe Smith <joe@example.com>`):
+  If the command asks for a username and password, ensure you have set up the
+  Mercurial configuration as described in "[Install](install.md#install)".
 
-  ```{code-block} ini
-  [auth]
-  c-space.prefix = https://c-space.net/
-  c-space.username = USER
-  c-space.password = PASSWORD
-
-  [ui]
-  username = FIRST LAST <EMAIL>
-  ```
-
-The typical structure of a document repository is shown below. The source files
-are located below the `docs` directory.
+The typical structure of a site repository is shown below. The source files are
+located below the `docs` directory.
 
 ```{code-block}
 :class: line-height-normal
 ├── .github
 │   └── workflows
-│       └── publish.yml       A workflow to publish the repository
+│       └── publish.yml       A workflow to publish the site
 ├── docs
 │   ├── conf.py               The Sphinx configuration
 │   ├── index.md              The main index page
@@ -94,7 +82,7 @@ are located below the `docs` directory.
   (...)
   build succeeded.
 
-  The HTML pages are in _build\serve-1724331687766143000\html.
+  The HTML pages are in _build\serve-8000-next\html.
   Serving at <http://localhost:8000/>
   ```
 
@@ -114,26 +102,48 @@ are located below the `docs` directory.
     rebuild, and report the issue to t-doc's authors.
 
 - **Stop the local server** by clicking the
-  <span style="font: var(--fa-font-solid);">&#xf52a;</span> button in the
-  header, by typing {kbd}`Ctrl+C` in the terminal, or by closing the terminal
-  window.
+  <span class="fa fa-door-closed"></span> button in the header, by typing
+  {kbd}`Ctrl+C` in the terminal, or by closing the terminal window.
 
 - Don't forget to **commit changes frequently**.
 
 {#deploy}
 ## Deploy documents
 
-To deploy the repository to [`tdoc.org`](https://t-doc.org/), make sure that all
-changes have been committed (and that new files have been added with Mercurial),
-then push the changes to the server.
+To deploy the site to [`tdoc.org`](https://t-doc.org/):
 
-```{code-block} shell-session
-hg push
-```
+- Make sure that all changes have been committed (and that new files have been
+  added with Mercurial).
 
-The changes should be live at `https://REPO.t-doc.org/` within a few minutes. If
-the build fails, GitHub should send you an email notification. It contains a
-link to the build log, which should allow figuring out what went wrong.
+- **Push the changes** to the server.
 
-Make sure that the `main` bookmark is always active and pointing to the
-repository head.
+  ```{code-block} shell-session
+  hg push
+  ```
+
+- The changes should be live at `https://SITE.t-doc.org/` within a few minutes. If
+  the build fails, GitHub should send you an email notification. It contains a
+  link to the build log, which should allow figuring out what went wrong.
+
+{#troubleshooting}
+## Troubleshooting
+
+### Changes don't show up on the deployed site
+
+- Go to the [`t-doc-org`](https://github.com/t-doc-org) organization page and
+  check the "Publish" status for the site. If it is failing, click on the badge
+  and check the logs of the failing workflow.
+
+- Check that the `main` bookmark is active and pointing to the repository head.
+  Run:
+
+  ```{code-block} shell-session
+  hg id
+  ```
+
+  The command should output the current revision, followed by `tip main`. If it
+  doesn't, the bookmark can be moved to the current revision with:
+
+  ```{code-block} shell-session
+  hg bookmark main
+  ```

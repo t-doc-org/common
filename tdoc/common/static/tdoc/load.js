@@ -72,7 +72,7 @@ if (toggleSolutionsBtn) {
                 updateSolutionsTooltip();
             })]});
         api.auth.onChange(async () => {
-            if (await api.auth.member_of('solutions:write')) {
+            if (await api.auth.memberOf('solutions:write')) {
                 htmlData.tdocSolutionsCtrl = '';
             } else {
                 delete htmlData.tdocSolutionsCtrl;
