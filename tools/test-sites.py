@@ -102,7 +102,7 @@ def run_tests(tests, repo, label, wheel, write):
     write(f"{label}Cloning\n")
     try:
         run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
-            repo_dir)
+            repo_dir, env=os.environ | {'GIT_ASKPASS': 'true'})
     except CommandFailed:
         run('hg', 'clone', '--updaterev=main', f'{cspace_net}/{repo}',
             repo_dir)
