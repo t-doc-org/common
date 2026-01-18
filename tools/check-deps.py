@@ -9,6 +9,7 @@ import json
 import os
 import pathlib
 import re
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,11 @@ import webbrowser
 
 
 def main(argv, stdin, stdout, stderr):
+    base = pathlib.Path(argv[0]).parent.resolve().parent
+    run_py = base / 'run.py'
+    if not pathlib.Path(sys.executable).is_relative_to(base):
+        return subprocess.run([run_py, 'python', '-P'] + argv).returncode
+
     checker = Checker(argv, stdout, stderr)
     checker.check_deps()
     checker.check_node()
@@ -158,15 +164,16 @@ class Namespace(dict):
         return self[name]
 
 
-# Use certifi if it's available.
-ssl_ctx = None
-with contextlib.suppress(ImportError):
-    import ssl
-    import certifi
-    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+ssl_ctx = False
 
 
 def fetch_json(url):
+    global ssl_ctx
+    if ssl_ctx is False:
+        ssl_ctx = None
+        with contextlib.suppress(ImportError):
+            import certifi
+            ssl_ctx = ssl.create_default_context(cafile=certifi.where())
     with request.urlopen(url, context=ssl_ctx, timeout=30) as f:
         return json.load(f, object_pairs_hook=Namespace)
 
