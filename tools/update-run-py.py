@@ -20,7 +20,7 @@ def main(argv, stdin, stdout, stderr):
     import certifi
     ca_data = certifi.contents().strip()
     old = run_py.read_text('utf-8')
-    new = re.sub(r'(?ms)^(ca_data = r"""\\\n).*(^"""  # ca_data)',
+    new = re.sub(r'(?ms)^(ca_data = r"""\n).*(^"""  # ca_data)',
                  lambda m: f'{m[1]}{ca_data}\n{m[2]}', old)
     if new != old: run_py.write_text(new, 'utf-8')
     subprocess.run(['hg', 'diff', '-R', run_py.parent, run_py])
