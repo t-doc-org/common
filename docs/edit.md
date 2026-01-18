@@ -124,14 +124,6 @@ To deploy the site to [`tdoc.org`](https://t-doc.org/):
 
 ## Troubleshooting
 
-### The local server fails with `CERTIFICATE_VERIFY_FAILED`
-
-Install or upgrade the [`certifi`](https://pypi.org/project/certifi/) package.
-
-```{code-block} shell-session
-python -m pip install --upgrade certifi
-```
-
 ### Changes don't show up on the deployed site
 
 - Go to the [`t-doc-org`](https://github.com/t-doc-org) organization page and
@@ -151,3 +143,9 @@ python -m pip install --upgrade certifi
   ```{code-block} shell-session
   hg bookmark main
   ```
+
+### The local server fails with `ERROR: run() got an unexpected keyword argument 'ssl_ctx'`
+
+This is a temporary error due to a compatibility issue with `run-stage2.py`.
+Running the local server again while connected to the internet should fix the
+issue.
