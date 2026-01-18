@@ -9,7 +9,6 @@
 release-notes
 ```
 
-{#requirements}
 ## Requirements
 
 t-doc requires the following software to be installed:
@@ -18,7 +17,6 @@ t-doc requires the following software to be installed:
 - [Graphviz](https://graphviz.org/), for `graphviz` directives
 - [Mercurial](https://www.mercurial-scm.org/), for managing source files
 
-{#windows}
 ### Windows
 
 - Install [Python](https://www.python.org/).
@@ -36,6 +34,12 @@ t-doc requires the following software to be installed:
     If this opens the Microsoft Store, open Windows settings, search for "App
     execution aliases", and disable the "App Installer" entries for `python.exe`
     and `python3.exe`.
+
+  - Install the [`certifi`](https://pypi.org/project/certifi/) package.
+
+    ```{code-block} shell-session
+    python -m pip install certifi
+    ```
 
 - Install [Graphviz](https://graphviz.org/). The installer must be run
   interactively and the **"Add Graphviz to the system PATH for all users"**
@@ -67,26 +71,24 @@ Available upgrades for these packages can be displayed and installed with
 ```{code-block} shell-session
 winget upgrade
 winget upgrade --id Python.Python.3.13
+python -m pip install --upgrade certifi
 winget upgrade --id Graphviz.Graphviz
 winget upgrade --id TortoiseHg.TortoiseHg
 winget upgrade --id Microsoft.WindowsTerminal
 ```
 
-{#macos}
 ### macOS
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) manually or via a package
   manager like [Homebrew](https://brew.sh/).
 
-{#linux}
 ### Linux
 
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) via your system's package
   manager.
 
-{#install}
 ## Install
 
 - Install the [required packages](#requirements).
@@ -125,7 +127,6 @@ winget upgrade --id Microsoft.WindowsTerminal
 - Everything else will be installed automatically when
   [starting the local server](edit.md#edit-documents).
 
-{#upgrade}
 ## Upgrade
 
 The [local server](edit.md#edit-documents) indicates when an upgrade is

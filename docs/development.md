@@ -32,74 +32,45 @@ creating and editing documents.
   ````
   `````
 
-- Install [build](https://pypi.org/project/build/) and
-  [hatchling](https://pypi.org/project/hatchling/).
+- Install the [`build`](https://pypi.org/project/build/),
+  [`hatchling`](https://pypi.org/project/hatchling/) and
+  [`uv`](https://pypi.org/project/uv/) packages.
 
   `````{tab-set}
   :sync-group: platform
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  python -m pip install build hatchling
+  python -m pip install build hatchling uv
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  python -m pip install --user build hatchling
+  python -m pip install --user build hatchling uv
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  python -m pip install --user build hatchling
+  python -m pip install --user build hatchling uv
   ```
   ````
   `````
 
-- Clone the `t-doc/common` repository (substitute `USER` with your username).
+- Clone the `common` repository.
 
   ```{code-block} shell-session
-  hg clone https://USER@c-space.net/rc/hg/t-doc/common
+  hg clone -u main https://rc.t-doc.org/hg/common
   cd common
   ```
 
-- Checkout and activate the `main` bookmark.
-
-  ```{code-block} shell-session
-  hg checkout main
-  ```
-
-- Run the local server with the option `--version=dev` as the first argument to
-  `run.py`. This installs the `t-doc-common` package as editable into the
-  virtual environment `_venv/dev`. You may also want to use the `--debug`
-  option to get full tracebacks.
-
-  `````{tab-set}
-  :sync-group: platform
-  ````{tab-item} Windows
-  :sync: windows
-  ```{code-block} shell-session
-  run.py --version=dev tdoc serve --debug
-  ```
-  ````
-  ````{tab-item} macOS
-  :sync: macos
-  ```{code-block} shell-session
-  ./run.py --version=dev tdoc serve --debug
-  ```
-  ````
-  ````{tab-item} Linux
-  :sync: linux
-  ```{code-block} shell-session
-  ./run.py --version=dev tdoc serve --debug
-  ```
-  ````
-  `````
+- Run the local server [as usual](edit.md#edit-documents). This installs the
+  `t-doc-common` package as editable into the virtual environment `_venv/dev`.
 
 ## Upgrade
 
-- Pull missing changesets from the `t-doc/common` repository.
+- Pull missing changesets from the `common` repository.
 
   ```{code-block} shell-session
   hg pull
@@ -114,34 +85,8 @@ creating and editing documents.
 - Update the generated files.
 
   ```{code-block} shell-session
-  python -m build --no-isolation --wheel
+  uv build
   ```
 
 - If any Python dependencies need to be upgraded, delete the `_venv/dev`
-  directory. It will be re-created when the local server is run the next time
-  with `--version=dev`.
-
-- Alternatively, the `t-doc-common` package metadata and any out-of-date
-  dependencies can be updated in-place.
-
-  `````{tab-set}
-  :sync-group: platform
-  ````{tab-item} Windows
-  :sync: windows
-  ```{code-block} shell-session
-  _venv\dev\Scripts\pip.exe install --upgrade --editable .
-  ```
-  ````
-  ````{tab-item} macOS
-  :sync: macos
-  ```{code-block} shell-session
-  _venv/dev/bin/pip install --upgrade --editable .
-  ```
-  ````
-  ````{tab-item} Linux
-  :sync: linux
-  ```{code-block} shell-session
-  _venv/dev/bin/pip install --upgrade --editable .
-  ```
-  ````
-  `````
+  directory. It will be re-created when the local server is run the next time.

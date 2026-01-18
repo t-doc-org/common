@@ -3,7 +3,6 @@
 
 # Create & edit documents
 
-{#clone}
 ## Clone a repository
 
 Documents are grouped into **sites**, which represent the unit of deployment.
@@ -38,7 +37,6 @@ located below the `docs` directory.
 └── run.py                    An auto-installing wrapper for the tdoc command
 ```
 
-{#edit}
 ## Edit documents
 
 - **Run the local server.**
@@ -107,7 +105,6 @@ located below the `docs` directory.
 
 - Don't forget to **commit changes frequently**.
 
-{#deploy}
 ## Deploy documents
 
 To deploy the site to [`tdoc.org`](https://t-doc.org/):
