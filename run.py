@@ -73,7 +73,7 @@ class Stage2:
             return (self.base / 'config' / self.run_stage2).read_bytes()
         with request.urlopen(
                 f'{REPO}/raw/refs/heads/main/config/{self.run_stage2}',
-                context=ssl_ctx, timeout=30) as f:
+                context=self.ssl_ctx, timeout=30) as f:
             return f.read()
 
     def exec(self, data):
