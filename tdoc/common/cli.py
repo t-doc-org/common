@@ -262,8 +262,8 @@ def add_group_commands(parser):
     p.set_defaults(handler=cmd_group_members)
     arg = p.add_argument
     add_origin_option(arg)
-    arg('--transitive', action='store_true', dest='transitive',
-        help="Include transitive memberships.")
+    arg('--direct', action='store_true', dest='direct',
+        help="List only direct memberships.")
     add_groups_re(arg)
     add_options(p)
 
@@ -302,7 +302,7 @@ def cmd_group_list(opts):
 def cmd_group_members(opts):
     with read_db(opts) as db:
         members = db.groups.members(opts.origin, opts.groups,
-                                    transitive=opts.transitive)
+                                    transitive=not opts.direct)
     members.sort()
     wgroup = max((len(m[0]) for m in members), default=0)
     wname = max((len(m[2]) for m in members), default=0)
@@ -638,8 +638,8 @@ def add_user_commands(parser):
     p.set_defaults(handler=cmd_user_memberships)
     arg = p.add_argument
     add_origin_option(arg)
-    arg('--transitive', action='store_true', dest='transitive',
-        help="Include transitive memberships.")
+    arg('--direct', action='store_true', dest='direct',
+        help="List only direct memberships.")
     add_users_re(arg)
     add_options(p)
 
@@ -670,7 +670,7 @@ def cmd_user_list(opts):
 def cmd_user_memberships(opts):
     with read_db(opts) as db:
         memberships = db.users.memberships(opts.origin, opts.users,
-                                           transitive=opts.transitive)
+                                           transitive=not opts.direct)
     memberships.sort()
     wuser = max((len(m[0]) for m in memberships), default=0)
     wgroup = max((len(m[1]) for m in memberships), default=0)

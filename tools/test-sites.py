@@ -187,18 +187,21 @@ path = "tmp/store.sqlite"
         r'^admin +\([ 0-9]+\) +created: ',
         r'^test-user +\([ 0-9]+\) +created: ',
     ])
-    vrun('tdoc', 'group', 'add', '--debug', '--users=admin,test-user',
+    vrun('tdoc', 'group', 'add', '--debug', '--users=test-user', 'users')
+    vrun('tdoc', 'group', 'add', '--debug', '--users=admin',
          '--groups=users', 'test-group')
     vrun('tdoc', 'user', 'memberships', '--debug', out=[
         r'^admin +\*\n +test-group\n',
-        r'^test-user +test-group\n',
+        r'^test-user +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'list', '--debug', out=[
         r'^\*\ntest-group\nusers\n',
     ])
     vrun('tdoc', 'group', 'members', '--debug', out=[
         r'^\* +user +admin\n',
-        r'^test-group +group +users\n +user +admin\n +user +test-user\n',
+        r'^test-group +group +users\n +user +admin\n'
+            r' +user +test-user  \(transitive\)\n'
+            r'users +user +test-user\n',
     ])
     vrun('tdoc', 'group', 'memberships', '--debug', out=[
         r'^users +test-group\n',
