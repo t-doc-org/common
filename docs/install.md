@@ -35,12 +35,6 @@ t-doc requires the following software to be installed:
     execution aliases", and disable the "App Installer" entries for `python.exe`
     and `python3.exe`.
 
-  - Install the [`certifi`](https://pypi.org/project/certifi/) package.
-
-    ```{code-block} shell-session
-    python -m pip install certifi
-    ```
-
 - Install [Graphviz](https://graphviz.org/). The installer must be run
   interactively and the **"Add Graphviz to the system PATH for all users"**
   option must be enabled.
@@ -71,7 +65,6 @@ Available upgrades for these packages can be displayed and installed with
 ```{code-block} shell-session
 winget upgrade
 winget upgrade --id Python.Python.3.13
-python -m pip install --upgrade certifi
 winget upgrade --id Graphviz.Graphviz
 winget upgrade --id TortoiseHg.TortoiseHg
 winget upgrade --id Microsoft.WindowsTerminal
