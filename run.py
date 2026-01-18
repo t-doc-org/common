@@ -40,8 +40,8 @@ class Stage2:
         self.venv = self.base / self.venv_root
         self.updater = None
         self.ssl_ctx = ssl.create_default_context()
-        self.ssl_ctx.load_verify_locations(
-            cadata=re.sub(r'[^\x00-\x7f]', '', ca_data))
+        if ca_data := ca_data.strip():
+            self.ssl_ctx.load_verify_locations(cadata=ca_data)
 
     def __enter__(self): return self
 
@@ -105,7 +105,7 @@ class Stage2:
 
 
 # Trusted CA bundle from the certifi package.
-ca_data = """\
+ca_data = r"""\
 # Issuer: CN=Entrust Root Certification Authority O=Entrust, Inc. OU=www.entrust.net/CPS is incorporated by reference/(c) 2006 Entrust, Inc.
 # Subject: CN=Entrust Root Certification Authority O=Entrust, Inc. OU=www.entrust.net/CPS is incorporated by reference/(c) 2006 Entrust, Inc.
 # Label: "Entrust Root Certification Authority"
@@ -4783,7 +4783,8 @@ J8tRd/iWkx7P8nd9H0aTolkelUTFLXVksNb54Dxp6gS1HAviRkRNQzuXSXERvSS2
 wq1yVAb+axj5d9spLFKebXd7Yv0PTY6YMjAwcRLWJTXjn/hvnLXrahut6hDTlhZy
 BiElxky8j3C7DOReIoMt0r7+hVu05L0=
 -----END CERTIFICATE-----
-"""  # noqa: E501
+"""  # ca_data # noqa: E501
+
 
 if __name__ == '__main__':
     main(sys.argv, sys.stdin, sys.stdout, sys.stderr)

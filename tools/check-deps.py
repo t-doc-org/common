@@ -266,6 +266,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         sys.exit(1)
     except Exception as e:
-        raise
         sys.stderr.write(f'\n{e}\n')
         sys.exit(1)
