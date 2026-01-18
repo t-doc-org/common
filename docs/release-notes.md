@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-68)=
+## 0.68 *(2026-01-18)*
+
+- Added self-service management of repository access credentials.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.67...0.68)
+
 (release-0-67)=
 ## 0.67 *(2026-01-04)*
 
