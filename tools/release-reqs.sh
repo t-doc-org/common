@@ -10,7 +10,7 @@ common="$(realpath "$(dirname "$0")/..")"
 cd "${common}"
 for v in "$@"; do
     reqs="${common}/config/${v}.req"
-    uv export --no-header --format=requirements.txt --script=<(
+    uv export --no-cache --no-header --format=requirements.txt --script=<(
         cat <<EOF
 # /// script
 # requires-python = '>=3.12'
