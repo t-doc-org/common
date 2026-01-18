@@ -52,6 +52,7 @@ building awesome software and making it available for free!
 :maxdepth: 1
 install
 edit
+faq
 development
 reference/index
 demo/index
