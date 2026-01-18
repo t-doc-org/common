@@ -24,7 +24,7 @@ import venv
 CONFIG = 'https://github.com/t-doc-org/common/raw/refs/heads/main/config'
 
 
-def main(*args, **kwargs):
+def main(**kwargs):
     try:
         sys.exit(run(**kwargs))
     except SystemExit:
