@@ -23,19 +23,9 @@ import venv
 # The URL of the config directory.
 CONFIG = 'https://github.com/t-doc-org/common/raw/refs/heads/main/config'
 
-# Use certifi if it's available.
-ssl_ctx = None
-with contextlib.suppress(ImportError):
-    import ssl
-    import certifi
-    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
-
 
 def main(*args, **kwargs):
     try:
-        # TODO: Remove compatibility code and *args
-        for a, n in zip(args, ('base', 'argv', 'stdin', 'stdout', 'stderr')):
-            kwargs[n] = a
         sys.exit(run(**kwargs))
     except SystemExit:
         raise
@@ -48,7 +38,7 @@ def main(*args, **kwargs):
         sys.exit(1)
 
 
-def run(argv, stdin, stdout, stderr, base):
+def run(argv, stdin, stdout, stderr, base, ssl_ctx=None, **kwargs):
     # Parse command-line options.
     config = CONFIG
     debug = False
@@ -80,7 +70,7 @@ def run(argv, stdin, stdout, stderr, base):
         i += 1
 
     # Create a environment builder.
-    builder = EnvBuilder(base, config, version, hermetic, stderr,
+    builder = EnvBuilder(base, config, version, hermetic, ssl_ctx, stderr,
                          debug or '--debug' in argv)
     if print_key is not None:
         v = builder.config
@@ -271,11 +261,12 @@ class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
     config_toml = 't-doc.toml'
 
-    def __init__(self, base, config, version, hermetic, out, debug):
+    def __init__(self, base, config, version, hermetic, ssl_ctx, out, debug):
         super().__init__(with_pip=True)
         self.base = base
         self.root = base / self.venv_root
         self.config_url = config
+        self.ssl_ctx = ssl_ctx
         self.out, self.debug = out, debug
         if version is None: version = self.config['version']
         if not (is_version(version) or is_tag(version) or is_wheel(version)):
@@ -307,8 +298,8 @@ class EnvBuilder(venv.EnvBuilder):
 
     def fetch(self, name):
         if self.config_url.startswith('https://'):
-            with request.urlopen(f'{self.config_url}/{name}', context=ssl_ctx,
-                                 timeout=30) as f:
+            with request.urlopen(f'{self.config_url}/{name}',
+                                 context=self.ssl_ctx, timeout=30) as f:
                 return f.read()
         return (pathlib.Path(self.config_url) / name).read_bytes()
 
