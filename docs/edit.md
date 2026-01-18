@@ -124,6 +124,14 @@ To deploy the site to [`tdoc.org`](https://t-doc.org/):
 
 ## Troubleshooting
 
+### The local server fails with `CERTIFICATE_VERIFY_FAILED`
+
+Install or upgrade the [`certifi`](https://pypi.org/project/certifi/) package.
+
+```{code-block} shell-session
+python -m pip install --upgrade certifi
+```
+
 ### Changes don't show up on the deployed site
 
 - Go to the [`t-doc-org`](https://github.com/t-doc-org) organization page and
