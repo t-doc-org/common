@@ -3,6 +3,16 @@
 
 # Create & edit documents
 
+This page assumes a basic working knowledge of
+[Mercurial](https://www.mercurial-scm.org/). Many tutorials are available on the
+internet; here are a few starting points.
+
+- [Mercurial Kick Start](https://mercurial.aragost.com/kick-start/en/) (also
+  available in [French](https://mercurial.aragost.com/kick-start/fr/))
+- [HgInit](https://hginit.github.io/)
+- [Mercurial: The Definitive Guide](https://hgbook.red-bean.com/read/)
+- [Mercurial quick start](https://wiki.mercurial-scm.org/QuickStart)
+
 ## Clone a repository
 
 Documents are grouped into **sites**, which represent the unit of deployment.
