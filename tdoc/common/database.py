@@ -117,6 +117,11 @@ class ConnectionPool:
                 db.close()
 
 
+def _regexp(pat, v):
+    if not isinstance(v, str): return
+    return re.fullmatch(pat, v) is not None
+
+
 class Database:
     Connection = Connection
     WriteConnection = Connection
@@ -190,9 +195,7 @@ class Database:
         db.autocommit = sqlite3.LEGACY_TRANSACTION_CONTROL \
                         if 'rw' in mode and db.isolation_level \
                         else False
-        db.create_function(
-            'regexp', 2, lambda pat, v: re.fullmatch(pat, v) is not None,
-            deterministic=True)
+        db.create_function('regexp', 2, _regexp, deterministic=True)
         return db
 
     def pool(self, **kwargs):
