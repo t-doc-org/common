@@ -191,7 +191,7 @@ class Database:
                         if 'rw' in mode and db.isolation_level \
                         else False
         db.create_function(
-            'regexp', 2, lambda pat, v: re.search(pat, v) is not None,
+            'regexp', 2, lambda pat, v: re.fullmatch(pat, v) is not None,
             deterministic=True)
         return db
 

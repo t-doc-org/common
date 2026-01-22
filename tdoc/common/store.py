@@ -118,12 +118,13 @@ class Users(database.ConnNamespace):
         raise database.Error(
             f"Ambiguous user name %r: {" ".join(f"#{u}" for u in uids)}")
 
-    def list(self, name_re=''):
-        return [(name, uid, database.to_datetime(created))
+    def list(self, user_re='.*'):
+        return [(uid, name, database.to_datetime(created))
                 for uid, name, created in self.execute("""
                     select id, name, created from users
-                    where name regexp ?
-                """, (name_re,))]
+                    where name regexp :user_re
+                        or cast(id as text) regexp :user_re
+                """, {'user_re': user_re})]
 
     def create(self, names):
         if invalid := [n for n in names if n.startswith('#')]:
@@ -135,14 +136,16 @@ class Users(database.ConnNamespace):
         """, [(uid, name, now) for uid, name in zip(uids, names)])
         return uids
 
-    def memberships(self, origin, name_re='', transitive=False):
+    def memberships(self, origin, user_re='.*', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select users.name, group_, transitive from user_memberships
             left join users on users.id = user
-            where origin = ? and users.name regexp ?
-              and (? or not transitive)
-        """, (origin, name_re, transitive)))
+            where origin = :origin
+                and (users.name regexp :user_re
+                     or cast(users.id as text) regexp :user_re)
+                and (:transitive or not transitive)
+        """, {'origin': origin, 'user_re': user_re, 'transitive': transitive}))
 
 
 class Tokens(database.ConnNamespace):
@@ -161,7 +164,7 @@ class Tokens(database.ConnNamespace):
             order by created limit 1
         """, (user, time.time_ns()), default=(None,))[0]
 
-    def list(self, user_re='', expired=False):
+    def list(self, user_re='.*', expired=False):
         now = time.time_ns()
         return [(name, uid, token, database.to_datetime(created),
                  database.to_datetime(expires))
@@ -170,9 +173,10 @@ class Tokens(database.ConnNamespace):
                            expires
                     from user_tokens
                     left join users on users.id = user_tokens.user
-                    where users.name regexp ?
-                      and (? or expires is null or ? < expires)
-                """, (user_re, expired, now))]
+                    where (users.name regexp :user_re
+                           or cast(users.id as text) regexp :user_re)
+                        and (:expired or expires is null or :now < expires)
+                """, {'user_re': user_re, 'expired': expired, 'now': now})]
 
     def create(self, uids, expires=None):
         now = time.time_ns()
@@ -190,7 +194,7 @@ class Tokens(database.ConnNamespace):
         self.executemany("""
             update user_tokens set expires = ?
             where token = ?
-               or exists(select 1 from users where id = user and name = ?)
+                or exists(select 1 from users where id = user and name = ?)
         """, [(expires, token, token) for token in tokens])
 
     def remove(self, tokens):
@@ -261,36 +265,37 @@ class Repo(database.ConnNamespace):
 
 
 class Groups(database.ConnNamespace):
-    def list(self, name_re=''):
+    def list(self, group_re='.*'):
         return [g for g, in self.execute("""
                     select distinct group_ from user_memberships
-                    where group_ regexp :name_re
+                    where group_ regexp :group_re
                     union
                     select distinct group_ from group_memberships
-                    where group_ regexp :name_re
+                    where group_ regexp :group_re
                     union
                     select distinct member from group_memberships
-                    where member regexp :name_re
-                """, {'name_re': name_re})]
+                    where member regexp :group_re
+                """, {'group_re': group_re})]
 
-    def members(self, origin, name_re='', transitive=False):
+    def members(self, origin, group_re='.*', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
             select group_, 'user', users.name, transitive from user_memberships
             left join users on users.id = user
-            where origin = :origin and group_ regexp :name_re
+            where origin = :origin and group_ regexp :group_re
               and (:transitive or not transitive)
             union all
             select group_, 'group', member, false from group_memberships
-            where origin = :origin and group_ regexp :name_re
-        """, {'origin': origin, 'name_re': name_re, 'transitive': transitive}))
+            where origin = :origin and group_ regexp :group_re
+        """, {'origin': origin, 'group_re': group_re,
+              'transitive': transitive}))
 
-    def memberships(self, origin, name_re=''):
+    def memberships(self, origin, group_re='.*'):
         self.check_origin(origin)
         return list(self.execute("""
             select member, group_ from group_memberships
             where origin = ? and member regexp ?
-        """, (origin, name_re)))
+        """, (origin, group_re)))
 
     def modify(self, origin, groups, add_users=None, add_groups=None,
                remove_users=None, remove_groups=None):

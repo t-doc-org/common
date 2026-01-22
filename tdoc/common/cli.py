@@ -240,7 +240,7 @@ def add_group_commands(parser):
                 help="A comma-separated list of users.")
 
     def add_groups_re(arg):
-        arg('groups', metavar='REGEXP', nargs='?', default='',
+        arg('groups', metavar='REGEXP', nargs='?', default='.*',
             help="A regexp to limit the groups to consider.")
 
     p = sp.add_parser('add', help="Add members to one or more groups.")
@@ -567,7 +567,7 @@ def add_token_commands(parser):
     arg('--expired', action='store_true', dest='expired',
         help="Include expired tokens.")
     add_origin_option(arg)
-    arg('users', metavar='REGEXP', nargs='?', default='',
+    arg('users', metavar='REGEXP', nargs='?', default='.*',
         help="A regexp to limit the users to consider.")
     add_options(p)
 
@@ -615,7 +615,7 @@ def add_user_commands(parser):
     sp.required = True
 
     def add_users_re(arg):
-        arg('users', metavar='REGEXP', nargs='?', default='',
+        arg('users', metavar='REGEXP', nargs='?', default='.*',
             help="A regexp to limit the users to consider.")
 
     p = sp.add_parser('create', help="Create users.")
