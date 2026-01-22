@@ -159,6 +159,15 @@ def on_upgrade(opts, st, db, version, latest):
 {o.LYELLOW}A database needs to be created:{o.NORM} dev={opts.dev}
   {st.path}
 Would you like to create it (y/n)? """)
+    elif latest < version:
+        o.write(f"""\
+{o.LYELLOW}A database needs to be downgraded:{o.NORM} version\
+ {o.CYAN}{version}{o.NORM} => {o.CYAN}{latest}{o.NORM}
+  {st.path}
+This cannot be done automatically. Please downgrade manually or restore from a
+backup.
+""")
+        raise Exception("Aborting to prevent data loss")
     else:
         o.write(f"""\
 {o.LYELLOW}A database needs to be upgraded:{o.NORM} version\
