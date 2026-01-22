@@ -136,12 +136,10 @@ def compress(src, dst):
 default_stream_format = '{ilevel} [{ctx:20}] {message}'
 default_file_format = '{asctime} {ilevel} [{ctx:20}] [{module}] {message}'
 
-class DisableHandler(Exception): pass
-
 
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False,
-              raise_exc=False, on_upgrade=None):
+              raise_exc=False, on_upgrade=None, db_logs=True):
     if config is None: config = _config.Config({})
     transport = config.get('transport', 'queue')
 
@@ -180,10 +178,9 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             hs.append(fh)
 
         for c in config.subs('databases'):
-            if not c.get('enabled', True): continue
+            if not db_logs or not c.get('enabled', True): continue
             lst = LogStore(c, stderr=stderr)
-            try: lst.check_version(on_upgrade)
-            except DisableHandler: continue
+            lst.check_version(on_upgrade)
             stack.enter_context(lst)
             dbh = DatabaseHandler(lst)
             dbh.setLevel(c.get('level', NOTSET))

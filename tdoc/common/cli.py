@@ -113,10 +113,17 @@ def main(argv, stdin, stdout, stderr):
     opts.cfg = config.Config.load(opts.config)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True, raise_exc=opts.debug,
-                        on_upgrade=functools.partial(on_upgrade, opts)):
+                        on_upgrade=functools.partial(on_upgrade, opts),
+                        db_logs=not getattr(opts.handler, '_disable_db_logs',
+                                            False)):
         log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
                  argv=argv)
         return opts.handler(opts)
+
+
+def disable_db_logs(fn):
+    fn._disable_db_logs = True
+    return fn
 
 
 def add_options(parser, sphinx=False):
@@ -144,15 +151,7 @@ def add_sphinx_options(parser):
         default=[], help="Additional options to pass to sphinx-build.")
 
 
-def disable_log_upgrades(fn):
-    fn._disable_log_upgrades = True
-    return fn
-
-
 def on_upgrade(opts, st, db, version, latest):
-    if getattr(opts.handler, '_disable_log_upgrades', False) \
-            and isinstance(st, logs.LogStore):
-        raise logs.DisableHandler()
     o = opts.stdout
     if db is None:
         o.write(f"""\
@@ -406,7 +405,7 @@ def add_log_commands(parser):
     add_options(p)
 
 
-@disable_log_upgrades
+@disable_db_logs
 def cmd_log_backup(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
@@ -416,7 +415,7 @@ def cmd_log_backup(opts):
             lst.backup(db, dest)
 
 
-@disable_log_upgrades
+@disable_db_logs
 def cmd_log_create(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
@@ -427,6 +426,7 @@ def cmd_log_create(opts):
         opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
 
 
+@disable_db_logs
 def cmd_log_query(opts):
     fmt = logs.Formatter(opts.format, utc=opts.utc)
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
@@ -434,6 +434,7 @@ def cmd_log_query(opts):
     else:
         raise Exception("Invalid log database index")
     lst = logs.LogStore(c)
+    lst.check_version(functools.partial(on_upgrade, opts))
     with contextlib.closing(lst.connect(mode='ro')) as db:
         rid = None
         while True:
@@ -446,7 +447,7 @@ def cmd_log_query(opts):
             time.sleep(1)
 
 
-@disable_log_upgrades
+@disable_db_logs
 def cmd_log_upgrade(opts):
     for c in opts.cfg.subs('logging.databases'):
         lst = logs.LogStore(c)
