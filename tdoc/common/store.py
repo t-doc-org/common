@@ -91,11 +91,6 @@ class WriteConnection(Connection):
 class Users(database.ConnNamespace):
     def member_of(self, origin, uid, group):
         if uid is None: return False
-        if origin is None:
-            return bool(self.row("""
-                select exists(select 1 from user_memberships
-                              where user = ? and group_ in (?, '*'))
-            """, (uid, group))[0])
         return bool(self.row("""
             select exists(select 1 from user_memberships
                           where (origin, user) = (?, ?) and group_ in (?, '*'))
@@ -248,20 +243,50 @@ class Oidc(database.ConnNamespace):
 
 
 class Repo(database.ConnNamespace):
-    def auth_prefix(self, uid):
-        return self.row("select prefix from repo_auth where user = ?",
-                        (uid,), default=(None,))[0]
+    def auth(self, uid):
+        enabled, prefix = self.row("""
+            select enabled, prefix from repo_auth where user = ?
+        """, (uid,), default=(False, None))
+        return bool(enabled), prefix
 
-    def reset_auth(self, uid, *, rounds=None):
+    def list_users(self, user_re='.*'):
+        return [(uid, name, bool(enabled), prefix)
+                for uid, name, enabled, prefix in self.execute("""
+                    select users.id, users.name, repo_auth.enabled,
+                        repo_auth.prefix
+                    from repo_auth
+                    left join users on users.id = repo_auth.user
+                    where users.name regexp :user_re
+                        or cast(users.id as text) regexp :user_re
+                """, {'user_re': user_re})]
+
+    def enable_auth(self, uid, enable):
+        self.execute("""
+            insert into repo_auth (user, enabled) values (:uid, :enable)
+            on conflict (user) do update set enabled = :enable
+        """, {'uid': uid, 'enable': bool(enable)})
+
+    def reset_password(self, uid):
+        self.execute("""
+            insert into repo_auth (user, password, prefix)
+                values (:uid, null, null)
+            on conflict (user) do update
+                set (user, password, prefix) = (:uid, null, null)
+        """, {'uid': uid})
+
+    def new_password(self, uid, *, rounds=None):
         prefix = 4
         password = secrets.token_urlsafe(secrets.DEFAULT_ENTROPY + prefix)[:71]
         kwargs = {'rounds': rounds} if rounds is not None else {}
         hashed = bcrypt.hashpw(password.encode('ascii'),
                                bcrypt.gensalt(**kwargs))
         self.execute("""
-            insert or replace into repo_auth (user, password, prefix)
-                values (?, ?, ?)
-        """, (uid, hashed.decode('ascii'), password[:prefix]))
+            insert into repo_auth (user, password, prefix)
+                values (:uid, :pw, :prefix)
+            on conflict (user) do update
+                set (user, password, prefix) = (:uid, :pw, :prefix)
+        """, {'uid': uid, 'pw': hashed.decode('ascii'),
+              'prefix': password[:prefix]})
         return password
 
 
@@ -805,3 +830,21 @@ class Store(database.Database):
                 foreign key (user) references users (id)
             ) strict
         """)
+
+    def version_8(self, db, dev, now):
+        # Add the "enabled" column and allow rows without a password.
+        db.create("""
+            create table repo_auth_ (
+                user integer primary key,
+                enabled int not null default 0,
+                password text,
+                prefix text,
+                foreign key (user) references users (id)
+            ) strict
+        """)
+        db.execute("""
+            insert into repo_auth_ (user, enabled, password, prefix)
+            select user, 1, password, prefix from repo_auth
+        """)
+        db.execute("drop table repo_auth")
+        db.execute("alter table repo_auth_ rename to repo_auth")

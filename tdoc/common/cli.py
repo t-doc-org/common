@@ -58,6 +58,7 @@ def main(argv, stdin, stdout, stderr):
 
     add_group_commands(root)
     add_log_commands(root)
+    add_repo_commands(root)
 
     p = root.add_parser('serve', help="Serve a book locally.")
     p.set_defaults(handler=cmd_serve)
@@ -449,6 +450,53 @@ def cmd_log_upgrade(opts):
             opts.stdout.write(f"Upgrading (version: {version}): {lst.path}\n")
             to_version = opts.version if opts.version is not None else latest
             upgrade_database(opts, lst, db, version, to_version, indent="  ")
+
+
+def add_repo_commands(parser):
+    p = parser.add_parser('repo', help="Repository-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('auth', help="Modify repository authentication.")
+    p.set_defaults(handler=cmd_repo_auth)
+    arg = p.add_argument
+    arg('--disable', action='store_false', dest='enable', default=None,
+        help="Disable repository access.")
+    arg('--enable', action='store_true', dest='enable', default=None,
+        help="Enable repository access.")
+    arg('--reset', action='store_true', dest='reset',
+        help="Reset the password.")
+    arg('user', metavar='USER', nargs='+',
+        help="The users for whom to modify repository authentication.")
+    add_options(p)
+
+    p = sp.add_parser('list-users', help="List repository users.")
+    p.set_defaults(handler=cmd_repo_list_users)
+    arg = p.add_argument
+    arg('users', metavar='REGEXP', nargs='?', default='.*',
+        help="A regexp to limit the users to consider.")
+    add_options(p)
+
+
+def cmd_repo_auth(opts):
+    with write_db(opts) as db:
+        for u in opts.user:
+            if (v := opts.enable) is not None:
+                db.repo.enable_auth(db.users.uid(u), v)
+            if opts.reset: db.repo.reset_password(db.users.uid(u))
+
+
+def cmd_repo_list_users(opts):
+    with read_db(opts) as db:
+        infos = db.repo.list_users(opts.users)
+    infos.sort(key=lambda r: (r[1], r[0]))
+    wuser = max((len(r[1]) for r in infos), default=0)
+    o = opts.stdout
+    for uid, name, enabled, prefix in infos:
+        opts.stdout.write(
+            f"{o.CYAN}{name:{wuser}}{o.NORM} ({uid:19d})  "
+            f"access: {"enabled " if enabled else "disabled"}  "
+            f"password: {"[none]" if prefix is None else prefix + "****"}\n")
 
 
 def cmd_serve(opts):

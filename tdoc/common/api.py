@@ -139,16 +139,14 @@ class Api(wsgi.Dispatcher):
     def handle_repo(self, wr, req):
         if req.get('info'):
             with wr.read_db as db:
-                if not db.users.member_of(None, wr.user, 'repo:push'):
-                    return {'user': str(wr.user)}
-                prefix = db.repo.auth_prefix(wr.user)
-            return {'user': str(wr.user), 'prefix': prefix}
+                enabled, prefix = db.repo.auth(wr.user)
+            return {'user': str(wr.user), 'enabled': enabled, 'prefix': prefix}
         if req.get('reset'):
             with wr.write_db as db:
-                if not db.users.member_of(None, wr.user, 'repo:push'):
+                if not db.repo.auth(wr.user)[0]:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN)
                 rounds = self.config.get('repo.bcrypt_rounds', 10)
-                password = db.repo.reset_auth(wr.user, rounds=rounds)
+                password = db.repo.new_password(wr.user, rounds=rounds)
             return {'user': str(wr.user), 'password': password}
         raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 

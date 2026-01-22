@@ -200,15 +200,18 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'group', 'members', '--debug', out=[
         r'^\* +user +admin\n',
         r'^test-group +group +users\n +user +admin\n'
-            r' +user +test-user  \(transitive\)\n'
-            r'users +user +test-user\n',
+            r' +user +test-user  \(transitive\)\n',
+        r'^users +user +test-user\n',
     ])
     vrun('tdoc', 'group', 'memberships', '--debug', out=[
         r'^users +test-group\n',
     ])
     vrun('tdoc', 'group', 'remove', '--debug', '--users=admin,test-user',
          '--groups=users', 'test-group')
-
+    vrun('tdoc', 'repo', 'auth', '--enable', 'test-user')
+    vrun('tdoc', 'repo', 'list-users', out=[
+        r'^test-user +\([ 0-9]+\) +access: enabled +password: \[none\]\n',
+    ])
     vrun('tdoc', 'token', 'create', '--debug', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', out=[
         r'^admin +\([ 0-9]+\) +#\?token=admin\n +created: ',
@@ -216,7 +219,6 @@ path = "tmp/store.sqlite"
             r' +created: .*\n){2}',
     ])
     vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
-
     vrun('tdoc', 'store', 'backup', '--debug', out=[
         r'^Backing up to: .*store\.sqlite'
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',

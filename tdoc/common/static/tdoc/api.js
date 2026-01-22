@@ -320,7 +320,7 @@ The login ${login.email} has been removed successfully.`;
         const hgrc = qs(repo, '.hgrc');
         const user = qs(hgrc, '.user');
         const pass = qs(hgrc, '.pass');
-        if (auth.prefix !== undefined) {
+        if (auth.enabled) {
             user.textContent = auth.user;
             pass.textContent = auth.prefix !== null ?
                                auth.prefix + '*'.repeat(48 - auth.prefix.length)
