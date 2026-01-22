@@ -98,7 +98,8 @@ winget upgrade --id Microsoft.WindowsTerminal
   create it as an empty plain-text file.
 
   - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME\.hgrc`)
-  - **macOS, Linux:** `$HOME/.hgrc` (typically `/home/USERNAME/.hgrc`)
+  - **macOS:** `$HOME/.hgrc` (typically `/Users/USERNAME/.hgrc`)
+  - **Linux:** `$HOME/.hgrc` (typically `/home/USERNAME/.hgrc`)
 
   Copy the `[auth]` section from the dialog above (if you generated a new
   password) or from another install (if you already had a password), and paste
