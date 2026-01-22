@@ -191,8 +191,8 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'group', 'add', '--debug', '--users=admin',
          '--groups=users', 'test-group')
     vrun('tdoc', 'user', 'memberships', '--debug', out=[
-        r'^admin +\*\n +test-group\n',
-        r'^test-user +test-group  \(transitive\)\n +users\n',
+        r'^admin +\([ 0-9]+\) +\*\n +test-group\n',
+        r'^test-user +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'list', '--debug', out=[
         r'^\*\ntest-group\nusers\n',
@@ -211,8 +211,9 @@ path = "tmp/store.sqlite"
 
     vrun('tdoc', 'token', 'create', '--debug', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', out=[
-        r'^admin +#\?token=admin\n +created: ',
-        r'^(test-user +#\?token=[a-zA-Z0-9-_]{43,}\n +created: .*\n){2}',
+        r'^admin +\([ 0-9]+\) +#\?token=admin\n +created: ',
+        r'^(test-user +\([ 0-9]+\) +#\?token=[a-zA-Z0-9-_]{43,}\n'
+            r' +created: .*\n){2}',
     ])
     vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
 

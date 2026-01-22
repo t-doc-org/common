@@ -304,8 +304,8 @@ def cmd_group_members(opts):
         members = db.groups.members(opts.origin, opts.groups,
                                     transitive=not opts.direct)
     members.sort()
-    wgroup = max((len(m[0]) for m in members), default=0)
-    wname = max((len(m[2]) for m in members), default=0)
+    wgroup = max((len(r[0]) for r in members), default=0)
+    wname = max((len(r[2]) for r in members), default=0)
     o = opts.stdout
     prev = None
     for group, typ, name, transitive in members:
@@ -324,7 +324,7 @@ def cmd_group_memberships(opts):
     with read_db(opts) as db:
         memberships = db.groups.memberships(opts.origin, opts.groups)
     memberships.sort()
-    wmember = max((len(m[0]) for m in memberships), default=0)
+    wmember = max((len(r[0]) for r in memberships), default=0)
     o = opts.stdout
     prev = None
     for member, group in memberships:
@@ -583,9 +583,9 @@ def cmd_token_create(opts):
         tokens = db.tokens.create(uids, opts.expire)
     width = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
-    for user, token in zip(opts.user, tokens):
+    for uid, user, token in zip(uids, opts.user, tokens):
         opts.stdout.write(
-            f"{o.CYAN}{user:{width}}{o.NORM} "
+            f"{o.CYAN}{user:{width}}{o.NORM}  ({uid:19d})  "
             f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
@@ -598,13 +598,13 @@ def cmd_token_list(opts):
     with read_db(opts) as db:
         tokens = db.tokens.list(opts.users, expired=opts.expired)
     epoch = datetime.datetime.fromtimestamp(0, datetime.UTC)
-    tokens.sort(key=lambda r: (r[0], r[3], r[4] or epoch, r[2]))
-    wuser = max((len(u) for u, *_ in tokens), default=0)
+    tokens.sort(key=lambda r: (r[1], r[3], r[4] or epoch, r[2]))
+    wuser = max((len(t[1]) for t in tokens), default=0)
     o = opts.stdout
-    for user, uid, token, created, expires in tokens:
+    for uid, user, token, created, expires in tokens:
         if expires: expires = f", expires: {util.local_time(expires)}"
         opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} "
+            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
             f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n"
             f"  created: {util.local_time(created)}{expires or ""}\n")
 
@@ -650,7 +650,7 @@ def cmd_user_create(opts):
         tokens = db.tokens.create(uids, opts.token_expire)
     wuser = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
-    for user, uid, token in zip(opts.user, uids, tokens):
+    for uid, user, token in zip(uids, opts.user, tokens):
         opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
                          f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
@@ -658,10 +658,10 @@ def cmd_user_create(opts):
 def cmd_user_list(opts):
     with read_db(opts) as db:
         users = db.users.list(opts.users)
-    users.sort(key=lambda r: r[0])
-    wuser = max((len(u[0]) for u in users), default=0)
+    users.sort(key=lambda r: r[1])
+    wuser = max((len(r[1]) for r in users), default=0)
     o = opts.stdout
-    for user, uid, created in users:
+    for uid, user, created in users:
         opts.stdout.write(
             f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
             f"created: {util.local_time(created)}\n")
@@ -672,13 +672,13 @@ def cmd_user_memberships(opts):
         memberships = db.users.memberships(opts.origin, opts.users,
                                            transitive=not opts.direct)
     memberships.sort()
-    wuser = max((len(m[0]) for m in memberships), default=0)
-    wgroup = max((len(m[1]) for m in memberships), default=0)
+    wuser = max((len(r[1]) for r in memberships), default=0)
+    wgroup = max((len(r[2]) for r in memberships), default=0)
     o = opts.stdout
     prev = None
-    for user, group, transitive in memberships:
-        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM}" if user != prev \
-                 else f"{'':{wuser}}"
+    for uid, user, group, transitive in memberships:
+        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  " \
+                 if user != prev else f"{'':{wuser + 19 + 5}}"
         if transitive:
             opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
                              "(transitive)\n")

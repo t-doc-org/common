@@ -139,7 +139,8 @@ class Users(database.ConnNamespace):
     def memberships(self, origin, user_re='.*', transitive=False):
         self.check_origin(origin)
         return list(self.execute("""
-            select users.name, group_, transitive from user_memberships
+            select users.id, users.name, group_, transitive
+            from user_memberships
             left join users on users.id = user
             where origin = :origin
                 and (users.name regexp :user_re
@@ -166,7 +167,7 @@ class Tokens(database.ConnNamespace):
 
     def list(self, user_re='.*', expired=False):
         now = time.time_ns()
-        return [(name, uid, token, database.to_datetime(created),
+        return [(uid, name, token, database.to_datetime(created),
                  database.to_datetime(expires))
                 for token, uid, name, created, expires in self.execute("""
                     select token, users.id, users.name, user_tokens.created,
