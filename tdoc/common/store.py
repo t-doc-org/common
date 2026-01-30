@@ -217,9 +217,8 @@ class Oidc(database.ConnNamespace):
 
     def user(self, id_token):
         return self.row("""
-            select user, id_token, updated from oidc_users
-            where (issuer, subject) = (?, ?)
-        """, (id_token['iss'], id_token['sub']), default=(None, None, None))
+            select user from oidc_users where (issuer, subject) = (?, ?)
+        """, (id_token['iss'], id_token['sub']), default=(None,))[0]
 
     def logins(self, user):
         return [(json.loads(id_token), database.to_datetime(updated))

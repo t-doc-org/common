@@ -514,32 +514,54 @@ class OidcAuthApi(wsgi.Dispatcher):
                 for i in issuers if i.get('enabled', True)}
 
     def issuer(self, issuer):
-        if (info := self.issuers.get(issuer)) is None:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        if (info := self.issuers.get(issuer)) is None: return None, None
         return info, self.discovery(info)
 
     def discovery(self, info):
+        # TODO: discovery => issuer, and add /.well-known/openid-configuration
         return json.loads(self.api.cache.get(info['discovery'], timeout=10))
+
+    def token_issuer(self, id_token):
+        if (v := self.issuers.get(id_token['iss'])) is not None: return v
+        ti_iss = self.microsoft_tenant_independent_issuer(id_token)
+        if ti_iss and (v := self.issuers.get(ti_iss)) is not None: return v
+
+    @staticmethod
+    def microsoft_tenant_independent_issuer(id_token):
+        # Map a tenant-specific Microsoft issuer to the tenant-independent
+        # issuer, as described in
+        # <https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer>.
+        if (tid := id_token.get('tid')) is None: return
+        iss = id_token['iss']
+        if (v := iss.replace(tid, '{tenantid}')) != iss: return v
+
+    @staticmethod
+    def token_name(id_token):
+        if (v := id_token.get('email')) is not None: return v
+        if (v := id_token.get('verified_primary_email')) is not None: return v
+        if (v := id_token.get('preferred_username')) is not None: return v
+        if (v := id_token.get('name')) is not None: return v
+        return f'sub:{id_token['sub']}'
 
     @wsgi.json_endpoint('info')
     def handle_info(self, wr, req):
-        issuers = self.issuers
         resp = {'issuers': [{'issuer': i, 'label': info.get('label', i)}
-                            for i, info in issuers.items()]}
+                            for i, info in self.issuers.items()]}
         if wr.user is not None:
-            iids = [(i, self.discovery(i)) for i in issuers.values()]
             resp['logins'] = logins = []
             with wr.read_db as db:
                 for id_token, updated in db.oidc.logins(wr.user):
-                    if (info := issuers.get(id_token['iss'])) is None: continue
+                    if (info := self.token_issuer(id_token)) is None: continue
+                    name = self.token_name(id_token)
                     logins.append({
-                        'email': id_token['email'],
+                        'name': name,
+                        'email': name,  # TODO(0.70): Remove this key
                         'issuer': info['label'],
                         'updated': updated.timestamp(),
                         'iss': id_token['iss'],
                         'sub': id_token['sub'],
                     })
-            logins.sort(key=lambda i: (i['email'], i['issuer']))
+            logins.sort(key=lambda i: (i['name'], i['issuer']))
         return resp
 
     @wsgi.json_endpoint('update', require_authn=True)
@@ -549,7 +571,7 @@ class OidcAuthApi(wsgi.Dispatcher):
             with wr.write_db as db:
                 db.oidc.remove_login(wr.user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
-                            if id_token['iss'] in self.issuers)
+                            if self.token_issuer(id_token) is not None)
                 if count < 1:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
                                      "At least one login is required")
@@ -559,23 +581,36 @@ class OidcAuthApi(wsgi.Dispatcher):
         header = jwt.get_unverified_header(token)
         alg, kid = header['alg'], header['kid']
         if alg not in self.config.get('token_algorithms', ()):
-            raise wsgi.Error(HTTPStatus.FORBIDDEN,
-                             f"Unsupported signing algorithm: {alg}")
+            raise Exception(f"Unsupported signing algorithm: {alg}")
         resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10))
         for key in resp['keys']:
-            if key['kid'] == kid and key['alg'] == alg: return jwt.PyJWK(key)
-        raise wsgi.Error(HTTPStatus.FORBIDDEN, "No verification key found")
+            # 'alg' may be absent if 'kid' is unique.
+            if key['kid'] != kid or key.get('alg', alg) != alg: continue
+            return jwt.PyJWK(key), key.get('issuer')
+        raise Exception("No verification key found")
 
     def verify_id_token(self, disc, token, audience, nonce):
-        key = self.get_key(disc, token)
+        key, key_issuer = self.get_key(disc, token)
         try:
-            info = jwt.decode(token, key, issuer=disc['issuer'],
-                              audience=audience, options={'strict_aud': True})
-        except jwt.exceptions.InvalidTokenError as e:
-            raise wsgi.Error(HTTPStatus.FORBIDDEN, str(e))
-        if info['nonce'] != nonce:
-            raise wsgi.Error(HTTPStatus.FORBIDDEN, "Nonce mismatch")
-        return info
+            # TODO: Add leeway
+            id_token = jwt.decode(token, key, audience=audience,
+                                  options={'strict_aud': True})
+        except jwt.exceptions.InvalidTokenError:
+            raise Exception("Invalid token")
+        self.verify_issuer(id_token, disc['issuer'])
+        if key_issuer is not None: self.verify_issuer(id_token, key_issuer)
+        if id_token['nonce'] != nonce:
+            raise Exception("Nonce mismatch")
+        return id_token
+
+    @staticmethod
+    def verify_issuer(id_token, issuer):
+        if (iss := id_token['iss']) == issuer: return
+        # Handle tenant-independent Microsoft issuers as described in
+        # <https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens#validate-the-issuer>.
+        if (tid := id_token.get('tid')) is not None:
+            if iss == issuer.replace('{tenantid}', tid): return
+        raise Exception("Invalid issuer")
 
     @wsgi.json_endpoint('login')
     def handle_login(self, wr, req):
@@ -599,6 +634,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if href_origin != wr.env.get('HTTP_ORIGIN'):
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
         info, disc = self.issuer(issuer)
+        if info is None: raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
         # Create the PKCE challenge as per RFC7636
         # <https://datatracker.ietf.org/doc/html/rfc7636>.
@@ -651,6 +687,7 @@ class OidcAuthApi(wsgi.Dispatcher):
 
         # Get the ID token from the issuer.
         info, disc = self.issuer(state['issuer'])
+        if info is None: raise Exception("Issuer not found")
         data = parse.urlencode({
             'code': code[0],
             'code_verifier': state['verifier'],
@@ -671,7 +708,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                                         state['nonce'])
 
         # Find the user for the returned identity, if it exists.
-        user, _, _ = db.oidc.user(id_token)
+        user = db.oidc.user(id_token)
 
         # If the user is logged in, we're adding a new identity or updating an
         # existing one. Check that the identity isn't associated with another
@@ -685,6 +722,7 @@ class OidcAuthApi(wsgi.Dispatcher):
 
         # If the user isn't logged in, and the identity's domain is allowlisted,
         # create a new user.
+        # TODO: Allow config to specify claims to match and use as username
         if user is None and (hd := id_token.get('hd')) is not None \
                 and hd in info.get('create_users_for_domains', []):
             if (email := id_token.get('email')) is None:
@@ -715,6 +753,6 @@ class OidcAuthApi(wsgi.Dispatcher):
         with wr.write_db as db:
             # Remove the token if the user has at least one login.
             count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
-                        if id_token['iss'] in self.issuers)
+                        if self.token_issuer(id_token) is not None)
             if count > 0: db.tokens.remove([token])
         return {}

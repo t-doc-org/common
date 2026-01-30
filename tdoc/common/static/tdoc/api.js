@@ -292,7 +292,7 @@ t-doc.password = <span class="pass user-select-all"></span>
             const updated = typeof login.updated === 'string' ? login.updated
                             : localIso(new Date(login.updated * 1e3));
             const row = logins.appendChild(elmt`\
-<tr><td class="px-2">${login.email}</td><td class="px-2 text-nowrap">\
+<tr><td class="px-2">${login.name}</td><td class="px-2 text-nowrap">\
 ${login.issuer}</td><td class="px-2 text-nowrap">${updated}</td>\
 <td><button type="button" class="btn btn-outline-danger">Remove</button></td>\
 </tr>`);
@@ -300,7 +300,7 @@ ${login.issuer}</td><td class="px-2 text-nowrap">${updated}</td>\
             if (info.logins.length < 2) enable(false, btn);
             on(btn).click(async () => {
                 if (!confirm(`\
-Are you sure you want to remove the login ${login.email}?`)) {
+Are you sure you want to remove the login ${login.name}?`)) {
                     return;
                 }
                 await toModalMessage(el, async () => {
@@ -311,7 +311,7 @@ Are you sure you want to remove the login ${login.email}?`)) {
                     const btns = qsa(logins, 'button');
                     if (btns.length < 2) enable(false, ...btns);
                     return `\
-The login ${login.email} has been removed successfully.`;
+The login ${login.name} has been removed successfully.`;
                 });
             });
         }
