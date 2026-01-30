@@ -8,6 +8,7 @@ import hashlib
 from http import HTTPMethod, HTTPStatus
 import json
 import queue
+import re
 import secrets
 import threading
 import time
@@ -650,11 +651,11 @@ class OidcAuthApi(wsgi.Dispatcher):
             'code_challenge': challenge,
             'code_challenge_method': 'S256',
             'nonce': nonce,
+            'prompt': 'select_account',
             'redirect_uri': f'{auth}/redirect',
             'response_type': 'code',
             'scope': 'openid profile email',
             'state': state,
-            **({'prompt': 'select_account'} if wr.user is not None else {}),
         }))
         return {'redirect': parse.urlunparse(parts)}
 
@@ -716,18 +717,10 @@ class OidcAuthApi(wsgi.Dispatcher):
             user = state_user
             if (t := state.get('token')) is not None: db.tokens.remove([t])
 
-        # If the user isn't logged in, and the identity's domain is allowlisted,
-        # create a new user.
-        # TODO: Allow config to specify claims to match and use as username
-        if user is None and (hd := id_token.get('hd')) is not None \
-                and hd in icfg.get('create_users_for_domains', []):
-            if (email := id_token.get('email')) is None:
-                raise Exception(
-                    "This identity doesn't specify an email address")
-            if not id_token.get('email_verified', False):
-                raise Exception(
-                    "This identity's email address hasn't been verified")
-            user, = db.users.create([email])
+        # If no existing user was found, and the identity matches auto-creation
+        # claims, create a new user.
+        if user is None and (name := self.new_user_name(id_token, icfg)):
+            user, = db.users.create([name])
 
         # If we've found or created a user, add or update the identity and
         # generate a new token.
@@ -742,6 +735,22 @@ class OidcAuthApi(wsgi.Dispatcher):
         if (desc := qs.get('error_description')) is not None:
             err = f"{err}: {desc[0]}"
         return err
+
+    def new_user_name(self, id_token, icfg):
+        for spec in icfg.get('create_users', []):
+            if not self.match_claims(spec.get('claims', {}), id_token): continue
+            if not (k := spec.get('username')): continue
+            if not (v := id_token.get(k)): continue
+            return v
+
+    def match_claims(self, claims, id_token):
+        for k, v in claims.items():
+            tv = id_token.get(k)
+            if isinstance(v, str):
+                if re.fullmatch(v, tv) is None: return False
+            elif tv != v:
+                return False
+        return True
 
     @wsgi.json_endpoint('logout', require_authn=True)
     def handle_logout(self, wr, req):
