@@ -580,7 +580,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
         alg, kid = header['alg'], header['kid']
-        if alg not in self.config.get('token_algorithms', ()):
+        if alg not in self.config.get('token.algorithms', ["RS256"]):
             raise Exception(f"Unsupported signing algorithm: {alg}")
         resp = json.loads(self.api.cache.get(disc['jwks_uri'], timeout=10))
         for key in resp['keys']:
@@ -591,16 +591,12 @@ class OidcAuthApi(wsgi.Dispatcher):
 
     def verify_id_token(self, disc, token, audience, nonce):
         key, key_issuer = self.get_key(disc, token)
-        try:
-            # TODO: Add leeway
-            id_token = jwt.decode(token, key, audience=audience,
-                                  options={'strict_aud': True})
-        except jwt.exceptions.InvalidTokenError:
-            raise Exception("Invalid token")
+        id_token = jwt.decode(
+            token, key, audience=audience, options={'strict_aud': True},
+            leeway=self.config.get('token.verify_leeway_secs', 60))
         self.verify_issuer(id_token, disc['issuer'])
         if key_issuer is not None: self.verify_issuer(id_token, key_issuer)
-        if id_token['nonce'] != nonce:
-            raise Exception("Nonce mismatch")
+        if id_token['nonce'] != nonce: raise Exception("Nonce mismatch")
         return id_token
 
     @staticmethod
