@@ -236,9 +236,15 @@ class Oidc(database.ConnNamespace):
               database.to_json(id_token), time.time_ns()))
 
     def remove_login(self, user, issuer, subject):
+        id_token = self.row("""
+            select id_token from oidc_users
+            where (issuer, subject, user) = (?, ?, ?)
+        """, (issuer, subject, user), default=(None,))[0]
+        if id_token is not None: id_token = json.loads(id_token)
         self.execute("""
             delete from oidc_users where (issuer, subject, user) = (?, ?, ?)
         """, (issuer, subject, user))
+        return id_token
 
 
 class Repo(database.ConnNamespace):

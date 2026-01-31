@@ -40,7 +40,18 @@ class Connection(sqlite3.Connection):
             except BaseException:
                 db.rollback()
                 raise
+        self._after_commit = []
         return db
+
+    def __exit__(self, typ, value, tb):
+        res = super().__exit__(typ, value, tb)
+        if typ is None:
+            for fn in self._after_commit: fn()
+            del self._after_commit
+        return res
+
+    def after_commit(self, fn):
+        self._after_commit.append(fn)
 
     def executescript(self, *args, **kwargs):
         # executescript() executes a COMMIT first if autocommit is

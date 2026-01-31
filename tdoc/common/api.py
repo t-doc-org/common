@@ -570,12 +570,17 @@ class OidcAuthApi(wsgi.Dispatcher):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
             with wr.write_db as db:
-                db.oidc.remove_login(wr.user, iss, sub)
+                id_token = db.oidc.remove_login(wr.user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                             if self.token_issuer(id_token) is not None)
                 if count < 1:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
                                      "At least one login is required")
+            if id_token is not None:
+                log.info("User %(user)d removed login %(name)s",
+                         user=wr.user, name=self.token_name(id_token),
+                         iss=id_token['iss'], sub=id_token['sub'],
+                         event='oidc:login:remove')
         return {}
 
     def get_key(self, disc, token):
@@ -673,6 +678,8 @@ class OidcAuthApi(wsgi.Dispatcher):
                 params = self._handle_redirect(wr, qs, db, data)
             except Exception as e:
                 params = {'auth_error': str(e)}
+                log.exception("OIDC login error", exc_limit=-1, exc_chain=False,
+                              event='oidc:login:error')
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
         return wr.redirect(parse.urlunparse(parts))
@@ -716,11 +723,23 @@ class OidcAuthApi(wsgi.Dispatcher):
                     "This identity is already associated with another user")
             user = state_user
             if (t := state.get('token')) is not None: db.tokens.remove([t])
+            db.after_commit(
+                lambda: log.info("User %(user)d added login %(name)s",
+                                 user=user, name=self.token_name(id_token),
+                                 iss=id_token['iss'], sub=id_token['sub'],
+                                 event='oidc:login:add'))
+        elif user is not None:
+            db.after_commit(
+                lambda: log.info("User %(user)d logged in", user=user,
+                                 event='oidc:login'))
 
         # If no existing user was found, and the identity matches auto-creation
         # claims, create a new user.
         if user is None and (name := self.new_user_name(id_token, icfg)):
             user, = db.users.create([name])
+            db.after_commit(
+                lambda: log.info("User %(user)d was auto-created", user=user,
+                                 event='user:create:auto'))
 
         # If we've found or created a user, add or update the identity and
         # generate a new token.
