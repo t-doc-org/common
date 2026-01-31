@@ -216,9 +216,13 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'token', 'list', '--debug', out=[
         r'^admin +\([ 0-9]+\) +#\?token=admin\n +created: ',
         r'^(test-user +\([ 0-9]+\) +#\?token=[a-zA-Z0-9-_]{43,}\n'
-            r' +created: .*\n){2}',
+            r' +created: [^,]*\n){2}',
     ])
-    vrun('tdoc', 'token', 'expire', '--debug', 'test-user')
+    vrun('tdoc', 'token', 'expire', '--debug', '--users', 'test-user')
+    vrun('tdoc', 'token', 'list', '--debug', '--expired', out=[
+        r'^(test-user +\([ 0-9]+\) +#\?token=[a-zA-Z0-9-_]{43,}\n'
+            r' +created: [^,]*, expires: .*\n){2}',
+    ])
     vrun('tdoc', 'store', 'backup', '--debug', out=[
         r'^Backing up to: .*store\.sqlite'
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',

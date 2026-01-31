@@ -18,7 +18,7 @@ def to_datetime(nsec):
 
 
 def to_nsec(dt, default=None):
-    return None if dt is None else util.datetime_to_nsec(dt)
+    return default if dt is None else util.datetime_to_nsec(dt)
 
 
 to_json = json.JSONEncoder(separators=(',', ':')).encode

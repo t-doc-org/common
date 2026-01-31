@@ -66,35 +66,35 @@ def main(argv, stdin, stdout, stderr):
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
-    arg('--cache', metavar='PATH', type='path', dest='cache', default='_cache',
+    arg('--cache', metavar='PATH', dest='cache', type='path', default='_cache',
         help="The path to the cache directory (default: %(default)s).")
-    arg('--delay', metavar='DURATION', type=float, dest='delay', default=1.0,
+    arg('--delay', metavar='DURATION', dest='delay', type=float, default=1.0,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
     arg('--exit-on-failure', action='store_true', dest='exit_on_failure',
         help="Terminate the server on build failure.")
-    arg('--exit-on-idle', metavar='DURATION', type=float, dest='exit_on_idle',
+    arg('--exit-on-idle', metavar='DURATION', dest='exit_on_idle', type=float,
         default=0.0,
         help="The time in seconds after the last connection closes when the "
              "server terminates (default: %(default)s).")
-    arg('--ignore', metavar='REGEXP', type='regexp', dest='ignore',
+    arg('--ignore', metavar='REGEXP', dest='ignore', type='regexp',
         default=f'(^|{re.escape(os.sep)})__pycache__$',
         help="A regexp matching files and directories to ignore from watching "
              "(default: %(default)s).")
     arg('--full-builds', action='store_true', dest='full_builds',
         help="Perform full builds on source changes.")
-    arg('--interval', metavar='DURATION', type=float, dest='interval',
+    arg('--interval', metavar='DURATION', dest='interval', type=float,
         default=1.0,
         help="The interval in seconds at which to check for source changes "
              "(default: %(default)s).")
     arg('--open', action='store_true', dest='open',
         help="Open the site in a browser tab after the first build completes.")
-    arg('--port', metavar='PORT', type=int, dest='port', default=0,
+    arg('--port', metavar='PORT', dest='port', type=int, default=0,
         help="The port to bind the server to (default: first unused port "
              f"starting at {default_port}).")
     arg('--restart-on-change', action='store_true', dest='restart_on_change',
         help="Restart the server on changes.")
-    arg('--watch', metavar='PATH', type='path', action='append', dest='watch',
+    arg('--watch', metavar='PATH', dest='watch', type='path', action='append',
         default=[],
         help="Additional directories to watch for changes.")
     add_options(p, sphinx=True)
@@ -132,7 +132,7 @@ def add_options(parser, sphinx=False):
     arg('--color', dest='color', choices=['auto', 'false', 'true'],
         default='auto',
         help="Control the use of colors in output (default: %(default)s).")
-    arg('--config', metavar='PATH', type='path', dest='config',
+    arg('--config', metavar='PATH', dest='config', type='path',
         default=os.environ.get('TDOC_CONFIG'),
         help="The path to the config file.")
     arg('--debug', action='store_true', dest='debug',
@@ -143,9 +143,9 @@ def add_options(parser, sphinx=False):
 
 def add_sphinx_options(parser):
     arg = parser.add_argument_group("Sphinx options").add_argument
-    arg('--build', metavar='PATH', type='path', dest='build', default='_build',
+    arg('--build', metavar='PATH', dest='build', type='path', default='_build',
         help="The path to the build directory (default: %(default)s).")
-    arg('--source', metavar='PATH', type='path', dest='source', default='docs',
+    arg('--source', metavar='PATH', dest='source', type='path', default='docs',
         help="The path to the source files (default: %(default)s).")
     arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
         default=[], help="Additional options to pass to sphinx-build.")
@@ -362,7 +362,7 @@ def add_log_commands(parser):
     p = sp.add_parser('create', help="Create log databases.")
     p.set_defaults(handler=cmd_log_create)
     arg = p.add_argument
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version at which to create the log databases (default: "
              "latest).")
     add_options(p)
@@ -370,20 +370,21 @@ def add_log_commands(parser):
     p = sp.add_parser('query', help="Query a log database.")
     p.set_defaults(handler=cmd_log_query)
     arg = p.add_argument
-    arg('--begin', metavar='TIME', type='nreltimestamp', dest='begin',
+    arg('--begin', metavar='TIME', dest='begin', type='opt_nrel_timestamp',
         default='1h',
         help="Output entries logged at or after the given relative or absolute "
              "time (default: %(default)s).")
-    arg('--end', metavar='TIME', dest='end', type='nreltimestamp', default=None,
+    arg('--end', metavar='TIME', dest='end', type='opt_nrel_timestamp',
+        default=None,
         help="Output entries logged before the given relative or absolute "
              "time.")
     arg('--format', metavar='FORMAT', dest='format',
         default=logs.default_file_format,
         help="The format to use for log entries (default: %(default)r).")
-    arg('--index', metavar='N', type=int, dest='index', default=0,
+    arg('--index', metavar='N', dest='index', type=int, default=0,
         help="The index of the database handler in the config (default: "
              "%(default)s).")
-    arg('--level', metavar='LEVEL', type=logs.to_level, dest='level',
+    arg('--level', metavar='LEVEL', dest='level', type=logs.to_level,
         default=None,
         help="Output entries with a log level equal to or above the given "
              "level.")
@@ -399,7 +400,7 @@ def add_log_commands(parser):
     p = sp.add_parser('upgrade', help="Upgrade log databases.")
     p.set_defaults(handler=cmd_log_upgrade)
     arg = p.add_argument
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version to which to upgrade the log databases (default: "
              "latest).")
     add_options(p)
@@ -546,7 +547,7 @@ def add_store_commands(parser):
     p = sp.add_parser('backup', help="Backup the store database.")
     p.set_defaults(handler=cmd_store_backup)
     arg = p.add_argument
-    arg('destination', metavar='PATH', type='path', nargs='?', default=None,
+    arg('destination', metavar='PATH', nargs='?', type='path', default=None,
         help="The path to the backup copy. Defaults to the source database "
              "file with a date + time suffix.")
     add_options(p)
@@ -554,7 +555,7 @@ def add_store_commands(parser):
     p = sp.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
     arg = p.add_argument
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version at which to create the store database (default: "
              "latest).")
     add_options(p)
@@ -562,7 +563,7 @@ def add_store_commands(parser):
     p = sp.add_parser('upgrade', help="Upgrade the store database.")
     p.set_defaults(handler=cmd_store_upgrade)
     arg = p.add_argument
-    arg('--version', metavar='VERSION', type=int, dest='version', default=None,
+    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version to which to upgrade the store database (default: "
              "latest).")
     add_options(p)
@@ -603,8 +604,8 @@ def add_token_commands(parser):
     p = sp.add_parser('create', help="Create tokens.")
     p.set_defaults(handler=cmd_token_create)
     arg = p.add_argument
-    arg('--expire', metavar='TIME', type='timestamp', dest='expire',
-        help="The token expiry timestamp.")
+    arg('--expire', metavar='TIME', dest='expire', type='opt_rel_timestamp',
+        help="Expire the token at the given relative or absolute time.")
     add_origin_option(arg)
     arg('user', metavar='USER', nargs='+',
         help="The users for whom to create tokens.")
@@ -613,10 +614,14 @@ def add_token_commands(parser):
     p = sp.add_parser('expire', help="Expire tokens.")
     p.set_defaults(handler=cmd_token_expire)
     arg = p.add_argument
-    arg('--time', metavar='TIME', type='timestamp', dest='time',
-        help="The time when the tokens should expire (default: now).")
-    arg('token', metavar='TOKEN', nargs='+',
-        help="The users and / or tokens to expire.")
+    arg('--time', metavar='TIME', dest='time', type='opt_rel_timestamp',
+        default='0s',
+        help="The time when the tokens should expire (default: now). An empty "
+             "value removes the expiry time.")
+    arg('--users', action='store_true', dest='users',
+        help="Expire all tokens for the users passed as arguments.")
+    arg('arg', metavar='ARG', nargs='+',
+        help="The tokens to expire, or the users for whom to expire tokens.")
     add_options(p)
 
     p = sp.add_parser('list', help="List tokens.")
@@ -649,7 +654,11 @@ def cmd_token_create(opts):
 
 def cmd_token_expire(opts):
     with write_db(opts) as db:
-        db.tokens.expire(opts.token, opts.time)
+        if opts.users:
+            db.tokens.expire(uids=[db.users.uid(u) for u in opts.arg],
+                             expires=opts.time)
+        else:
+            db.tokens.expire(tokens=opts.arg, expires=opts.time)
 
 
 def cmd_token_list(opts):
@@ -680,8 +689,9 @@ def add_user_commands(parser):
     p.set_defaults(handler=cmd_user_create)
     arg = p.add_argument
     add_origin_option(arg)
-    arg('--token-expire', metavar='TIME', type='timestamp', dest='token_expire',
-        help="The expiry time of the users' token.")
+    arg('--token-expire', metavar='TIME', dest='token_expire',
+        type='opt_rel_timestamp',
+        help="Expire the users' token at the given relative or absolute time.")
     arg('user', metavar='USER', nargs='+',
         help="The names of the users to create.")
     add_options(p)

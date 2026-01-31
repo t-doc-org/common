@@ -35,8 +35,9 @@ _duration_kw_map = {
 }
 
 
-def parse_duration(duration):
+def parse_duration(duration, *, signed=False):
     """Parse a human-readable duration of the form '3d28m32s'."""
+    if (neg := signed and duration.startswith('-')): duration = duration[1:]
     if not duration: raise ValueError(f"Invalid duration: {duration}")
     parts = _duration_unit_re.split(duration)
     if len(parts) % 2 != 0 and not parts[-1]: parts.pop()
@@ -50,7 +51,8 @@ def parse_duration(duration):
             raise ValueError(f"Invalid duration: {duration}")
         if v < 0: raise ValueError(f"Invalid duration: {duration}")
         kwargs[k] = kwargs.get(k, 0) + v
-    return datetime.timedelta(**kwargs)
+    td = datetime.timedelta(**kwargs)
+    return -td if neg else td
 
 
 def nsec_to_datetime(nsec):

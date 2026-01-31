@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import contextlib
 import datetime
 import functools
 import os
@@ -78,7 +79,11 @@ def get_arg_parser(stdin, stdout, stderr):
             self.register('type', 'path', _parse_path)
             self.register('type', 'regexp', _parse_regexp)
             self.register('type', 'timestamp', _parse_timestamp)
-            self.register('type', 'nreltimestamp', _parse_nreltimestamp)
+            self.register('type', 'rel_timestamp', rel_timestamp())
+            self.register('type', 'opt_rel_timestamp', rel_timestamp(opt=True))
+            self.register('type', 'nrel_timestamp', rel_timestamp(neg=True))
+            self.register('type', 'opt_nrel_timestamp',
+                          rel_timestamp(opt=True, neg=True))
             self._positionals.title = "Positional arguments"
             self._optionals.title = "Options"
             if help_description:
@@ -121,12 +126,17 @@ def _parse_timestamp(v):
         raise ValueError("Invalid timestamp") from e
 
 
-def _parse_nreltimestamp(v):
-    try: return -util.parse_duration(v) + datetime.datetime.now(datetime.UTC)
-    except ValueError: pass
-    try: return util.parse_time(v)
-    except ValueError: pass
-    raise ValueError("Invalid relative or absolute time")
+def rel_timestamp(neg=False, opt=False):
+    fact = -1 if neg else 1
+    def parse(v):
+        if opt and v == '': return None
+        with contextlib.suppress(ValueError):
+            return util.parse_duration(v, signed=True) * fact \
+                   + datetime.datetime.now(datetime.UTC)
+        with contextlib.suppress(ValueError):
+            return util.parse_time(v)
+        raise ValueError("Invalid relative or absolute time")
+    return parse
 
 
 def main(fn):

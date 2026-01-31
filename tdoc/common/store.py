@@ -185,13 +185,16 @@ class Tokens(database.ConnNamespace):
               for user, token in zip(uids, tokens)])
         return tokens
 
-    def expire(self, tokens, expires=None):
-        expires = database.to_nsec(expires, time.time_ns())
-        self.executemany("""
-            update user_tokens set expires = ?
-            where token = ?
-                or exists(select 1 from users where id = user and name = ?)
-        """, [(expires, token, token) for token in tokens])
+    def expire(self, *, tokens=(), uids=(), expires=None):
+        expires = database.to_nsec(expires)
+        if tokens:
+            self.executemany("""
+                update user_tokens set expires = ? where token = ?
+            """, [(expires, token) for token in tokens])
+        if uids:
+            self.executemany("""
+                update user_tokens set expires = ? where user = ?
+            """, [(expires, uid) for uid in uids])
 
     def remove(self, tokens):
         # Don't remove non-generated tokens.
