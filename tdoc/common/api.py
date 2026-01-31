@@ -678,8 +678,9 @@ class OidcAuthApi(wsgi.Dispatcher):
                 params = self._handle_redirect(wr, qs, db, data)
             except Exception as e:
                 params = {'auth_error': str(e)}
-                log.exception("OIDC login error", exc_limit=-1, exc_chain=False,
-                              event='oidc:login:error')
+                log.info("OIDC login error: %(type)s: %(message)s",
+                         type=e.__class__.__name__, message=str(e),
+                         event='oidc:login:error')
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
         return wr.redirect(parse.urlunparse(parts))
