@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import {elmt, escape, on, onMessage, qs} from './core.js';
-import {Executor} from './exec.js';
+import {Runner} from './exec.js';
 
 const parser = new DOMParser();
 
-class HtmlExecutor extends Executor {
-    static runner = 'html';
-    static highlight = 'html';
+class HtmlRunner extends Runner {
+    static name = 'html';
 
     constructor(node) {
         super(node);
@@ -104,8 +103,6 @@ class HtmlExecutor extends Executor {
         for (const {code} of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');
     }
-
-    async stop(run_id) {}
 }
 
-Executor.apply(HtmlExecutor);  // Background
+Runner.apply(HtmlRunner);  // Background

@@ -54,7 +54,7 @@ class Solution(admonitions.BaseAdmonition):
 
 
 def set_html_context(app, docname, template, context, doctree):
-    v = meta(app, docname, 'solutions', 'show')
+    v = meta(app.env, docname, 'solutions', 'show')
     if v not in ('show', 'hide', 'dynamic'):
         _log.warning(f"{{solution}}: Invalid 'solutions' value: {v}")
         v = app.env.metadata[docname]['solutions'] = 'show'

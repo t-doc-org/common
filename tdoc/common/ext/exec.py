@@ -10,8 +10,8 @@ from docutils.parsers.rst import directives
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, format_attrs, format_data_attrs, names_option, \
-    report_exceptions, UniqueChecker
+from . import __version__, format_attrs, format_data_attrs, merge_dict, meta, \
+    names_option, report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -23,10 +23,11 @@ def setup(app):
     app.add_env_collector(UniqueChecker('exec-editor',
         lambda doctree: ((n, n.get('editor')) for n in doctree.findall(exec)),
         lambda v: f"{{exec}}: Duplicate :editor: ID: {v}"))
-    app.connect('doctree-resolved', check_references)
+    app.connect('doctree-resolved', check_nodes)
     app.connect('tdoc-html-page-config', set_html_page_config)
     app.connect('html-page-context', add_js)
     app.add_config_value('tdoc_python_modules', [], 'html', list)
+    app.connect('config-inited', set_default_metadata)
     app.connect('config-inited', set_python_modules)
     app.connect('write-started', write_static_files)
     return {
@@ -37,13 +38,6 @@ def setup(app):
 
 
 class Exec(code.CodeBlock):
-    languages = {
-        'html': 'html',
-        'micropython': 'python',
-        'python': 'python',
-        'sql': 'sql',
-    }
-
     required_arguments = 1
     optional_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
@@ -85,11 +79,10 @@ class Exec(code.CodeBlock):
 
     def _update_node(self, node):
         node = node.next_node(nodes.literal_block, include_self=True)
-        if (hl := self.languages.get(runner := node['language'])) is None:
-            raise Exception(f"{{exec}}: Unsupported runner: {runner}")
+        runner = node['language']
         node['runner'] = runner
         node['env'] = self.arguments[1] if len(self.arguments) >= 2 else ''
-        node['language'] = hl
+        node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
         node['classes'] += ['tdoc-exec', f'tdoc-exec-runner-{runner}']
@@ -106,14 +99,24 @@ class Exec(code.CodeBlock):
 class exec(nodes.literal_block): pass
 
 
-def check_references(app, doctree, docname):
+def check_nodes(app, doctree, docname):
+    md = meta(app.env, docname, 'exec', {})
     for runner, nodes in Exec.find_nodes(doctree).items():
+        # Check references.
         names = set()
         for node in nodes:
             names.update(node['names'])
         for node in nodes:
             check_refs(node, names, runner, 'after', doctree)
             check_refs(node, names, runner, 'then', doctree)
+
+        # Check runner.
+        if (hl := md.get(runner, {}).get('highlight')) is None:
+            hl = 'text'
+            for node in nodes:
+                doctree.reporter.error(
+                    f"{{exec}}: Unsupported runner: {runner}", base_node=node)
+        for node in nodes: node['language'] = hl
 
 
 def check_refs(node, names, runner, typ, doctree):
@@ -142,6 +145,19 @@ def add_js(app, page, template, context, doctree):
     if doctree:
         for runner in sorted(Exec.find_nodes(doctree)):
             app.add_js_file(f'tdoc/exec-{runner}.js', type='module')
+
+
+_default_metadata = {
+    'exec': {
+        'html': {'highlight': 'html'},
+        'micropython': {'highlight': 'python'},
+        'python': {'highlight': 'python'},
+        'sql': {'highlight': 'sql'},
+    },
+}
+
+def set_default_metadata(app, config):
+    merge_dict(app.config.metadata, _default_metadata, override=False)
 
 
 def set_python_modules(app, config):

@@ -82,12 +82,12 @@ def to_base64(s):
 
 unset = object()
 
-def merge_dict(dst, src):
+def merge_dict(dst, src, override=True):
     for k, sv in src.items():
         dv = dst.get(k, unset)
         if isinstance(sv, dict) and isinstance(dv, dict):
             merge_dict(dv, sv)
-        else:
+        elif override or dv is unset:
             dst[k] = copy.deepcopy(sv)
     return dst
 
@@ -131,8 +131,8 @@ def format_data_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
-def meta(app, docname, key, default=None):
-    v = app.env.metadata[docname]
+def meta(env, docname, key, default=None):
+    v = env.metadata[docname]
     for k in key.split('.'):
         try:
             v = v[k]
@@ -275,7 +275,7 @@ def add_js(app, page, template, context, doctree):
     tdoc = tdoc_config(app, page, doctree, context)
     version = tdoc['versions'].pop('mathjax')
     if version.startswith('/'): version = f'..{version}'
-    cfg = meta(app, page, 'mathjax', {})
+    cfg = meta(app.env, page, 'mathjax', {})
     if (out := cfg.get('output', 'svg')) not in ('chtml', 'svg'):
         _log.warning("Invalid mathjax:output: metadata value (allowed: chtml, "
                      f"svg): {out}")
@@ -307,7 +307,7 @@ def tdoc_config(app, page=None, doctree=None, context=None):
         'repos': app.config.tdoc_repos,
     }
     if is_dev := 'tdoc-dev' in app.tags: tdoc['dev'] = True
-    versions = tdoc['versions'] = meta(app, page, 'versions', {}).copy()
+    versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
     for name, info in deps.info.items():
         if '://' not in (v := versions.setdefault(name, info['version'])):
             versions[name] = f'/_cache/{name}/{v}' if is_dev \
@@ -473,5 +473,5 @@ def add_dyn_config(app, page, config, doctree):
     if page is None or doctree is None: return
     dcfg = {}
     for typ in {n['type'] for n in doctree.findall(dyn)}:
-        dcfg[typ] = meta(app, page, typ, {})
+        dcfg[typ] = meta(app.env, page, typ, {})
     if dcfg: config['dyn'] = dcfg

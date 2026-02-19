@@ -1,7 +1,9 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, Stored, text} from './core.js';
+import {
+    domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, Stored, text,
+} from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -60,15 +62,15 @@ const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
                      : `tdoc:editor:${rootUrl.pathname}:`;
 
 // A base class for {exec} block handlers.
-export class Executor {
+export class Runner {
     static next_run_id = 0;
 
     // Apply an {exec} block handler class.
     static async apply(cls) {
-        cls.ready = cls.init(tdoc.exec?.envs?.[cls.runner] ?? []);
+        cls.ready = cls.init(tdoc.exec?.envs?.[cls.name] ?? []);
         await domLoaded;
         for (const node of qsa(document,
-                               `div.tdoc-exec-runner-${cls.runner}`)) {
+                               `div.tdoc-exec-runner-${cls.name}`)) {
             fixLineNos(node);
             const handler = new cls(node);
             node.tdocExec = handler;
@@ -113,10 +115,10 @@ export class Executor {
 
     // Add an editor to the {exec} block.
     addEditor() {
-        const exec = this;
+        const runner = this;
         const extensions = [
             cmview.ViewPlugin.fromClass(class {
-                update(update) { return exec.onEditorUpdate(update); }
+                update(update) { return runner.onEditorUpdate(update); }
             }),
         ];
         if (this.when !== 'never') {
@@ -124,7 +126,7 @@ export class Executor {
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
-        const preText = Executor.preText(this.node).trimEnd();
+        const preText = Runner.preText(this.node).trimEnd();
         let doc = preText;
         const editorId = this.editorId;
         if (editorId) {
@@ -139,7 +141,7 @@ export class Executor {
         }
         const view = newEditor({
             extensions, doc,
-            language: this.constructor.highlight,
+            language: tdoc.exec?.metadata?.[this.constructor.name]?.highlight,
             parent: qs(this.node, 'div.highlight'),
         });
         this.origText = view.state.toText(preText);
@@ -227,7 +229,7 @@ export class Executor {
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkNodes(this.node)) {
-            yield {code: Executor.text(node), node};
+            yield {code: Runner.text(node), node};
         }
     }
 
@@ -235,7 +237,7 @@ export class Executor {
     async run(run_id) { throw new Error("not implemented"); }
 
     // Stop the running code.
-    async stop(run_id) { throw new Error("not implemented"); }
+    async stop(run_id) {}
 
     // Run the code in the {exec} block.
     async doRun() {
@@ -243,9 +245,8 @@ export class Executor {
         while (this.running) await this.doStop();
         const {promise, resolve} = Promise.withResolvers();
         this.running = promise;
-        const run_id = this.run_id = Executor.next_run_id;
-        Executor.next_run_id = run_id < Number.MAX_SAFE_INTEGER ?
-                               run_id + 1 : 0;
+        const run_id = this.run_id = Runner.next_run_id;
+        Runner.next_run_id = run_id < Number.MAX_SAFE_INTEGER ? run_id + 1 : 0;
         try {
             this.preRun(run_id);
             try {
@@ -326,7 +327,7 @@ export class Executor {
 }
 
 class SectionedOutput {
-    constructor(exec) { this.exec = exec; }
+    constructor(runner) { this.runner = runner; }
 
     remove() {
         if (this.output) this.output.remove();
@@ -338,7 +339,7 @@ class SectionedOutput {
         if (!this.output?.parentNode) {
             this.output =
                 elmt`<div class="tdoc-exec-output tdoc-sectioned"></div>`;
-            this.exec.appendOutputs(this.output);
+            this.runner.appendOutputs(this.output);
         }
         for (const el of this.output.children) {
             if (el.tdocName > name) {
@@ -453,7 +454,7 @@ class ConsoleOut {
             on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => div.remove());
-            const style = this.output.exec.node.dataset.tdocConsoleStyle;
+            const style = this.output.runner.node.dataset.tdocConsoleStyle;
             if (style) qs(div, 'pre').setAttribute('style', style);
         }
         const out = qs(this.out, 'pre');

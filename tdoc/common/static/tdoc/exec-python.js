@@ -2,26 +2,29 @@
 // SPDX-License-Identifier: MIT
 
 import {dec, elmt, focusIfVisible, on, text} from './core.js';
-import {Executor} from './exec.js';
+import {Runner} from './exec.js';
 
-const executors = {};
+const runners = {};
 const hooks = {
-    log: (...args) => { console.log(...exec.interp.toJs(args)); },
+    log: (...args) => {
+        // TODO: `runner` doesn't exist here; get interp from somewhere else
+        console.log(...runner.interp.toJs(args));
+    },
     write: (run_id, ...args) => {
-        const exec = executors[run_id];
-        if (exec) return exec.onWrite(...exec.interp.toJs(args));
+        const runner = runners[run_id];
+        if (runner) return runner.onWrite(...runner.interp.toJs(args));
     },
     input: (run_id, ...args) => {
-        const exec = executors[run_id];
-        if (exec) return exec.onInput(...exec.interp.toJs(args));
+        const runner = runners[run_id];
+        if (runner) return runner.onInput(...runner.interp.toJs(args));
     },
     render: (run_id, ...args) => {
-        const exec = executors[run_id];
-        if (exec) return exec.onRender(...exec.interp.toJs(args));
+        const runner = runners[run_id];
+        if (runner) return runner.onRender(...runner.interp.toJs(args));
     },
     setup_canvas: (run_id, ...args) => {
-        const exec = executors[run_id];
-        if (exec) return exec.onSetupCanvas(...exec.interp.toJs(args));
+        const runner = runners[run_id];
+        if (runner) return runner.onSetupCanvas(...runner.interp.toJs(args));
     },
 };
 
@@ -156,9 +159,8 @@ async function create(cls) {
 
 let interps;
 
-class PythonExecutor extends Executor {
-    static runner = 'python';
-    static highlight = 'python';
+class PythonRunner extends Runner {
+    static name = 'python';
 
     static async init(envs) {
         if (envs.length === 0) return;
@@ -194,11 +196,11 @@ class PythonExecutor extends Executor {
     preRun(run_id) {
         this.runCtrl.classList.add('hidden');
         this.stopCtrl.classList.remove('hidden');
-        executors[run_id] = this;
+        runners[run_id] = this;
     }
 
     postRun(run_id) {
-        delete executors[run_id];
+        delete runners[run_id];
         if (this.input) {
             this.input.remove();
             delete this.input;
@@ -298,4 +300,4 @@ class PythonExecutor extends Executor {
     }
 }
 
-Executor.apply(PythonExecutor);  // Background
+Runner.apply(PythonRunner);  // Background

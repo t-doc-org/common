@@ -231,8 +231,9 @@ class points(nodes.Inline, nodes.TextElement): pass
 
 def handle_points(app, doctree, docname):
     # Format points values, in the document body and in the TOC.
-    fmt = meta(app, docname, 'points.format', "{0:.3g}")
-    tfmt = meta(app, docname, 'points.text', [" ({0} point)", " ({0} points)"])
+    fmt = meta(app.env, docname, 'points.format', "{0:.3g}")
+    tfmt = meta(app.env, docname, 'points.text',
+                [" ({0} point)", " ({0} points)"])
     if isinstance(tfmt, str): tfmt = [tfmt, tfmt]
     tfmt = [f.format(fmt) for f in tfmt]
     pns = [(pn, pn.parent.next_node(num)) for pn in doctree.findall(points)]

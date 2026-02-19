@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {dataUrl, elmt, on, qs, text} from './core.js';
-import {Executor, UserError} from './exec.js';
+import {Runner, UserError} from './exec.js';
 
 let promiser;
 
@@ -33,9 +33,8 @@ class Database {
     }
 }
 
-class SqlExecutor extends Executor {
-    static runner = 'sql';
-    static highlight = 'sql';
+class SqlRunner extends Runner {
+    static name = 'sql';
 
     static async init(envs) {
         if (envs.length === 0) return;
@@ -125,8 +124,6 @@ sqlite3InitModule().then((sqlite3) => sqlite3.initWorker1API());
         }
     }
 
-    async stop(run_id) {}
-
     outputTable(columns) {
         const output = elmt`\
 <div class="tdoc-exec-output"><div class="pst-scrollable-table-container">\
@@ -164,4 +161,4 @@ sqlite3InitModule().then((sqlite3) => sqlite3.initWorker1API());
     }
 }
 
-Executor.apply(SqlExecutor);  // Background
+Runner.apply(SqlRunner);  // Background

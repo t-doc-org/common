@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import {dec, elmt, enc, html, on, qs, qsa, text} from './core.js';
-import {Executor} from './exec.js';
+import {Runner} from './exec.js';
 import {MicroPython} from './micropython.js';
 import {getSerials, onSerial, requestSerial} from './serial.js';
 
-class MicroPythonExecutor extends Executor {
-    static runner = 'micropython';
-    static highlight = 'python';
+class MicroPythonRunner extends Runner {
+    static name = 'micropython';
 
     constructor(node) {
         super(node);
@@ -212,4 +211,4 @@ class MicroPythonExecutor extends Executor {
     }
 }
 
-Executor.apply(MicroPythonExecutor);  // Background
+Runner.apply(MicroPythonRunner);  // Background
