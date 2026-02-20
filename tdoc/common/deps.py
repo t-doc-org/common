@@ -41,7 +41,7 @@ info = {
     },
     'polyscript': {
         'name': 'polyscript',
-        'version': '0.20.0',
+        'version': '0.20.9',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'release_urls': [
@@ -50,7 +50,7 @@ info = {
     },
     'pyodide': {
         'name': 'pyodide',
-        'version': '0.29.0',
+        'version': '0.29.3',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [

@@ -29,7 +29,7 @@ Code using Pygame must run in the `main` environment.
 ```
 
 ````{warning}
-`pygame-ce` is broken in recent Pyodide versions (0.28.*). Specify an earlier
+`pygame-ce` is broken in recent Pyodide versions (>=0.28). Specify an earlier
 version (e.g. 0.27.7) via the `versions:pyodide:` {rst:dir}`metadata`.
 
 ```
