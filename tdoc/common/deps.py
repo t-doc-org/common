@@ -59,7 +59,7 @@ info = {
     },
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        'version': '3.51.1-build2',
+        'version': '3.51.2-build6',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [

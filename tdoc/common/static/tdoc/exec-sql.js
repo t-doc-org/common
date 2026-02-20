@@ -43,22 +43,13 @@ class SqlRunner extends Runner {
         // config creates a worker from sqlite3-worker1.mjs, which may be served
         // from a different origin. So we start the worker on a data: URL that
         // imports the worker module.
-        const {default: sqlite3_init} = await import(`\
-${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3-worker1-promiser.mjs`);
+        const {sqlite3Worker1Promiser: sqlite3_init} = await import(
+            `${tdoc.versions.sqlite}/dist/index.mjs`);
         promiser = await sqlite3_init({
             worker: () => {
-                // BUG(sqlite-wasm): 3.51.0 and above have a broken
-                // sqlite3-worker1.mjs
-                // <https://github.com/sqlite/sqlite-wasm/issues/123>,
-                // and prior versions don't even have the .mjs file. Since the
-                // module is a very thin wrapper around sqlite3.mjs, we include
-                // its content here as a data: URL.
                 const url = import.meta.resolve(
-                    `${tdoc.versions.sqlite}/sqlite-wasm/jswasm/sqlite3.mjs`);
-                const mod = `\
-import sqlite3InitModule from ${JSON.stringify(url)};
-sqlite3InitModule().then((sqlite3) => sqlite3.initWorker1API());
-`;
+                    `${tdoc.versions.sqlite}/dist/sqlite3-worker1.mjs`);
+                const mod = `import ${JSON.stringify(url)};`;
                 return new Worker(dataUrl('application/javascript', mod),
                                   {type: 'module'});
             },
