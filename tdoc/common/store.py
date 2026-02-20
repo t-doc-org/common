@@ -673,7 +673,7 @@ class Store(database.Database):
         """)
         db.create("""
             create table log (
-                time int not null,
+                time integer not null,
                 location text not null,
                 session text,
                 data text
@@ -844,7 +844,7 @@ class Store(database.Database):
         db.create("""
             create table repo_auth_ (
                 user integer primary key,
-                enabled int not null default 0,
+                enabled integer not null default 0,
                 password text,
                 prefix text,
                 foreign key (user) references users (id)

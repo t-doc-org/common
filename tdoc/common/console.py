@@ -24,8 +24,7 @@ except ImportError:
 def want_colors(stdout):
     if not _colors: return False
     if 'NO_COLOR' in os.environ: return False
-    if not hasattr(stdout, 'isatty') or not stdout.isatty(): return False
-    return True
+    return hasattr(stdout, 'isatty') and stdout.isatty()
 
 
 _ansi_seqs = {

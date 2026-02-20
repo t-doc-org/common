@@ -25,9 +25,9 @@ tasks = {}
 env = {'__name__': '__main__'}
 
 if xworker is not None:
-    js_input = xworker.sync.input
-    js_render = xworker.sync.render
-    js_write = xworker.sync.write
+    js_write = xworker.sync.js_write
+    js_input = xworker.sync.js_input
+    js_render = xworker.sync.js_render
 
     def js_setup_canvas():
         raise Exception(

@@ -4,41 +4,46 @@
 import {dec, elmt, focusIfVisible, on, text} from './core.js';
 import {Runner} from './exec.js';
 
-const runners = {};
-const hooks = {
-    log: (...args) => {
-        // TODO: `runner` doesn't exist here; get interp from somewhere else
-        console.log(...runner.interp.toJs(args));
-    },
-    write: (run_id, ...args) => {
-        const runner = runners[run_id];
-        if (runner) return runner.onWrite(...runner.interp.toJs(args));
-    },
-    input: (run_id, ...args) => {
-        const runner = runners[run_id];
-        if (runner) return runner.onInput(...runner.interp.toJs(args));
-    },
-    render: (run_id, ...args) => {
-        const runner = runners[run_id];
-        if (runner) return runner.onRender(...runner.interp.toJs(args));
-    },
-    setup_canvas: (run_id, ...args) => {
-        const runner = runners[run_id];
-        if (runner) return runner.onSetupCanvas(...runner.interp.toJs(args));
-    },
-};
-
 class Interpreter {
+    files = {}
+    runners = {}
+
     constructor() {
         this.md = tdoc.exec?.metadata?.python ?? {};
 
         // Extract files and resolve their URLs.
         const base = import.meta.resolve('../');
-        this.files = {}
         for (const [k, v] of Object.entries(this.md.files ?? {})) {
             this.files[(new URL(k, base)).toString()] = v;
         }
         this.files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
+    }
+
+    setHooks(ns) {
+        const p = Interpreter.prototype;
+        for (const k of Object.getOwnPropertyNames(p)) {
+            if (k.startsWith('js_')) ns[k] = p[k].bind(this);
+        }
+    }
+
+    js_write(run_id, ...args) {
+        const runner = this.runners[run_id];
+        if (runner) return runner.onWrite(...this.toJs(args));
+    }
+
+    js_input(run_id, ...args) {
+        const runner = this.runners[run_id];
+        if (runner) return runner.onInput(...this.toJs(args));
+    }
+
+    js_render(run_id, ...args) {
+        const runner = this.runners[run_id];
+        if (runner) return runner.onRender(...this.toJs(args));
+    }
+
+    js_setup_canvas(run_id, ...args) {
+        const runner = this.runners[run_id];
+        if (runner) return runner.onSetupCanvas(...this.toJs(args));
     }
 }
 
@@ -62,7 +67,7 @@ class WorkerInterpreter extends Interpreter {
             console.info(`[t-doc] ${msg}`);
             resolve();
         };
-        for (const [k, v] of Object.entries(hooks)) this.worker.sync[k] = v;
+        this.setHooks(this.worker.sync);
         await promise;
     }
 
@@ -109,7 +114,7 @@ msg = (f"{platform.python_implementation()}"
 core, msg
 `);
         this.core = core;
-        for (const [k, v] of Object.entries(hooks)) this.core[`js_${k}`] = v;
+        this.setHooks(this.core);
         console.info(`[t-doc] ${msg}`);
     }
 
@@ -165,8 +170,8 @@ class PythonRunner extends Runner {
     static async init(envs) {
         if (envs.length === 0) return;
         interps = Object.fromEntries(await Promise.all(envs.map(
-            async e => [e, e === 'main'? await create(MainInterpreter)
-                                       : await create(WorkerInterpreter)])));
+            async e => [e, e === 'main' ? await create(MainInterpreter)
+                                        : await create(WorkerInterpreter)])));
     }
 
     constructor(node) {
@@ -196,11 +201,11 @@ class PythonRunner extends Runner {
     preRun(run_id) {
         this.runCtrl.classList.add('hidden');
         this.stopCtrl.classList.remove('hidden');
-        runners[run_id] = this;
+        this.interp.runners[run_id] = this;
     }
 
     postRun(run_id) {
-        delete runners[run_id];
+        delete this.interp.runners[run_id];
         if (this.input) {
             this.input.remove();
             delete this.input;
