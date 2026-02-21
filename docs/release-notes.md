@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-69)=
+## 0.69 *(2026-02-21)*
+
+- Added the possibility to implmement custom {rst:dir}`{exec} <exec>` runners in
+  site repositories.
+- Fixed the OpenID Connect functionality to work with Microsoft as a provider.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.68...0.69)
+
 (release-0-68)=
 ## 0.68 *(2026-01-18)*
 
