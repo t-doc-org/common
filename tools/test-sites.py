@@ -14,7 +14,7 @@ import subprocess
 import sys
 import threading
 
-cspace_net = 'ssh://rc.c-space.net//home/rc/hg/t-doc'
+tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
 
 
@@ -104,7 +104,7 @@ def run_tests(tests, repo, label, wheel, write):
         run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
             repo_dir, env=os.environ | {'GIT_ASKPASS': 'true'})
     except CommandFailed:
-        run('hg', 'clone', '--updaterev=main', f'{cspace_net}/{repo}',
+        run('hg', 'clone', '--updaterev=main', f'{tdoc_org}/{repo}',
             repo_dir)
 
     def vrun(*args, wait=True, out=(), **kwargs):
