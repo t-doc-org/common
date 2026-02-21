@@ -111,8 +111,10 @@ def check_nodes(app, doctree, docname):
             check_refs(node, names, runner, 'then', doctree)
 
         # Check runner.
-        if (hl := md.get(runner, {}).get('highlight')) is None:
-            hl = 'text'
+        hl = 'text'
+        if (cfg := md.get(runner)) is not None:
+            hl = cfg.get('highlight', hl)
+        else:
             for node in nodes:
                 doctree.reporter.error(
                     f"{{exec}}: Unsupported runner: {runner}", base_node=node)
@@ -127,21 +129,18 @@ def check_refs(node, names, runner, typ, doctree):
                 base_node=node)
 
 
-def set_html_page_config(app, page, config, doctree):
-    if page is None: return
+def set_html_page_config(app, docname, config, doctree):
+    if docname is None or doctree is None: return
     cfg = {}
-    if (md := app.env.metadata[page].get('exec')) is not None:
-        cfg['metadata'] = md
-    if doctree:
-        envs = {}
-        for n in doctree.findall(exec):
-            if n['when'] == 'never': continue
-            envs.setdefault(n['runner'], set()).add(n['env'])
-        if envs: cfg['envs'] = {k: sorted(v) for k, v in envs.items()}
+    md = meta(app.env, docname, 'exec', {})
+    for runner, nodes in Exec.find_nodes(doctree).items():
+        c = cfg[runner] = md.get(runner, {}).copy()
+        if envs := set(n['env'] for n in nodes if n['when'] != 'never'):
+            c['_envs'] = sorted(envs)
     if cfg: config['exec'] = cfg
 
 
-def add_js(app, page, template, context, doctree):
+def add_js(app, docname, template, context, doctree):
     if doctree:
         for runner in sorted(Exec.find_nodes(doctree)):
             app.add_js_file(f'tdoc/exec-{runner}.js', type='module')

@@ -67,7 +67,7 @@ export class Runner {
 
     // Apply an {exec} block handler class.
     static async apply(cls) {
-        cls.ready = cls.init(tdoc.exec?.envs?.[cls.name] ?? []);
+        cls.ready = cls.init(tdoc.exec?.[cls.name] ?? {});
         await domLoaded;
         for (const node of qsa(document,
                                `div.tdoc-exec-runner-${cls.name}`)) {
@@ -95,9 +95,8 @@ export class Runner {
         return view ? view.state.doc.toString() : this.preText(node);
     }
 
-    // Initialize the runner. `envs` is the list of environments that are used
-    // on the page.
-    static async init(envs) {}
+    // Initialize the runner.
+    static async init(config) {}
 
     constructor(node) {
         this.node = node;
@@ -106,6 +105,9 @@ export class Runner {
 
     // The interpreter environment to use.
     get env() { return this.node.dataset.tdocEnv; }
+
+    // The configuration for the runner.
+    get config() { return tdoc.exec?.[this.constructor.name] ?? {}; }
 
     // True iff the {exec} block has an editor.
     get editable() { return this.node.dataset.tdocEditor !== undefined; }
@@ -141,7 +143,7 @@ export class Runner {
         }
         const view = newEditor({
             extensions, doc,
-            language: tdoc.exec?.metadata?.[this.constructor.name]?.highlight,
+            language: this.config?.highlight,
             parent: qs(this.node, 'div.highlight'),
         });
         this.origText = view.state.toText(preText);

@@ -8,12 +8,12 @@ class Interpreter {
     files = {}
     runners = {}
 
-    constructor() {
-        this.md = tdoc.exec?.metadata?.python ?? {};
+    constructor(config) {
+        this.config = config;
 
         // Extract files and resolve their URLs.
         const base = import.meta.resolve('../');
-        for (const [k, v] of Object.entries(this.md.files ?? {})) {
+        for (const [k, v] of Object.entries(this.config.files ?? {})) {
             this.files[(new URL(k, base)).toString()] = v;
         }
         this.files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
@@ -57,7 +57,7 @@ class WorkerInterpreter extends Interpreter {
             async: true,
             // https://docs.pyscript.net/latest/user-guide/configuration/
             config: {
-                ...this.md,
+                ...this.config,
                 files: this.files,
                 packages_cache: 'passthrough',
             },
@@ -88,13 +88,13 @@ class MainInterpreter extends Interpreter {
     async init() {
         const pyodide = await import(`${tdoc.versions.pyodide}/pyodide.mjs`);
         this.interp = await pyodide.loadPyodide();
-        this.interp.setDebug(this.md.debug ?? false);
+        this.interp.setDebug(this.config.debug ?? false);
         this.canvas = document.body.appendChild(elmt`\
 <canvas id="canvas" class="hidden" width="0" height="0"></canvas>`);
         this.interp.canvas.setCanvas2D(this.canvas);
         const tasks = [];
-        if (this.md.packages && this.md.packages.length > 0) {
-            tasks.push(this.interp.loadPackage(this.md.packages));
+        if (this.config.packages && this.config.packages.length > 0) {
+            tasks.push(this.interp.loadPackage(this.config.packages));
         }
         tasks.push(this.writeFiles(this.files));
         await Promise.all(tasks);
@@ -156,8 +156,8 @@ core, msg
     }
 }
 
-async function create(cls) {
-    const inst = new cls();
+async function create(cls, config) {
+    const inst = new cls(config);
     await inst.init();
     return inst;
 }
@@ -167,11 +167,14 @@ let interps;
 class PythonRunner extends Runner {
     static name = 'python';
 
-    static async init(envs) {
-        if (envs.length === 0) return;
-        interps = Object.fromEntries(await Promise.all(envs.map(
-            async e => [e, e === 'main' ? await create(MainInterpreter)
-                                        : await create(WorkerInterpreter)])));
+    static async init(config) {
+        if (config._envs === undefined) return;
+        interps = Object.fromEntries(await Promise.all(config._envs.map(
+            async env => [
+                env,
+                env === 'main' ? await create(MainInterpreter, config)
+                               : await create(WorkerInterpreter, config),
+            ])));
     }
 
     constructor(node) {

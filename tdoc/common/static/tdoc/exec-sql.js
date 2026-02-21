@@ -36,8 +36,8 @@ class Database {
 class SqlRunner extends Runner {
     static name = 'sql';
 
-    static async init(envs) {
-        if (envs.length === 0) return;
+    static async init(config) {
+        if (config._envs === undefined) return;
 
         // Web worker URLs must satisfy the same-origin policy, and the default
         // config creates a worker from sqlite3-worker1.mjs, which may be served
@@ -55,8 +55,8 @@ class SqlRunner extends Runner {
             },
             // debug: console.debug,
         });
-        const config = await Database.config();
-        console.info(`[t-doc] SQLite ${config.version.libVersion}`);
+        const cfg = await Database.config();
+        console.info(`[t-doc] SQLite ${cfg.version.libVersion}`);
     }
 
     addControls(controls) {
