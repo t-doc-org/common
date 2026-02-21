@@ -152,9 +152,9 @@ This is the solution to exercise {numref}`block-ex:c`.
 
 ````{admonition} Horizontal alignment
 :class: note dropdown expand
-The `pydata_sphinx_theme` CSS breaks the layout of its content, in particular
-horizontal alignment. We fix it by patching the CSS file after copying the
-asset.
+The `pydata_sphinx_theme` CSS breaks the layout of admonition content, in
+particular horizontal alignment. We fix it by patching the CSS file after
+copying the asset.
 
 - Item 1
 - Item 2
