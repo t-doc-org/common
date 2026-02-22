@@ -308,3 +308,48 @@ interrupting running code via the <button class="tdoc fa-stop"></button> button.
 The {rst:dir}`{exec} sql <exec>` runner uses a WebAssembly build of
 [SQLite](https://sqlite.org/). Each block execution is performed against a new,
 empty database.
+
+### Custom runners
+
+It is possible to create custom runners in site repositories. In the following,
+substitute `RUNNER` with the name to be used in {rst:dir}`{exec}<exec>`
+directives.
+
+- Create the file `tdoc/exec-RUNNER.js` in the `_static` directory.
+  - Import
+  [`./exec.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec.js).
+  - Subclass `Runner`, set the static attribute `name` and implement the desired
+    functionality in the class.
+  - Call `Runner.apply()` with the subclass at the end of the module.
+
+  ```{code-block} js
+  import {Runner} from './exec.js';
+
+  class MyRunner extends Runner {
+      static name = 'RUNNER';
+
+      // Implement runner functionality
+  }
+
+  Runner.apply(MyRunner);  // Background
+  ```
+
+- In `conf.py`, add a configuration `dict` for the runner to the `exec` key of
+  to the `metadata` option. Optionally, set the `highlight` key to the language
+  to use for syntax highlighting
+  ([available lexers](https://pygments.org/docs/lexers/); the default is
+  `text`, i.e. no highlighting).
+
+  ```{code-block} python
+  metadata = {
+      # ...
+      'exec': {'RUNNER': {'highlight': 'lua'}},
+  }
+  ```
+
+The existing runners
+([`html`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec-html.js),
+[`micropython`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec-micropython.js),
+[`python`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec-python.js),
+[`sql`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec-sql.js))
+can serve as examples for the creation of new ones.
