@@ -33,9 +33,13 @@ is displayed in a console output block. Its size can be controlled with
 <html lang="en">
 <head>
   <title>This is the page title (counter: 0)</title>
-  <style>h1 { margin: 0; font-size: 3rem; }</style>
+  <style>
+    h1 { margin: 0; font-size: 3rem; }
+    img.logo { float: right; min-width: 20px; min-height: 20px; }
+  </style>
 </head>
 <body>
+  <img src="/_static/logo.svg" class="logo">
   <h1 id="top">Hello, </h1>
   <p>Go to <a href="#sect-1">section 1</a>, <a href="#sect-2">section 2</a>,
     <a href="#sect-3">section 3</a> or <a href="#sect-4">section 4</a>.</p>

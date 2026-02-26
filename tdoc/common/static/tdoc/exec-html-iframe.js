@@ -3,9 +3,27 @@
 
 'use strict';
 (() => {
-    // Set the base URL for relative links.
-    document.head.appendChild(document.createElement('base'))
-        .setAttribute('href', location.href);
+    // Links of the form <a href="#..."> load the containing page instead of
+    // scrolling within the current page. Adding a
+    // <base href="${location.href}"> tag fixes the issue, but breaks all other
+    // relative links, e.g. for <img> tags. So we make the `href` of the links
+    // absolute, using the page location as a base.
+    const base = location.href;
+    function fixHref(node) {
+        if (node.nodeName !== 'A') return;
+        const href = node.getAttribute('href');
+        if (href === null || !href.startsWith('#')) return;
+        node.setAttribute('href', new URL(href, base));
+    }
+    new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const n of m.addedNodes) fixHref(n);
+            if (m.attributeName === 'href') fixHref(m.target);
+        }
+    }).observe(document.documentElement, {
+        subtree: true, childList: true, characterData: false,
+        attributes: true, attributeFilter: ['href'],
+    });
 
     // Set up channel back to the parent.
     let connected = true;
@@ -159,6 +177,5 @@
     }
 
     // Hook into console methods.
-    const cons = console;
     globalThis.console = new Console(globalThis.console);
 })();
