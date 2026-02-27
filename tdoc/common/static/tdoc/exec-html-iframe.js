@@ -15,9 +15,21 @@
         if (href === null || !href.startsWith('#')) return;
         node.setAttribute('href', new URL(href, base));
     }
+    function* allElements(nodes) {
+        if (nodes.length === 0) return;
+        const stack = [nodes];
+        while (stack.length > 0) {
+            for (const n of stack.pop()) {
+                const cs = n.children;
+                if (cs === undefined) continue;  // Not an element
+                yield n;
+                if (cs.length > 0) stack.push(cs);
+            }
+        }
+    }
     new MutationObserver((mutations) => {
         for (const m of mutations) {
-            for (const n of m.addedNodes) fixHref(n);
+            for (const n of allElements(m.addedNodes)) fixHref(n);
             if (m.attributeName === 'href') fixHref(m.target);
         }
     }).observe(document.documentElement, {

@@ -34,15 +34,17 @@ is displayed in a console output block. Its size can be controlled with
 <head>
   <title>This is the page title (counter: 0)</title>
   <style>
-    h1 { margin: 0; font-size: 3rem; }
     img.logo { float: right; min-width: 20px; min-height: 20px; }
+    h1 { margin: 0; font-size: 3rem; }
+    span > a { color: red; }
   </style>
 </head>
 <body>
   <img src="/_static/logo.svg" class="logo">
   <h1 id="top">Hello, </h1>
-  <p>Go to <a href="#sect-1">section 1</a>, <a href="#sect-2">section 2</a>,
-    <a href="#sect-3">section 3</a> or <a href="#sect-4">section 4</a>.</p>
+  <p class="toc">
+    Go to <a href="#sect-1">section 1</a>, <a href="#sect-2">section 2</a>,
+  </p>
   <br><br><br><br>
 
   <h2 id="sect-1">Section 1</h2>
@@ -57,6 +59,10 @@ is displayed in a console output block. Its size can be controlled with
   <script>
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('h1').appendChild(document.createTextNode('world!'));
+  const n = document.createElement('span');
+  n.innerHTML = `\
+<a href="#sect-3">section 3</a> or <a href="#sect-4">section 4</a>.`;
+  document.querySelector('p.toc').appendChild(n);
 });
 let counter = 0;
 setInterval(() => {
