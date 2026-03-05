@@ -160,7 +160,6 @@ def set_default_metadata(app, config):
 
 
 def set_python_modules(app, config):
-    config.tdoc_python_modules.insert(0, str(_base / 'python'))
     if '_python' not in config.tdoc_python_modules \
             and (app.confdir / '_python').exists():
         config.tdoc_python_modules.append('_python')
@@ -176,6 +175,7 @@ def write_static_files(app, builder):
         zpath = static / 'exec-python.zip'
         zpath.unlink(missing_ok=True)
         with zipfile.ZipFile(zpath, mode='x') as f:
+            add_modules(f, _base / 'python')
             for mpath in app.config.tdoc_python_modules:
                 add_modules(f, app.confdir / mpath)
 

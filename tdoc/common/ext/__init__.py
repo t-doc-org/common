@@ -194,8 +194,8 @@ def on_config_inited(app, config):
     config.templates_path.append(str(_base / 'templates'))
 
     # Add our own static paths, and a default one if it exists.
-    config.html_static_path.append(str(_base / 'static'))
-    config.html_static_path.append(str(_base / 'static.gen'))
+    app.add_static_dir(_base / 'static')
+    app.add_static_dir(_base / 'static.gen')
     if '_static' not in config.html_static_path \
             and (app.confdir / '_static').exists():
         config.html_static_path.append('_static')
