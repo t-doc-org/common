@@ -1,0 +1,7 @@
+{# Copyright 2026 Remy Blank <remy@c-space.org> #}
+{# SPDX-License-Identifier: MIT #}
+{% for badge in theme_tdoc_badges %}
+<a class="tdoc-badge" href="{{ badge.href }}">
+<img src="{{ badge.img }}" onerror="this.closest('a').style.display = 'none';">
+</a>
+{% endfor %}

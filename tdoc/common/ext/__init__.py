@@ -212,9 +212,6 @@ def on_config_inited(app, config):
     opts = config.html_theme_options
     opts.setdefault('use_sidenotes', True)
     opts.setdefault('path_to_docs', 'docs')
-    if opts.get('repository_url'):
-        opts.setdefault('use_repository_button', True)
-        opts.setdefault('use_source_button', True)
     opts.setdefault('use_download_button', False)
 
     # Check that MathJax options are in the right config key.
@@ -256,6 +253,32 @@ def set_base_html_context(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
     app.config.html_context['tdoc'] = to_json(tdoc).replace('<', '\\x3c')
+
+    # Expand badge URLs.
+    theme_opts = app.builder.theme_options
+    opts = app.builder.theme.get_options(theme_opts)
+    repo_url = opts['repository_url']
+    if (badges := opts['tdoc_badges']) is True:
+        badges = []
+        if repo_url.startswith('https://github.com/'):
+            badges.append({'href': '/actions/workflows/publish.yml',
+                           'img': '/actions/workflows/publish.yml/badge.svg'})
+    badges = [eb for b in badges
+              if (eb := expand_badge(b, repo_url)) is not None]
+    if badges:
+        theme_opts['tdoc_badges'] = badges
+        theme_opts.setdefault('primary_sidebar_end', []).append('tdoc-badges')
+
+
+def expand_badge(badge, repo_url):
+    href, img = badge['href'], badge['img']
+    if '://' not in href:
+        if not repo_url: return
+        href = repo_url + href
+    if '://' not in img:
+        if not repo_url: return
+        img = repo_url + img
+    return {'href': href, 'img': img}
 
 
 def set_html_context(app, page, template, context, doctree):

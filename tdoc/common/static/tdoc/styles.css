@@ -1079,6 +1079,9 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
 }
 
 /* Content footer */
+.bd-footer-content .bd-footer-content__inner {
+    padding-right: 0;
+}
 .bd-footer-content .tdoc-version {
     float: right;
     margin-left: 2rem;
@@ -1143,6 +1146,25 @@ html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
 .modal .table tbody tr:nth-child(odd), .modal .table tbody tr:nth-child(even),
 .modal .table tbody tr:hover {
     background-color: initial;
+}
+
+/* Badges in the primary sidebar */
+.sidebar-primary-items__end .sidebar-primary-item:has(.tdoc-badge) {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0.5rem;
+}
+.sidebar-primary-items__end .sidebar-primary-item .tdoc-badge img {
+    display: block;
+}
+
+/* Remove some unnecessary whitespace in the primary sidebar. */
+.bd-sidebar-primary .sidebar-primary-items__end {
+    margin-bottom: 0;
+}
+.bd-sidebar-primary .sidebar-primary-items__end
+        .sidebar-primary-item:last-child {
+    padding-bottom: 0;
 }
 
 /* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme

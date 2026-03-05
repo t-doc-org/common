@@ -16,3 +16,4 @@ footer_content_items = [
     "last-updated.html",
     "extra-footer.html",
 ]
+tdoc_badges = true
