@@ -88,6 +88,49 @@ mathjax3_config = {
     'svg': {
         'mtextInheritFont': True,
     },
+    # From: https://docs.mathjax.org/en/stable/input/tex/extensions/index.html
+    'tdoc_tex_extensions': [
+        'action',
+        # 'ams',                # Included in combined package
+        'amscd',
+        # 'autoload',           # Included in combined package
+        'bbm',
+        'bboldx',
+        'bbox',
+        'begingroup',
+        'boldsymbol',
+        'braket',
+        'bussproofs',
+        'cancel',
+        'cases',
+        'centernot',
+        'color',
+        'colortbl',
+        # 'colorv2',            # Non-standard
+        # 'configmacros',       # Included in combined package
+        'dsfont',
+        'empheq',
+        'enclose',
+        'extpfeil',
+        'gensymb',
+        'html',
+        'mathtools',
+        'mhchem',
+        # 'newcommand',         # Included in combined package
+        'noerrors',
+        # 'noundefined',        # Included in combined package
+        # 'physics',            # Redefines many standard macros
+        # 'require',            # Included in combined package
+        'setoptions',
+        'tagformat',
+        'texhtml',
+        'textcomp',
+        # 'textmacros',         # Included in combined package
+        'unicode',
+        'units',
+        'upgreek',
+        'verb',
+    ],
 }
 
 # Domain storage options.

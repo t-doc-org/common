@@ -23,9 +23,9 @@ info = {
     },
     'mathjax': {
         'name': 'mathjax',
-        'version': '3.2.2',
+        'version': '4.1.1',
         'tag': 'latest',
-        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/es5',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
     },
     'mermaid': {
         'name': 'mermaid',

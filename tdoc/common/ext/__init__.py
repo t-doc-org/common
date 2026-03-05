@@ -14,7 +14,7 @@ import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from sphinx import config, locale
+from sphinx import config, errors, locale
 from sphinx.builders import html as sphinx_html
 from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
@@ -217,6 +217,12 @@ def on_config_inited(app, config):
         opts.setdefault('use_source_button', True)
     opts.setdefault('use_download_button', False)
 
+    # Check that MathJax options are in the right config key.
+    # BUG(myst-parser): Uses mathjax3_config and ignores mathjax4_config
+    if config.mathjax4_config is not None:
+        raise errors.ConfigError(
+            "mathjax4_config: Set MathJax options in mathjax3_config instead")
+
 
 def update_intersphinx(app):
     cl = app.config.intersphinx_cache_limit
@@ -282,9 +288,17 @@ def add_js(app, page, template, context, doctree):
         out = 'svg'
     context['tdoc_mathjax_save'] = (app.config.mathjax_path,
                                     app.config.mathjax3_config)
-    app.config.mathjax_path = f'{version}/tex-{out}-full.js'
-    app.config.mathjax3_config = merge_dict(
+    mj_cfg = app.config.mathjax3_config = merge_dict(
         copy.deepcopy(app.config.mathjax3_config), cfg)
+    if re.search(r'[/@]3[./]', version) is not None:
+        app.config.mathjax_path = f'{version}/es5/tex-{out}-full.js'
+    else:
+        app.config.mathjax_path = f'{version}/tex-{out}.js'
+        exts = mj_cfg.pop('tdoc_tex_extensions', [])
+        mj_cfg.setdefault('loader', {}).setdefault('load', []) \
+            .extend(f'[tex]/{e}' for e in exts)
+        mj_cfg.setdefault('tex', {}).setdefault('packages', {}) \
+            .setdefault('[+]', []).extend(exts)
 
     # Set up early and on-load JavaScript.
     tdoc = to_json(tdoc).replace('<', '\\x3c')
