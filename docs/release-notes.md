@@ -3,11 +3,25 @@
 
 # Release notes
 
+(release-0-70)=
+## 0.70 *(2026-03-06)*
+
+- Upgraded to
+  [MathJax 4](https://docs.mathjax.org/en/latest/upgrading/whats-new-4.0.html).
+  This can cause minor layout changes for `{math}` {rst:dir}`roles <math>` and
+  {rst:role}`directives <math>` (and the corresponding `$` and `$$` shorthands),
+  so it's a good idea to check math-heavy pages after the upgrade.
+- Added support for status badges in the primary sidebar.
+- Added support for more languages for custom {rst:dir}`exec` runners.
+- Fixed images with relative URLs in [`{exec} html`](/reference/exec.md#html)
+  blocks.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.69...0.70)
+
 (release-0-69)=
 ## 0.69 *(2026-02-21)*
 
-- Added the possibility to implmement custom {rst:dir}`{exec} <exec>` runners in
-  site repositories.
+- Added the possibility to implmement custom {rst:dir}`exec` runners in site
+  repositories.
 - Fixed the OpenID Connect functionality to work with Microsoft as a provider.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.68...0.69)
 
