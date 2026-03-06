@@ -101,7 +101,11 @@ class Users(database.ConnNamespace):
         groups = [g for g, in self.execute("""
             select group_ from user_memberships where (origin, user) = (?, ?)
         """, (origin, uid))]
-        return {'name': name, 'groups': groups}
+        tags = []
+        if self.row("select enabled from repo_auth where user = ?", (uid,),
+                    default=(False,)):
+            tags.append('repo-access')
+        return {'name': name, 'groups': groups, 'tags': tags}
 
     def uid(self, name):
         if name.startswith('#'): return int(name[1:])

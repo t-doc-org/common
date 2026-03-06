@@ -1098,15 +1098,15 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     font: var(--fa-font-regular);
     content: '\f007';
 }
-html[data-tdoc-logged-in] .article-header-buttons > .dropdown-user
+html[data-tdoc-user-tags] .article-header-buttons > .dropdown-user
         > button::before {
     font: var(--fa-font-solid);
 }
-html[data-tdoc-logged-in] .article-header-buttons > .dropdown-user
+html[data-tdoc-user-tags] .article-header-buttons > .dropdown-user
         .dropdown-item.btn-login {
     display: none;
 }
-html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
+html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
         .dropdown-item.btn-settings {
     display: none;
 }
@@ -1156,6 +1156,10 @@ html:not([data-tdoc-logged-in]) .article-header-buttons > .dropdown-user
 }
 .sidebar-primary-items__end .sidebar-primary-item .tdoc-badge img {
     display: block;
+}
+html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
+        .sidebar-primary-items__end .sidebar-primary-item:has(.tdoc-badge) {
+    display: none;
 }
 
 /* Remove some unnecessary whitespace in the primary sidebar. */

@@ -115,6 +115,11 @@ class Auth extends EventTarget {
         return groups.includes(group) || groups.includes('*');
     }
 
+    async tags() {
+        if (this.ready) await this.ready;
+        return this.data?.tags ?? [];
+    }
+
     async onChange(fn) {
         await fn();
         this.addEventListener('change', fn);
@@ -123,9 +128,9 @@ class Auth extends EventTarget {
     set(data) {
         this.data = data;
         if (data) {
-            htmlData.tdocLoggedIn = '';
+            htmlData.tdocUserTags = (data.tags ?? []).join(' ');
         } else {
-            delete htmlData.tdocLoggedIn;
+            delete htmlData.tdocUserTags;
         }
         if (this.rReady) {
             this.rReady();
