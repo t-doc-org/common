@@ -29,7 +29,7 @@ info = {
     },
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.12.2',
+        'version': '11.12.3',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
