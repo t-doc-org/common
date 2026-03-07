@@ -267,7 +267,8 @@ def set_base_html_context(app):
               if (eb := expand_badge(b, repo_url)) is not None]
     if badges:
         theme_opts['tdoc_badges'] = badges
-        theme_opts.setdefault('primary_sidebar_end', []).append('tdoc-badges')
+        pse = theme_opts.setdefault('primary_sidebar_end', [])
+        if 'tdoc-badges' not in pse: pse.append('tdoc-badges')
 
 
 def expand_badge(badge, repo_url):
