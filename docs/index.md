@@ -3,6 +3,17 @@
 
 # t-doc
 
+```{toctree}
+:maxdepth: 1
+:hidden:
+install
+edit
+faq
+development
+reference/index
+demo/index
+```
+
 This site describes the **documentation system** that forms the base of the
 [t-doc.org](https://t-doc.org/) site. It is distributed as a single Python
 package ([`t-doc-common`](https://pypi.org/project/t-doc-common/)) under the
@@ -45,15 +56,3 @@ t-doc builds on the following open-source software, among others:
 
 A huge thank you to the developers and maitainers of these packages, for
 building awesome software and making it available for free!
-
-## Navigation
-
-```{toctree}
-:maxdepth: 1
-install
-edit
-faq
-development
-reference/index
-demo/index
-```

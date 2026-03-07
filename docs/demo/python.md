@@ -3,6 +3,12 @@
 
 # Python
 
+```{toctree}
+:maxdepth: 1
+:hidden:
+python/pygame
+```
+
 ```{metadata}
 exec:
   python:
@@ -314,11 +320,3 @@ for base, dirs, files in pathlib.Path('/').walk(on_error=lambda e: None):
 paths.sort()
 print('\n'.join(paths))
 ```
-
-## More
-
-```{toctree}
-:maxdepth: 1
-python/pygame
-```
-
