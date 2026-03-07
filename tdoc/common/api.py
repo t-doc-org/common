@@ -667,20 +667,24 @@ class OidcAuthApi(wsgi.Dispatcher):
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), log_query=False)
     def handle_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
-        href = None
-        with wr.write_db as db:
-            if (state := qs.get('state')) is not None:
-                data = db.oidc.state(state[0])
-            if data is None:
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
-            href = data['href']
-            try:
+        if (state := qs.get('state')) is None:
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing state")
+        href, params = None, None
+        try:
+            with wr.write_db as db:
+                if (data := db.oidc.state(state[0])) is None:
+                    raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
+                href = data['href']
                 params = self._handle_redirect(wr, qs, db, data)
-            except Exception as e:
-                params = {'auth_error': str(e)}
-                log.info("OIDC login error: %(type)s: %(message)s",
-                         type=e.__class__.__name__, message=str(e),
-                         event='oidc:login:error')
+        except wsgi.Error:
+            raise
+        except Exception as e:
+            params = {'auth_error': str(e)}
+            log.info("OIDC login error: %(type)s: %(message)s",
+                     type=e.__class__.__name__, message=str(e),
+                     event='oidc:login:error')
+        if href is None or params is None:
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
         parts = parse.urlparse(href)
         parts = parts._replace(fragment='?' + parse.urlencode(params))
         return wr.redirect(parse.urlunparse(parts))

@@ -220,6 +220,7 @@ class Oidc(database.ConnNamespace):
                         (state,), default=(None,))[0]
         self.execute("delete from oidc_states where state = ? or created < ?",
                      (state, time.time_ns() - self.state_lifetime))
+        if data is None: return
         return json.loads(data)
 
     def user(self, id_token):
