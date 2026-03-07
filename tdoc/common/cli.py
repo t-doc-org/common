@@ -1033,10 +1033,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
-                wr.respond(wsgi.http_status(HTTPStatus.MOVED_PERMANENTLY), [
-                    ('Location', location),
-                    ('Content-Length', '0'),
-                ])
+                wr.redirect(location, HTTPStatus.MOVED_PERMANENTLY)
                 return
             path = path / 'index.html'
             if (st := try_stat(path)) is None:
@@ -1046,10 +1043,10 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             raise wsgi.Error(HTTPStatus.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
         wr.respond(wsgi.http_status(HTTPStatus.OK), [
-            ('Content-Type', mime_type),
-            ('Content-Length', str(st.st_size)),
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
+            ('Content-Type', mime_type),
+            ('Content-Length', str(st.st_size)),
         ])
         if method == HTTPMethod.HEAD: return
         yield from wr.file_wrapper(open(path, 'rb'))

@@ -231,8 +231,8 @@ class EventsApi(wsgi.Dispatcher):
         req = wr.json
         with self.watcher() as watcher:
             wr.respond(wsgi.http_status(HTTPStatus.OK), [
-                ('Content-Type', 'text/plain; charset=utf-8'),
                 ('Cache-Control', 'no-store'),
+                ('Content-Type', 'text/plain; charset=utf-8'),
             ])
             resp = {'sid': watcher.sid}
             if failed := self.watch(watcher, req.get('add', []), wr):

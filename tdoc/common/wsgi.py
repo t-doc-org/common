@@ -159,13 +159,15 @@ class Request:
         if msg is None: msg = status.description
         body = msg.encode('utf-8')
         self.respond(http_status(status), [
+            ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', str(len(body))),
         ], exc_info)
         return [body]
 
-    def redirect(self, url):
-        self.respond(http_status(HTTPStatus.FOUND), [
+    def redirect(self, url, status=HTTPStatus.FOUND):
+        self.respond(http_status(status), [
+            ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', '0'),
             ('Location', url),
@@ -175,9 +177,9 @@ class Request:
     def respond_json(self, data):
         body = to_json(data).encode('utf-8')
         self.respond(http_status(HTTPStatus.OK), [
+            ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
-            ('Cache-Control', 'no-store'),
         ])
         return [body]
 
