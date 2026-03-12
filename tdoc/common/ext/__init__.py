@@ -255,10 +255,9 @@ def set_base_html_context(app):
     app.config.html_context['tdoc'] = to_json(tdoc).replace('<', '\\x3c')
 
     # Expand badge URLs.
-    theme_opts = app.builder.theme_options
-    opts = app.builder.theme.get_options(theme_opts)
-    repo_url = opts['repository_url']
-    if (badges := opts['tdoc_badges']) is True:
+    opts = app.builder.theme_options
+    repo_url = opts.get('repository_url', '')
+    if (badges := opts.get('tdoc_badges')) is None:
         badges = []
         if repo_url.startswith('https://github.com/'):
             badges.append({'href': '/actions/workflows/publish.yml',
@@ -266,8 +265,8 @@ def set_base_html_context(app):
     badges = [eb for b in badges
               if (eb := expand_badge(b, repo_url)) is not None]
     if badges:
-        theme_opts['tdoc_badges'] = badges
-        pse = theme_opts.setdefault('primary_sidebar_end', [])
+        opts['tdoc_badges'] = badges
+        pse = opts.setdefault('primary_sidebar_end', [])
         if 'tdoc-badges' not in pse: pse.append('tdoc-badges')
 
 
