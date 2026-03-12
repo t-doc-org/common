@@ -259,7 +259,13 @@ async function checkArgs(field) {
             for (const [fn, name] of fns) {
                 if (!fn) this.invalid = `Unknown check: ${name}`;
                 if (this.invalid || this.ok !== undefined) break;
-                fn(this);
+                try {
+                    fn(this);
+                } catch (e) {
+                    this.invalid = e.toString();
+                    console.error(e);
+                    break;
+                }
             }
         },
 
@@ -267,10 +273,16 @@ async function checkArgs(field) {
             for (const name of ['answer', 'solution']) {
                 const v = this[name];
                 if (v === undefined) continue;
-                if (v instanceof Array) {
-                    this[name] = v.map(v => fn(v));
-                } else if (typeof v === 'string') {
-                    this[name] = fn(v);
+                try {
+                    if (v instanceof Array) {
+                        this[name] = v.map(v => fn(v));
+                    } else if (typeof v === 'string') {
+                        this[name] = fn(v);
+                    }
+                } catch (e) {
+                    this.invalid = e.toString();
+                    console.error(e);
+                    break;
                 }
             }
         }
