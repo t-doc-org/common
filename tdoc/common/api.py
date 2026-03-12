@@ -706,6 +706,7 @@ class OidcAuthApi(wsgi.Dispatcher):
             'grant_type': 'authorization_code',
         }).encode('utf-8')
         req = request.Request(disc['token_endpoint'], data, headers={
+            'Cache-Control': 'no-store',
             'Content-Type': 'application/x-www-form-urlencoded',
         })
         with util.urlopen(req, timeout=10) as f: resp = json.load(f)

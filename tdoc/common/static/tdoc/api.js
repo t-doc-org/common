@@ -473,8 +473,9 @@ class EventsApi {
         this.abort = new AbortController();
         try {
             const resp = await fetch(`${url}/events/watch`, {
-                method: 'POST', cache: 'no-cache', referrer: '',
+                method: 'POST', cache: 'no-store', referrer: '',
                 headers: {
+                    'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
                     ...bearerAuthorization(this.token),
                 },
