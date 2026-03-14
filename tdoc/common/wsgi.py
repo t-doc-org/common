@@ -56,9 +56,9 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
 
     achs = []
     if methods:
-        achs.append(('Access-Control-Allow-Methods', ', '.join(methods)))
+        achs.append(('Access-Control-Allow-Methods', ','.join(methods)))
     if headers:
-        achs.append(('Access-Control-Allow-Headers', ', '.join(headers)))
+        achs.append(('Access-Control-Allow-Headers', ','.join(headers)))
     if max_age is not None:
         achs.append(('Access-Control-Max-Age', str(max_age)))
 
