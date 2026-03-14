@@ -47,4 +47,4 @@ def application(config_path, origins, events_level=logs.NOTSET):
     return wsgi.cors(
         origins=origins,
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
-        headers=('Authorization', 'Content-Type'))(app)
+        headers=('Authorization', 'Cache-Control', 'Content-Type'))(app)
