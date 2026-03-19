@@ -13,6 +13,17 @@ $$
 &\textrm{with } D=b^2-4ac
 $$
 
+Solve the following system of equations:
+
+$$
+\left\{
+\begin{aligned}
+x + 3y &= 8 \\
+2x - 5y &= -17
+\end{aligned}
+\right.
+$$
+
 ## Flex tables
 
 ### Function value table
