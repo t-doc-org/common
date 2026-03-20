@@ -1222,7 +1222,7 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
 .article-header-buttons > .dropdown > button {
     justify-content: center;
 }
-.article-header-buttons > button > .btn__icon-container {
+.article-header-buttons > :is(a, button) > .btn__icon-container {
     display: inline-flex;
     align-items: center;
 }

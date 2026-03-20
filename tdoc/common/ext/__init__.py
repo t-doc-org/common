@@ -355,7 +355,6 @@ def tdoc_config(app, page=None, doctree=None, context=None):
 
 
 def add_terminate_button(app, page, template, context, doctree):
-    if doctree is None: return
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.terminateServer()',
@@ -365,7 +364,6 @@ def add_terminate_button(app, page, template, context, doctree):
 
 
 def add_draw_button(app, page, template, context, doctree):
-    if doctree is None: return
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.draw()',
@@ -375,7 +373,6 @@ def add_draw_button(app, page, template, context, doctree):
 
 
 def add_user_button(app, page, template, context, doctree):
-    if doctree is None: return
     context["header_buttons"].append({
         'type': 'group',
         'label': 'user',
