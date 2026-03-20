@@ -97,11 +97,6 @@
         meta.content = token;
         document.head.append(meta);
     };
-    // https://developer.chrome.com/origintrials/#/view_trial/1603844417297317889
-    tdoc.enableOriginTrial(`\
-AnazgzvWiP27bmtE9xuk594k/IhVQlM2Ho9j9fztj3gDEQUHOTQCLhqH0ihfYkJwtXp4tpDy87EVwfd\
-vgrK67AoAAABieyJvcmlnaW4iOiJodHRwczovL3QtZG9jLm9yZzo0NDMiLCJmZWF0dXJlIjoiV2ViQX\
-NzZW1ibHlKU1Byb21pc2VJbnRlZ3JhdGlvbiIsImV4cGlyeSI6MTc1MzE0MjQwMH0=`);
 
     // Set up the SharedArrayBuffer workaround as configured.
     const workers = navigator.serviceWorker;

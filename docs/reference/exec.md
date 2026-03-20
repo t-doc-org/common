@@ -285,14 +285,11 @@ This requires the experimental
 [WebAssembly JavaScript promise integration API](https://github.com/WebAssembly/js-promise-integration)
 (JSPI), which isn't widely supported yet.
 
-- **Chromium-based browsers (Google Chrome, Microsoft Edge):** The serving
-  domain must be registered for the
-  [origin trial](https://developer.chrome.com/origintrials/#/register_trial/1603844417297317889).
-  For local testing, the feature can be enabled with a flag
-  (`chrome://flags/#enable-experimental-webassembly-jspi`).
-- **Firefox:** Firefox doesn't have an
-  [origin trial](https://wiki.mozilla.org/Origin_Trials) yet, and is still
-  working on the [implementation](https://bugzilla.mozilla.org/show_bug.cgi?id=1897981).
+- **Chromium-based browsers (Google Chrome, Microsoft Edge):** JSPI is supported
+  since Chromium 137.
+- **Firefox:** Firefox is still working on the
+  [implementation](https://bugzilla.mozilla.org/show_bug.cgi?id=1897981) and
+  doesn't have an [origin trial](https://wiki.mozilla.org/Origin_Trials) yet.
   For local testing, the feature can be enabled with a config
   (`javascript.options.wasm_js_promise_integration`), but it doesn't work with
   Pyodide yet.
