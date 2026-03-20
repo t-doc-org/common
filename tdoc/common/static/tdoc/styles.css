@@ -18,7 +18,7 @@ section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
     line-height: normal;
 }
 
-/* Revert font attributes to pre pydata_sphinx_theme 0.16.0. */
+/* Revert font attributes to pre pydata-sphinx-theme 0.16.0. */
 html {
     --pst-font-size-h1: 2.5rem;
     --pst-font-size-h2: 2rem;
@@ -79,7 +79,7 @@ blockquote div > p:has(+ p.attribution) {
     text-indent: -0.5rem;
 }
 .bd-toc .nav .toc-entry a.nav-link {
-    /* Revert increased padding introduced in pydata_sphinx_theme 0.16.0. */
+    /* Revert increased padding introduced in pydata-sphinx-theme 0.16.0. */
     padding-top: 0.125rem;
     padding-bottom: 0.125rem;
 }
@@ -369,7 +369,7 @@ table.align-right {
     margin-right: 0;
 }
 
-/* Fix the layout of admonition content. pydata_sphinx_theme sets left and right
+/* Fix the layout of admonition content. pydata-sphinx-theme sets left and right
    margins on all direct descendants, which breaks horizontal alignment classes.
    Use padding on the container instead, and remove the margins through
    patching. Also, set a bottom margin on the title. */
@@ -1141,7 +1141,7 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
     height: 0px;
 }
 
-/* Revert table style changes from pydata_sphinx_theme in Bootstrap modals. */
+/* Revert table style changes from pydata-sphinx-theme in Bootstrap modals. */
 .modal .table {
     --bs-table-bg: var(--bs-body-bg);
     --bs-table-color: var(--bs-emphasis-color);
@@ -1196,13 +1196,13 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
     padding-bottom: 0;
 }
 
-/* Hide the Read-the-Docs switcher in the sidebar added by pydata_sphinx_theme
+/* Hide the Read-the-Docs switcher in the sidebar added by pydata-sphinx-theme
    if it's empty, as it causes the scrollbar to always appear. */
 .bd-sidebar-primary div#rtd-footer-container:empty {
     display: none;
 }
 
-/* Make the modal created by pydata_sphinx_theme when opening the left sidebar
+/* Make the modal created by pydata-sphinx-theme when opening the left sidebar
    full-height, and remove the ugly dialog border. */
 .bd-sidebar-primary[open] {
     position: fixed;
@@ -1265,7 +1265,7 @@ code.literal.literal.literal {
     background-color: var(--pst-color-surface);
 }
 
-/* Fix the gap left by pydata_sphinx_theme between the table and the
+/* Fix the gap left by pydata-sphinx-theme between the table and the
    scrollbar. */
 .pst-scrollable-table-container {
     margin-bottom: 1rem;

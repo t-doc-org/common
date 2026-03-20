@@ -44,7 +44,7 @@ _license_urls = {
 def pydata_sphinx_theme_css(data):
     overwrite = lambda m: f'{m[1]}{' ' * len(m[2])}{m[3]}'
 
-    # BUG(pydata_sphinx_theme): The theme's CSS sets a top margin on the next
+    # BUG(pydata-sphinx-theme): The theme's CSS sets a top margin on the next
     # element after the title. Remove that, and set a bottom margin on the title
     # instead.
     data = patch.sub(data,
@@ -52,13 +52,13 @@ def pydata_sphinx_theme_css(data):
                      r'div\.admonition>\.admonition-title\+\*'
                      r'\{)(margin-top:[^}]+)(\})',
                      overwrite)
-    # BUG(pydata_sphinx_theme): The rule in the theme's CSS is too broad. The
+    # BUG(pydata-sphinx-theme): The rule in the theme's CSS is too broad. The
     # selector should be more precise (.admonition > :last-child), but basic.css
     # already has such a rule, so it can be removed altogether.
     data = patch.sub(data,
                      r'(\.admonition :last-child\{)(margin-bottom:[^}]+)(\})',
                      overwrite)
-    # BUG(pydata_sphinx_theme): The theme's CSS sets left and right margins on
+    # BUG(pydata-sphinx-theme): The theme's CSS sets left and right margins on
     # all direct descendants of admonition containers. This breaks horizontal
     # alignment classes.
     data = patch.sub(data,
@@ -66,7 +66,7 @@ def pydata_sphinx_theme_css(data):
                      r'div\.admonition p\.admonition-title~\*'
                      r'\{)(margin-left:[^;]+;margin-right:[^}]+)(\})',
                      overwrite)
-    # BUG(pydata_sphinx_theme): The theme's CSS sets a left margin on lists that
+    # BUG(pydata-sphinx-theme): The theme's CSS sets a left margin on lists that
     # are direct descendants of admonition containers.
     data = patch.sub(data,
                      r'(\.admonition>ol,\.admonition>ul,'
