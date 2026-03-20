@@ -18,6 +18,14 @@ section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
     line-height: normal;
 }
 
+/* Revert font attributes to pre pydata_sphinx_theme 0.16.0. */
+html {
+    --pst-font-size-h1: 2.5rem;
+    --pst-font-size-h2: 2rem;
+    --pst-font-size-h6: 1.1rem;
+    --pst-font-weight-heading: 400;
+}
+
 /* Set the maximum width of sidebars instead of a fixed width. */
 div.sidebar, aside.sidebar {
     max-width: 40%;
@@ -66,9 +74,21 @@ blockquote div > p:has(+ p.attribution) {
     padding-left: 1.25rem;  /* The original padding is 0.65rem */
     text-indent: -0.6rem;
 }
-.bd-toc-nav li:is(.toc-h2, .toc-h3, .toc-h4, .toc-h5, .toc-h6) > a {
+.page-toc li:is(.toc-h2, .toc-h3, .toc-h4, .toc-h5, .toc-h6) > a {
     padding-left: 1.5rem;  /* The original padding is 1rem */
     text-indent: -0.5rem;
+}
+.bd-toc .nav .toc-entry a.nav-link {
+    /* Revert increased padding introduced in pydata_sphinx_theme 0.16.0. */
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+@media (min-width: 1200px) {
+    .bd-sidebar-secondary {
+        /* Remove undesired padding introduced in sphinx-book-theme 1.2.0. */
+        padding-left: 0;
+        padding-right: 0;
+    }
 }
 
 /* Layout */
@@ -118,8 +138,8 @@ blockquote div > p:has(+ p.attribution) {
     overflow: hidden;
 }
 .tdoc-leader.eol::after {
-  position: absolute;
-  margin-left: 0.5rem;
+    position: absolute;
+    margin-left: 0.5rem;
 }
 .tdoc-leader:not(.eol) {
     display: inline-block;
@@ -130,24 +150,24 @@ blockquote div > p:has(+ p.attribution) {
     white-space: nowrap;
 }
 .tdoc-leader.c\.::after {
-  content: "................................................................"
-           "................................................................"
-           "................................................................"
-           "................................................................"
-           "................................................................"
-           "................................................................";
+    content: "................................................................"
+             "................................................................"
+             "................................................................"
+             "................................................................"
+             "................................................................"
+             "................................................................";
 }
 .tdoc-leader.cdot::after {
-  content: "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
-           "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
-           "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
-           "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․";
+    content: "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
+             "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
+             "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․"
+             "․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․․";
 }
 .tdoc-leader.c\_::after {
-  content: "________________________________________________________________"
-           "________________________________________________________________"
-           "________________________________________________________________"
-           "________________________________________________________________";
+    content: "________________________________________________________________"
+             "________________________________________________________________"
+             "________________________________________________________________"
+             "________________________________________________________________";
 }
 
 /* Grids */
@@ -351,7 +371,7 @@ table.align-right {
 
 /* Fix the layout of admonition content. pydata_sphinx_theme sets left and right
    margins on all direct descendants, which breaks horizontal alignment classes.
-   Use padding on the container instead, adn remove the margins through
+   Use padding on the container instead, and remove the margins through
    patching. Also, set a bottom margin on the title. */
 .admonition, div.admonition {
     padding-left: 2rem;
@@ -519,6 +539,11 @@ select:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
 .article-header-buttons > button.btn-draw::before {
     font: var(--fa-font-solid);
     content: '\f304';
+}
+.bd-header-article .header-article-items__start {
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
 }
 html[data-tdoc-draw] .article-header-buttons > button.btn-draw {
     background-color: var(--pst-color-border);
@@ -1040,15 +1065,15 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     background-color: var(--tdoc-background-dark);
 }
 .mermaidTooltip {
-  position: absolute;
-  max-width: 30%;
-  border: 1px solid var(--pst-color-border);
-  border-radius: 0.25rem;
-  padding: 2px 4px;
-  background-color: var(--pst-color-surface);
-  font-size: var(--pst-font-size-milli);
-  pointer-events: none;
-  z-index: 100;
+    position: absolute;
+    max-width: 30%;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    padding: 2px 4px;
+    background-color: var(--pst-color-surface);
+    font-size: var(--pst-font-size-milli);
+    pointer-events: none;
+    z-index: 100;
 }
 
 /* Drop-down menus */
