@@ -29,6 +29,7 @@ html_theme_options = {
     ],
 }
 
+intersphinx_cache_limit = 14
 intersphinx_mapping = {
     'python': (
         f'https://docs.python.org/3', ('_cached/python.inv', None),
