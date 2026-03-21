@@ -5,7 +5,6 @@
 
 ```{metadata}
 hide: [navigation]
-solutions: dynamic
 ```
 
 This page hides all navigation elements (navbar, sidebars, footers), leaving

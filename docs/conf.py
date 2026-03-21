@@ -29,6 +29,10 @@ html_theme_options = {
     ],
 }
 
+metadata = {
+    'solutions': 'dynamic',
+}
+
 intersphinx_cache_limit = 14
 intersphinx_mapping = {
     'python': (

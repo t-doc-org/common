@@ -166,14 +166,14 @@ admonitions on the page.
 The `solutions:` key in the [document metadata](#document-metadata) controls how
 solutions are displayed.
 
-- `show` (default): Solutions are shown on the page.
+- `dynamic` (default): Solutions are hidden by default, but can be made visible
+  to everyone in real-time by members of the group `solutions:show` using the
+  <button class="tdoc fa-eye"></button> /
+  <button class="tdoc fa-eye-slash"></button> button.
+- `show`: Solutions are shown on the page.
 - `hide`: Solutions are hidden when the page loads. They can be shown or hidden
   with the <button class="tdoc fa-eye"></button> /
   <button class="tdoc fa-eye-slash"></button> button in the navbar.
-- `dynamic`: Solutions are hidden by default, but can be made visible to
-  everyone in real-time by members of the group `solutions:show` using the
-  <button class="tdoc fa-eye"></button> /
-  <button class="tdoc fa-eye-slash"></button> button.
 
 {.rubric}
 Options
