@@ -132,6 +132,27 @@ blockquote div > p:has(+ p.attribution) {
     display: block;
 }
 
+/* Hidden elements */
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=navbar])
+        .bd-header-article,
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=primary-sidebar])
+        .bd-sidebar-primary,
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=secondary-sidebar])
+        :is(.bd-sidebar-secondary, #print-main-content),
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=prev-next])
+        .prev-next-footer,
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
+        .bd-footer-content {
+    display: none;
+}
+
+/* Keep the margin below the title even if the TOC is removed. */
+@media print {
+    .bd-main .bd-content #jb-print-docs-body h1 {
+        margin-bottom: 2.75rem;
+    }
+}
+
 /* Leaders */
 .tdoc-leader.eol {
     position: relative;
@@ -456,6 +477,11 @@ html:not([data-tdoc-solutions=hide]):not([data-tdoc-solutions-ctrl])
         .article-header-buttons > button.btn-toggle-solutions {
     display: none;
 }
+html[data-tdoc-solutions=dynamic][data-tdoc-solutions-ctrl] .bd-header-article {
+    /* Don't hide the navbar when dynamic solutions can be controlled. */
+    display: flex;
+}
+
 
 /* Inline code */
 a code {
@@ -1222,7 +1248,7 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
 .article-header-buttons > .dropdown > button {
     justify-content: center;
 }
-.article-header-buttons > :is(a, button) > .btn__icon-container {
+.article-header-buttons > .btn > .btn__icon-container {
     display: inline-flex;
     align-items: center;
 }

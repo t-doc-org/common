@@ -4,7 +4,6 @@
 # t-doc
 
 ```{toctree}
-:maxdepth: 1
 :hidden:
 install
 edit

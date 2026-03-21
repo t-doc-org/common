@@ -3,6 +3,11 @@
 
 # Layout
 
+```{toctree}
+:hidden:
+layout/hide
+```
+
 ## Spacing
 
 The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
@@ -255,3 +260,7 @@ flowchart LR;
     node(Node)
 ```
 ````
+
+## Hide elements
+
+[This page](layout/hide.md) hides all navigation elements.

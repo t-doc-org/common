@@ -4,7 +4,6 @@
 # Install & upgrade
 
 ```{toctree}
-:maxdepth: 1
 :hidden:
 release-notes
 ```

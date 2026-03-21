@@ -200,10 +200,13 @@ def depart_grid_cell(self, node):
 
 
 def set_html_context(app, page, template, context, doctree):
+    attrs = context['html_attrs']
     md = app.env.metadata[page]
     if v := md.get('print-styles'): app.add_css_file(v)
+    if (v := md.get('hide')) is None: v = []
+    elif isinstance(v, str): v = v.split()
+    if v: attrs['data-tdoc-hide'] = ' '.join(sorted(set(v)))
 
-    attrs = context['html_attrs']
     if v := app.config.author: attrs['data-tdoc-author'] = v
     attrs['data-tdoc-date'] = date if (date := md.get('date')) is not None \
                               else datetime.datetime.now().strftime('%Y-%m-%d')

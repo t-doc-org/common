@@ -19,13 +19,16 @@ interpreted.
   date.
 
 `exec`
-: A map of per-language configuration for client-side code execution.
+: A map of per-language configuration for client-side [code execution](exec.md).
 
   ```{code-block} yaml
   exec:
     python:
       packages: [sqlite3]
   ```
+
+`hide`
+: A set of [elements to hide](layout.md#hide-elements) on the page.
 
 `mathjax`
 : A map of

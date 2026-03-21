@@ -217,3 +217,37 @@ Options
 A space-separated list of CSS classes to add to the rendered block sections.
 ```
 ````
+
+## Hide elements
+
+The `hide:` {rst:dir}`metadata` allows hiding elements on a page. The value is
+a list of keywords. The following keywords are defined:
+
+- `navbar`: The navigation bar at the top of the page. Note that the navigation
+  bar is not hidden if there are {rst:dir}`solution` directives on the page,
+  the solution mode is `dynamic`, and the user has permission to show and hide
+  solutions.
+- `primary-sidebar`: The primary sidebar (for navigating across pages).
+- `secondary-sidebar`: The secondary sidebar (for navigating within the page).
+- `prev-next`: The "< Previous / Next >" navigation links at the bottom of the
+  page content.
+- `footer`: The footer at the bottom of the page, showing the copyright and
+  license.
+- `navigation`: All navigation elements. This is equivalent to specifying
+  `[navbar, primary-sidebar, secondary-sidebar, prev-next, footer]`.
+
+````{code-block}
+```{metadata}
+hide: [primary-sidebar, prev-next, footer]
+```
+````
+
+Additional keywords can be defined via a custom CSS stylesheet. For example, the
+following CSS defines the keyword `search` to hide the search field in the
+primary sidebar.
+
+```{code-block} css
+html[data-tdoc-hide~=search] .sidebar-primary-item:has(.search-button-field) {
+  display: none;
+}
+```
