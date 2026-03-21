@@ -26,18 +26,23 @@ fi
 
 hg -R "${common}" ci -m "Release ${version}."
 hg -R "${common}" tag -m "Tag ${version} release." "${version}"
+hg -R "${common}" push
 
 cat <<EOF
 
-After the release has been pushed and built successfully:
+Next steps:
  - Increment __version__ in tdoc/common/__init__.py and add a ".dev1" suffix.
+ - Wait for the package to be built and pushed to PyPI.
+   https://github.com/t-doc-org/common/actions/workflows/package.yml
  - Generate the requirements file for the release, add the new file, commit and
    push.
    $ tools/release-reqs.sh ${version}
    $ hg add config/${version}.req
    $ hg commit -m "Add requirements for ${version}." \\
        tdoc/common/__init__.py config/${version}.req
+   $ hg push
  - In config/t-doc.toml, move the current value of "stable" to "previous", set
    "stable" to ${version}, commit and push.
    $ hg commit -m "Roll out ${version} to stable." config/t-doc.toml
+   $ hg push
 EOF
