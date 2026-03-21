@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-71)=
+## 0.71 *(2026-03-21)*
+
+- Added the [`hide:`](/reference/layout.md#hide-elements) {rst:dir}`metadata` to
+  hide navigation elements (navbar, sidebars, footers) on individual pages.
+- Added a visual indication to {rst:dir}`solution` blocks that are dynamically
+  hidden.
+- Made `solutions: dynamic` the default.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.70...0.71)
+
 (release-0-70)=
 ## 0.70 *(2026-03-06)*
 
