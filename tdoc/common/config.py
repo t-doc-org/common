@@ -10,9 +10,8 @@ local = 'local.toml'
 
 class Config:
     @staticmethod
-    def find_local():
-        cwd = pathlib.Path.cwd()
-        for parent in itertools.chain([cwd], cwd.parents):
+    def find_local(path):
+        for parent in itertools.chain([path], path.parents):
             if not (parent / 'run.py').is_file(): continue
             return p if (p := parent / local).is_file() else None
 
