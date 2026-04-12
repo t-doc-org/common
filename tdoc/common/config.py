@@ -1,13 +1,21 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import itertools
 import pathlib
 import tomllib
 
-local = pathlib.Path('local.toml')
+local = 'local.toml'
 
 
 class Config:
+    @staticmethod
+    def find_local():
+        cwd = pathlib.Path.cwd()
+        for parent in itertools.chain([cwd], cwd.parents):
+            if not (parent / 'run.py').is_file(): continue
+            return p if (p := parent / local).is_file() else None
+
     @classmethod
     def load(cls, path):
         if path is None: return cls({})

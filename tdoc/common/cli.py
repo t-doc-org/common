@@ -107,9 +107,9 @@ def main(argv, stdin, stdout, stderr):
     add_options(p)
 
     opts = parser.parse_args(argv[1:])
-    if opts.config is None and (lc := config.local.resolve()).is_file():
-        opts.config = lc
-    opts.cfg = config.Config.load(opts.config)
+    if opts.config is None: opts.config = config.Config.find_local()
+    opts.cfg = config.Config.load(
+        opts.config.resolve() if opts.config is not None else None)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True, raise_exc=opts.debug,
                         on_upgrade=functools.partial(on_upgrade, opts),
