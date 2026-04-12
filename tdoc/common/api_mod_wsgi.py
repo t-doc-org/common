@@ -3,6 +3,7 @@
 
 import contextlib
 import mod_wsgi
+import re
 import sys
 import threading
 
@@ -11,7 +12,7 @@ from tdoc.common import api, config, store, logs, wsgi
 log = logs.logger(__name__)
 
 
-def application(config_path, origins, events_level=logs.NOTSET):
+def application(config_path, events_level=logs.NOTSET):
     threading.current_thread().name = 'main'
 
     # Load the config and set defaults.
@@ -45,6 +46,7 @@ def application(config_path, origins, events_level=logs.NOTSET):
     app = stack.enter_context(api.Api(config=cfg, store=st))
 
     return wsgi.cors(
-        origins=origins,
+        origins=rf'https://(?:{wsgi.hostname_re}\.)?{re.escape(domain)}'
+                if (domain := cfg.get('cors.domain')) is not None else (),
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type'))(app)

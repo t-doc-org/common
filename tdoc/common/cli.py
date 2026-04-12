@@ -34,7 +34,6 @@ from . import __project__, __version__, api, config, console, deps, logs, \
 
 log = logs.logger(__name__)
 default_port = 8000
-local_config = pathlib.Path('local.toml')
 
 
 @console.main
@@ -108,7 +107,7 @@ def main(argv, stdin, stdout, stderr):
     add_options(p)
 
     opts = parser.parse_args(argv[1:])
-    if opts.config is None and (lc := local_config.resolve()).is_file():
+    if opts.config is None and (lc := config.local.resolve()).is_file():
         opts.config = lc
     opts.cfg = config.Config.load(opts.config)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,

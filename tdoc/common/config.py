@@ -4,6 +4,8 @@
 import pathlib
 import tomllib
 
+local = pathlib.Path('local.toml')
+
 
 class Config:
     @classmethod

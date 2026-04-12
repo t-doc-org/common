@@ -5,7 +5,7 @@ import mod_wsgi
 import pathlib
 import sys
 
-from tdoc.common import api_mod_wsgi, logs, wsgi
+from tdoc.common import api_mod_wsgi, config, logs
 
 base = pathlib.Path(__file__).parent.parent.resolve()
 sys.stderr.write(
@@ -13,6 +13,5 @@ sys.stderr.write(
     f"threads: {mod_wsgi.threads_per_process})\n")
 
 application = api_mod_wsgi.application(
-    config_path=base / '_local' / 'config.toml',
-    origins=rf'https://(?:{wsgi.hostname_re}\.)?t-doc\.org',
+    config_path=base / config.local,
     events_level=logs.NOTSET)
