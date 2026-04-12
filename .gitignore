@@ -3,6 +3,7 @@ __pycache__
 
 /LICENSES.deps.txt
 /local.toml
+/.venv/
 /_*/
 /dist/
 /node_modules/

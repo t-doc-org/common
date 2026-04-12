@@ -3,8 +3,9 @@ syntax: glob
 __pycache__
 
 syntax: regexp
-^LICENSES.deps.txt$
+^LICENSES\.deps\.txt$
 ^local\.toml$
+^\.venv/
 ^_[^/]*/
 ^dist/
 ^node_modules/
