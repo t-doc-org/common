@@ -36,8 +36,8 @@ metadata = {
 intersphinx_cache_limit = 14
 intersphinx_mapping = {
     'python': (
-        f'https://docs.python.org/3', ('_cached/python.inv', None),
+        f'https://docs.python.org/3', ('_cache/python.inv', None),
     ),
     'sphinx': ('https://www.sphinx-doc.org/en/master',
-               ('_cached/sphinx.inv', None)),
+               ('_cache/sphinx.inv', None)),
 }
