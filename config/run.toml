@@ -1,0 +1,20 @@
+# Copyright 2025 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+package = 't-doc-common'
+version = 'stable'
+hermetic = true
+
+[tags]
+testing = '0.71'
+stable = '0.71'
+previous = '0.70'
+
+[defaults]
+command = [
+    'tdoc', 'serve', '--open',
+]
+command-dev = [
+    'tdoc', 'serve', '--debug', '--full-builds',
+    '--watch=../common/tdoc',
+]

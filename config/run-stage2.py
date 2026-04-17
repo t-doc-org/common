@@ -259,7 +259,7 @@ class Env:
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
-    config_toml = 't-doc.toml'
+    run_toml = 'run.toml'
 
     def __init__(self, base, config, version, hermetic, ssl_ctx, out, debug):
         super().__init__(with_pip=True)
@@ -280,7 +280,7 @@ class EnvBuilder(venv.EnvBuilder):
     @functools.cached_property
     def config(self):
         try:
-            data = (self.root / self.config_toml).read_bytes()
+            data = (self.root / self.run_toml).read_bytes()
             config = tomllib.loads(data.decode('utf-8'))
         except Exception:
             return self.fetch_config()
@@ -288,10 +288,10 @@ class EnvBuilder(venv.EnvBuilder):
         return config
 
     def fetch_config(self):
-        data = self.fetch(self.config_toml)
+        data = self.fetch(self.run_toml)
         config = tomllib.loads(data.decode('utf-8'))
         self.root.mkdir(exist_ok=True)
-        with write_atomic(self.root / self.config_toml, 'wb') as f:
+        with write_atomic(self.root / self.run_toml, 'wb') as f:
             f.write(data)
         self.merge_local_config(config)
         return config
@@ -305,7 +305,7 @@ class EnvBuilder(venv.EnvBuilder):
 
     def merge_local_config(self, config):
         with contextlib.suppress(OSError), \
-                (self.base / self.config_toml).open('rb') as f:
+                (self.base / self.run_toml).open('rb') as f:
             merge_dict(config, tomllib.load(f))
 
     def requirements(self, config=None):

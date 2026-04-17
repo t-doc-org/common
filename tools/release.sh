@@ -41,8 +41,8 @@ Next steps:
    $ hg commit -m "Add requirements for ${version}." \\
        tdoc/common/__init__.py config/${version}.req
    $ hg push
- - In config/t-doc.toml, move the current value of "stable" to "previous", set
+ - In config/run.toml, move the current value of "stable" to "previous", set
    "stable" to ${version}, commit and push.
-   $ hg commit -m "Roll out ${version} to stable." config/t-doc.toml
+   $ hg commit -m "Roll out ${version} to stable." config/run.toml
    $ hg push
 EOF
