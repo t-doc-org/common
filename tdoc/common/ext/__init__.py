@@ -86,7 +86,7 @@ def merge_dict(dst, src, override=True):
     for k, sv in src.items():
         dv = dst.get(k, unset)
         if isinstance(sv, dict) and isinstance(dv, dict):
-            merge_dict(dv, sv)
+            merge_dict(dv, sv, override)
         elif override or dv is unset:
             dst[k] = copy.deepcopy(sv)
     return dst
