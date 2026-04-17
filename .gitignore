@@ -1,11 +1,14 @@
 *.orig
 __pycache__
 
-/LICENSES.deps.txt
 /local.toml
-/.venv/
+/run.local.toml
 /_*/
+/docs/_build/
+/tmp/
+
+/LICENSES.deps.txt
+/.venv/
 /dist/
 /node_modules/
 /tdoc/common/static.gen/
-/tmp/

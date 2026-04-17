@@ -40,7 +40,7 @@ def main(**kwargs):
 
 def run(argv, stdin, stdout, stderr, base, ssl_ctx=None, **kwargs):
     # Parse command-line options.
-    config = CONFIG
+    config = None
     debug = False
     hermetic = None
     print_key = None
@@ -120,22 +120,17 @@ Release notes: <https://common.t-doc.org/release-notes.html\
             stderr.write("\n")
 
     # Check for upgrades.
-    wait_until = None
-    if not (is_dev(builder.version) or is_wheel(builder.version)):
-        checker = threading.Thread(target=env.check_upgrade, daemon=True)
-        checker.start()
-        wait_until = time.monotonic() + 5
+    checker = threading.Thread(target=env.check_upgrade, daemon=True)
+    checker.start()
+    wait_until = time.monotonic() + 5
     try:
         # Run the command.
-        args = argv[1:] if len(argv) > 1 \
-               else builder.config['defaults']['command-dev'] \
-               if is_dev(builder.version) \
-               else builder.config['defaults']['command']
+        args = argv[1:] if len(argv) > 1 else builder.default_command
         args[0] = env.bin_path(args[0])
         rc = subprocess.run(args).returncode
     finally:
         # Give the upgrade checker a chance to run at least for a bit.
-        if wait_until is not None: checker.join(wait_until - time.monotonic())
+        checker.join(wait_until - time.monotonic())
     return rc
 
 
@@ -144,12 +139,9 @@ class Namespace(dict):
         return self[name]
 
 
-unset = object()
-
 def merge_dict(dst, src):
     for k, sv in src.items():
-        dv = dst.get(k, unset)
-        if isinstance(sv, dict) and isinstance(dv, dict):
+        if isinstance(sv, dict) and isinstance(dv := dst.get(k), dict):
             merge_dict(dv, sv)
         else:
             dst[k] = sv
@@ -247,7 +239,8 @@ class Env:
 
     def check_upgrade(self):
         try:
-            config = self.builder.fetch_config()
+            config = self.builder.fetch_and_cache_config()
+            if is_dev(v := self.builder.version) or is_wheel(v): return
             reqs = self.builder.requirements(config=config)
             if reqs != self.requirements:
                 with write_atomic(
@@ -260,6 +253,7 @@ class Env:
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
     run_toml = 'run.toml'
+    run_local_toml = 'run.local.toml'
 
     def __init__(self, base, config, version, hermetic, ssl_ctx, out, debug):
         super().__init__(with_pip=True)
@@ -283,30 +277,44 @@ class EnvBuilder(venv.EnvBuilder):
             data = (self.root / self.run_toml).read_bytes()
             config = tomllib.loads(data.decode('utf-8'))
         except Exception:
-            return self.fetch_config()
-        self.merge_local_config(config)
+            return self.fetch_and_cache_config()
+        self.merge_local_configs(config)
         return config
 
-    def fetch_config(self):
+    def fetch_and_cache_config(self):
         data = self.fetch(self.run_toml)
         config = tomllib.loads(data.decode('utf-8'))
         self.root.mkdir(exist_ok=True)
         with write_atomic(self.root / self.run_toml, 'wb') as f:
             f.write(data)
-        self.merge_local_config(config)
+        self.merge_local_configs(config)
         return config
 
     def fetch(self, name):
-        if self.config_url.startswith('https://'):
-            with request.urlopen(f'{self.config_url}/{name}',
-                                 context=self.ssl_ctx, timeout=30) as f:
-                return f.read()
-        return (pathlib.Path(self.config_url) / name).read_bytes()
+        if (url := self.config_url) is None:
+            with contextlib.suppress(Exception):
+                return (self.base / 'config' / name).read_bytes()
+            url = CONFIG
+        if '://' not in url: return (pathlib.Path(url) / name).read_bytes()
+        with request.urlopen(f'{url}/{name}', context=self.ssl_ctx,
+                             timeout=30) as f:
+            return f.read()
 
-    def merge_local_config(self, config):
-        with contextlib.suppress(OSError), \
-                (self.base / self.run_toml).open('rb') as f:
+    def merge_local_configs(self, config):
+        self.merge_config(config, self.base / self.run_toml)
+        self.merge_config(config, self.base / self.run_local_toml)
+
+    def merge_config(self, config, path):
+        with contextlib.suppress(OSError), path.open('rb') as f:
             merge_dict(config, tomllib.load(f))
+
+    @property
+    def default_command(self):
+        key = 'command-dev' if is_dev(self.version) else 'command'
+        args = [(k, v) for k, v in self.config['defaults'].items()
+                if k == key or k.startswith(key + '_')]
+        args.sort()
+        return functools.reduce(lambda a, b: a + b, (it[1] for it in args), [])
 
     def requirements(self, config=None):
         if is_dev(v := self.version): return f'-e {self.base.as_uri()}\n'
