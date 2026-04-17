@@ -912,6 +912,7 @@ class Application(wsgi.Dispatcher):
         def on_error(e): log.error("Scan: %(exc)s", exc=e)
         mtime = self.min_mtime
         for path in itertools.chain([self.opts.source], self.opts.watch):
+            if not path.exists(): continue
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
                     p = base / file

@@ -11,6 +11,10 @@ stable = '0.71'
 previous = '0.70'
 
 [defaults]
-command = ['tdoc', 'serve', '--open']
-command-dev = ['tdoc', 'serve', '--debug', '--watch=../common/tdoc',
-               '--full-builds']
+command = [
+    'tdoc', 'serve', '--open',
+]
+command-dev = [
+    'tdoc', 'serve', '--debug', '--full-builds',
+    '--watch=../common/tdoc',
+]
