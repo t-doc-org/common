@@ -18,7 +18,7 @@ from sphinx import config, errors, locale
 from sphinx.builders import html as sphinx_html
 from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
-from sphinx.util import display, docutils, fileutil, logging
+from sphinx.util import display, docutils, fileutil, logging, requests
 
 from . import patch
 from .. import __version__, deps
@@ -157,12 +157,16 @@ def setup(app):
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
+    app.add_config_value('cached_files', {}, 'env', types={list})
+    app.add_config_value('cached_files_timeout', 10, '',
+                         types={float, int, type(None)})
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', update_intersphinx, priority=499.9)
+    app.connect('builder-inited', update_cached_files)
     app.connect('builder-inited', set_base_html_context)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
@@ -222,6 +226,7 @@ def on_config_inited(app, config):
 
 
 def update_intersphinx(app):
+    if 'tdoc-dev' not in app.tags: return
     cl = app.config.intersphinx_cache_limit
     cache_time = time.time() - cl * 24 * 3600 if cl >= 0 else 0
     inv_config = _load._InvConfig.from_config(app.config)
@@ -242,10 +247,40 @@ def update_intersphinx(app):
             with contextlib.suppress(Exception), \
                     display.progress_message(
                         f"updating intersphinx inventory '{name}'"
-                        f" from {_load._get_safe_url(loc)}..."):
+                        f" from {_load._get_safe_url(loc)}"):
                 data = _load._fetch_inventory_url(
                     target_uri=uri, inv_location=loc, config=inv_config)[0]
-                if data != cur_data: dest.write_bytes(data)
+                if data != cur_data:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(data)
+                break
+
+
+def update_cached_files(app):
+    is_dev = 'tdoc-dev' in app.tags
+    config = app.config
+    for dst, srcs in app.config.cached_files.items():
+        abs_dst = app.srcdir / dst
+        if not is_dev and abs_dst.exists(): continue
+        cur = None
+        with contextlib.suppress(OSError, IOError):
+            cur = abs_dst.read_bytes()
+        for src in srcs:
+            with contextlib.suppress(Exception), \
+                    display.progress_message(
+                        f"updating cached file {dst} from {src}"):
+                if '://' in src:
+                    with requests.get(src, timeout=config.cached_files_timeout,
+                                      _user_agent=config.user_agent,
+                                      _tls_info=(config.tls_verify,
+                                                 config.tls_cacerts)) as r:
+                        r.raise_for_status()
+                        new = r.content
+                else:
+                    new = (app.srcdir / src).read_bytes()
+                if new != cur:
+                    abs_dst.parent.mkdir(parents=True, exist_ok=True)
+                    abs_dst.write_bytes(new)
                 break
 
 

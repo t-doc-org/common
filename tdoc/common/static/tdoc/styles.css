@@ -1058,7 +1058,8 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     margin-right: 0;
 }
 html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
-    border-color: var(--pst-color-danger);
+    /* Override border attributes set on the element. */
+    border: 1px solid var(--pst-color-danger) !important;
 }
 .tdoc-dyn[data-type=jsxgraph] > div.spinner {
     display: flex;
