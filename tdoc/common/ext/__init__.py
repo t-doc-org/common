@@ -157,16 +157,14 @@ def setup(app):
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
-    app.add_config_value('cached_files', {}, 'env', types={list})
-    app.add_config_value('cached_files_timeout', 10, '',
-                         types={float, int, type(None)})
+    app.add_config_value('import_files', {}, 'env', types={list})
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', update_intersphinx, priority=499.9)
-    app.connect('builder-inited', update_cached_files)
+    app.connect('builder-inited', sync_imported_files)
     app.connect('builder-inited', set_base_html_context)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
@@ -196,6 +194,10 @@ def on_config_inited(app, config):
     cv = config.values['html_title']
     super(cv.__class__, cv).__setattr__('default', lambda c: c.project)
     config.templates_path.append(str(_base / 'templates'))
+
+    # Add exclude patterns for imports.
+    if _import_glob not in config.exclude_patterns:
+        config.exclude_patterns.append(_import_glob)
 
     # Add our own static paths, and a default one if it exists.
     app.add_static_dir(_base / 'static')
@@ -256,32 +258,61 @@ def update_intersphinx(app):
                 break
 
 
-def update_cached_files(app):
-    is_dev = 'tdoc-dev' in app.tags
-    config = app.config
-    for dst, srcs in app.config.cached_files.items():
-        abs_dst = app.srcdir / dst
-        if not is_dev and abs_dst.exists(): continue
-        cur = None
-        with contextlib.suppress(OSError, IOError):
-            cur = abs_dst.read_bytes()
-        for src in srcs:
-            with contextlib.suppress(Exception), \
-                    display.progress_message(
-                        f"updating cached file {dst} from {src}"):
-                if '://' in src:
-                    with requests.get(src, timeout=config.cached_files_timeout,
-                                      _user_agent=config.user_agent,
-                                      _tls_info=(config.tls_verify,
-                                                 config.tls_cacerts)) as r:
-                        r.raise_for_status()
-                        new = r.content
-                else:
-                    new = (app.srcdir / src).read_bytes()
+_import = '_import'
+_import_glob = f'{_import}/**'
+
+
+def sync_imported_files(app):
+    if 'tdoc-dev' not in app.tags: return
+    for dst, spec in app.config.import_files.items():
+        if isinstance(spec, str):
+            spec = {'src': spec, 'include': ['**/*.export/**', '**/*.export.*']}
+        abs_src = (app.srcdir / spec['src']).resolve()
+        if not abs_src.exists(): continue
+        include = spec.get('include', [])
+        exclude = [_import_glob] + spec.get('exclude', [])
+        matches = lambda path: any(path.full_match(p) for p in include) \
+                               and not any(path.full_match(p) for p in exclude)
+        src_paths = set(find_files(abs_src, matches))
+        abs_dst = (app.srcdir / _import / dst).resolve()
+        dst_paths = set(find_files(abs_dst, missing_ok=True))
+
+        # Copy files but don't overwrite if the content hasn't changed.
+        if src_paths:
+            for sp in display.status_iterator(
+                    src_paths, f"importing {dst}... ", 'turquoise',
+                    len(src_paths), app.config.verbosity,
+                    lambda p: p.relative_to(abs_src)):
+                dp = abs_dst / sp.relative_to(abs_src)
+                dst_paths.discard(dp)
+                cur = None
+                with contextlib.suppress(OSError):
+                    cur = dp.read_bytes()
+                new = sp.read_bytes()
                 if new != cur:
-                    abs_dst.parent.mkdir(parents=True, exist_ok=True)
-                    abs_dst.write_bytes(new)
-                break
+                    dp.parent.mkdir(parents=True, exist_ok=True)
+                    dp.write_bytes(new)
+
+        # Remove stale files.
+        if dst_paths:
+            for dp in display.status_iterator(
+                    dst_paths, f"cleaning {dst}... ", 'turquoise',
+                    len(dst_paths), app.config.verbosity,
+                    lambda p: p.relative_to(abs_dst)):
+                dp.unlink()
+                for p in dp.parents:
+                    if p == abs_dst: break
+                    with contextlib.suppress(OSError):
+                        p.rmdir()
+
+
+def find_files(base, predicate=lambda p: True, missing_ok=False):
+    if missing_ok and not base.exists(): return
+    def on_error(e): raise e
+    for root, dirs, files in base.walk(on_error=on_error):
+        for fn in files:
+            path = root / fn
+            if predicate(path.relative_to(base)) and path.is_file(): yield path
 
 
 def set_base_html_context(app):
