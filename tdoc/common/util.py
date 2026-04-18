@@ -4,6 +4,7 @@
 import datetime
 from http import client
 import itertools
+import os
 import re
 import ssl
 from urllib import request
@@ -65,6 +66,16 @@ def datetime_to_nsec(dt):
 
 def timedelta_to_nsec(td):
     return (td // usec) * 1000
+
+
+def read_stable(path):
+    with path.open('rb') as f:
+        mtime = os.stat(fd := f.fileno()).st_mtime_ns
+        while True:  # Repeat read if mtime changes
+            data = f.read()
+            if (mtime2 := os.stat(fd).st_mtime_ns) == mtime: return data
+            mtime = mtime2
+            f.seek(0)
 
 
 # Use certifi instead of the system CA store for portability.

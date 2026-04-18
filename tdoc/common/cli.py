@@ -987,9 +987,7 @@ class Application(wsgi.Dispatcher):
                 cur = None
                 with contextlib.suppress(OSError):
                     cur = dp.read_bytes()
-                # TODO: Check for mtime change across read and retry
-                new = sp.read_bytes()
-                if new != cur:
+                if (new := util.read_stable(sp)) != cur:
                     dp.parent.mkdir(parents=True, exist_ok=True)
                     dp.write_bytes(new)
                     os.utime(dp, ns=(dp.stat().st_atime_ns, mtime))
