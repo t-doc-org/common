@@ -28,6 +28,9 @@ class Config:
     def __repr__(self):
         return f'Config(path={self._path}, data={self._data})'
 
+    def keys(self):
+        return self._data.keys()
+
     def get(self, key, default=None):
         v = self._data
         for p in key.split('.'):
@@ -48,11 +51,13 @@ class Config:
         for p in parts[:-1]: d = d.setdefault(p, {})
         return d, parts[-1]
 
-    def path(self, key, default=None):
-        if (v := self.get(key, default)) is not None:
-            v = (self._path.parent / v).resolve() if self._path is not None \
+    def as_path(self, v):
+        if v is None: return
+        return (self._path.parent / v).resolve() if self._path is not None \
                 else pathlib.Path(v).resolve()
-        return v
+
+    def path(self, key, default=None):
+        return self.as_path(self.get(key, default))
 
     def sub(self, key):
         return Config(self.setdefault(key, {}), self._path)

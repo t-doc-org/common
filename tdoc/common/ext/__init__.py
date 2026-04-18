@@ -18,7 +18,7 @@ from sphinx import config, errors, locale
 from sphinx.builders import html as sphinx_html
 from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
-from sphinx.util import display, docutils, fileutil, logging, requests
+from sphinx.util import display, docutils, fileutil, logging
 
 from . import patch
 from .. import __version__, deps
@@ -157,14 +157,12 @@ def setup(app):
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
-    app.add_config_value('import_files', {}, 'env', types={list})
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
 
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', update_intersphinx, priority=499.9)
-    app.connect('builder-inited', sync_imported_files)
     app.connect('builder-inited', set_base_html_context)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
@@ -196,8 +194,8 @@ def on_config_inited(app, config):
     config.templates_path.append(str(_base / 'templates'))
 
     # Add exclude patterns for imports.
-    if _import_glob not in config.exclude_patterns:
-        config.exclude_patterns.append(_import_glob)
+    if (g := '_import/**') not in config.exclude_patterns:
+        config.exclude_patterns.append(g)
 
     # Add our own static paths, and a default one if it exists.
     app.add_static_dir(_base / 'static')
@@ -256,63 +254,6 @@ def update_intersphinx(app):
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_bytes(data)
                 break
-
-
-_import = '_import'
-_import_glob = f'{_import}/**'
-
-
-def sync_imported_files(app):
-    if 'tdoc-dev' not in app.tags: return
-    for dst, spec in app.config.import_files.items():
-        if isinstance(spec, str):
-            spec = {'src': spec, 'include': ['**/*.export/**', '**/*.export.*']}
-        abs_src = (app.srcdir / spec['src']).resolve()
-        if not abs_src.exists(): continue
-        include = spec.get('include', [])
-        exclude = [_import_glob] + spec.get('exclude', [])
-        matches = lambda path: any(path.full_match(p) for p in include) \
-                               and not any(path.full_match(p) for p in exclude)
-        src_paths = set(find_files(abs_src, matches))
-        abs_dst = (app.srcdir / _import / dst).resolve()
-        dst_paths = set(find_files(abs_dst, missing_ok=True))
-
-        # Copy files but don't overwrite if the content hasn't changed.
-        if src_paths:
-            for sp in display.status_iterator(
-                    src_paths, f"importing {dst}... ", 'turquoise',
-                    len(src_paths), app.config.verbosity,
-                    lambda p: p.relative_to(abs_src)):
-                dp = abs_dst / sp.relative_to(abs_src)
-                dst_paths.discard(dp)
-                cur = None
-                with contextlib.suppress(OSError):
-                    cur = dp.read_bytes()
-                new = sp.read_bytes()
-                if new != cur:
-                    dp.parent.mkdir(parents=True, exist_ok=True)
-                    dp.write_bytes(new)
-
-        # Remove stale files.
-        if dst_paths:
-            for dp in display.status_iterator(
-                    dst_paths, f"cleaning {dst}... ", 'turquoise',
-                    len(dst_paths), app.config.verbosity,
-                    lambda p: p.relative_to(abs_dst)):
-                dp.unlink()
-                for p in dp.parents:
-                    if p == abs_dst: break
-                    with contextlib.suppress(OSError):
-                        p.rmdir()
-
-
-def find_files(base, predicate=lambda p: True, missing_ok=False):
-    if missing_ok and not base.exists(): return
-    def on_error(e): raise e
-    for root, dirs, files in base.walk(on_error=on_error):
-        for fn in files:
-            path = root / fn
-            if predicate(path.relative_to(base)) and path.is_file(): yield path
 
 
 def set_base_html_context(app):

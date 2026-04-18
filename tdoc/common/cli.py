@@ -887,7 +887,7 @@ class Application(wsgi.Dispatcher):
                 self.opts.stdout.write(
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
-            if self.build(build_next):
+            if self.build(build_next, mtime):
                 build = self.build_dir(mtime)
                 os.rename(build_next, build)
                 with self.lock:
@@ -912,6 +912,7 @@ class Application(wsgi.Dispatcher):
         def on_error(e): log.error("Scan: %(exc)s", exc=e)
         mtime = self.min_mtime
         for path in itertools.chain([self.opts.source], self.opts.watch):
+            # TODO: Use find_files()
             if not path.exists(): continue
             for base, dirs, files in path.walk(on_error=on_error):
                 for file in files:
@@ -925,13 +926,29 @@ class Application(wsgi.Dispatcher):
                         on_error(e)
                 dirs[:] = [d for d in dirs
                            if self.opts.ignore.search(str(base / d)) is None]
+        for _, srcs, _, _ in self.list_imports():
+            for sp, smtime in srcs: mtime = max(mtime, smtime)
         return mtime
+
+    def find_files(self, root, predicate=lambda p: True, missing_ok=False):
+        if missing_ok and not root.exists(): return
+        def on_error(e): log.error("Scan: %(exc)s", exc=e)
+        for parent, dirs, files in root.walk(on_error=on_error):
+            for fn in files:
+                p = parent / fn
+                if not predicate(p.relative_to(root)): continue
+                try:
+                    st = p.stat()
+                    if stat.S_ISREG(st.st_mode): yield p, st.st_mtime_ns
+                except Exception as e:
+                    on_error(e)
 
     def build_dir(self, mtime):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
-    def build(self, build):
+    def build(self, build, mtime):
         try:
+            self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
                                tags=['tdoc-dev'])
             if res.returncode == 0: return True
@@ -941,6 +958,56 @@ class Application(wsgi.Dispatcher):
             self.returncode = 1
             self.server.shutdown()
         return False
+
+    _import = '_import'
+    _import_glob = f'{_import}/**'
+
+    def list_imports(self):
+        import_files = self.opts.cfg.sub('import-files')
+        for dst in import_files.keys():
+            if isinstance(src := import_files.get(dst), str):
+                include = ['**/*.export/**', '**/*.export.*']
+                exclude = [self._import_glob]
+            else:
+                spec = import_files.sub(dst)
+                src = spec.get('src')
+                include = spec.get('include', [])
+                exclude = [self._import_glob] + spec.get('exclude', [])
+            src = import_files.as_path(src)
+            if not src.exists(): continue
+            dst = (self.opts.source / self._import / dst).resolve()
+            matches = lambda path: \
+                any(path.full_match(p) for p in include) \
+                and not any(path.full_match(p) for p in exclude)
+            srcs = self.find_files(src, matches)
+            dsts = self.find_files(dst, missing_ok=True)
+            yield src, srcs, dst, dsts
+
+    def update_imports(self, mtime):
+        for src, srcs, dst, dsts in self.list_imports():
+            dsts = set(p for p, _ in dsts)
+
+            # Copy files but don't overwrite if the content hasn't changed.
+            for sp, _ in srcs:
+                dp = dst / sp.relative_to(src)
+                dsts.discard(dp)
+                cur = None
+                with contextlib.suppress(OSError):
+                    cur = dp.read_bytes()
+                # TODO: Check for mtime change across read and retry
+                new = sp.read_bytes()
+                if new != cur:
+                    dp.parent.mkdir(parents=True, exist_ok=True)
+                    dp.write_bytes(new)
+                    os.utime(dp, ns=(dp.stat().st_atime_ns, mtime))
+
+            # Remove stale files.
+            for dp in dsts:
+                dp.unlink()
+                for p in dp.parents:
+                    if p == dst: break
+                    with contextlib.suppress(OSError):
+                        p.rmdir()
 
     def remove(self, build):
         build.relative_to(self.opts.build)  # Ensure we're below the build dir
