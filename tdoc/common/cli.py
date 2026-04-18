@@ -909,39 +909,31 @@ class Application(wsgi.Dispatcher):
         self.remove(build_next)
 
     def latest_mtime(self):
-        def on_error(e): log.error("Scan: %(exc)s", exc=e)
         mtime = self.min_mtime
+        pred = lambda path, root: self.opts.ignore.search(str(path)) is None
         for path in itertools.chain([self.opts.source], self.opts.watch):
-            # TODO: Use find_files()
-            if not path.exists(): continue
-            for base, dirs, files in path.walk(on_error=on_error):
-                for file in files:
-                    p = base / file
-                    if self.opts.ignore.search(str(p)) is not None: continue
-                    try:
-                        st = p.stat()
-                        if stat.S_ISREG(st.st_mode):
-                            mtime = max(mtime, st.st_mtime_ns)
-                    except Exception as e:
-                        on_error(e)
-                dirs[:] = [d for d in dirs
-                           if self.opts.ignore.search(str(base / d)) is None]
+            for _, t in self.find_files(path, file_pred=pred, dir_pred=pred,
+                                        missing_ok=True):
+                mtime = max(mtime, t)
         for _, srcs, _, _ in self.list_imports():
-            for sp, smtime in srcs: mtime = max(mtime, smtime)
+            for _, t in srcs: mtime = max(mtime, t)
         return mtime
 
-    def find_files(self, root, predicate=lambda p: True, missing_ok=False):
+    def find_files(self, root, *, file_pred=lambda p, r: True, dir_pred=None,
+                   missing_ok=False):
         if missing_ok and not root.exists(): return
         def on_error(e): log.error("Scan: %(exc)s", exc=e)
         for parent, dirs, files in root.walk(on_error=on_error):
             for fn in files:
-                p = parent / fn
-                if not predicate(p.relative_to(root)): continue
+                path = parent / fn
+                if not file_pred(path, root): continue
                 try:
-                    st = p.stat()
-                    if stat.S_ISREG(st.st_mode): yield p, st.st_mtime_ns
+                    st = path.stat()
+                    if stat.S_ISREG(st.st_mode): yield path, st.st_mtime_ns
                 except Exception as e:
                     on_error(e)
+            if dir_pred is not None:
+                dirs[:] = [d for d in dirs if dir_pred(parent / d, root)]
 
     def build_dir(self, mtime):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
@@ -976,10 +968,11 @@ class Application(wsgi.Dispatcher):
             src = import_files.as_path(src)
             if not src.exists(): continue
             dst = (self.opts.source / self._import / dst).resolve()
-            matches = lambda path: \
-                any(path.full_match(p) for p in include) \
-                and not any(path.full_match(p) for p in exclude)
-            srcs = self.find_files(src, matches)
+            def pred(path, root):
+                path = path.relative_to(root)
+                return any(path.full_match(p) for p in include) \
+                       and not any(path.full_match(p) for p in exclude)
+            srcs = self.find_files(src, file_pred=pred)
             dsts = self.find_files(dst, missing_ok=True)
             yield src, srcs, dst, dsts
 
