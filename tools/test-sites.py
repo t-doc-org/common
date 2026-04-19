@@ -138,7 +138,7 @@ def run_tests(tests, repo, label, wheel, write):
     # Create the store.
     write(f"{label}Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
-    (repo_dir / 'local.toml').write_text("""\
+    (repo_dir / 'tdoc.local.toml').write_text("""\
 [logging]
 level = "DEBUG"
 

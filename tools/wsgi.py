@@ -13,5 +13,5 @@ sys.stderr.write(
     f"threads: {mod_wsgi.threads_per_process})\n")
 
 application = api_mod_wsgi.application(
-    config_path=(base / config.local).resolve(),
+    config_path=(base / config.tdoc).resolve(),
     events_level=logs.NOTSET)

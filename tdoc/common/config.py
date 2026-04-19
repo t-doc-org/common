@@ -5,15 +5,14 @@ import itertools
 import pathlib
 import tomllib
 
-local = 'local.toml'
+tdoc = 'tdoc.local.toml'
 
 
 class Config:
     @staticmethod
-    def find_local(path):
+    def find(path):
         for parent in itertools.chain([path], path.parents):
-            if not (parent / 'run.py').is_file(): continue
-            return p if (p := parent / local).is_file() else None
+            if (p := parent / tdoc).is_file(): return p
 
     @classmethod
     def load(cls, path):
