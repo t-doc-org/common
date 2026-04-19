@@ -101,6 +101,13 @@ The `tdoc` CLI and the API server read their configuration from a
 If not specified otherwise, configuration values that represent paths interpret
 relative paths as relative to the directory containing the config file.
 
+### `[cors]`
+
+This table configures cross-origin resource sharing (CORS).
+
+- `domain`: The apex domain of the deployment. The API server allows
+  cross-origin HTTPS requests from this domain and all direct subdomains.
+
 ### `[import-files]`
 
 This table defines files to be copied from outside the repository. The files are
@@ -196,16 +203,6 @@ This table configures the logging handler that outputs log records to `stderr`.
   [log level](https://docs.python.org/3/library/logging.html#logging-levels)
   for this handler.
 
-### `[oidc.token]`
-
-This table configures options related to
-[JSON Web Tokens](https://openid.net/developers/how-connect-works/) (JWT).
-
-- `algorithms` (default: `["RS256"]`): The set of JWT signature algorithms to
-  accept.
-- `verify_leeway_secs` (default: `60`): The maximum clock skew in seconds to
-  accept when verifying JWTs.
-
 ### `[[oidc.issuers]]`
 
 These tables configure [OIDC](https://openid.net/developers/how-connect-works/)
@@ -240,6 +237,16 @@ create_users = [
    {claims = {hd = 'example\.com', email_verified = true}, username = "email"},
 ]
 ```
+
+### `[oidc.token]`
+
+This table configures options related to
+[JSON Web Tokens](https://openid.net/developers/how-connect-works/) (JWT).
+
+- `algorithms` (default: `["RS256"]`): The set of JWT signature algorithms to
+  accept.
+- `verify_leeway_secs` (default: `60`): The maximum clock skew in seconds to
+  accept when verifying JWTs.
 
 ### `[repo]`
 
