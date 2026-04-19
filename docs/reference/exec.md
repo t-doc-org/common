@@ -3,6 +3,10 @@
 
 # Code execution
 
+```{role} py(code)
+:language: python
+```
+
 The {rst:dir}`exec` directive allows executing code from the browser.
 
 ```{exec} sql
@@ -275,6 +279,16 @@ exec:
       input.txt:                    # .../_static/input.txt => $HOME/input.txt
       db/init.sql: /tmp/            # .../_static/db/init.sql => /tmp/init.sql
       ../index.html: homepage.html  # .../index.html => $HOME/homepage.html
+```
+
+The following `conf.py` options enable site-wide customization of Pyodide.
+
+```{confval} tdoc_python_modules
+:type: {py}`list`
+:default: {py}`[]`
+A list of directories, relative to the directory containing `conf.py`,
+containing Python modules to be exposed to Pyodide. A `_python` entry is added
+automatically if such a directory exists next to `conf.py`.
 ```
 
 {#run-sync}

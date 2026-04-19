@@ -3,23 +3,38 @@
 
 # Elements
 
+```{role} py(code)
+:language: python
+```
+
 ## Document metadata
 
-````{rst:directive} .. metadata::
-This directive allows adding document metadata to a page. The content of the
-directive is a [YAML](https://yaml.org/) document which is converted to a Python
+The {rst:dir}`metadata` directive overrides document metadata at the page level.
+
+```{rst:directive} .. metadata::
+This directive adds document metadata to a page. The content of the directive is
+a [YAML](https://yaml.org/) document which is converted to a Python
 {py:class}`dict` and merged into the document metadata.
+```
+
+The {confval}`metadata` `conf.py` option defines site-wide default document
+metadata.
+
+```{confval} metadata
+:type: {py}`dict`
+:default: {py}`{}`
+Site-wide default document metadata.
+```
 
 In addition to Sphinx-specific
-[metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields), the following top-level keys are
-interpreted.
+[metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields),
+t-doc uses the following document metadata fields as per-page configuration.
 
-`date`
-: The date to use in headers and footers when printing. Defaults to the current
-  date.
+- `date`: The date to use in headers and footers when printing. Defaults to the
+  current date.
 
-`exec`
-: A map of per-language configuration for client-side [code execution](exec.md).
+- `exec`: A map of per-language configuration for client-side
+  [code execution](exec.md).
 
   ```{code-block} yaml
   exec:
@@ -27,30 +42,26 @@ interpreted.
       packages: [sqlite3]
   ```
 
-`hide`
-: A set of [elements to hide](layout.md#hide-elements) on the page.
+- `hide`: A set of [elements to hide](layout.md#hide-elements) on the page.
 
-`mathjax`
-: A map of
+- `mathjax`: A map of
   [MathJax configuration](https://docs.mathjax.org/en/stable/web/configuration.html)
   overrides.
 
-  `output`
-  : The default output processor (`chtml`, `svg`). The default is `svg`.
+  - `output`: The default output processor (`chtml`, `svg`). The default is
+    `svg`.
 
-`mermaid`
-: A map of config properties for {rst:dir}`mermaid` diagrams.
+- `mermaid`: A map of config properties for {rst:dir}`mermaid` diagrams.
 
-`page-break-avoid`
-: A level or list of levels of sections in which page breaks should be avoided.
+- `page-break-avoid`: A level or list of levels of sections in which page breaks
+  should be avoided.
 
-`page-break-force`
-: A level or list of levels of sections after which a page break should be
-  forced.
+- `page-break-force`: A level or list of levels of sections after which a page
+  break should be forced.
 
-`print-styles`
-: A CSS stylesheet URL to use when printing. Relative URLs are resolved relative
-  to the `_static` directory. The following print stylesheets are provided:
+- `print-styles`: A CSS stylesheet URL to use when printing. Relative URLs are
+  resolved relative to the `_static` directory. The following print stylesheets
+  are provided:
 
   - `tdoc/print.css`
     - Header, left: The value of the `subject` metadata.
@@ -65,12 +76,11 @@ interpreted.
     - Footer, left: The site author.
     - Footer, center: The page number and the total number of pages.
 
-`scripts`
-: A list of scripts to reference from the page header through `<script>`{l=html}
-  elements. The list items can be either strings (the URL of the script) or
-  maps. For maps, the `src` key specifies the URL of the script, and other keys
-  are added to the `<script>`{l=html} element. Relative URLs are resolved
-  relative to the `_static` directory.
+- `scripts`: A list of scripts to reference from the page header through
+  `<script>`{l=html} elements. The list items can be either strings (the URL of
+  the script) or maps. For maps, the `src` key specifies the URL of the script,
+  and other keys are added to the `<script>`{l=html} element. Relative URLs are
+  resolved relative to the `_static` directory.
 
   ```{code-block} yaml
   scripts:
@@ -80,8 +90,7 @@ interpreted.
     - https://code.jquery.com/jquery-3.7.1.min.js
   ```
 
-`styles`
-: A list of CSS stylesheets to reference from the page header through
+- `styles`: A list of CSS stylesheets to reference from the page header through
   `<link>`{l=html} elements. The list items can be either strings (the URL of
   the stylesheet) or maps. For maps, the `src` key specifies the URL of the
   stylesheet, and other keys are added to the `<link>`{l=html} element. Relative
@@ -95,14 +104,12 @@ interpreted.
     - https://example.com/styles.css
   ```
 
-`subject`
-: The subject covered by the document. This may be used by print stylesheets in
-  headers or footers.
+- `subject`: The subject covered by the document. This may be used by print
+  stylesheets in headers or footers.
 
-`versions`
-: A map overriding the versions of JavaScript dependencies on a page. The keys
-  are dependency identifiers and the values can be either version numbers or
-  full URLs. See
+- `versions`: A map overriding the versions of JavaScript dependencies on a
+  page. The keys are dependency identifiers and the values can be either version
+  numbers or full URLs. See
   [`deps.py`](https://github.com/t-doc-org/common/blob/main/tdoc/common/deps.py)
   for the list of dependencies and their default version.
 
@@ -111,7 +118,6 @@ interpreted.
     polyscript: 0.17.30
     pyodide: https://cdn.jsdelivr.net/pyodide/v0.27.7/full
   ```
-````
 
 ## Default directive options
 

@@ -5,6 +5,7 @@
 
 ```{toctree}
 :maxdepth: 1
+config
 elements
 layout
 diagram

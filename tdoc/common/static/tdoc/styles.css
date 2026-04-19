@@ -1315,9 +1315,18 @@ code.literal.literal.literal {
 }
 
 /* Reduce the bottom margin of directive definition list options. */
-dl[class]:not(.directive, .option-list, .field-list, .footnote, .glossary,
+dl[class]:not(.option-list, .field-list, .footnote, .glossary,
               .simple):not(#¶) {
     margin-bottom: 1.5rem;
+}
+
+/* Make field lists more compact. */
+dl[class]:not(.option-list, .field-list, .footnote, .glossary, .simple)
+        dl.field-list {
+    grid-template-columns: fit-content(30%) auto;
+}
+dl[class]:not(.option-list, .field-list, .footnote, .glossary, .simple) dd {
+    margin-left: 1rem;
 }
 
 /* Hide the search shortcut, which is disabled. */
