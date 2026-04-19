@@ -984,21 +984,27 @@ class Application(wsgi.Dispatcher):
             for sp, _ in srcs:
                 dp = dst / sp.relative_to(src)
                 dsts.discard(dp)
-                cur = None
-                with contextlib.suppress(OSError):
-                    cur = dp.read_bytes()
-                if (new := util.read_stable(sp)) != cur:
-                    dp.parent.mkdir(parents=True, exist_ok=True)
-                    dp.write_bytes(new)
-                    os.utime(dp, ns=(dp.stat().st_atime_ns, mtime))
+                try:
+                    cur = dp.read_bytes() if dp.is_file() else None
+                    new = util.read_stable(sp)
+                    if new != cur:
+                        dp.parent.mkdir(parents=True, exist_ok=True)
+                        dp.write_bytes(new)
+                        os.utime(dp, ns=(dp.stat().st_atime_ns, mtime))
+                except Exception as e:
+                    log.error("Copy: %(src)s -> %(dst)s: %(exc)s", src=sp,
+                              dst=dp, exc=e)
 
             # Remove stale files.
             for dp in dsts:
-                dp.unlink()
-                for p in dp.parents:
-                    if p == dst: break
-                    with contextlib.suppress(OSError):
-                        p.rmdir()
+                try:
+                    dp.unlink()
+                    for p in dp.parents:
+                        if p == dst: break
+                        try: p.rmdir()
+                        except OSError: break
+                except Exception as e:
+                    log.error("Remove: %(path)s: %(exc)s", path=dp, exc=e)
 
     def remove(self, build):
         build.relative_to(self.opts.build)  # Ensure we're below the build dir

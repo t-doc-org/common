@@ -13,7 +13,7 @@ exclude_patterns = ['_build', '.DS_Store', 'Thumbs.db']
 
 extensions = [
     'myst_parser',
-    'sphinx.ext.duration',
+    # 'sphinx.ext.duration',
     'sphinx.ext.extlinks',
     'sphinx.ext.githubpages',
     'sphinx.ext.graphviz',
