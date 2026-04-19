@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-72)=
+## 0.72 *(2026-04-19)*
+
+- Added a [mechanism](reference/config.md#import-files) to the local server to
+  import out-of-repository files.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.71...0.72)
+
 (release-0-71)=
 ## 0.71 *(2026-03-21)*
 
