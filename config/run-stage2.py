@@ -70,68 +70,99 @@ def run(argv, stdin, stdout, stderr, base, ssl_ctx=None, **kwargs):
         i += 1
 
     # Create a environment builder.
-    builder = EnvBuilder(base, config, version, hermetic, ssl_ctx, stderr,
-                         debug or '--debug' in argv)
-    if print_key is not None:
-        v = builder.config
-        try:
-            for k in print_key.split('.'): v = v[k]
-        except KeyError:
-            return 1
-        stdout.write(str(v))
-        return 0
+    with EnvBuilder(base, config, version, hermetic, ssl_ctx, stderr,
+                    debug or '--debug' in argv) as builder:
+        if print_key is not None:
+            v = builder.config
+            try:
+                for k in print_key.split('.'): v = v[k]
+            except KeyError:
+                return 1
+            stdout.write(str(v))
+            return 0
 
-    # Find a matching venv, or create one if there is none.
-    envs, matching = builder.find()
-    if not matching:
-        stderr.write("Installing...\n")
-        env = builder.new()
-        env.create()
-        stderr.write("\n")
-    else:
-        env = matching[0]
+        # Check the Python version.
+        check_python(builder, stderr)
 
-    # Remove old venvs.
-    for e in envs:
-        if e is not env: e.remove()
+        # Find a matching venv, or create one if there is none.
+        envs, matching = builder.find()
+        if not matching:
+            stderr.write("Installing...\n")
+            env = builder.new()
+            env.create()
+            stderr.write("\n")
+        else:
+            env = matching[0]
 
-    # Check for available upgrades, and upgrade if requested.
+        # Remove old venvs.
+        for e in envs:
+            if e is not env: e.remove()
+
+        # Handle pending upgrades.
+        env = handle_upgrades(builder, env, stderr)
+
+        # Check for upgrades in the background and run the command.
+        with env.check_upgrade():
+            args = argv[1:] if len(argv) > 1 else builder.default_command
+            args[0] = env.bin_path(args[0])
+            return subprocess.run(args).returncode
+
+
+def check_python(builder, stderr):
+    py = builder.config.get('python', {})
+    if (v := version_tuple(py.get('minimum'))) and sys.version_info < v:
+        raise Exception(f"""\
+Python >={version_str(v)} is required \
+(currently used: {version_str(sys.version_info[:3])}).
+See <https://common.t-doc.org/install.html>.""")
+    if (v := version_tuple(py.get('recommend'))) and sys.version_info < v:
+        stderr.write(f"""\
+Python >={version_str(v)} is recommended \
+(currently used: {version_str(sys.version_info[:3])}).
+Please abort (Ctrl+C) and install or select a more recent version (see
+<https://common.t-doc.org/install.html>), or press ENTER to continue with the
+current version.
+""")
+        input()
+
+
+def handle_upgrades(builder, env, stderr):
+    upgrades = []
     reqs, reqs_up = env.requirements, env.requirements_upgrade
     if reqs_up is not None and reqs_up != reqs:
         cur, new = builder.version_from(reqs), builder.version_from(reqs_up)
-        stderr.write(f"""\
-An upgrade is available: {builder.package} {cur} => {new}
-Release notes: <https://common.t-doc.org/release-notes.html\
+        if new != cur:
+            upgrades.append(f" - {builder.package} {cur} => {new}\n")
+        else:
+            upgrades.append(f" - {builder.package} {new}\n")
+        upgrades.append(f"""\
+   Release notes: <https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}>
 """)
-        stderr.write("Would you like to install the upgrade (y/n)? ")
-        stderr.flush()
-        resp = input().lower()
-        stderr.write("\n")
-        if resp in ('y', 'yes', 'o', 'oui', 'j', 'ja'):
-            stderr.write("Upgrading...\n")
-            new_env = builder.new()
-            try:
-                new_env.create(reqs_up)
-                env = new_env
-            except Exception:
-                stderr.write("\nThe upgrade failed. Continuing with the "
-                             "current version.\n")
-            stderr.write("\n")
-
-    # Check for upgrades.
-    checker = threading.Thread(target=env.check_upgrade, daemon=True)
-    checker.start()
-    wait_until = time.monotonic() + 5
+    cur_py, new_py = env.py_version_info[:3], sys.version_info[:3]
+    if new_py != cur_py:
+        upgrades.append(f"""\
+ - Python {version_str(cur_py)} => {version_str(new_py)}
+""")
+    if not upgrades: return env
+    stderr.write("An upgrade is available:\n")
+    stderr.write("".join(upgrades))
+    stderr.write("Would you like to upgrade (y/n)? ")
+    stderr.flush()
+    resp = input().lower()
+    stderr.write("\n")
+    if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return env
+    stderr.write("Upgrading...\n")
     try:
-        # Run the command.
-        args = argv[1:] if len(argv) > 1 else builder.default_command
-        args[0] = env.bin_path(args[0])
-        rc = subprocess.run(args).returncode
-    finally:
-        # Give the upgrade checker a chance to run at least for a bit.
-        checker.join(wait_until - time.monotonic())
-    return rc
+        new_env = builder.new()
+        new_env.create(reqs_up)
+        env = new_env
+    except Exception as e:
+        if builder.debug: raise
+        stderr.write(f"\nThe upgrade failed: {e}\n"
+                     "Continuing with the previous version.\n")
+    stderr.write("\n")
+    return env
 
 
 class Namespace(dict):
@@ -147,6 +178,20 @@ def merge_dict(dst, src):
             dst[k] = sv
 
 
+def version_str(info):
+    return '.'.join(str(v) for v in info)
+
+
+def version_tuple(version):
+    if not version: return None
+    return tuple(try_int(v) for v in version.split('.'))
+
+
+def try_int(v):
+    try: return int(v)
+    except ValueError: return v
+
+
 version_re = re.compile(r'[0-9][0-9a-z.!+]*')
 tag_re = re.compile(r'[a-z][a-z0-9-]*')
 
@@ -154,6 +199,12 @@ def is_version(version): return version_re.match(version)
 def is_tag(version): return tag_re.match(version)
 def is_dev(version): return version == 'dev'
 def is_wheel(version): return pathlib.Path(version).resolve().is_file()
+
+
+def thread(fn):
+    t = threading.Thread(target=fn, daemon=True)
+    t.start()
+    return t
 
 
 @contextlib.contextmanager
@@ -198,6 +249,14 @@ class Env:
                                                 vars=vars)),
                 sysconfig.get_config_vars().get('EXE', ''))
 
+    @functools.cached_property
+    def py_version_info(self):
+        out = self.python('-c',
+            'import sys; '
+            'print(".".join(str(v) for v in sys.version_info), end="")',
+            capture_output=True)
+        return tuple(try_int(v) for v in out.split('.'))
+
     def bin_path(self, name):
         scripts, ext = self.sysinfo
         return scripts / f'{name}{ext}'
@@ -224,24 +283,37 @@ class Env:
             self.builder.out.write(f"ERROR: {e}")
 
     def uv(self, *args, **kwargs):
-        p = subprocess.run((self.bin_path('uv'),) + args,
+        p = subprocess.run((self.bin_path('uv'), *args),
+                           stdin=subprocess.DEVNULL, text=True, **kwargs)
+        if p.returncode != 0: raise Exception(p.stderr)
+        return p.stdout
+
+    def python(self, *args, **kwargs):
+        p = subprocess.run((self.bin_path('python'), '-P', *args),
                            stdin=subprocess.DEVNULL, text=True, **kwargs)
         if p.returncode != 0: raise Exception(p.stderr)
         return p.stdout
 
     def pip(self, *args, json_output=False, **kwargs):
-        p = subprocess.run((self.bin_path('python'), '-P', '-m', 'pip',
-                            '--require-virtualenv') + args,
-                           stdin=subprocess.DEVNULL, **kwargs)
-        if p.returncode != 0: raise Exception(p.stderr)
-        if not json_output: return p.stdout
-        return json.loads(p.stdout, object_pairs_hook=Namespace)
+        out = self.python('-m', 'pip', '--require-virtualenv', *args, **kwargs)
+        if not json_output: return out
+        return json.loads(out, object_pairs_hook=Namespace)
 
+    @contextlib.contextmanager
     def check_upgrade(self):
+        th = None
+        if not (is_dev(v := self.builder.version) or is_wheel(v)):
+            th = thread(self._check_upgrade)
+            wait_until = time.monotonic() + 5
         try:
-            config = self.builder.fetch_and_cache_config()
-            if is_dev(v := self.builder.version) or is_wheel(v): return
-            reqs = self.builder.requirements(config=config)
+            yield
+        finally:
+            # Give the thread a chance to run at least for a bit.
+            if th is not None: th.join(wait_until - time.monotonic())
+
+    def _check_upgrade(self):
+        try:
+            reqs = self.builder.requirements(config=self.builder.live_config())
             if reqs != self.requirements:
                 with write_atomic(
                         self.path / self.requirements_upgrade_txt, 'w') as f:
@@ -257,15 +329,30 @@ class EnvBuilder(venv.EnvBuilder):
 
     def __init__(self, base, config, version, hermetic, ssl_ctx, out, debug):
         super().__init__(with_pip=True)
+        self.lock = threading.Lock()
         self.base = base
         self.root = base / self.venv_root
         self.config_url = config
+        self._live_config = None
+        self._fetch_thread = None
         self.ssl_ctx = ssl_ctx
         self.out, self.debug = out, debug
         if version is None: version = self.config['version']
         if not (is_version(version) or is_tag(version) or is_wheel(version)):
             raise Exception(f"Invalid version: {version}")
         self.version, self.hermetic = version, hermetic
+
+    def __enter__(self):
+        with self.lock: fetched = self._live_config is not None
+        if not fetched:
+            self._fetch_thread = thread(self.live_config)
+            self._fetch_wait_until = time.monotonic() + 5
+        return self
+
+    def __exit__(self, typ, value, tb):
+        if (th := self._fetch_thread) is not None:
+            # Give the thread a chance to run at least for a bit.
+            th.join(self._fetch_wait_until - time.monotonic())
 
     @functools.cached_property
     def package(self):
@@ -277,18 +364,21 @@ class EnvBuilder(venv.EnvBuilder):
             data = (self.root / self.run_toml).read_bytes()
             config = tomllib.loads(data.decode('utf-8'))
         except Exception:
-            return self.fetch_and_cache_config()
+            return self.live_config()
         self.merge_local_configs(config)
         return config
 
-    def fetch_and_cache_config(self):
-        data = self.fetch(self.run_toml)
-        config = tomllib.loads(data.decode('utf-8'))
-        self.root.mkdir(exist_ok=True)
-        with write_atomic(self.root / self.run_toml, 'wb') as f:
-            f.write(data)
-        self.merge_local_configs(config)
-        return config
+    def live_config(self):
+        with self.lock:
+            if (c := self._live_config) is not None: return c
+            data = self.fetch(self.run_toml)
+            config = tomllib.loads(data.decode('utf-8'))
+            self.root.mkdir(exist_ok=True)
+            with write_atomic(self.root / self.run_toml, 'wb') as f:
+                f.write(data)
+            self.merge_local_configs(config)
+            self._live_config = config
+            return config
 
     def fetch(self, name):
         if (url := self.config_url) is None:
