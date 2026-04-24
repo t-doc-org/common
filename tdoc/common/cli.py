@@ -215,7 +215,7 @@ def upgrade_database(opts, database, db, version, to_version, indent=""):
     database.backup(db, backup)
     def on_version(v): o.write(f"{indent}Upgrading database to version {v}\n")
     database.upgrade(version=to_version, on_version=on_version)
-    o.write(f"{indent}Database upgraded successfully\n")
+    o.write(f"{indent}Database upgraded successfully\n\n")
 
 
 def comma_separated(s):
