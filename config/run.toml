@@ -7,6 +7,10 @@ testing = "0.72"
 stable = "0.72"
 previous = "0.71"
 
+[python]
+minimum = "3.12"
+recommend = "3.13"
+
 [defaults]
 command = ["tdoc", "serve"]
 command_10 = ["--open"]
