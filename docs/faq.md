@@ -51,12 +51,30 @@ version of the package can be used until a fix is released.
 
 ## Editing
 
+(faq-new-remote-head)=
+### Why does `hg push` fail with "push creates new remote head"?
+
+When `hg push` fails with "push creates new remote head", it means that the
+remote repository contains changes that aren't available locally, usually pushed
+by someone else. These changes must first be pulled from the remote and merged
+before the push can succeed. **Do not** use `hg push --force` to try and
+force-push the new head.
+
+```{code-block} shell-session
+hg pull
+hg merge
+# Resolve conflicts if any, and check the merge result.
+hg commit
+```
+
+It may be worth reading a [Mercurial tutorial](edit.md) to get familiar with
+basic version control workflows.
+
 (faq-changes-not-deployed)=
 ### Why do my changes not show up on the deployed site?
 
-- Go to the [`t-doc-org`](https://github.com/t-doc-org) organization page and
-  check the "Publish" status for the site. If it is failing, click on the badge
-  and check the logs of the failing workflow.
+- Check the "Publish" status on the badge at the bottom of the left sidebar. If
+  it is failing, click on the badge and check the logs of the failing workflow.
 
 - Check that the `main` bookmark is active and pointing to the repository head.
   Run:
@@ -66,10 +84,11 @@ version of the package can be used until a fix is released.
   ```
 
   The command should output the current revision, followed by `tip main`. If it
-  doesn't, the bookmark can be moved to the current revision with:
+  doesn't, the bookmark must be moved to the current revision and pushed with:
 
   ```{code-block} shell-session
   hg bookmark main
+  hg push -B main
   ```
 
 ## Troubleshooting
