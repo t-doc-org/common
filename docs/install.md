@@ -58,16 +58,26 @@ t-doc requires the following software to be installed:
 
 #### Upgrades
 
-Available upgrades for these packages can be displayed and installed with
-`winget upgrade`.
+- If a new minor version of Python is recommended (e.g. 3.12.5 is installed and
+  3.13 is recommended), install the new version.
 
-```{code-block} shell-session
-winget upgrade
-winget upgrade --id Python.Python.3.13
-winget upgrade --id Graphviz.Graphviz
-winget upgrade --id TortoiseHg.TortoiseHg
-winget upgrade --id Microsoft.WindowsTerminal
-```
+  ```{code-block} shell-session
+  winget install --id Python.Python.3.13
+  ```
+
+- Otherwise, upgrade the installed minor version.
+
+  ```{code-block} shell-session
+  winget upgrade --id Python.Python.3.13
+  ```
+
+- Upgrade the other packages.
+
+  ```{code-block} shell-session
+  winget upgrade --id Graphviz.Graphviz
+  winget upgrade --id TortoiseHg.TortoiseHg
+  winget upgrade --id Microsoft.WindowsTerminal
+  ```
 
 ### macOS
 
@@ -87,7 +97,7 @@ winget upgrade --id Microsoft.WindowsTerminal
 
 - If this is the first time you access a t-doc repository, generate a repository
   access password.
-  - Go to [`tdoc.org`](https://t-doc.org/) and ensure you are logged in.
+  - Go to [`t-doc.org`](https://t-doc.org/) and ensure you are logged in.
   - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
     <span class="fa fa-gear"></span> Settings", then open "Repository access".
   - Click "Reset" to generate the password. Keep the dialog open for the next
