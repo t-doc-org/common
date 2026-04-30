@@ -41,17 +41,17 @@ def main(argv, stdin, stdout, stderr):
     """Run the command."""
     threading.current_thread().name = 'main'
     parser = console.get_arg_parser(stdin, stdout, stderr)(
-        prog=pathlib.Path(argv[0]).name, description="Manage a t-doc book.")
+        prog=pathlib.Path(argv[0]).name, description="Manage a t-doc site.")
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    p = root.add_parser('build', help="Build a book.")
+    p = root.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
     add_options(p, sphinx=True)
 
-    p = root.add_parser('clean', help="Clean the build products of a book.")
+    p = root.add_parser('clean', help="Clean the build products of a site.")
     p.set_defaults(handler=cmd_clean)
     add_options(p, sphinx=True)
 
@@ -59,7 +59,7 @@ def main(argv, stdin, stdout, stderr):
     add_log_commands(root)
     add_repo_commands(root)
 
-    p = root.add_parser('serve', help="Serve a book locally.")
+    p = root.add_parser('serve', help="Serve a site locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument
     arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
