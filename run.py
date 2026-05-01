@@ -55,22 +55,26 @@ class Stage2:
                     base=self.base, ssl_ctx=self.ssl_ctx)
 
     def get(self):
+        if (data := self.read_local()) is not None:
+            return self.exec(data)
         with contextlib.suppress(Exception):
             data = (self.venv / self.run_stage2).read_bytes()
             mod = self.exec(data)
+            self.wait_until = time.monotonic() + 5
             self.updater = threading.Thread(target=self.update, args=(data,),
                                             daemon=True)
             self.updater.start()
-            self.wait_until = time.monotonic() + 5
             return mod
         data = self.fetch()
         mod = self.exec(data)
         self.write(data)
         return mod
 
-    def fetch(self):
+    def read_local(self):
         with contextlib.suppress(Exception):
             return (self.base / 'config' / self.run_stage2).read_bytes()
+
+    def fetch(self):
         with request.urlopen(
                 f'{REPO}/raw/refs/heads/main/config/{self.run_stage2}',
                 context=self.ssl_ctx, timeout=30) as f:
