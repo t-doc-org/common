@@ -81,7 +81,8 @@ def main(argv, stdin, stdout, stderr):
         with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
             for repo in repos:
                 def test(repo=repo):
-                    run_tests(tests, repo, label(repo), wheel, write,
+                    prefix = label(repo)
+                    run_tests(tests, repo, wheel, lambda t: write(prefix + t),
                               interactive)
                 tasks[repo] = ex.submit(test)
 
@@ -118,10 +119,10 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, label, wheel, write, interactive):
+def run_tests(tests, repo, wheel, write, interactive):
     # Clone the document repository.
     repo_dir = tests / repo
-    write(f"{label}Cloning\n")
+    write("Cloning\n")
     try:
         run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
             repo_dir, env=os.environ | {'GIT_ASKPASS': 'true'})
@@ -151,10 +152,10 @@ def run_tests(tests, repo, label, wheel, write, interactive):
         return pout
 
     # Run CLI tests.
-    exercise_cli(repo_dir, label, write, vrun)
+    exercise_cli(repo_dir, write, vrun)
 
     # Run the local server, wait for it to serve or exit.
-    write(f"{label}Running local server\n")
+    write("Running local server\n")
     args = ['tdoc', 'serve', '--debug', '--exit-on-failure']
     if interactive: args += ['--exit-on-idle=2', '--open']
     # TODO: Manage server process in a background thread
@@ -164,11 +165,11 @@ def run_tests(tests, repo, label, wheel, write, interactive):
         out = io.StringIO()
         for line in p.stdout:
             if out is None:
-                write(f"{label}{line}")
+                write(line)
                 continue
             out.write(line)
             if (m := serving_re.match(line)) is None: continue
-            write(f"{label}{line}")
+            write(line)
             base = m[1].rstrip('/')
             out = None
 
@@ -186,17 +187,17 @@ def run_tests(tests, repo, label, wheel, write, interactive):
                 return HTTPStatus(f.status), f.headers, data
 
             # Run server tests.
-            exercise_server(label, write, urlopen)
+            exercise_server(write, urlopen)
             if not interactive:
-                write(f"{label}Terminating local server\n")
+                write("Terminating local server\n")
                 urlopen('/_api/terminate', json={'rc': 0})
     except BaseException as e:
         error = e
     finally:
         if error is not None:
-            write(f"{label}Killing local server\n")
+            write("Killing local server\n")
             p.terminate()
-        write(f"{label}Waiting for local server termination\n")
+        write("Waiting for local server termination\n")
         if p.wait() != 0 and error is None:
             output = f"\n\n{out.getvalue()}" if out is not None else ""
             raise Error(
@@ -204,21 +205,21 @@ def run_tests(tests, repo, label, wheel, write, interactive):
         if error is not None: raise error
 
 
-def exercise_cli(repo_dir, label, write, vrun):
+def exercise_cli(repo_dir, write, vrun):
     # Get version information. This creates the venv.
-    write(f"{label}Getting version information\n")
+    write("Getting version information\n")
     vrun('tdoc', 'version', '--debug')
 
     # Build the HTML.
-    write(f"{label}Building HTML\n")
+    write("Building HTML\n")
     vrun('tdoc', 'build', '--debug', 'html')
 
     # Clean the HTML output.
-    write(f"{label}Cleaning HTML output\n")
+    write("Cleaning HTML output\n")
     vrun('tdoc', 'clean', '--debug')
 
     # Create the store.
-    write(f"{label}Setting up logging\n")
+    write("Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
     (repo_dir / 'tdoc.local.toml').write_text("""\
 [logging]
@@ -246,7 +247,7 @@ path = "tmp/store.sqlite"
     ])
 
     # Create the store.
-    write(f"{label}Creating store\n")
+    write("Creating store\n")
     vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3', out=[
         r'^Created \(version: 3\): .*store\.sqlite$',
     ])
@@ -263,7 +264,7 @@ path = "tmp/store.sqlite"
     ])
 
     # Run commands interacting with the store.
-    write(f"{label}Interacting with store\n")
+    write("Interacting with store\n")
     vrun('tdoc', 'user', 'create', '--debug', 'test-user')
     vrun('tdoc', 'user', 'list', '--debug', out=[
         r'^admin +\([ 0-9]+\) +created: ',
@@ -311,7 +312,7 @@ path = "tmp/store.sqlite"
     ])
 
     # Query the log database.
-    write(f"{label}Querying log database\n")
+    write("Querying log database\n")
     vrun(
         'tdoc', 'log', 'query', '--debug', '--utc', '--begin=10m', '--end=0s',
         '--level=info', "--where=record ->> '$.module' = 'cli'",
@@ -326,9 +327,9 @@ path = "tmp/store.sqlite"
     ])
 
 
-def exercise_server(label, write, urlopen):
+def exercise_server(write, urlopen):
     # Check server health.
-    write(f"{label}Checking local server health\n")
+    write("Checking local server health\n")
     urlopen('/_api/health')
 
 
