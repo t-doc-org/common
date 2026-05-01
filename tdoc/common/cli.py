@@ -78,8 +78,8 @@ def main(argv, stdin, stdout, stderr):
         help="Terminate the server on build failure.")
     arg('--exit-on-idle', metavar='DURATION', dest='exit_on_idle', type=float,
         default=0.0,
-        help="The time in seconds after the last connection closes when the "
-             "server terminates (default: %(default)s).")
+        help="The time in seconds after the last watch connection closes when "
+             "the server terminates (default: %(default)s).")
     arg('--ignore', metavar='REGEXP', dest='ignore', type='regexp',
         default=f'(^|{re.escape(os.sep)})__pycache__$',
         help="A regexp matching files and directories to ignore from watching "

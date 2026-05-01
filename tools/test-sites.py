@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 from concurrent import futures
+from http import HTTPStatus
 import io
+import json
 import os
 import pathlib
 import re
@@ -13,6 +15,7 @@ import stat
 import subprocess
 import sys
 import threading
+from urllib import request
 
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
@@ -25,6 +28,22 @@ def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve().parent
     os.chdir(base)
     tests = base / 'tmp' / 'tests'
+
+    # Parse command-line arguments.
+    interactive = False
+    i = 1
+    while True:
+        if i >= len(argv) or not (arg := argv[i]).startswith('--'):
+            argv = argv[:1] + argv[i:]
+            break
+        elif arg == '--':
+            argv = argv[:1] + argv[i + 1:]
+            break
+        elif arg == '--interactive':
+            interactive = True
+        else:
+            raise Exception(f"Unknown option: {arg}")
+        i += 1
 
     # Find repository names and URLs.
     repos = argv[1:]
@@ -43,9 +62,11 @@ def main(argv, stdin, stdout, stderr):
     def on_error(fn, path, e):
         if path == tests: return
         try:
-            # Git on Windows sets some files read-only. Remove the flag and
+            # Git on Windows sets some files read-only. Set the write bit and
             # try again.
-            os.chmod(path, stat.S_IREAD | stat.S_IWRITE, follow_symlinks=False)
+            st = os.stat(path, follow_symlinks=False)
+            os.chmod(path, (st.st_mode & 0o777) | stat.S_IWUSR,
+                     follow_symlinks=False)
             fn(path)
         except OSError:
             stderr.write(f"ERROR: {fn.__name__}: {path}: {e}\n")
@@ -60,7 +81,8 @@ def main(argv, stdin, stdout, stderr):
         with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
             for repo in repos:
                 def test(repo=repo):
-                    run_tests(tests, repo, label(repo), wheel, write)
+                    run_tests(tests, repo, label(repo), wheel, write,
+                              interactive)
                 tasks[repo] = ex.submit(test)
 
         # Display output of failures.
@@ -96,7 +118,7 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, label, wheel, write):
+def run_tests(tests, repo, label, wheel, write, interactive):
     # Clone the document repository.
     repo_dir = tests / repo
     write(f"{label}Cloning\n")
@@ -110,12 +132,17 @@ def run_tests(tests, repo, label, wheel, write):
     def vrun(*args, wait=True, out=(), **kwargs):
         p = subprocess.Popen(
             (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
-             '--') + args,
+             '--', *args),
             cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if not wait: return p
-        pout, _ = p.communicate()
-        if p.wait() != 0:
+        with p:
+            try:  # Do the same as subprocess.run()
+                pout, _ = p.communicate()
+            except BaseException:
+                p.kill()
+                raise
+        if p.poll() != 0:
             raise Error(f"Command: {shlex.join(args)}\nOutput:\n{pout}")
         for regex in out:
             if not re.search(regex, pout, re.MULTILINE):
@@ -123,6 +150,61 @@ def run_tests(tests, repo, label, wheel, write):
                             f"Output:\n{pout}")
         return pout
 
+    # Run CLI tests.
+    exercise_cli(repo_dir, label, write, vrun)
+
+    # Run the local server, wait for it to serve or exit.
+    write(f"{label}Running local server\n")
+    args = ['tdoc', 'serve', '--debug', '--exit-on-failure']
+    if interactive: args += ['--exit-on-idle=2', '--open']
+    # TODO: Manage server process in a background thread
+    error = None
+    p = vrun(*args, wait=False)
+    try:
+        out = io.StringIO()
+        for line in p.stdout:
+            if out is None:
+                write(f"{label}{line}")
+                continue
+            out.write(line)
+            if (m := serving_re.match(line)) is None: continue
+            write(f"{label}{line}")
+            base = m[1].rstrip('/')
+            out = None
+
+            def urlopen(url, json=None, **kwargs):
+                data = None
+                headers = {}
+                if json is not None:
+                    data = to_json(json).encode('utf-8')
+                    headers['Content-Type'] = 'application/json'
+                    headers['Content-Length'] = str(len(data))
+                req = request.Request(f'{base}{url}', data=data,
+                                      headers=headers)
+                with request.urlopen(req, **kwargs) as f:
+                    data = f.read()
+                return HTTPStatus(f.status), f.headers, data
+
+            # Run server tests.
+            exercise_server(label, write, urlopen)
+            if not interactive:
+                write(f"{label}Terminating local server\n")
+                urlopen('/_api/terminate', json={'rc': 0})
+    except BaseException as e:
+        error = e
+    finally:
+        if error is not None:
+            write(f"{label}Killing local server\n")
+            p.terminate()
+        write(f"{label}Waiting for local server termination\n")
+        if p.wait() != 0 and error is None:
+            output = f"\n\n{out.getvalue()}" if out is not None else ""
+            raise Error(
+                f"The local server has terminated with an error.{output}")
+        if error is not None: raise error
+
+
+def exercise_cli(repo_dir, label, write, vrun):
     # Get version information. This creates the venv.
     write(f"{label}Getting version information\n")
     vrun('tdoc', 'version', '--debug')
@@ -243,25 +325,11 @@ path = "tmp/store.sqlite"
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
     ])
 
-    # Run the local server, wait for it to serve or exit.
-    write(f"{label}Running local server\n")
-    p = vrun('tdoc', 'serve', '--debug', '--exit-on-failure',
-             '--exit-on-idle=2', '--open', wait=False)
-    try:
-        out = io.StringIO()
-        for line in p.stdout:
-            if out is None:
-                write(f"{label}{line}")
-                continue
-            out.write(line)
-            if (m := serving_re.match(line)) is None: continue
-            write(f"{label}{line}")
-            out = None
-    finally:
-        write(f"{label}Local server terminated\n")
-        if p.wait() == 0: return
-        output = f"\n\n{out.getvalue()}" if out is not None else ""
-        raise Error(f"The local server has terminated with an error.{output}")
+
+def exercise_server(label, write, urlopen):
+    # Check server health.
+    write(f"{label}Checking local server health\n")
+    urlopen('/_api/health')
 
 
 class CommandFailed(Error):
@@ -279,6 +347,9 @@ def run(*args, **kwargs):
                               text=True, check=True, **kwargs).stdout
     except subprocess.CalledProcessError as e:
         raise CommandFailed(e)
+
+
+to_json = json.JSONEncoder(separators=(',', ':')).encode
 
 
 if __name__ == '__main__':
