@@ -34,6 +34,8 @@ from . import __project__, __version__, api, config, console, deps, logs, \
 
 log = logs.logger(__name__)
 default_port = 8000
+rc_build_failure = 1
+rc_source_change = 123
 
 
 @console.main
@@ -70,6 +72,8 @@ def main(argv, stdin, stdout, stderr):
     arg('--delay', metavar='DURATION', dest='delay', type=float, default=1.0,
         help="The delay in seconds between detecting a source change and "
              "triggering a build (default: %(default)s).")
+    arg('--exit-on-change', action='store_true', dest='exit_on_change',
+        help="Terminate the server on changes.")
     arg('--exit-on-failure', action='store_true', dest='exit_on_failure',
         help="Terminate the server on build failure.")
     arg('--exit-on-idle', metavar='DURATION', dest='exit_on_idle', type=float,
@@ -111,6 +115,7 @@ def main(argv, stdin, stdout, stderr):
         opts.config = config.Config.find(pathlib.Path.cwd())
     opts.cfg = config.Config.load(
         opts.config.resolve() if opts.config is not None else None)
+    if opts.restart_on_change: return restarter(opts)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True, raise_exc=opts.debug,
                         on_upgrade=functools.partial(on_upgrade, opts),
@@ -119,6 +124,16 @@ def main(argv, stdin, stdout, stderr):
         log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
                  argv=argv)
         return opts.handler(opts)
+
+
+def restarter(opts):
+    argv = ['--exit-on-change' if a == '--restart-on-change' else a
+            for a in sys.orig_argv]
+    while True:
+        opts.stderr.write("Starting server as a subprocess\n")
+        p = subprocess.run(argv)
+        if p.returncode != rc_source_change: return p.returncode
+        time.sleep(0.1)
 
 
 def disable_db_logs(fn):
@@ -529,13 +544,7 @@ def cmd_serve(opts):
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
-            opts.restart_on_change = False
             opts.stderr.write("Interrupted, exiting\n")
-
-    if opts.restart_on_change:
-        opts.stdout.flush()
-        opts.stderr.flush()
-        os.execv(sys.argv[0], sys.argv)
     return app.returncode
 
 
@@ -879,12 +888,13 @@ class Application(wsgi.Dispatcher):
                 prev = mtime + delay - interval
                 continue
             if prev_mtime != 0:
-                if self.opts.restart_on_change:
-                    self.opts.stdout.write(
-                        "\nSource change detected, restarting\n")
+                if self.opts.exit_on_change:
+                    self.opts.stderr.write(
+                        "\nSource change detected, exiting\n")
+                    self.returncode = rc_source_change
                     self.server.shutdown()
                     break
-                self.opts.stdout.write(
+                self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
             if self.build(build_next, mtime):
@@ -947,7 +957,7 @@ class Application(wsgi.Dispatcher):
         except Exception as e:
             log.error("Build: %(exc)s", exc=e)
         if self.opts.exit_on_failure:
-            self.returncode = 1
+            self.returncode = rc_build_failure
             self.server.shutdown()
         return False
 
@@ -1023,7 +1033,7 @@ class Application(wsgi.Dispatcher):
         host, port = self.server.host_port
         if host in ('', '::', '0.0.0.0'): host = socket.getfqdn()
         if ':' in host: host = f'[{host}]'
-        o = self.opts.stdout
+        o = self.opts.stderr
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
         o.flush()
         if self.opts.open and not self.opened:
@@ -1032,7 +1042,7 @@ class Application(wsgi.Dispatcher):
 
     def print_upgrade(self):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
-        o = self.opts.stdout
+        o = self.opts.stderr
         with contextlib.suppress(Exception):
             reqs = prefix_read('requirements.txt')
             reqs_up = prefix_read('requirements-upgrade.txt')
