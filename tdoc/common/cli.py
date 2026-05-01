@@ -115,7 +115,8 @@ def main(argv, stdin, stdout, stderr):
         opts.config = config.Config.find(pathlib.Path.cwd())
     opts.cfg = config.Config.load(
         opts.config.resolve() if opts.config is not None else None)
-    if opts.restart_on_change: return restarter(opts)
+    if opts.handler == cmd_serve and opts.restart_on_change:
+        return restarter(opts)
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
                         level=logs.WARNING, stream=True, raise_exc=opts.debug,
                         on_upgrade=functools.partial(on_upgrade, opts),
