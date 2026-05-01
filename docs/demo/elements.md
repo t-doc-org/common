@@ -3,11 +3,6 @@
 
 # Elements
 
-## Document metadata
-
-This section configures page metadata with a {rst:dir}`metadata` directive to
-hide solutions by default.
-
 ```{metadata}
 solutions: hide
 points:

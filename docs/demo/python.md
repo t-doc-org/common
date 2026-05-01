@@ -285,8 +285,8 @@ print(f"Hello, {name}!")
 
 ## Packages
 
-Additional packages can be made available through the `exec:python:packages`
-metadata, which holds a
+Additional packages can be made available through the `exec:python:packages:`
+{rst:dir}`metadata`, which holds a
 [list of packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages)
 to load.
 

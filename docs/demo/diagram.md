@@ -10,7 +10,8 @@ mermaid:
 
 ## Mermaid
 
-The default theme is set in the page {rst:dir}`metadata`.
+The default theme is set in the `mermaid:` key of the document
+{rst:dir}`metadata`.
 
 ### Flowchart
 
