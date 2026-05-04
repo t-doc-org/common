@@ -17,6 +17,7 @@ jobs:
         with:
           build-pkgs: true
           build-sites: false
+          ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Checkout repository
         uses: actions/checkout@v6
         with:

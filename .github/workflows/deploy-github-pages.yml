@@ -28,6 +28,8 @@ jobs:
       - name: Set up for running t-doc
         id: setup
         uses: t-doc-org/common/.github/actions/setup@main
+        with:
+          ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Checkout repository
         uses: actions/checkout@v6
         with:

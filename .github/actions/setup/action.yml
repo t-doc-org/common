@@ -9,6 +9,9 @@ inputs:
   build-sites:
     description: "When true, install packages required for building sites."
     default: true
+  ssh-key:
+    description: "SSH key to use to checkout the common repository."
+    required: true
 outputs:
   python-path:
     description: "The absolute path to the Python or PyPy executable."
@@ -23,7 +26,7 @@ runs:
         repository: t-doc-org/common
         ref: main
         path: common
-        ssh-key: ${{ secrets.DEPLOY_COMMON }}
+        ssh-key: ${{ inputs.ssh-key }}
     - name: Get recommended Python version
       id: version
       shell: python
