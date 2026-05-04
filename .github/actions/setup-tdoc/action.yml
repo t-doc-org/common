@@ -1,10 +1,10 @@
 # Copyright 2026 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-name: Set up Python
+name: Set up for running t-doc
 inputs:
   build:
-    description: "When true, install packages required for building."
+    description: "When true, install packages required for building Python packages."
     type: boolean
     default: false
   run-toml:
@@ -19,6 +19,14 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Update system package index
+      shell: bash
+      run: sudo apt-get update
+    - name: Install system packages
+      shell: bash
+      run: |
+        sudo apt-get install --yes \
+            graphviz
     - name: Get recommended Python version
       id: version
       shell: python
