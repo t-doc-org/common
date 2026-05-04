@@ -28,7 +28,6 @@ classifiers = [
     "Topic :: Education",
     "Topic :: Internet :: WWW/HTTP :: Site Management",
 ]
-requires-python = ">=3.12"
 dependencies = [
     "bcrypt>=5.0.0",
     "certifi>=2026.1.4",
@@ -44,7 +43,7 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
 ]
-dynamic = ["version"]
+dynamic = ["requires-python", "version"]
 
 [project.urls]
 Code = "https://github.com/t-doc-org/common"

@@ -11,6 +11,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import tomllib
 from urllib import parse
 import zipfile
 
@@ -41,6 +42,9 @@ class HookMixin:
 
 class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
+        with (self.top / 'config' / 'run.toml').open('rb') as f:
+            run_toml = tomllib.load(f)
+        metadata['requires-python'] = f'>={run_toml['python']['minimum']}'
         with (self.top / LICENSES).open('w') as out:
             out.write(f"""\
 This file lists the dependencies that are partially or fully included in this
