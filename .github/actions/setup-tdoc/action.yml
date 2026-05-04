@@ -3,7 +3,11 @@
 
 name: Set up for running t-doc
 inputs:
-  build:
+  build-sites:
+    description: "When true, install packages required for building sites."
+    type: boolean
+    default: true
+  build-pkgs:
     description: "When true, install packages required for building Python packages."
     type: boolean
     default: false
@@ -20,9 +24,11 @@ runs:
   using: composite
   steps:
     - name: Update system package index
+      if: ${{ inputs.build-sites }}
       shell: bash
       run: sudo apt-get update
     - name: Install system packages
+      if: ${{ inputs.build-sites }}
       shell: bash
       run: |
         sudo apt-get install --yes \
@@ -44,7 +50,7 @@ runs:
       with:
         python-version: ${{ steps.version.outputs.version }}
     - name: Install build packages
-      if: ${{ inputs.build }}
+      if: ${{ inputs.build-pkgs }}
       shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -m pip install build

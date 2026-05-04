@@ -15,7 +15,8 @@ jobs:
         id: python
         uses: t-doc-org/common/.github/actions/setup-tdoc@main
         with:
-          build: true
+          build-pkgs: true
+          build-sites: false
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Build sdist and wheel
