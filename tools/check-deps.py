@@ -54,8 +54,8 @@ class Checker:
             i += 1
 
     @functools.cached_property
-    def pyproject(self):
-        with (self.base / 'pyproject.toml').open('rb') as f:
+    def run_toml(self):
+        with (self.base / 'config' / 'run.toml').open('rb') as f:
             return tomllib.load(f)
 
     def write(self, s): return self.stdout.write(s)
@@ -120,8 +120,8 @@ class Checker:
             with tempfile.NamedTemporaryFile('w') as f:
                 f.write(f"""\
 # /// script
-# requires-python = {self.pyproject['project']['requires-python']!r}
-# dependencies = [{p.stem!r}]
+# requires-python = '>={self.run_toml['python']['minimum']}'
+# dependencies = ['{p.stem}']
 # ///
 """)
                 f.flush()
