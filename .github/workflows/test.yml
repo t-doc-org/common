@@ -11,7 +11,7 @@ jobs:
     name: Test sites
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Python
+      - name: Set up for running t-doc
         id: python
         uses: t-doc-org/common/.github/actions/setup-tdoc@main
         with:

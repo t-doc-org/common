@@ -17,6 +17,8 @@ import sys
 import threading
 from urllib import request
 
+# TODO: Limit concurrency
+
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
 

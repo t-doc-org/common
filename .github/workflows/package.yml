@@ -11,16 +11,13 @@ jobs:
     name: Build package
     runs-on: ubuntu-latest
     steps:
+      - name: Set up for running t-doc
+        id: python
+        uses: t-doc-org/common/.github/actions/setup-tdoc@main
+        with:
+          build: true
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install Python
-        id: python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      - name: Install build packages
-        run: |
-          ${{ steps.python.outputs.python-path }} -m pip install build
       - name: Build sdist and wheel
         run: |
           ${{ steps.python.outputs.python-path }} -m build
