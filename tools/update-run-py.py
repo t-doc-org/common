@@ -14,7 +14,7 @@ def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve().parent
     run_py = base / run_py_name
     if not pathlib.Path(sys.executable).is_relative_to(base):
-        return subprocess.run([run_py, 'python', '-P'] + argv).returncode
+        return subprocess.run((run_py, 'python', '-P', *argv)).returncode
 
     # Update the trusted CA bundle.
     import certifi
