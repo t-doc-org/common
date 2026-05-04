@@ -32,6 +32,7 @@ def main(argv, stdin, stdout, stderr):
     tests = base / 'tmp' / 'tests'
 
     # Parse command-line arguments.
+    concurrency = 'auto'
     interactive = False
     i = 1
     while True:
@@ -41,6 +42,10 @@ def main(argv, stdin, stdout, stderr):
         elif arg == '--':
             argv = argv[:1] + argv[i + 1:]
             break
+        elif arg.startswith('--concurrency='):
+            concurrency = arg[14:]
+            if concurrency not in ('auto', 'max'):
+                concurrency = int(concurrency)
         elif arg == '--interactive':
             interactive = True
         else:
@@ -79,8 +84,15 @@ def main(argv, stdin, stdout, stderr):
         wheel = build_wheel(tests)
 
         # Run tests.
+        if concurrency == 'auto':
+            max_workers = pc if (pc := os.process_cpu_count()) is not None \
+                          else c if (c := os.cpu_count()) is not None else None
+        elif concurrency == 'max':
+            max_workers = len(repos)
+        else:
+            max_workers = concurrency
         tasks = {}
-        with futures.ThreadPoolExecutor(max_workers=len(repos)) as ex:
+        with futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
             for repo in repos:
                 def test(repo=repo):
                     prefix = label(repo)
