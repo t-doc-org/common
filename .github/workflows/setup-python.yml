@@ -8,13 +8,14 @@ on:
       build:
         description: "When true, install packages required for building."
         type: boolean
-        required: false
+        default: false
       run-toml:
-        description: "The URL of the run.toml file"
+        description: "The URL of the run.toml file."
+        type: string
         default: https://github.com/t-doc-org/common/raw/refs/heads/main/config/run.toml
     outputs:
       python-path:
-        descrption: "The absolute path to the Python or PyPy executable."
+        description: "The absolute path to the Python or PyPy executable."
         value: ${{ jobs.install.outputs.python-path }}
 
 jobs:

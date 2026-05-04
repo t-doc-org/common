@@ -27,4 +27,4 @@ jobs:
     steps:
       - name: Output Python version
         run: |
-          ${{ jobs.setup.outputs.python-path }} --version
+          ${{ needs.setup.outputs.python-path }} --version
