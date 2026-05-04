@@ -3,12 +3,12 @@
 
 name: Set up for running t-doc
 inputs:
-  build-sites:
-    description: "When true, install packages required for building sites."
-    default: true
   build-pkgs:
     description: "When true, install packages required for building Python packages."
     default: false
+  build-sites:
+    description: "When true, install packages required for building sites."
+    default: true
   run-toml:
     description: "The URL of the run.toml file."
     default: https://github.com/t-doc-org/common/raw/refs/heads/main/config/run.toml
@@ -20,16 +20,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Update system package index
-      if: ${{ inputs.build-sites == 'true' }}
-      shell: bash
-      run: sudo apt-get update
-    - name: Install system packages
-      if: ${{ inputs.build-sites == 'true' }}
-      shell: bash
-      run: |
-        sudo apt-get install --yes \
-            graphviz
     - name: Get recommended Python version
       id: version
       shell: python
@@ -51,3 +41,13 @@ runs:
       shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -m pip install build
+    - name: Update system package index
+      if: ${{ inputs.build-sites == 'true' }}
+      shell: bash
+      run: sudo apt-get update
+    - name: Install system packages
+      if: ${{ inputs.build-sites == 'true' }}
+      shell: bash
+      run: |
+        sudo apt-get install --yes \
+            graphviz

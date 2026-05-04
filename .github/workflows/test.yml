@@ -12,16 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up for running t-doc
-        id: python
-        uses: t-doc-org/common/.github/actions/setup-tdoc@main
+        id: setup
+        uses: t-doc-org/common/.github/actions/setup@main
         with:
           build-pkgs: true
-          build-sites: true
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Run site tests
         run: |
-          ${{ steps.python.outputs.python-path }} tools/test-sites.py \
+          ${{ steps.setup.outputs.python-path }} tools/test-sites.py \
               t-doc-org.github.io \
               canb \
               common \

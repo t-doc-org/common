@@ -25,17 +25,9 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - name: Update system package index
-        run: sudo apt-get update
-      - name: Install system packages
-        run: |
-          sudo apt-get install --yes \
-              graphviz
-      - name: Install Python
-        id: python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
+      - name: Set up for running t-doc
+        id: setup
+        uses: t-doc-org/common/.github/actions/setup@main
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -51,12 +43,12 @@ jobs:
       - name: Build HTML (dev)
         if: ${{ inputs.dev }}
         run: |
-          ${{ steps.python.outputs.python-path }} common/run.py \
+          ${{ steps.setup.outputs.python-path }} common/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Build HTML (release)
         if: ${{ !inputs.dev }}
         run: |
-          ${{ steps.python.outputs.python-path }} repo/run.py \
+          ${{ steps.setup.outputs.python-path }} repo/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
