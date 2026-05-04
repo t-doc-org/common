@@ -46,7 +46,7 @@ runs:
       if: ${{ inputs.build-pkgs == 'true' }}
       shell: bash
       run: |
-        ${{ steps.python.outputs.python-path }} -m pip install build
+        ${{ steps.python.outputs.python-path }} -P -m pip install build
     - name: Update system package index
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash

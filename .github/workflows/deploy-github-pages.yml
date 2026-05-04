@@ -37,12 +37,12 @@ jobs:
       - name: Build HTML (dev)
         if: ${{ inputs.dev }}
         run: |
-          ${{ steps.setup.outputs.python-path }} common/run.py \
+          ${{ steps.setup.outputs.python-path }} -P common/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Build HTML (release)
         if: ${{ !inputs.dev }}
         run: |
-          ${{ steps.setup.outputs.python-path }} repo/run.py \
+          ${{ steps.setup.outputs.python-path }} -P repo/run.py \
               tdoc build --source=repo/docs --build=_build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
