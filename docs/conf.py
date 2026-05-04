@@ -26,6 +26,8 @@ html_theme_options = {
          'img': 'https://img.shields.io/pypi/v/t-doc-common.svg?color=blue'},
         {'href': '/actions/workflows/publish.yml',
          'img': '/actions/workflows/publish.yml/badge.svg'},
+        {'href': '/actions/workflows/test.yml',
+         'img': '/actions/workflows/test.yml/badge.svg'},
     ],
 }
 
