@@ -24,11 +24,11 @@ runs:
   using: composite
   steps:
     - name: Update system package index
-      if: ${{ inputs.build-sites }}
+      if: ${{ inputs.build-sites == true }}
       shell: bash
       run: sudo apt-get update
     - name: Install system packages
-      if: ${{ inputs.build-sites }}
+      if: ${{ inputs.build-sites == true }}
       shell: bash
       run: |
         sudo apt-get install --yes \
@@ -50,7 +50,7 @@ runs:
       with:
         python-version: ${{ steps.version.outputs.version }}
     - name: Install build packages
-      if: ${{ inputs.build-pkgs }}
+      if: ${{ inputs.build-pkgs == true }}
       shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -m pip install build
