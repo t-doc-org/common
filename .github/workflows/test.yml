@@ -13,12 +13,13 @@ jobs:
     with:
       build: true
   test-sites:
-    name: Run test-sites.py
+    name: Test sites
     needs: [setup-python]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Output Python version
+      - name: Run site tests
         run: |
-          ${{ needs.setup-python.outputs.python-path }} --version
+          ${{ needs.setup-python.outputs.python-path }} tools/test-sites.py \
+              test
