@@ -1,0 +1,30 @@
+# Copyright 2026 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+name: Test
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    name: Set up
+    runs-on: ubuntu-latest
+    outputs:
+      python-path: ${{ steps.python.outputs.python-path }}
+    steps:
+      - name: Set up Python
+        id: python
+        uses: t-doc-org/common/.github/workflows/setup-python.yml@main
+        with:
+          build: true
+      - name: Checkout repository
+        uses: actions/checkout@v6
+  test-sites:
+    name: Run test-sites.py
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output Python version
+        run: |
+          ${{ jobs.setup.outputs.python-path }} --version

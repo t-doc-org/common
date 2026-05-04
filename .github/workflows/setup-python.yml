@@ -1,0 +1,45 @@
+# Copyright 2026 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+name: Set up Python
+on:
+  workflow_call:
+    inputs:
+      build:
+        description: "When true, install packages required for building."
+        type: boolean
+        required: false
+      run-toml:
+        description: "The URL of the run.toml file"
+        default: https://github.com/t-doc-org/common/raw/refs/heads/main/config/run.toml
+    outputs:
+      python-path:
+        descrption: "The absolute path to the Python or PyPy executable."
+        value: ${{ jobs.install.outputs.python-path }}
+
+jobs:
+  install:
+    name: Install
+    runs-on: ubuntu-latest
+    outputs:
+      python-path: ${{ steps.python.outputs.python-path }}
+    steps:
+      - name: Get Python version
+        id: version
+        run: |
+          python -c '
+          import tomllib
+          from urllib import request
+          with request.urlopen("${{ inputs.run-toml }}") as f:
+            config = tomllib.load(f)
+          print(f"version={config["python"]["recommend"]}")
+          ' >> $GITHUB_OUTPUT
+      - name: Install Python
+        id: python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ steps.version.version }}
+      - name: Install build packages
+        if: ${{ inputs.build }}
+        run: |
+          ${{ steps.python.outputs.python-path }} -m pip install build
