@@ -108,8 +108,7 @@ def main(argv, stdin, stdout, stderr):
 wheel_re = re.compile(r't_doc_common-[^ ]+\.whl')
 
 def build_wheel(tests):
-    out = run(sys.executable, '-P', '-m', 'build', '--no-isolation',
-              '--outdir', tests)
+    out = run(sys.executable, '-P', '-m', 'build', '--outdir', tests)
     if (m := wheel_re.search(out)) is None:
         raise Exception("Failed to determine wheel name")
     wheel = tests / m.group(0)
