@@ -21,14 +21,15 @@ runs:
   steps:
     - name: Get recommended Python version
       id: version
+      shell: python
       run: |
-        python -c '
+        import os
         import tomllib
         from urllib import request
         with request.urlopen("${{ inputs.run-toml }}") as f:
           config = tomllib.load(f)
-        print(f"version={config["python"]["recommend"]}")
-        ' >> $GITHUB_OUTPUT
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f"version={config["python"]["recommend"]}\n")
     - name: Install Python
       id: python
       uses: actions/setup-python@v6
@@ -36,5 +37,6 @@ runs:
         python-version: ${{ steps.version.outputs.version }}
     - name: Install build packages
       if: ${{ inputs.build }}
+      shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -m pip install build
