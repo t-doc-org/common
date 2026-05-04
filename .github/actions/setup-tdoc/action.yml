@@ -5,15 +5,12 @@ name: Set up for running t-doc
 inputs:
   build-sites:
     description: "When true, install packages required for building sites."
-    type: boolean
     default: true
   build-pkgs:
     description: "When true, install packages required for building Python packages."
-    type: boolean
     default: false
   run-toml:
     description: "The URL of the run.toml file."
-    type: string
     default: https://github.com/t-doc-org/common/raw/refs/heads/main/config/run.toml
 outputs:
   python-path:
@@ -24,11 +21,11 @@ runs:
   using: composite
   steps:
     - name: Update system package index
-      if: ${{ inputs.build-sites == true }}
+      if: ${{ inputs.build-sites == 'true' }}
       shell: bash
       run: sudo apt-get update
     - name: Install system packages
-      if: ${{ inputs.build-sites == true }}
+      if: ${{ inputs.build-sites == 'true' }}
       shell: bash
       run: |
         sudo apt-get install --yes \
@@ -50,7 +47,7 @@ runs:
       with:
         python-version: ${{ steps.version.outputs.version }}
     - name: Install build packages
-      if: ${{ inputs.build-pkgs == true }}
+      if: ${{ inputs.build-pkgs == 'true' }}
       shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -m pip install build
