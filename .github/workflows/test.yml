@@ -9,7 +9,6 @@ on:
 jobs:
   setup-python:
     name: Set up Python
-    id: python
     uses: t-doc-org/common/.github/workflows/setup-python.yml@main
     with:
       build: true
