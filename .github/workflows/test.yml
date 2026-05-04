@@ -7,24 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup:
-    name: Set up
-    runs-on: ubuntu-latest
-    outputs:
-      python-path: ${{ steps.python.outputs.python-path }}
-    steps:
-      - name: Set up Python
-        id: python
-        uses: t-doc-org/common/.github/workflows/setup-python.yml@main
-        with:
-          build: true
-      - name: Checkout repository
-        uses: actions/checkout@v6
+
+jobs:
+  setup-python:
+    name: Set up Python
+    id: python
+    uses: t-doc-org/common/.github/workflows/setup-python.yml@main
+    with:
+      build: true
   test-sites:
     name: Run test-sites.py
-    needs: [setup]
+    needs: [setup-python]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
       - name: Output Python version
         run: |
-          ${{ needs.setup.outputs.python-path }} --version
+          ${{ needs.setup-python.outputs.python-path }} --version
