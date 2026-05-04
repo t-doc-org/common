@@ -32,14 +32,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           path: repo
-      - name: Checkout t-doc/common repository
-        if: ${{ inputs.dev }}
-        uses: actions/checkout@v6
-        with:
-          repository: t-doc-org/common
-          ref: main
-          path: common
-          ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Build HTML (dev)
         if: ${{ inputs.dev }}
         run: |

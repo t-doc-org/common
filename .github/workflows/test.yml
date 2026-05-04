@@ -18,9 +18,11 @@ jobs:
           build-pkgs: true
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          path: repo
       - name: Run site tests
         run: |
-          ${{ steps.setup.outputs.python-path }} tools/test-sites.py \
+          ${{ steps.setup.outputs.python-path }} repo/tools/test-sites.py \
               t-doc-org.github.io \
               canb \
               common \

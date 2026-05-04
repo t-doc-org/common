@@ -19,14 +19,17 @@ jobs:
           build-sites: false
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          path: repo
       - name: Build sdist and wheel
+        working-directory: ./repo
         run: |
           ${{ steps.setup.outputs.python-path }} -m build
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: python-package
-          path: dist/
+          path: repo/dist/
 
   publish-to-pypi:
     name: Publish to PyPI
