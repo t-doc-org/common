@@ -7,19 +7,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup-python:
-    name: Set up Python
-    uses: t-doc-org/common/.github/workflows/setup-python.yml@main
-    with:
-      build: true
   test-sites:
     name: Test sites
-    needs: [setup-python]
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Python
+        id: python
+        uses: t-doc-org/common/.github/actions/setup-python@main
+        with:
+          build: true
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Run site tests
         run: |
-          ${{ needs.setup-python.outputs.python-path }} tools/test-sites.py \
+          ${{ steps.python.outputs.python-path }} tools/test-sites.py \
               test
