@@ -39,7 +39,7 @@ jobs:
         id: python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ steps.version.version }}
+          python-version: ${{ steps.version.outputs.version }}
       - name: Install build packages
         if: ${{ inputs.build }}
         run: |
