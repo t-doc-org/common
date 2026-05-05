@@ -52,14 +52,8 @@ def main(argv, stdin, stdout, stderr):
             raise Exception(f"Unknown option: {arg}")
         i += 1
 
-    # Find repository names and URLs.
-    repos = argv[1:]
-    if not repos:
-        repos = [d.name for d in base.parent.iterdir()
-                 if (d / 'run.py').exists()
-                    and (d / 'docs' / 'conf.py').exists()]
-    repos.sort()
-    width = max(len(repo) for repo in repos)
+    repos = sorted(set(argv[1:]))
+    width = max((len(repo) for repo in repos), default=0)
     def label(repo): return f"{repo:{width}} | "
 
     lock = threading.Lock()
