@@ -2,16 +2,16 @@
 # Copyright 2026 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import contextlib
 import json
 import os
 import pathlib
+import re
 import signal
 import subprocess
 import sys
 import tomllib
 
-# TODO: Add --default-port
+label_base = 'org.t-doc.sandbox'
 
 
 def main(argv, stdin, stdout, stderr):
@@ -20,8 +20,11 @@ def main(argv, stdin, stdout, stderr):
 
     # Parse command-line arguments.
     debug = False
+    port = 9000
+    ports = 20
     python = run_toml(common)['python']['recommend']
     rebuild = False
+    restart = False
     stop = False
     uid = 1000
     userns = 'nomap'
@@ -35,10 +38,16 @@ def main(argv, stdin, stdout, stderr):
             break
         elif arg == '--debug':
             debug = True
+        elif arg.startswith('--port='):
+            port = int(arg[7:])
+        elif arg.startswith('--ports='):
+            ports = int(arg[8:])
         elif arg.startswith('--python='):
             python = arg[9:]
         elif arg == '--rebuild':
             rebuild = True
+        elif arg == '--restart':
+            restart = True
         elif arg == '--stop':
             stop = True
         elif arg.startswith('--uid='):
@@ -51,16 +60,27 @@ def main(argv, stdin, stdout, stderr):
 
     # Manage image and container.
     name = f't-doc-{python}'
-    running = bool(list_containers(filter=f'ancestor={name}'))
-    if stop or rebuild:
-        stop_containers(filter=f'ancestor={name}')
+    image = f'localhost/{name}-{port}:latest'
+    port_range = f'{port}-{port + ports - 1}'
+
+    idata = list_images(filter=f'reference={image}')
+    if idata and label(idata[0], 'port') != str(port):
+        rebuild = True
+    cdata = list_containers(filter=f'name={re.escape(name)}')
+    if cdata and label(cdata[0], 'port_range') != port_range:
+        restart = True
+    running = bool(cdata)
+    if stop or rebuild or restart:
+        stop_containers(filter=f'name={re.escape(name)}')
         running = False
         if stop: return 0
     if not running:
-        if rebuild or not list_images(filter=f'reference={name}'):
-            create_image(common, name=name, python=python)
-            prune_images(filter=f'label=org.t-doc.sandbox={python}')
-        start_container(base, common, name=name, image=name, userns=userns)
+        if rebuild or not list_images(filter=f'reference={image}'):
+            create_image(common, name=image, python=python, port=port)
+            prune_images(filter=[f'label={label_base}.python={python}',
+                                 f'label={label_base}.port={port}'])
+        start_container(base, common, name=name, image=image, userns=userns,
+                        python=python, port_range=port_range)
 
     # Start a new shell in the container.
     return shell_in_container(name, uid=uid)
@@ -77,14 +97,18 @@ def list_images(*, filter=()):
 
 
 def prune_images(*, filter=()):
-    run('podman', 'image', 'prune', *filter_args(filter), '--force')
+    run('podman', 'image', 'prune', *filter_args(filter), '--force',
+        stdout=subprocess.DEVNULL)
 
 
-def create_image(common, name, *, python):
-    run('podman', 'image', 'build', '--pull', '--no-cache', f'--tag={name}',
+def create_image(common, name, *, python, port):
+    run('podman', 'image', 'build',
+        f'--tag={name}', '--pull', '--no-cache',
         f'--file={common / 'tools' / 'sandbox.Containerfile'}',
         f'--from=docker.io/python:{python}-slim',
-        f'--label=org.t-doc.sandbox={python}',
+        f'--label={label_base}.port={port}',
+        f'--label={label_base}.python={python}',
+        f'--env=TDOC_DEFAULT_PORT={port}',
         common / 'tools')
 
 
@@ -94,10 +118,11 @@ def list_containers(*, filter=()):
 
 
 def stop_containers(*, filter=()):
-    run('podman', 'container', 'stop', '--time=0', *filter_args(filter))
+    run('podman', 'container', 'stop', '--time=0', *filter_args(filter),
+        stdout=subprocess.DEVNULL)
 
 
-def start_container(base, common, *, name, image, userns):
+def start_container(base, common, *, name, image, userns, python, port_range):
     mounts = [f'--mount=type=bind,src={base},dst=/t-doc,ro=true']
     for repo in sorted(base.iterdir()):
         if not (repo / 'run.py').is_file() \
@@ -109,7 +134,6 @@ def start_container(base, common, *, name, image, userns):
             tmpfs(repo, '_tmp'),
             tmpfs(repo, '_venv'),
         ])
-        # TODO: Use writable_by_other()
         if (repo / '_data').is_dir(follow_symlinks=False):
             mounts.append(bind(repo, '_data'))
         if repo == common:
@@ -122,31 +146,31 @@ def start_container(base, common, *, name, image, userns):
     # TODO: Use --init?
     # https://oneuptime.com/blog/post/2026-03-16-run-container-init-process-podman/view
     run('podman', 'container', 'run',
-        f'--name={name}', f'--userns={userns}', '--rm',
-        '--detach', *mounts, '--publish=127.0.0.1:9000-9019:9000-9019/tcp',
-        f'localhost/{image}:latest',
-        '/bin/sleep', 'infinity')
+        f'--name={name}', f'--userns={userns}', '--detach', '--rm', *mounts,
+        f'--publish=127.0.0.1:{port_range}:{port_range}/tcp',
+        f'--label={label_base}.port_range={port_range}',
+        f'--label={label_base}.python={python}',
+        image,
+        '/bin/sleep', 'infinity',
+        stdout=subprocess.DEVNULL)
 
 
 def shell_in_container(name, *, uid):
     return run_long('podman', 'container', 'exec', '--interactive', '--tty',
                     f'--user={uid}', '--workdir=/t-doc',
-                    f'--env=TERM={os.environ['TERM']}',
                     f'--env=CONTAINER_NAME={name}',
+                    f'--env=TERM={os.environ['TERM']}',
                     name, '/bin/bash')
-
-
-def writable_by_other(path):
-    with contextlib.suppress(OSError):
-        st = path.stat(follow_symlinks=False)
-        return stat.S_ISDIR(st.st_mode) \
-               and stat.S_IMODE(st.st_mode) & stat.S_IWOTH
-    return False
 
 
 def filter_args(filter):
     if isinstance(filter, str): return [f'--filter={filter}']
     return [f'--filter={f}' for f in filter]
+
+
+def label(data, name):
+    if (labels := data.get('Labels')) is None: return
+    return labels.get(f'{label_base}.{name}')
 
 
 def tmpfs(repo, name):
