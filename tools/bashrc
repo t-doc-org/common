@@ -1,0 +1,62 @@
+# Copyright 2026 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+[ "${EUID-}" == "0" ] && umask 022 || umask 002
+USER="$(getent passwd "${EUID}" | sed -rne 's/^([^:]+):.*/\1/p')"
+
+if [[ $- != *i* ]]; then
+    return
+fi
+
+# Set PATH
+prepend_path() {
+    [[ -d "$1" ]] || return
+    [[ -n "${PATH/$1:*}" && -n "${PATH/*:$1:*}" && -n "${PATH/*:$1}" ]] || return
+    export PATH="$1:${PATH}"
+}
+
+prepend_path "${HOME}/.local/bin"
+prepend_path "${HOME}/bin"
+
+# History
+export HISTCONTROL=ignorespace:ignoredups
+export HISTFILE=~/.bash_history_eternal
+export HISTFILESIZE=
+export HISTSIZE=
+shopt -s histappend
+
+# Change the window title
+case ${TERM} in
+    xterm*|rxvt*|Eterm|aterm|kterm|gnome*|interix)
+        PROMPT_COMMAND='history -a; echo -ne "\033]0;${USER}@${CONTAINER_NAME}:${PWD/#$HOME/~}\007"';;
+    screen*)
+        PROMPT_COMMAND='history -a; echo -ne "\033_${USER}@${CONTAINER_NAME}:${PWD/#$HOME/~}\033\\"';;
+esac
+
+# Prompt
+if [[ ${EUID} == 0 ]] ; then
+    PS1='\[\033[33m\]${CONTAINER_NAME} \[\033[01;34m\]\W \[\033[00m\]\$ '
+else
+    PS1='\[\033[36m\]\u@${CONTAINER_NAME} \[\033[01;34m\]\W \[\033[00m\]\$ '
+fi
+
+# Aliases
+if [[ ${EUID} == 0 ]]; then
+    alias rm='rm -i'
+    alias cp='cp -i'
+    alias mv='mv -i'
+fi
+alias du1='du --max-depth=1'
+alias gh='hg'
+alias grep='grep --color=auto'
+alias ip='ip --color=auto'
+alias ll="ls --color -l -N"
+alias ls="ls --color=auto --show-control-chars --group-directories-first -N"
+alias pd='pushd'
+alias pp='popd'
+
+shopt -s checkwinsize
+export ACK_COLOR_MATCH="bold red"
+
+# Return success
+true
