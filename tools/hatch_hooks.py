@@ -45,7 +45,13 @@ class MetadataHook(MetadataHookInterface, HookMixin):
         with (self.top / 'config' / 'run.toml').open('rb') as f:
             run_toml = tomllib.load(f)
         metadata['requires-python'] = f'>={run_toml['python']['minimum']}'
-        with (self.top / LICENSES).open('w') as out:
+        licenses = self.top / LICENSES
+        try: licenses.write_text('')
+        except OSError: pass
+        else: self.update_licenses(licenses)
+
+    def update_licenses(self, licenses):
+        with licenses.open('w') as out:
             out.write(f"""\
 This file lists the dependencies that are partially or fully included in this
 package. The licenses of bundled package archives (e.g. *.whl) can be found in
