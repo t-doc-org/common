@@ -142,16 +142,30 @@ def start_container(base, common, *, name, image, userns, python, port_range):
                 tmpfs(repo, 'node_modules'),
                 tmpfs(repo, 'tdoc/common/static.gen'),
             ])
-    # TODO: Poll for open sessions, terminate 1h after last session
+
     # TODO: Use --init?
     # https://oneuptime.com/blog/post/2026-03-16-run-container-init-process-podman/view
+
+    # Run a script that terminates some duration after the last shell exits.
     run('podman', 'container', 'run',
         f'--name={name}', f'--userns={userns}', '--detach', '--rm', *mounts,
         f'--publish=127.0.0.1:{port_range}:{port_range}/tcp',
         f'--label={label_base}.port_range={port_range}',
         f'--label={label_base}.python={python}',
         image,
-        '/bin/sleep', 'infinity',
+        '/usr/local/bin/python', '-P', '-c', """\
+import pathlib
+import time
+delay = 10 * 60
+proc = pathlib.Path('/proc')
+stop = (now := time.time()) + delay
+while now < stop:
+    time.sleep(min(stop - now, max(delay / 100, 1)))
+    now = time.time()
+    if any(p.read_bytes().startswith(b'/bin/bash\\0')
+           for p in proc.glob('[0-9]*/cmdline')):
+        stop = now + delay
+""",
         stdout=subprocess.DEVNULL)
 
 
