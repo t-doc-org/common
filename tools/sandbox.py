@@ -11,8 +11,6 @@ import subprocess
 import sys
 import tomllib
 
-# TODO: Add --rebuild
-# TODO: Add --stop
 # TODO: Add --default-port
 
 
@@ -23,6 +21,8 @@ def main(argv, stdin, stdout, stderr):
     # Parse command-line arguments.
     debug = False
     python = run_toml(common)['python']['recommend']
+    rebuild = False
+    stop = False
     uid = 1000
     userns = 'nomap'
     i = 1
@@ -37,6 +37,10 @@ def main(argv, stdin, stdout, stderr):
             debug = True
         elif arg.startswith('--python='):
             python = arg[9:]
+        elif arg == '--rebuild':
+            rebuild = True
+        elif arg == '--stop':
+            stop = True
         elif arg.startswith('--uid='):
             uid = arg[6:]
         elif arg.startswith('--userns='):
@@ -47,9 +51,15 @@ def main(argv, stdin, stdout, stderr):
 
     # Manage image and container.
     name = f't-doc-{python}'
-    if not list_containers(f'name={name}'):
-        if not list_images(f'reference={name}'):
+    running = bool(list_containers(filter=f'ancestor={name}'))
+    if stop or rebuild:
+        stop_containers(filter=f'ancestor={name}')
+        running = False
+        if stop: return 0
+    if not running:
+        if rebuild or not list_images(filter=f'reference={name}'):
             create_image(common, name=name, python=python)
+            prune_images(filter=f'label=org.t-doc.sandbox={python}')
         start_container(base, common, name=name, image=name, userns=userns)
 
     # Start a new shell in the container.
@@ -61,21 +71,30 @@ def run_toml(common):
         return tomllib.load(f)
 
 
-def list_images(filter):
-    return run_json('podman', 'image', 'list', f'--filter={filter}',
+def list_images(*, filter=()):
+    return run_json('podman', 'image', 'list', *filter_args(filter),
                     '--format=json')
+
+
+def prune_images(*, filter=()):
+    run('podman', 'image', 'prune', *filter_args(filter), '--force')
 
 
 def create_image(common, name, *, python):
-    run('podman', 'build', f'--tag={name}',
+    run('podman', 'image', 'build', '--pull', '--no-cache', f'--tag={name}',
         f'--file={common / 'tools' / 'sandbox.Containerfile'}',
         f'--from=docker.io/python:{python}-slim',
+        f'--label=org.t-doc.sandbox={python}',
         common / 'tools')
 
 
-def list_containers(filter):
-    return run_json('podman', 'container', 'list', f'--filter={filter}',
+def list_containers(*, filter=()):
+    return run_json('podman', 'container', 'list', *filter_args(filter),
                     '--format=json')
+
+
+def stop_containers(*, filter=()):
+    run('podman', 'container', 'stop', '--time=0', *filter_args(filter))
 
 
 def start_container(base, common, *, name, image, userns):
@@ -102,15 +121,15 @@ def start_container(base, common, *, name, image, userns):
     # TODO: Poll for open sessions, terminate 1h after last session
     # TODO: Use --init?
     # https://oneuptime.com/blog/post/2026-03-16-run-container-init-process-podman/view
-    return run('podman', 'run', f'--name={name}', f'--userns={userns}', '--rm',
-               '--detach', *mounts,
-               '--publish=127.0.0.1:9000-9019:9000-9019/tcp',
-               f'localhost/{image}:latest',
-               '/bin/sleep', 'infinity')
+    run('podman', 'container', 'run',
+        f'--name={name}', f'--userns={userns}', '--rm',
+        '--detach', *mounts, '--publish=127.0.0.1:9000-9019:9000-9019/tcp',
+        f'localhost/{image}:latest',
+        '/bin/sleep', 'infinity')
 
 
 def shell_in_container(name, *, uid):
-    return run_long('podman', 'exec', '--interactive', '--tty',
+    return run_long('podman', 'container', 'exec', '--interactive', '--tty',
                     f'--user={uid}', '--workdir=/t-doc',
                     f'--env=TERM={os.environ['TERM']}',
                     f'--env=CONTAINER_NAME={name}',
@@ -123,6 +142,11 @@ def writable_by_other(path):
         return stat.S_ISDIR(st.st_mode) \
                and stat.S_IMODE(st.st_mode) & stat.S_IWOTH
     return False
+
+
+def filter_args(filter):
+    if isinstance(filter, str): return [f'--filter={filter}']
+    return [f'--filter={f}' for f in filter]
 
 
 def tmpfs(repo, name):
