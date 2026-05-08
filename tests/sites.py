@@ -17,8 +17,6 @@ import sys
 import threading
 from urllib import request
 
-# TODO: Limit concurrency
-
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
 
@@ -29,7 +27,7 @@ class Error(Exception): pass
 def main(argv, stdin, stdout, stderr):
     base = pathlib.Path(argv[0]).parent.resolve().parent
     os.chdir(base)
-    tests = base / 'tmp' / 'tests'
+    tests = base / '_tmp' / 'tests'
 
     # Parse command-line arguments.
     concurrency = 'auto'
