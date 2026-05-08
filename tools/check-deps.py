@@ -95,7 +95,8 @@ class Checker:
 
     def npm_outdated(self):
         p = subprocess.run(('npm', 'outdated', '--json'), cwd=self.base,
-                           stdin=subprocess.DEVNULL, capture_output=True)
+                           stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True)
         if p.returncode not in (0, 1): raise Exception(p.stderr)
         return json.loads(p.stdout, object_pairs_hook=Namespace)
 
