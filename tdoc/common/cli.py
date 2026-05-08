@@ -33,7 +33,6 @@ from . import __project__, __version__, api, config, console, deps, logs, \
 # TODO: Split groups of sub-commands into separate modules
 
 log = logs.logger(__name__)
-default_port = 8000
 rc_build_failure = 1
 rc_source_change = 123
 
@@ -42,6 +41,8 @@ rc_source_change = 123
 def main(argv, stdin, stdout, stderr):
     """Run the command."""
     threading.current_thread().name = 'main'
+    default_port = int(os.environ.get('TDOC_DEFAULT_PORT', 8000))
+
     parser = console.get_arg_parser(stdin, stdout, stderr)(
         prog=pathlib.Path(argv[0]).name, description="Manage a t-doc site.")
     root = parser.add_subparsers(title='Sub-commands')
@@ -111,6 +112,7 @@ def main(argv, stdin, stdout, stderr):
     add_options(p)
 
     opts = parser.parse_args(argv[1:])
+    opts.default_port = default_port
     if opts.config is None:
         opts.config = config.Config.find(pathlib.Path.cwd())
     opts.cfg = config.Config.load(
@@ -536,6 +538,7 @@ def cmd_serve(opts):
     class Server(ServerBase):
         address_family = socket.AF_INET6 if socket.AF_INET6 in families \
                          else socket.AF_INET
+        default_port = opts.default_port
 
     with Server(addr, RequestHandler) as srv, \
             get_store(opts, allow_mem=True) as st, \
@@ -799,7 +802,7 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
             self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
         addr = self.server_address
         port = addr[1]
-        if auto_port := port == 0: port = default_port
+        if auto_port := port == 0: port = self.default_port
         while True:
             # server_bind() sets server_address to the socket's name.
             self.server_address = self.bind_address = addr = \
