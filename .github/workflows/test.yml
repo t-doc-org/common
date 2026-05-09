@@ -15,7 +15,7 @@ jobs:
         id: setup
         uses: t-doc-org/common/.github/actions/setup@main
         with:
-          build-pkgs: true
+          dev-pkgs: true
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Checkout repository
         uses: actions/checkout@v6

@@ -3,12 +3,12 @@
 
 name: Set up for running t-doc
 inputs:
-  build-pkgs:
-    description: "When true, install packages required for building Python packages."
-    default: false
   build-sites:
     description: "When true, install packages required for building sites."
     default: true
+  dev-pkgs:
+    description: "When true, install packages required for development."
+    default: false
   ssh-key:
     description: "SSH key to use to checkout the common repository."
     required: true
@@ -42,13 +42,13 @@ runs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ steps.version.outputs.version }}
-    - name: Install build packages
-      if: ${{ inputs.build-pkgs == 'true' }}
+    - name: Install development packages
+      if: ${{ inputs.dev-pkgs == 'true' }}
       shell: bash
       run: |
         ${{ steps.python.outputs.python-path }} -P -m pip install \
             --require-hashes --only-binary=:all: --no-deps \
-            --requirement=common/config/build.req
+            --requirement=common/config/dev.req
     - name: Update system package index
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash

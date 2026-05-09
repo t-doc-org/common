@@ -114,7 +114,7 @@ class Checker:
             self.section(p.name)
             self.report_packages(pkgs)
 
-    reqs_pkg_version_re = re.compile(r'(?m)^([^\\s=]+)==([^\\s;]+)(?:\\s|$)')
+    reqs_pkg_version_re = re.compile(r'(?m)^([^\s#=]+)==([^\s;]+)(?:\s|$)')
 
     def parse_requirements(self, text):
         reqs = {}
