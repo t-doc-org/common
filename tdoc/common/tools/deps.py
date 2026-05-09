@@ -53,8 +53,9 @@ class Checker:
     def write(self, s): return self.opts.stdout.write(s)
 
     def section(self, s):
+        o = self.opts.stdout
         if not self.first_section: self.write("\n")
-        self.write(f"{s}\n{'=' * len(s)}\n")
+        self.write(f"{o.BOLD}{s}{o.NORM}\n{o.BOLD}{'=' * len(s)}{o.NORM}\n")
         self.first_section = False
 
     def check_deps(self):
@@ -189,14 +190,15 @@ class Package:
         res = self._info_cache[self.name] = fetch_json(self.info_url)
         return res
 
-    def report(self, out, open):
-        out.write(f"{self.name}\n")
+    def report(self, o, open):
+        o.write(f"{o.LCYAN}{self.name}{o.NORM}\n")
         w = max(len(self.current), len(self.wanted))
-        out.write(
-            f"  current: {self.current:{w}} ({self.time(self.current)})\n")
-        out.write(f"  wanted : {self.wanted:{w}} ({self.time(self.wanted)})\n")
+        o.write(f"  current: {o.LGREEN}{self.current:{w}}{o.NORM}"
+                f" ({self.time(self.current)})\n")
+        o.write(f"  wanted : {o.LYELLOW}{self.wanted:{w}}{o.NORM} "
+                f"({o.LMAGENTA}{self.time(self.wanted)}{o.NORM})\n")
         for url in self.urls:
-            out.write(f"  url: {url}\n")
+            o.write(f"  url: {url}\n")
             if open: webbrowser.open_new_tab(url)
 
 
