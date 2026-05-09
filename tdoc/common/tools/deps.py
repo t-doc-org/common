@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
@@ -20,13 +19,21 @@ import webbrowser
 # TODO: GitHub actions
 
 
-def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).parent.resolve().parent
-    run_py = base / 'run.py'
-    if not pathlib.Path(sys.executable).is_relative_to(base):
-        return subprocess.run((run_py, 'python', '-P', *argv)).returncode
+def add_commands(parser, common_options):
+    p = parser.add_parser('deps', help="Dependeny-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
 
-    checker = Checker(argv, stdout, stderr)
+    p = sp.add_parser('check', help="Check dependencies for updates.")
+    p.set_defaults(handler=cmd_check)
+    arg = p.add_argument
+    arg('--open', action='store_true', dest='open',
+        help="Open all URLs in a browser.")
+    common_options(p)
+
+
+def cmd_check(opts):
+    checker = Checker(opts)
     checker.check_deps()
     checker.check_node()
     checker.check_python()
@@ -34,31 +41,16 @@ def main(argv, stdin, stdout, stderr):
 
 
 class Checker:
-    def __init__(self, argv, stdout, stderr):
-        self.base = pathlib.Path(argv[0]).parent.resolve().parent
-        self.stdout, self.stderr = stdout, stderr
+    def __init__(self, opts):
+        self.opts = opts
         self.first_section = True
-        self.open = False
-        i = 1
-        while True:
-            if i >= len(argv) or not (arg := argv[i]).startswith('--'):
-                argv = argv[:1] + argv[i:]
-                break
-            elif arg == '--':
-                argv = argv[:1] + argv[i + 1:]
-                break
-            elif arg == '--open':
-                self.open = True
-            else:
-                raise Exception(f"Unknown option: {arg}")
-            i += 1
 
     @functools.cached_property
     def run_toml(self):
-        with (self.base / 'config' / 'run.toml').open('rb') as f:
+        with (self.opts.common / 'config' / 'run.toml').open('rb') as f:
             return tomllib.load(f)
 
-    def write(self, s): return self.stdout.write(s)
+    def write(self, s): return self.opts.stdout.write(s)
 
     def section(self, s):
         if not self.first_section: self.write("\n")
@@ -66,7 +58,7 @@ class Checker:
         self.first_section = False
 
     def check_deps(self):
-        path = self.base / 'tdoc' / 'common' / 'deps.py'
+        path = self.opts.common / 'tdoc' / 'common' / 'deps.py'
         mod = type(sys)('tdoc.common.deps')
         code = compile(path.read_text('utf-8'), str(path), 'exec')
         exec(code, mod.__dict__)
@@ -94,7 +86,7 @@ class Checker:
         self.report_packages(pkgs)
 
     def npm_outdated(self):
-        p = subprocess.run(('npm', 'outdated', '--json'), cwd=self.base,
+        p = subprocess.run(('npm', 'outdated', '--json'), cwd=self.opts.common,
                            stdin=subprocess.DEVNULL, capture_output=True,
                            text=True)
         if p.returncode not in (0, 1): raise Exception(p.stderr)
@@ -116,7 +108,7 @@ class Checker:
         self.report_packages(pkgs)
 
     def check_requirements(self):
-        for p in sorted((self.base / 'config').glob('[!0-9]*.req')):
+        for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text())
             with tempfile.NamedTemporaryFile('w') as f:
                 f.write(f"""\
@@ -150,14 +142,14 @@ class Checker:
         return reqs
 
     def uv(self, *args, **kwargs):
-        p = subprocess.run(('uv', *args), cwd=self.base,
+        p = subprocess.run(('uv', *args), cwd=self.opts.common,
                            stdin=subprocess.DEVNULL, **kwargs)
         if p.returncode != 0: raise Exception(p.stderr)
         return p.stdout, p.stderr
 
     def report_packages(self, pkgs):
         pkgs.sort(key=lambda p: p.name)
-        for pkg in pkgs: pkg.report(self.stdout, self.open)
+        for pkg in pkgs: pkg.report(self.opts.stdout, self.opts.open)
 
 
 class Namespace(dict):
@@ -264,15 +256,3 @@ class PythonPackage(Package):
     @property
     def versions_url(self):
         return f'https://pypi.org/project/{self.name}/#history'
-
-
-if __name__ == '__main__':
-    try:
-        sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
-    except SystemExit:
-        raise
-    except KeyboardInterrupt:
-        sys.exit(1)
-    except Exception as e:
-        sys.stderr.write(f'\n{e}\n')
-        sys.exit(1)

@@ -1,7 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import argparse
 import contextlib
 import datetime
 import errno

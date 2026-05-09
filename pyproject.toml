@@ -53,6 +53,7 @@ Homepage = "https://t-doc.org/"
 
 [project.scripts]
 tdoc = "tdoc.common.cli:main"
+tdoc-dev = "tdoc.common.tools:main"
 
 [build-system]
 requires = ["hatchling"]
