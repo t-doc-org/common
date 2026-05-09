@@ -105,12 +105,14 @@ def vrun_uv(*args, common, **kwargs):
     return vrun('uv', *args, common=common, cwd=common, **kwargs)
 
 
-def requirements(*, common, pkgs=(), only_emit=(), no_emit_project=False):
+def requirements(*, common, pkgs=(), only_pkgs=(), only_groups=(),
+                 no_project=False):
     def export(*args):
-        return vrun_uv('export', '--no-header',
+        return vrun_uv('export', '--no-header', '--no-default-groups',
                        '--format=requirements.txt', *args,
-                       *(f'--only-emit-package={p}' for p in only_emit),
-                       *(('--no-emit-project',) if no_emit_project else ()),
+                       *(f'--only-emit-package={p}' for p in only_pkgs),
+                       *(f'--only-group={g}' for g in only_groups),
+                       *(('--no-emit-project',) if no_project else ()),
                        common=common, capture_output=True, text=True).stdout
 
     if not pkgs: return export()

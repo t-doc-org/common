@@ -101,7 +101,8 @@ class Checker:
         for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text())
             want_reqs = self.parse_requirements(
-                package_reqs(p, name_only=True, common=self.opts.common))
+                util.requirements(only_groups=[p.stem],
+                                  common=self.opts.common))
             if want_reqs == cur_reqs: continue
             pkgs = []
             for pn in cur_reqs | want_reqs:
@@ -219,36 +220,16 @@ def cmd_generate(opts):
         if name[:1].isdigit():
             generate_version_reqs(opts, name)
         else:
-            generate_package_reqs(opts, name)
+            generate_group_reqs(opts, name)
 
 
 def generate_version_reqs(opts, version):
-    path = opts.common / 'config' / f'{version}.req'
     reqs = util.requirements(pkgs=[f't-doc-common=={version}'],
-                             only_emit=['t-doc-common'], common=opts.common)
-    reqs += util.requirements(no_emit_project=True, common=opts.common)
-    path.write_text(reqs)
+                             only_pkgs=['t-doc-common'], common=opts.common)
+    reqs += util.requirements(no_project=True, common=opts.common)
+    (opts.common / 'config' / f'{version}.req').write_text(reqs)
 
 
-def generate_package_reqs(opts, name):
-    path = common / 'config' / f'{name}.req'
-    reqs = package_reqs(name, common=opts.common)
-    with path.open('w') as f:
-        for h in headers: f.write(f'{h}\n')
-        f.write(reqs)
-
-
-deps_re = re.compile(r'^# DEPS: (.*)$')
-pkg_name_re = re.compile(r'^([a-zA-Z0-9_.-]+)')
-
-
-def package_reqs(path, *, common, name_only=False):
-    headers, pkgs = [], []
-    with path.open() as f:
-        for line in f:
-            if not (m := deps_re.match(line)): break
-            headers.append(line.rstrip())
-            ps = m[1].split()
-            if name_only: ps = [pkg_name_re.match(p)[1] for p in ps]
-            pkgs.extend(ps)
-    return util.requirements(pkgs=pkgs, common=common)
+def generate_group_reqs(opts, group):
+    reqs = util.requirements(only_groups=[group], common=opts.common)
+    (opts.common / 'config' / f'{group}.req').write_text(reqs)
