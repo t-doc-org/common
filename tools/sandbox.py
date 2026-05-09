@@ -111,7 +111,6 @@ def create_image(common, name, *, python, port):
         f'--label={label_base}.port={port}',
         f'--label={label_base}.python={python}',
         f'--env=TDOC_DEFAULT_PORT={port}',
-        # TODO: Set TERM?
         common / 'tools')
 
 

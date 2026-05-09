@@ -9,6 +9,10 @@ RUN --mount=type=bind,source=/,dst=/mnt/ctx \
     cp /mnt/ctx/bashrc /home/user/.bashrc && \
     python -P -m pip install build && \
     apt-get update && \
-    apt-get install --yes --no-install-recommends \
-        graphviz npm && \
+    DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade \
+        --yes --no-install-recommends && \
+    DEBIAN_FRONTEND=noninteractive apt-get install \
+        --yes --no-install-recommends \
+        git graphviz mercurial npm && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
