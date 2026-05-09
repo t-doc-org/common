@@ -11,7 +11,6 @@ import pathlib
 import re
 import shutil
 import subprocess
-import tomllib
 from urllib import parse
 import zipfile
 
@@ -42,9 +41,6 @@ class HookMixin:
 
 class MetadataHook(MetadataHookInterface, HookMixin):
     def update(self, metadata):
-        with (self.top / 'config' / 'run.toml').open('rb') as f:
-            run_toml = tomllib.load(f)
-        metadata['requires-python'] = f'>={run_toml['python']['minimum']}'
         licenses = self.top / LICENSES
         try: licenses.write_text('')
         except OSError: pass
