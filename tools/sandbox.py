@@ -11,6 +11,8 @@ import subprocess
 import sys
 import tomllib
 
+# TODO: Run sandbox under gVisor
+
 label_base = 'org.t-doc.sandbox'
 
 
@@ -147,7 +149,7 @@ def start_container(base, common, *, name, image, userns, python, port_range):
     # Run a script that terminates some duration after the last shell exits.
     run('podman', 'container', 'run',
         f'--name={name}', f'--userns={userns}', '--init', '--detach', '--rm',
-        '--security-opt=no-new-privileges', *mounts,
+        '--security-opt=no-new-privileges', '--cap-drop=ALL', *mounts,
         f'--publish=127.0.0.1:{port_range}:{port_range}/tcp',
         f'--label={label_base}.port_range={port_range}',
         f'--label={label_base}.python={python}',
