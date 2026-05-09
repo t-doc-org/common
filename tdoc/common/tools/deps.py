@@ -23,6 +23,13 @@ def add_commands(parser, common_options):
         help="Open all URLs in a browser.")
     common_options(p)
 
+    p = sp.add_parser('generate', help="Generate requirements files.")
+    p.set_defaults(handler=cmd_generate)
+    arg = p.add_argument
+    arg('name', metavar='NAME', nargs='+',
+        help="The requirements files to generate.")
+    common_options(p)
+
 
 def cmd_check(opts):
     checker = Checker(opts)
@@ -74,7 +81,7 @@ class Checker:
                      capture_output=True, text=True, success=(0, 1))
         return json.loads(p.stdout, object_pairs_hook=util.Namespace)
 
-    uv_update_re = re.compile('^Update ([^ ]+) v([^ ]+) -> v([^ ]+)$')
+    uv_update_re = re.compile(r'^Update ([^ ]+) v([^ ]+) -> v([^ ]+)$')
 
     def check_python(self):
         pkgs = []
@@ -94,7 +101,7 @@ class Checker:
         for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text())
             want_reqs = self.parse_requirements(
-                util.requirements(p.stem, common=self.opts.common))
+                package_reqs(p, name_only=True, common=self.opts.common))
             if want_reqs == cur_reqs: continue
             pkgs = []
             for pn in cur_reqs | want_reqs:
@@ -107,7 +114,7 @@ class Checker:
             self.section(p.name)
             self.report_packages(pkgs)
 
-    reqs_pkg_version_re = re.compile(f'(?m)^([^\\s=]+)==([^\\s;]+)(?:\\s|$)')
+    reqs_pkg_version_re = re.compile(r'(?m)^([^\\s=]+)==([^\\s;]+)(?:\\s|$)')
 
     def parse_requirements(self, text):
         reqs = {}
@@ -205,3 +212,43 @@ class PythonPackage(Package):
     @property
     def versions_url(self):
         return f'https://pypi.org/project/{self.name}/#history'
+
+
+def cmd_generate(opts):
+    for name in opts.name:
+        if name[:1].isdigit():
+            generate_version_reqs(opts, name)
+        else:
+            generate_package_reqs(opts, name)
+
+
+def generate_version_reqs(opts, version):
+    path = opts.common / 'config' / f'{version}.req'
+    reqs = util.requirements(pkgs=[f't-doc-common=={version}'],
+                             only_emit=['t-doc-common'], common=opts.common)
+    reqs += util.requirements(no_emit_project=True, common=opts.common)
+    path.write_text(reqs)
+
+
+def generate_package_reqs(opts, name):
+    path = common / 'config' / f'{name}.req'
+    reqs = package_reqs(name, common=opts.common)
+    with path.open('w') as f:
+        for h in headers: f.write(f'{h}\n')
+        f.write(reqs)
+
+
+deps_re = re.compile(r'^# DEPS: (.*)$')
+pkg_name_re = re.compile(r'^([a-zA-Z0-9_.-]+)')
+
+
+def package_reqs(path, *, common, name_only=False):
+    headers, pkgs = [], []
+    with path.open() as f:
+        for line in f:
+            if not (m := deps_re.match(line)): break
+            headers.append(line.rstrip())
+            ps = m[1].split()
+            if name_only: ps = [pkg_name_re.match(p)[1] for p in ps]
+            pkgs.extend(ps)
+    return util.requirements(pkgs=pkgs, common=common)

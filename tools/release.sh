@@ -36,7 +36,7 @@ Next steps:
    https://github.com/t-doc-org/common/actions/workflows/package.yml
  - Generate the requirements file for the release, add the new file, commit and
    push.
-   $ tools/release-reqs.sh ${version}
+   $ ./run.py tdoc-dev deps generate ${version}
    $ hg add config/${version}.req
    $ hg commit -m "Add requirements for ${version}." \\
        tdoc/common/__init__.py config/${version}.req
