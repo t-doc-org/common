@@ -4,9 +4,14 @@
 import datetime
 from http import client
 import itertools
+import json
 import os
 import re
+import shlex
 import ssl
+import subprocess
+import tempfile
+import tomllib
 from urllib import request
 
 import certifi
@@ -78,6 +83,43 @@ def read_stable(path):
             f.seek(0)
 
 
+def read_toml(path):
+    with path.open('rb') as f:
+        return tomllib.load(f)
+
+
+def run(*args, success=(0,), **kwargs):
+    if 'stdin' not in kwargs: kwargs['stdin'] = subprocess.DEVNULL
+    p = subprocess.run(args, **kwargs)
+    if p.returncode not in success:
+        raise Exception(e if (e := (p.stderr or '').strip())
+                        else f"Command failed (exit status: {p.returncode})")
+    return p
+
+
+def vrun(*args, common, **kwargs):
+    return run(common / 'run.py', *args, **kwargs)
+
+
+def vrun_uv(*args, common, **kwargs):
+    return vrun('uv', *args, common=common, cwd=common, **kwargs)
+
+
+def requirements(*pkgs, common):
+    run_toml = read_toml(common / 'config' / 'run.toml')
+    with tempfile.NamedTemporaryFile('w') as f:
+        f.write(f"""\
+# /// script
+# requires-python = '>={run_toml['python']['minimum']}'
+# dependencies = [{', '.join(f"'{p}'" for p in pkgs)}]
+# ///
+""")
+        f.flush()
+        return vrun_uv('export', '--no-cache', '--no-header',
+                       '--format=requirements.txt', f'--script={f.name}',
+                       common=common, capture_output=True, text=True).stdout
+
+
 # Use certifi instead of the system CA store for portability.
 #  - Recent SSL certificates from Sectigo used by GitHub aren't trusted on
 #    Windows 10.
@@ -93,3 +135,13 @@ if ssl_ctx.post_handshake_auth is not None:
 def urlopen(*args, **kwargs):
     if 'context' not in kwargs: kwargs['context'] = ssl_ctx
     return request.urlopen(*args, **kwargs)
+
+
+class Namespace(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+
+def fetch_json(*args, **kwargs):
+    with urlopen(*args, **kwargs) as f:
+        return json.load(f, object_pairs_hook=Namespace)

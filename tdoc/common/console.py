@@ -21,10 +21,10 @@ except ImportError:
     _colors = False
 
 
-def want_colors(stdout):
+def want_colors(stream):
     if not _colors: return False
     if 'NO_COLOR' in os.environ: return False
-    return hasattr(stdout, 'isatty') and stdout.isatty()
+    return hasattr(stream, 'isatty') and stream.isatty()
 
 
 _ansi_seqs = {

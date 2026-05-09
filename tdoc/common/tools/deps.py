@@ -2,19 +2,11 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
-import functools
-import itertools
 import json
-import os
-import pathlib
 import re
-import ssl
-import subprocess
-import sys
-import tempfile
-import tomllib
-from urllib import request
 import webbrowser
+
+from .. import deps, util
 
 # TODO: GitHub actions
 
@@ -45,11 +37,6 @@ class Checker:
         self.opts = opts
         self.first_section = True
 
-    @functools.cached_property
-    def run_toml(self):
-        with (self.opts.common / 'config' / 'run.toml').open('rb') as f:
-            return tomllib.load(f)
-
     def write(self, s): return self.opts.stdout.write(s)
 
     def section(self, s):
@@ -59,12 +46,8 @@ class Checker:
         self.first_section = False
 
     def check_deps(self):
-        path = self.opts.common / 'tdoc' / 'common' / 'deps.py'
-        mod = type(sys)('tdoc.common.deps')
-        code = compile(path.read_text('utf-8'), str(path), 'exec')
-        exec(code, mod.__dict__)
         pkgs = []
-        for info in mod.info.values():
+        for info in deps.info.values():
             pkg = NpmPackage(info['name'], info['version'])
             pkg.wanted_tag(info['tag'])
             if (urls := info.get('release_urls')) is not None:
@@ -87,18 +70,17 @@ class Checker:
         self.report_packages(pkgs)
 
     def npm_outdated(self):
-        p = subprocess.run(('npm', 'outdated', '--json'), cwd=self.opts.common,
-                           stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True)
-        if p.returncode not in (0, 1): raise Exception(p.stderr)
-        return json.loads(p.stdout, object_pairs_hook=Namespace)
+        p = util.run('npm', 'outdated', '--json', cwd=self.opts.common,
+                     capture_output=True, text=True, success=(0, 1))
+        return json.loads(p.stdout, object_pairs_hook=util.Namespace)
 
     uv_update_re = re.compile('^Update ([^ ]+) v([^ ]+) -> v([^ ]+)$')
 
     def check_python(self):
         pkgs = []
-        out = self.uv('lock', '--upgrade', '--dry-run', '--no-progress',
-                      '--color=never', capture_output=True, text=True)[1]
+        out = util.vrun_uv('lock', '--upgrade', '--dry-run', '--no-progress',
+                           '--color=never', common=self.opts.common,
+                           capture_output=True, text=True).stderr
         for line in out.splitlines():
             if (m := self.uv_update_re.fullmatch(line)) is None: continue
             pkg = PythonPackage(m[1], m[2], m[3])
@@ -111,18 +93,8 @@ class Checker:
     def check_requirements(self):
         for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text())
-            with tempfile.NamedTemporaryFile('w') as f:
-                f.write(f"""\
-# /// script
-# requires-python = '>={self.run_toml['python']['minimum']}'
-# dependencies = ['{p.stem}']
-# ///
-""")
-                f.flush()
-                out = self.uv('export', '--no-header',
-                              '--format=requirements.txt', f'--script={f.name}',
-                              capture_output=True, text=True)[0]
-            want_reqs = self.parse_requirements(out)
+            want_reqs = self.parse_requirements(
+                util.requirements(p.stem, common=self.opts.common))
             if want_reqs == cur_reqs: continue
             pkgs = []
             for pn in cur_reqs | want_reqs:
@@ -142,34 +114,9 @@ class Checker:
         for m in self.reqs_pkg_version_re.finditer(text): reqs[m[1]] = m[2]
         return reqs
 
-    def uv(self, *args, **kwargs):
-        p = subprocess.run(('uv', *args), cwd=self.opts.common,
-                           stdin=subprocess.DEVNULL, **kwargs)
-        if p.returncode != 0: raise Exception(p.stderr)
-        return p.stdout, p.stderr
-
     def report_packages(self, pkgs):
         pkgs.sort(key=lambda p: p.name)
         for pkg in pkgs: pkg.report(self.opts.stdout, self.opts.open)
-
-
-class Namespace(dict):
-    def __getattr__(self, name):
-        return self[name]
-
-
-ssl_ctx = False
-
-
-def fetch_json(url):
-    global ssl_ctx
-    if ssl_ctx is False:
-        ssl_ctx = None
-        with contextlib.suppress(ImportError):
-            import certifi
-            ssl_ctx = ssl.create_default_context(cafile=certifi.where())
-    with request.urlopen(url, context=ssl_ctx, timeout=30) as f:
-        return json.load(f, object_pairs_hook=Namespace)
 
 
 gh_repo_re = re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)')
@@ -187,7 +134,7 @@ class Package:
     @property
     def info(self):
         if (info := self._info_cache.get(self.name)) is not None: return info
-        res = self._info_cache[self.name] = fetch_json(self.info_url)
+        res = self._info_cache[self.name] = util.fetch_json(self.info_url)
         return res
 
     def report(self, o, open):
