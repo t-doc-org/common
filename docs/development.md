@@ -32,31 +32,6 @@ creating and editing documents.
   ````
   `````
 
-- Install the [`build`](https://pypi.org/project/build/) and
-  [`uv`](https://pypi.org/project/uv/) packages.
-
-  `````{tab-set}
-  :sync-group: platform
-  ````{tab-item} Windows
-  :sync: windows
-  ```{code-block} shell-session
-  python -m pip install build uv
-  ```
-  ````
-  ````{tab-item} macOS
-  :sync: macos
-  ```{code-block} shell-session
-  python -m pip install --user build uv
-  ```
-  ````
-  ````{tab-item} Linux
-  :sync: linux
-  ```{code-block} shell-session
-  python -m pip install --user build uv
-  ```
-  ````
-  `````
-
 - Clone the `common` repository.
 
   ```{code-block} shell-session
@@ -83,9 +58,27 @@ creating and editing documents.
 
 - Update the generated files.
 
+  `````{tab-set}
+  :sync-group: platform
+  ````{tab-item} Windows
+  :sync: windows
   ```{code-block} shell-session
-  uv build
+  run.py uv build
   ```
+  ````
+  ````{tab-item} macOS
+  :sync: macos
+  ```{code-block} shell-session
+  ./run.py uv build
+  ```
+  ````
+  ````{tab-item} Linux
+  :sync: linux
+  ```{code-block} shell-session
+  ./run.py uv build
+  ```
+  ````
+  `````
 
 - If any Python dependencies need to be upgraded, delete the `_venv/dev`
   directory. It will be re-created when the local server is run the next time.

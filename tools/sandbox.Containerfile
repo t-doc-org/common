@@ -8,13 +8,6 @@ RUN --mount=type=bind,source=/,dst=/mnt/tools \
         --create-home --no-log-init user; \
     cp /mnt/tools/bashrc /root/.bashrc; \
     cp /mnt/tools/bashrc /home/user/.bashrc;
-RUN --mount=type=bind,from=config,source=/,dst=/mnt/config \
-    set -o errexit; \
-    for pkg in build uv; do \
-        python -P -m pip install --root-user-action=ignore \
-            --require-hashes --only-binary=:all: --no-deps \
-            --requirement="/mnt/config/${pkg}.req"; \
-    done;
 RUN \
     set -o errexit; \
     apt-get update; \
