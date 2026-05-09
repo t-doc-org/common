@@ -109,6 +109,7 @@ def create_image(common, name, *, python, port):
         f'--label={label_base}.port={port}',
         f'--label={label_base}.python={python}',
         f'--env=TDOC_DEFAULT_PORT={port}',
+        # TODO: Set TERM?
         common / 'tools')
 
 
@@ -172,7 +173,7 @@ while now < stop:
 def shell_in_container(name, *, uid):
     return run_long('podman', 'container', 'exec', '--interactive', '--tty',
                     f'--user={uid}', '--workdir=/t-doc',
-                    f'--env=CONTAINER_NAME={name}',
+                    f'--env=TDOC_SANDBOX={name}',
                     f'--env=TERM={os.environ['TERM']}',
                     name, '/bin/bash')
 

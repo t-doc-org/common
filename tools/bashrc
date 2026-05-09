@@ -28,16 +28,16 @@ shopt -s histappend
 # Change the window title
 case ${TERM} in
     xterm*|rxvt*|Eterm|aterm|kterm|gnome*|interix)
-        PROMPT_COMMAND='history -a; echo -ne "\033]0;${USER}@${CONTAINER_NAME}:${PWD/#$HOME/~}\007"';;
+        PROMPT_COMMAND='history -a; echo -ne "\033]0;${USER}@${TDOC_SANDBOX}:${PWD/#$HOME/~}\007"';;
     screen*)
-        PROMPT_COMMAND='history -a; echo -ne "\033_${USER}@${CONTAINER_NAME}:${PWD/#$HOME/~}\033\\"';;
+        PROMPT_COMMAND='history -a; echo -ne "\033_${USER}@${TDOC_SANDBOX}:${PWD/#$HOME/~}\033\\"';;
 esac
 
 # Prompt
 if [[ ${EUID} == 0 ]] ; then
-    PS1='\[\033[33m\]${CONTAINER_NAME} \[\033[01;34m\]\W \[\033[00m\]\$ '
+    PS1='\[\033[33m\]${TDOC_SANDBOX} \[\033[01;34m\]\W \[\033[00m\]\$ '
 else
-    PS1='\[\033[36m\]\u@${CONTAINER_NAME} \[\033[01;34m\]\W \[\033[00m\]\$ '
+    PS1='\[\033[36m\]\u@${TDOC_SANDBOX} \[\033[01;34m\]\W \[\033[00m\]\$ '
 fi
 
 # Aliases

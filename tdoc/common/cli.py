@@ -65,7 +65,8 @@ def main(argv, stdin, stdout, stderr):
     p = root.add_parser('serve', help="Serve a site locally.")
     p.set_defaults(handler=cmd_serve)
     arg = p.add_argument
-    arg('--bind', metavar='ADDRESS', dest='bind', default='localhost',
+    arg('--bind', metavar='ADDRESS', dest='bind',
+        default='ALL' if 'TDOC_SANDBOX' in os.environ else 'localhost',
         help="The address to bind the server to (default: %(default)s). "
              "Specify ALL to bind to all interfaces.")
     arg('--cache', metavar='PATH', dest='cache', type='path', default='_cache',
@@ -1035,7 +1036,9 @@ class Application(wsgi.Dispatcher):
 
     def print_serving(self):
         host, port = self.server.host_port
-        if host in ('', '::', '0.0.0.0'): host = socket.getfqdn()
+        if host in ('', '::', '0.0.0.0'):
+            host = 'localhost' if 'TDOC_SANDBOX' in os.environ \
+                   else socket.getfqdn()
         if ':' in host: host = f'[{host}]'
         o = self.opts.stderr
         o.write(f"Serving at <{o.LBLUE}http://{host}:{port}/{o.NORM}>\n")
