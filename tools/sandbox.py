@@ -119,7 +119,7 @@ def list_containers(*, filter=()):
 
 
 def stop_containers(*, filter=()):
-    run('podman', 'container', 'stop', '--time=0', *filter_args(filter),
+    run('podman', 'container', 'stop', *filter_args(filter),
         stdout=subprocess.DEVNULL)
 
 
@@ -144,12 +144,10 @@ def start_container(base, common, *, name, image, userns, python, port_range):
                 tmpfs(repo, 'tdoc/common/static.gen'),
             ])
 
-    # TODO: Use --init?
-    # https://oneuptime.com/blog/post/2026-03-16-run-container-init-process-podman/view
-
     # Run a script that terminates some duration after the last shell exits.
     run('podman', 'container', 'run',
-        f'--name={name}', f'--userns={userns}', '--detach', '--rm', *mounts,
+        f'--name={name}', f'--userns={userns}', '--init', '--detach', '--rm',
+        '--security-opt=no-new-privileges', *mounts,
         f'--publish=127.0.0.1:{port_range}:{port_range}/tcp',
         f'--label={label_base}.port_range={port_range}',
         f'--label={label_base}.python={python}',
