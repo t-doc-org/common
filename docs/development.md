@@ -32,8 +32,7 @@ creating and editing documents.
   ````
   `````
 
-- Install the [`build`](https://pypi.org/project/build/),
-  [`hatchling`](https://pypi.org/project/hatchling/) and
+- Install the [`build`](https://pypi.org/project/build/) and
   [`uv`](https://pypi.org/project/uv/) packages.
 
   `````{tab-set}
@@ -41,19 +40,19 @@ creating and editing documents.
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  python -m pip install build hatchling uv
+  python -m pip install build uv
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  python -m pip install --user build hatchling uv
+  python -m pip install --user build uv
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  python -m pip install --user build hatchling uv
+  python -m pip install --user build uv
   ```
   ````
   `````

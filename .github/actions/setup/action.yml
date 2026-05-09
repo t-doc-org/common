@@ -46,7 +46,9 @@ runs:
       if: ${{ inputs.build-pkgs == 'true' }}
       shell: bash
       run: |
-        ${{ steps.python.outputs.python-path }} -P -m pip install build
+        ${{ steps.python.outputs.python-path }} -P -m pip install \
+            --require-hashes --only-binary=:all: --no-deps \
+            --requirement=common/config/build.req
     - name: Update system package index
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash
@@ -55,5 +57,5 @@ runs:
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash
       run: |
-        sudo apt-get install --yes \
+        sudo apt-get install --yes --no-install-recommends \
             graphviz
