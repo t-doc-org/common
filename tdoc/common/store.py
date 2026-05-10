@@ -12,7 +12,7 @@ import bcrypt
 
 from . import database, logs
 
-log = logs.logger(__name__)
+_log = logs.logger(__name__)
 max_id_len = 64  # Maximum length of globally-unique identifiers
 max_voters_per_poll = 100  # Maximum number of voters per poll
 
@@ -581,8 +581,8 @@ class Store(database.Database):
         self._wake = Seqs()
 
     def __enter__(self):
-        log.debug("Store: %(path)s",
-                  path=self.path if self.path is not None else ':in-memory:')
+        _log.debug("Store: %(path)s",
+                   path=self.path if self.path is not None else ':in-memory:')
         res = super().__enter__()
         self.dispatcher_db = self.mem_db or self.connect(mode='ro')
         self.dispatcher = threading.Thread(target=self.dispatch,
@@ -592,14 +592,14 @@ class Store(database.Database):
         return res
 
     def __exit__(self, typ, value, tb):
-        log.debug("Store: stopping")
+        _log.debug("Store: stopping")
         with self.lock:
             self._stop = True
             self.lock.notify()
         self.dispatcher.join()
         if self.dispatcher_db != self.mem_db: self.dispatcher_db.close()
         res = super().__exit__(typ, value, tb)
-        log.debug("Store: done")
+        _log.debug("Store: done")
         return res
 
     @contextlib.contextmanager

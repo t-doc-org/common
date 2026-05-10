@@ -15,7 +15,7 @@ from wsgiref import util as wsgiutil
 
 from . import logs, util
 
-log = logs.logger(__name__)
+_log = logs.logger(__name__)
 _missing = object()
 
 # A regexp matching a hostname component.
@@ -222,12 +222,12 @@ class Dispatcher:
                 log_query = getattr(handler, '_log_query', True)
                 if log_level != logs.NOTSET:
                     uri = wr.uri(include_query=log_query)
-                    log.log(log_level,
-                            "%(method)s %(uri)s\n"
-                            "origin=%(origin)s remote=%(remote)s user=%(user)s",
-                            event='req:start', method=wr.method, uri=uri,
-                            origin=wr.origin, remote=wr.remote_addr,
-                            user=wr.user)
+                    _log.log(
+                        log_level,
+                        "%(method)s %(uri)s\n"
+                        "origin=%(origin)s remote=%(remote)s user=%(user)s",
+                        event='req:start', method=wr.method, uri=uri,
+                        origin=wr.origin, remote=wr.remote_addr, user=wr.user)
                     chained_respond = wr.respond
                     def respond_log(status, headers, exc_info=None):
                         nonlocal log_status
@@ -241,17 +241,17 @@ class Dispatcher:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info())
         except Exception as e:
             if uri is None: uri = wr.uri(include_query=log_query)
-            log.exception("Uncaught exception", event='req:exception',
-                          method=wr.method, uri=uri, origin=wr.origin,
-                          remote=wr.remote_addr, user=wr.user)
+            _log.exception("Uncaught exception", event='req:exception',
+                           method=wr.method, uri=uri, origin=wr.origin,
+                           remote=wr.remote_addr, user=wr.user)
             yield from wr.error(HTTPStatus.INTERNAL_SERVER_ERROR,
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
                 if uri is None: uri = wr.uri(include_query=log_query)
-                log.log(log_level, "%(status)s", event='req:end',
-                        method=wr.method, uri=uri, origin=wr.origin,
-                        remote=wr.remote_addr, user=wr.user, status=log_status)
+                _log.log(log_level, "%(status)s", event='req:end',
+                         method=wr.method, uri=uri, origin=wr.origin,
+                         remote=wr.remote_addr, user=wr.user, status=log_status)
             logs.pop_ctx(ctoken)
 
     def pre_request(self, wr): pass

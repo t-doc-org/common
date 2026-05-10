@@ -9,7 +9,7 @@ import threading
 
 from tdoc.common import api, config, store, logs, wsgi
 
-log = logs.logger(__name__)
+_log = logs.logger(__name__)
 
 
 def application(config_path, events_level=logs.NOTSET):
@@ -25,19 +25,19 @@ def application(config_path, events_level=logs.NOTSET):
     stack = contextlib.ExitStack()
     stack.enter_context(logs.configure(config=cfg.sub('logging'),
                                        stderr=sys.stderr))
-    log.info("Starting (processes: %(processes)s, threads: %(threads)s)",
-             processes=mod_wsgi.maximum_processes,
-             threads=mod_wsgi.threads_per_process)
+    _log.info("Starting (processes: %(processes)s, threads: %(threads)s)",
+              processes=mod_wsgi.maximum_processes,
+              threads=mod_wsgi.threads_per_process)
 
     @mod_wsgi.subscribe_shutdown
     def on_shutdown(event, **kwargs):
-        log.info("Shutdown: %s", kwargs)
+        _log.info("Shutdown: %s", kwargs)
         stack.close()
 
     if events_level != logs.NOTSET:
         @mod_wsgi.subscribe_events
         def on_event(event, **kwargs):
-            log.log(events_level, "Event %s: %s", event, kwargs)
+            _log.log(events_level, "Event %s: %s", event, kwargs)
 
     # Instantiate the store and the API.
     st = store.Store(store_config)

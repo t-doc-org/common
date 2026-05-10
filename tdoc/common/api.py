@@ -19,7 +19,7 @@ import jwt
 
 from . import database, logs, store, util, wsgi
 
-log = logs.logger(__name__)
+_log = logs.logger(__name__)
 missing = object()
 # TODO(py-3.13): Remove ShutDown
 ShutDown = getattr(queue, 'ShutDown', queue.Empty)
@@ -62,9 +62,9 @@ class Api(wsgi.Dispatcher):
     def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
-        log.debug("Api: stopping")
+        _log.debug("Api: stopping")
         self.events.stop()
-        log.debug("Api: done")
+        _log.debug("Api: done")
 
     @contextlib.contextmanager
     def write_db(self):
@@ -82,7 +82,7 @@ class Api(wsgi.Dispatcher):
             try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
             except Exception as e:
-                log.exception("Authentication failure", event='auth:error')
+                _log.exception("Authentication failure", event='auth:error')
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
@@ -91,12 +91,12 @@ class Api(wsgi.Dispatcher):
         try:
             yield from handler(wr.env, wr.respond, wr)
         except database.client_errors:
-            log.exception("Store client error", exc_limit=-1, exc_chain=False,
-                          event='store:error:client')
+            _log.exception("Store client error", exc_limit=-1, exc_chain=False,
+                           event='store:error:client')
             raise wsgi.Error(HTTPStatus.BAD_REQUEST)
         except database.Error as e:
-            log.exception("Store error", exc_limit=-1, exc_chain=False,
-                          event='store:error')
+            _log.exception("Store error", exc_limit=-1, exc_chain=False,
+                           event='store:error')
             raise wsgi.Error(HTTPStatus.FORBIDDEN,
                              e.args[0] if e.args else None)
 
@@ -426,8 +426,8 @@ class DbObservable(DynObservable):
     def wake_keys(self, db): return None
 
     def poll(self):
-        log.debug("Start: %(cls)s", event='obs:start',
-                  cls=self.__class__.__name__)
+        _log.debug("Start: %(cls)s", event='obs:start',
+                   cls=self.__class__.__name__)
         try:
             store = self.events.api.store
             with contextlib.closing(store.connect(mode='ro')) as db, \
@@ -439,7 +439,7 @@ class DbObservable(DynObservable):
                         with db: data, until = self.query(db)
                         queried = True
                     except Exception:
-                        log.exception("Exception")
+                        _log.exception("Exception")
                     with self.lock:
                         if queried and data != self._data:
                             self._data = data
@@ -449,10 +449,10 @@ class DbObservable(DynObservable):
         except Exception:
             with self.lock: self._stop = True
             self.remove()
-            log.exception("Uncaught exception", event='obs:exception',
-                          cls=self.__class__.__name__)
+            _log.exception("Uncaught exception", event='obs:exception',
+                           cls=self.__class__.__name__)
         finally:
-            log.debug("End", event='obs:end', cls=self.__class__.__name__)
+            _log.debug("End", event='obs:end', cls=self.__class__.__name__)
 
     def query(self, db):
         raise NotImplementedError()
@@ -577,10 +577,10 @@ class OidcAuthApi(wsgi.Dispatcher):
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
                                      "At least one login is required")
             if id_token is not None:
-                log.info("User %(user)d removed login %(name)s",
-                         user=wr.user, name=self.token_name(id_token),
-                         iss=id_token['iss'], sub=id_token['sub'],
-                         event='oidc:login:remove')
+                _log.info("User %(user)d removed login %(name)s",
+                          user=wr.user, name=self.token_name(id_token),
+                          iss=id_token['iss'], sub=id_token['sub'],
+                          event='oidc:login:remove')
         return {}
 
     def get_key(self, disc, token):
@@ -680,9 +680,9 @@ class OidcAuthApi(wsgi.Dispatcher):
             raise
         except Exception as e:
             params = {'auth_error': str(e)}
-            log.info("OIDC login error: %(type)s: %(message)s",
-                     type=e.__class__.__name__, message=str(e),
-                     event='oidc:login:error')
+            _log.info("OIDC login error: %(type)s: %(message)s",
+                      type=e.__class__.__name__, message=str(e),
+                      event='oidc:login:error')
         if href is None or params is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
         parts = parse.urlparse(href)
@@ -730,22 +730,22 @@ class OidcAuthApi(wsgi.Dispatcher):
             user = state_user
             if (t := state.get('token')) is not None: db.tokens.remove([t])
             db.after_commit(
-                lambda: log.info("User %(user)d added login %(name)s",
-                                 user=user, name=self.token_name(id_token),
-                                 iss=id_token['iss'], sub=id_token['sub'],
-                                 event='oidc:login:add'))
+                lambda: _log.info("User %(user)d added login %(name)s",
+                                  user=user, name=self.token_name(id_token),
+                                  iss=id_token['iss'], sub=id_token['sub'],
+                                  event='oidc:login:add'))
         elif user is not None:
             db.after_commit(
-                lambda: log.info("User %(user)d logged in", user=user,
-                                 event='oidc:login'))
+                lambda: _log.info("User %(user)d logged in", user=user,
+                                  event='oidc:login'))
 
         # If no existing user was found, and the identity matches auto-creation
         # claims, create a new user.
         if user is None and (name := self.new_user_name(id_token, icfg)):
             user, = db.users.create([name])
             db.after_commit(
-                lambda: log.info("User %(user)d was auto-created", user=user,
-                                 event='user:create:auto'))
+                lambda: _log.info("User %(user)d was auto-created", user=user,
+                                  event='user:create:auto'))
 
         # If we've found or created a user, add or update the identity and
         # generate a new token.
