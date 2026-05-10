@@ -27,7 +27,7 @@ import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
 from .. import __project__, __version__, api, config, console, deps, logs, \
-               store, util, wsgi
+               store as _store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
@@ -47,7 +47,7 @@ def main(argv, stdin, stdout, stderr):
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    from . import group, log, repo, token, user
+    from . import group, log, repo, store, token, user
 
     p = root.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
@@ -108,7 +108,7 @@ def main(argv, stdin, stdout, stderr):
     add_sphinx_options(p)
     add_common_options(p)
 
-    add_store_commands(root)
+    store.add_commands(root)
     token.add_commands(root)
     user.add_commands(root)
 
@@ -207,8 +207,8 @@ Would you like to perform the upgrade (y/n)? """)
 
 
 def get_store(opts, allow_mem=False):
-    st = store.Store(opts.cfg.sub('store'),
-                     mem_name='store' if allow_mem else None)
+    st = _store.Store(opts.cfg.sub('store'),
+                      mem_name='store' if allow_mem else None)
     st.check_version(functools.partial(on_upgrade, opts))
     return st
 
@@ -277,63 +277,6 @@ def cmd_serve(opts):
         except KeyboardInterrupt:
             opts.stderr.write("Interrupted, exiting\n")
     return app.returncode
-
-
-def add_store_commands(parser):
-    p = parser.add_parser('store', help="Store-related commands.")
-    sp = p.add_subparsers(title="Sub-commands")
-    sp.required = True
-
-    p = sp.add_parser('backup', help="Backup the store database.")
-    p.set_defaults(handler=cmd_store_backup)
-    arg = p.add_argument
-    arg('destination', metavar='PATH', nargs='?', type='path', default=None,
-        help="The path to the backup copy. Defaults to the source database "
-             "file with a date + time suffix.")
-    add_common_options(p)
-
-    p = sp.add_parser('create', help="Create the store database.")
-    p.set_defaults(handler=cmd_store_create)
-    arg = p.add_argument
-    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
-        help="The version at which to create the store database (default: "
-             "latest).")
-    add_common_options(p)
-
-    p = sp.add_parser('upgrade', help="Upgrade the store database.")
-    p.set_defaults(handler=cmd_store_upgrade)
-    arg = p.add_argument
-    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
-        help="The version to which to upgrade the store database (default: "
-             "latest).")
-    add_common_options(p)
-
-
-def cmd_store_backup(opts):
-    st = store.Store(opts.cfg.sub('store'))
-    if opts.destination is None: opts.destination = backup_path(st)
-    with contextlib.closing(st.connect(mode='ro')) as db, db:
-        opts.stdout.write(f"Backing up to: {opts.destination}\n")
-        st.backup(db, opts.destination)
-
-
-def cmd_store_create(opts):
-    st = store.Store(opts.cfg.sub('store'))
-    version = st.create(version=opts.version, dev=opts.dev)
-    opts.stdout.write(f"Created (version: {version}): {st.path}\n")
-
-
-def cmd_store_upgrade(opts):
-    st = store.Store(opts.cfg.sub('store'))
-    with contextlib.closing(st.connect(mode='rw')) as db:
-        with db: version, latest = st.version(db)
-        if version == latest:
-            opts.stdout.write(
-                f"Already up-to-date (version: {version}): {st.path}\n")
-            return
-        opts.stdout.write(f"Upgrading (version: {version}): {st.path}\n")
-        to_version = opts.version if opts.version is not None else latest
-        upgrade_database(opts, st, db, version, to_version, indent="  ")
 
 
 def add_origin_option(arg):
