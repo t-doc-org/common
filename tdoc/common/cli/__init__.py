@@ -47,7 +47,7 @@ def main(argv, stdin, stdout, stderr):
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    from . import group, token
+    from . import group, token, user
 
     p = root.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
@@ -110,7 +110,7 @@ def main(argv, stdin, stdout, stderr):
 
     add_store_commands(root)
     token.add_commands(root)
-    add_user_commands(root)
+    user.add_commands(root)
 
     p = root.add_parser('version', help="Display version information.")
     p.set_defaults(handler=cmd_version)
@@ -499,85 +499,6 @@ def cmd_store_upgrade(opts):
 def add_origin_option(arg):
     arg('--origin', metavar='URL', dest='origin', default='',
         help="The origin on which to operate.")
-
-
-def add_user_commands(parser):
-    p = parser.add_parser('user', help="User-related commands.")
-    sp = p.add_subparsers(title="Sub-commands")
-    sp.required = True
-
-    def add_users_re(arg):
-        arg('users', metavar='REGEXP', nargs='?', default='.*',
-            help="A regexp to limit the users to consider.")
-
-    p = sp.add_parser('create', help="Create users.")
-    p.set_defaults(handler=cmd_user_create)
-    arg = p.add_argument
-    add_origin_option(arg)
-    arg('--token-expire', metavar='TIME', dest='token_expire',
-        type='opt_rel_timestamp',
-        help="Expire the users' token at the given relative or absolute time.")
-    arg('user', metavar='USER', nargs='+',
-        help="The names of the users to create.")
-    add_common_options(p)
-
-    p = sp.add_parser('list', help="List users.")
-    p.set_defaults(handler=cmd_user_list)
-    arg = p.add_argument
-    add_users_re(arg)
-    add_common_options(p)
-
-    p = sp.add_parser('memberships', help="List group memberships for a user.")
-    p.set_defaults(handler=cmd_user_memberships)
-    arg = p.add_argument
-    add_origin_option(arg)
-    arg('--direct', action='store_true', dest='direct',
-        help="List only direct memberships.")
-    add_users_re(arg)
-    add_common_options(p)
-
-
-def cmd_user_create(opts):
-    with write_db(opts) as db:
-        uids = db.users.create(opts.user)
-        tokens = db.tokens.create(uids, opts.token_expire)
-    wuser = max((len(u) for u in opts.user), default=0)
-    o = opts.stdout
-    for uid, user, token in zip(uids, opts.user, tokens):
-        opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
-                         f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
-
-
-def cmd_user_list(opts):
-    with read_db(opts) as db:
-        users = db.users.list(opts.users)
-    users.sort(key=lambda r: r[1])
-    wuser = max((len(r[1]) for r in users), default=0)
-    o = opts.stdout
-    for uid, user, created in users:
-        opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
-            f"created: {util.local_time(created)}\n")
-
-
-def cmd_user_memberships(opts):
-    with read_db(opts) as db:
-        memberships = db.users.memberships(opts.origin, opts.users,
-                                           transitive=not opts.direct)
-    memberships.sort()
-    wuser = max((len(r[1]) for r in memberships), default=0)
-    wgroup = max((len(r[2]) for r in memberships), default=0)
-    o = opts.stdout
-    prev = None
-    for uid, user, group, transitive in memberships:
-        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  " \
-                 if user != prev else f"{'':{wuser + 19 + 5}}"
-        if transitive:
-            opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
-                             "(transitive)\n")
-        else:
-            opts.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
-        prev = user
 
 
 def cmd_version(opts):
