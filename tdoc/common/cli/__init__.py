@@ -31,7 +31,7 @@ from .. import __project__, __version__, api, config, console, deps, logs, \
 
 # TODO: Split groups of sub-commands into separate modules
 
-log = logs.logger(__name__)
+_log = logs.logger(__name__)
 rc_build_failure = 1
 rc_source_change = 123
 
@@ -47,7 +47,7 @@ def main(argv, stdin, stdout, stderr):
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    from . import group, repo, token, user
+    from . import group, log, repo, token, user
 
     p = root.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
@@ -62,7 +62,7 @@ def main(argv, stdin, stdout, stderr):
     add_common_options(p)
 
     group.add_commands(root)
-    add_log_commands(root)
+    log.add_commands(root)
     repo.add_commands(root)
 
     p = root.add_parser('serve', help="Serve a site locally.")
@@ -129,8 +129,8 @@ def main(argv, stdin, stdout, stderr):
                         on_upgrade=functools.partial(on_upgrade, opts),
                         db_logs=not getattr(opts.handler, '_disable_db_logs',
                                             False)):
-        log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
-                 argv=argv)
+        _log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
+                  argv=argv)
         return opts.handler(opts)
 
 
@@ -253,119 +253,6 @@ def cmd_build(opts):
 
 def cmd_clean(opts):
     return sphinx_build(opts, 'clean', build=opts.build).returncode
-
-
-def add_log_commands(parser):
-    p = parser.add_parser('log', help="Log-related commands.")
-    sp = p.add_subparsers(title="Sub-commands")
-    sp.required = True
-
-    p = sp.add_parser('backup', help="Backup log databases.")
-    p.set_defaults(handler=cmd_log_backup)
-    add_common_options(p)
-
-    p = sp.add_parser('create', help="Create log databases.")
-    p.set_defaults(handler=cmd_log_create)
-    arg = p.add_argument
-    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
-        help="The version at which to create the log databases (default: "
-             "latest).")
-    add_common_options(p)
-
-    p = sp.add_parser('query', help="Query a log database.")
-    p.set_defaults(handler=cmd_log_query)
-    arg = p.add_argument
-    arg('--begin', metavar='TIME', dest='begin', type='opt_nrel_timestamp',
-        default='1h',
-        help="Output entries logged at or after the given relative or absolute "
-             "time (default: %(default)s).")
-    arg('--end', metavar='TIME', dest='end', type='opt_nrel_timestamp',
-        default=None,
-        help="Output entries logged before the given relative or absolute "
-             "time.")
-    arg('--format', metavar='FORMAT', dest='format',
-        default=logs.default_file_format,
-        help="The format to use for log entries (default: %(default)r).")
-    arg('--index', metavar='N', dest='index', type=int, default=0,
-        help="The index of the database handler in the config (default: "
-             "%(default)s).")
-    arg('--level', metavar='LEVEL', dest='level', type=logs.to_level,
-        default=None,
-        help="Output entries with a log level equal to or above the given "
-             "level.")
-    arg('--utc', action='store_true', dest='utc',
-        help="Format times in UTC instead of local time.")
-    arg('--watch', action='store_true', dest='watch',
-        help="Output new log entries as they appear.")
-    arg('--where', metavar='EXPR', dest='where', default=None,
-        help="An additional SQL expression to add to the WHERE clause of the "
-             "database query.")
-    add_common_options(p)
-
-    p = sp.add_parser('upgrade', help="Upgrade log databases.")
-    p.set_defaults(handler=cmd_log_upgrade)
-    arg = p.add_argument
-    arg('--version', metavar='VERSION', dest='version', type=int, default=None,
-        help="The version to which to upgrade the log databases (default: "
-             "latest).")
-    add_common_options(p)
-
-
-@disable_db_logs
-def cmd_log_backup(opts):
-    for c in opts.cfg.subs('logging.databases'):
-        lst = logs.LogStore(c)
-        dest = backup_path(lst)
-        with contextlib.closing(lst.connect(mode='ro')) as db, db:
-            opts.stdout.write(f"Backing up to: {dest}\n")
-            lst.backup(db, dest)
-
-
-@disable_db_logs
-def cmd_log_create(opts):
-    for c in opts.cfg.subs('logging.databases'):
-        lst = logs.LogStore(c)
-        if lst.exists:
-            opts.stdout.write(f"Already exists: {lst.path}\n")
-            continue
-        version = lst.create(version=opts.version, dev=opts.dev)
-        opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
-
-
-@disable_db_logs
-def cmd_log_query(opts):
-    fmt = logs.Formatter(opts.format, utc=opts.utc)
-    for i, c in enumerate(opts.cfg.subs('logging.databases')):
-        if i == opts.index: break
-    else:
-        raise Exception("Invalid log database index")
-    lst = logs.LogStore(c)
-    lst.check_version(functools.partial(on_upgrade, opts))
-    with contextlib.closing(lst.connect(mode='ro')) as db:
-        rid = None
-        while True:
-            with db:
-                for rec, rid in db.query(row_id=rid, level=opts.level,
-                                         begin=opts.begin, end=opts.end,
-                                         where=opts.where):
-                    opts.stdout.write(f"{fmt.format(rec)}\n")
-            if not opts.watch: break
-            time.sleep(1)
-
-
-@disable_db_logs
-def cmd_log_upgrade(opts):
-    for c in opts.cfg.subs('logging.databases'):
-        lst = logs.LogStore(c)
-        with contextlib.closing(lst.connect(mode='rw')) as db:
-            with db: version, latest = lst.version(db)
-            if version == latest:
-                opts.stdout.write(
-                    f"Already up-to-date (version: {version}): {lst.path}\n")
-                continue
-            opts.stdout.write(f"Upgrading (version: {version}): {lst.path}\n")
-            to_version = opts.version if opts.version is not None else latest
-            upgrade_database(opts, lst, db, version, to_version, indent="  ")
 
 
 def cmd_serve(opts):
@@ -504,7 +391,7 @@ class RequestHandler(simple_server.WSGIRequestHandler):
     def log_request(self, code='-', size='-'): pass
 
     def log_message(self, format, *args):
-        log.debug((format % args).translate(self._control_char_table))
+        _log.debug((format % args).translate(self._control_char_table))
 
 
 def try_stat(path):
@@ -622,7 +509,7 @@ class Application(wsgi.Dispatcher):
     def find_files(self, root, *, file_pred=lambda p, r: True, dir_pred=None,
                    missing_ok=False):
         if missing_ok and not root.exists(): return
-        def on_error(e): log.error("Scan: %(exc)s", exc=e)
+        def on_error(e): _log.error("Scan: %(exc)s", exc=e)
         for parent, dirs, files in root.walk(on_error=on_error):
             for fn in files:
                 path = parent / fn
@@ -645,7 +532,7 @@ class Application(wsgi.Dispatcher):
                                tags=['tdoc-dev'])
             if res.returncode == 0: return True
         except Exception as e:
-            log.error("Build: %(exc)s", exc=e)
+            _log.error("Build: %(exc)s", exc=e)
         if self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()
@@ -692,8 +579,8 @@ class Application(wsgi.Dispatcher):
                         dp.write_bytes(new)
                         os.utime(dp, ns=(dp.stat().st_atime_ns, mtime))
                 except Exception as e:
-                    log.error("Copy: %(src)s -> %(dst)s: %(exc)s", src=sp,
-                              dst=dp, exc=e)
+                    _log.error("Copy: %(src)s -> %(dst)s: %(exc)s", src=sp,
+                               dst=dp, exc=e)
 
             # Remove stale files.
             for dp in dsts:
@@ -704,14 +591,14 @@ class Application(wsgi.Dispatcher):
                         try: p.rmdir()
                         except OSError: break
                 except Exception as e:
-                    log.error("Remove: %(path)s: %(exc)s", path=dp, exc=e)
+                    _log.error("Remove: %(path)s: %(exc)s", path=dp, exc=e)
 
     def remove(self, build):
         build.relative_to(self.opts.build)  # Ensure we're below the build dir
         if not build.exists(): return
         def on_error(fn, path, e):
-            log.error("Remove: %(func)s: %(path)s: %(exc)s", func=fn, path=path,
-                      exc=e)
+            _log.error("Remove: %(func)s: %(path)s: %(exc)s", func=fn,
+                       path=path, exc=e)
         shutil.rmtree(build, onexc=on_error)
 
     def remove_all(self):
@@ -766,7 +653,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             if parts[0] != '' or len(parts) < 4: return
             if (d := deps.info.get(parts[1])) is None: return
             url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
-            log.debug("Caching: %(url)s", url=url)
+            _log.debug("Caching: %(url)s", url=url)
             with util.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
@@ -776,7 +663,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 f.close()
                 pathlib.Path(f.name).replace(path)
         except Exception as e:
-            log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
+            _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
     @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
                    log_level=logs.DEBUG)
