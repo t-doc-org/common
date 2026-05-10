@@ -161,7 +161,7 @@ def run_tests(tests, repo, wheel, write, interactive):
 
     # Run the local server, wait for it to serve or exit.
     write("Running local server\n")
-    args = ['tdoc', 'serve', '--debug', '--exit-on-failure']
+    args = ['tdoc', 'site', 'serve', '--debug', '--exit-on-failure']
     if interactive: args += ['--exit-on-idle=2', '--open']
     # TODO: Manage server process in a background thread
     error = None
@@ -217,11 +217,11 @@ def exercise_cli(repo_dir, write, vrun):
 
     # Build the HTML.
     write("Building HTML\n")
-    vrun('tdoc', 'build', '--debug', 'html')
+    vrun('tdoc', 'site', 'build', '--debug', 'html')
 
     # Clean the HTML output.
     write("Cleaning HTML output\n")
-    vrun('tdoc', 'clean', '--debug')
+    vrun('tdoc', 'site', 'clean', '--debug')
 
     # Create the store.
     write("Setting up logging\n")

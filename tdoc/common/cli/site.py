@@ -31,19 +31,28 @@ rc_source_change = 123
 
 
 def add_commands(parser):
-    p = parser.add_parser('build', help="Build a site.")
+    p = parser.add_parser('site', help="Site-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+    _add_commands(sp)
+    # TODO(0.73): Remove aliases
+    _add_commands(parser)
+
+
+def _add_commands(sp):
+    p = sp.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
     add_sphinx_options(p)
     cli.add_common_options(p)
 
-    p = parser.add_parser('clean', help="Clean the build products of a site.")
+    p = sp.add_parser('clean', help="Clean the build products of a site.")
     p.set_defaults(handler=cmd_clean)
     add_sphinx_options(p)
     cli.add_common_options(p)
 
-    p = parser.add_parser('serve', help="Serve a site locally.")
+    p = sp.add_parser('serve', help="Serve a site locally.")
     p.set_defaults(handler=cmd_serve)
     p.set_defaults(default_port=int(os.environ.get('TDOC_DEFAULT_PORT', 8000)))
     arg = p.add_argument
