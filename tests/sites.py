@@ -320,11 +320,11 @@ path = "tmp/store.sqlite"
     write("Querying log database\n")
     vrun(
         'tdoc', 'log', 'query', '--debug', '--utc', '--begin=10m', '--end=0s',
-        '--level=info', "--where=record ->> '$.module' = 'cli'",
-        '--format={asctime} {ilevel} {ctx} {module} {message}',
+        '--level=info', "--where=record ->> '$.name' = 'tdoc.common.cli'",
+        '--format={asctime} {ilevel} {ctx} {name} {message}',
         out=[
-            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z I main cli CLI: .*'
-                r' store create ',
+            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z '
+            r'I main tdoc.common.cli CLI: .* store create ',
         ])
     vrun('tdoc', 'log', 'backup', '--debug', out=[
         r'^Backing up to: .*log\.sqlite'
