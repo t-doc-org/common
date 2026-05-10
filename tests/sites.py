@@ -215,6 +215,8 @@ def exercise_cli(repo_dir, write, vrun):
     write("Getting version information\n")
     vrun('tdoc', 'version', '--debug')
 
+    # TODO: Exercise deps sub-commands.
+
     # Build the HTML.
     write("Building HTML\n")
     vrun('tdoc', 'site', 'build', '--debug', 'html')

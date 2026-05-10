@@ -9,7 +9,8 @@ import pathlib
 import shlex
 import threading
 
-from .. import __project__, __version__, config, console, logs, store as _store
+from .. import __project__, __version__, config, console, logs, \
+               store as _store, util
 
 _log = logs.logger(__name__)
 
@@ -24,7 +25,8 @@ def main(argv, stdin, stdout, stderr):
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    from . import group, log, repo, site, store, token, user
+    from . import deps, group, log, repo, site, store, token, user
+    deps.add_commands(root)
     group.add_commands(root)
     log.add_commands(root)
     repo.add_commands(root)
@@ -83,6 +85,17 @@ def add_common_options(parser):
 def add_origin_option(arg):
     arg('--origin', metavar='URL', dest='origin', default='',
         help="The origin on which to operate.")
+
+
+def require_common(opts):
+    path = pathlib.Path(__file__).parent.resolve().parent.parent.parent
+    with contextlib.suppress(Exception):
+        data = util.read_toml(path / 'pyproject.toml')
+        if data['project']['name'] == __project__:
+            opts.common = path
+            return
+    raise Exception("This command is only available in an editable install of "
+                    f"{__project__}")
 
 
 def on_upgrade(opts, st, db, version, latest):

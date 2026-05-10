@@ -6,13 +6,13 @@ import json
 import re
 import webbrowser
 
-from .. import deps, util
+from .. import cli, deps, util
 
 # TODO: GitHub actions
 
 
-def add_commands(parser, common_options):
-    p = parser.add_parser('deps', help="Dependeny-related commands.")
+def add_commands(parser):
+    p = parser.add_parser('deps', help="Commands related to dependencies.")
     sp = p.add_subparsers(title="Sub-commands")
     sp.required = True
 
@@ -21,17 +21,18 @@ def add_commands(parser, common_options):
     arg = p.add_argument
     arg('--open', action='store_true', dest='open',
         help="Open all URLs in a browser.")
-    common_options(p)
+    cli.add_common_options(p)
 
     p = sp.add_parser('generate', help="Generate requirements files.")
     p.set_defaults(handler=cmd_generate)
     arg = p.add_argument
     arg('name', metavar='NAME', nargs='+',
         help="The requirements files to generate.")
-    common_options(p)
+    cli.add_common_options(p)
 
 
 def cmd_check(opts):
+    cli.require_common(opts)
     checker = Checker(opts)
     checker.check_deps()
     checker.check_node()
@@ -216,6 +217,7 @@ class PythonPackage(Package):
 
 
 def cmd_generate(opts):
+    cli.require_common(opts)
     for name in opts.name:
         if name[:1].isdigit():
             generate_version_reqs(opts, name)
