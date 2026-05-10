@@ -26,8 +26,8 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import __project__, __version__, api, config, console, deps, logs, \
-              store, util, wsgi
+from .. import __project__, __version__, api, config, console, deps, logs, \
+               store, util, wsgi
 
 # TODO: Split groups of sub-commands into separate modules
 
