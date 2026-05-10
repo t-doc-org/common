@@ -26,7 +26,6 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server, util as wsgiutil
 
-from . import group
 from .. import __project__, __version__, api, config, console, deps, logs, \
                store, util, wsgi
 
@@ -47,6 +46,8 @@ def main(argv, stdin, stdout, stderr):
         prog=pathlib.Path(argv[0]).name, description="Manage a t-doc site.")
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
+
+    from . import group, token
 
     p = root.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
@@ -105,7 +106,7 @@ def main(argv, stdin, stdout, stderr):
     add_options(p, sphinx=True)
 
     add_store_commands(root)
-    add_token_commands(root)
+    token.add_commands(root)
     add_user_commands(root)
 
     p = root.add_parser('version', help="Display version information.")
@@ -493,84 +494,9 @@ def cmd_store_upgrade(opts):
         upgrade_database(opts, st, db, version, to_version, indent="  ")
 
 
-def add_token_commands(parser):
-    p = parser.add_parser('token', help="Token-related commands.")
-    sp = p.add_subparsers(title="Sub-commands")
-    sp.required = True
-
-    p = sp.add_parser('create', help="Create tokens.")
-    p.set_defaults(handler=cmd_token_create)
-    arg = p.add_argument
-    arg('--expire', metavar='TIME', dest='expire', type='opt_rel_timestamp',
-        help="Expire the token at the given relative or absolute time.")
-    add_origin_option(arg)
-    arg('user', metavar='USER', nargs='+',
-        help="The users for whom to create tokens.")
-    add_options(p)
-
-    p = sp.add_parser('expire', help="Expire tokens.")
-    p.set_defaults(handler=cmd_token_expire)
-    arg = p.add_argument
-    arg('--time', metavar='TIME', dest='time', type='opt_rel_timestamp',
-        default='0s',
-        help="The time when the tokens should expire (default: now). An empty "
-             "value removes the expiry time.")
-    arg('--users', action='store_true', dest='users',
-        help="Expire all tokens for the users passed as arguments.")
-    arg('arg', metavar='ARG', nargs='+',
-        help="The tokens to expire, or the users for whom to expire tokens.")
-    add_options(p)
-
-    p = sp.add_parser('list', help="List tokens.")
-    p.set_defaults(handler=cmd_token_list)
-    arg = p.add_argument
-    arg('--expired', action='store_true', dest='expired',
-        help="Include expired tokens.")
-    add_origin_option(arg)
-    arg('users', metavar='REGEXP', nargs='?', default='.*',
-        help="A regexp to limit the users to consider.")
-    add_options(p)
-
-
 def add_origin_option(arg):
     arg('--origin', metavar='URL', dest='origin', default='',
         help="The origin on which to operate.")
-
-
-def cmd_token_create(opts):
-    with write_db(opts) as db:
-        uids = [db.users.uid(u) for u in opts.user]
-        tokens = db.tokens.create(uids, opts.expire)
-    width = max((len(u) for u in opts.user), default=0)
-    o = opts.stdout
-    for uid, user, token in zip(uids, opts.user, tokens):
-        opts.stdout.write(
-            f"{o.CYAN}{user:{width}}{o.NORM}  ({uid:19d})  "
-            f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
-
-
-def cmd_token_expire(opts):
-    with write_db(opts) as db:
-        if opts.users:
-            db.tokens.expire(uids=[db.users.uid(u) for u in opts.arg],
-                             expires=opts.time)
-        else:
-            db.tokens.expire(tokens=opts.arg, expires=opts.time)
-
-
-def cmd_token_list(opts):
-    with read_db(opts) as db:
-        tokens = db.tokens.list(opts.users, expired=opts.expired)
-    epoch = datetime.datetime.fromtimestamp(0, datetime.UTC)
-    tokens.sort(key=lambda r: (r[1], r[3], r[4] or epoch, r[2]))
-    wuser = max((len(t[1]) for t in tokens), default=0)
-    o = opts.stdout
-    for uid, user, token, created, expires in tokens:
-        if expires: expires = f", expires: {util.local_time(expires)}"
-        opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
-            f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n"
-            f"  created: {util.local_time(created)}{expires or ""}\n")
 
 
 def add_user_commands(parser):
