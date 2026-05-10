@@ -134,7 +134,7 @@ def compress(src, dst):
 
 
 default_stream_format = '{ilevel} [{ctx:20}] {message}'
-default_file_format = '{asctime} {ilevel} [{ctx:20}] [{module}] {message}'
+default_file_format = '{asctime} {ilevel} [{ctx:20}] [{name}] {message}'
 
 
 @contextlib.contextmanager
