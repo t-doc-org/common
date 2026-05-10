@@ -53,11 +53,13 @@ def main(argv, stdin, stdout, stderr):
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument
     arg('target', metavar='TARGET', nargs='+', help="The build targets to run.")
-    add_options(p, sphinx=True)
+    add_sphinx_options(p)
+    add_common_options(p)
 
     p = root.add_parser('clean', help="Clean the build products of a site.")
     p.set_defaults(handler=cmd_clean)
-    add_options(p, sphinx=True)
+    add_sphinx_options(p)
+    add_common_options(p)
 
     group.add_commands(root)
     add_log_commands(root)
@@ -103,7 +105,8 @@ def main(argv, stdin, stdout, stderr):
     arg('--watch', metavar='PATH', dest='watch', type='path', action='append',
         default=[],
         help="Additional directories to watch for changes.")
-    add_options(p, sphinx=True)
+    add_sphinx_options(p)
+    add_common_options(p)
 
     add_store_commands(root)
     token.add_commands(root)
@@ -111,7 +114,7 @@ def main(argv, stdin, stdout, stderr):
 
     p = root.add_parser('version', help="Display version information.")
     p.set_defaults(handler=cmd_version)
-    add_options(p)
+    add_common_options(p)
 
     opts = parser.parse_args(argv[1:])
     opts.default_port = default_port
@@ -146,8 +149,7 @@ def disable_db_logs(fn):
     return fn
 
 
-def add_options(parser, sphinx=False):
-    if sphinx: add_sphinx_options(parser)
+def add_common_options(parser):
     arg = parser.add_argument_group("Common options").add_argument
     arg('--color', dest='color', choices=['auto', 'false', 'true'],
         default='auto',
@@ -260,7 +262,7 @@ def add_log_commands(parser):
 
     p = sp.add_parser('backup', help="Backup log databases.")
     p.set_defaults(handler=cmd_log_backup)
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('create', help="Create log databases.")
     p.set_defaults(handler=cmd_log_create)
@@ -268,7 +270,7 @@ def add_log_commands(parser):
     arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version at which to create the log databases (default: "
              "latest).")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('query', help="Query a log database.")
     p.set_defaults(handler=cmd_log_query)
@@ -298,7 +300,7 @@ def add_log_commands(parser):
     arg('--where', metavar='EXPR', dest='where', default=None,
         help="An additional SQL expression to add to the WHERE clause of the "
              "database query.")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('upgrade', help="Upgrade log databases.")
     p.set_defaults(handler=cmd_log_upgrade)
@@ -306,7 +308,7 @@ def add_log_commands(parser):
     arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version to which to upgrade the log databases (default: "
              "latest).")
-    add_options(p)
+    add_common_options(p)
 
 
 @disable_db_logs
@@ -382,14 +384,14 @@ def add_repo_commands(parser):
         help="Reset the password.")
     arg('user', metavar='USER', nargs='+',
         help="The users for whom to modify repository authentication.")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('list-users', help="List repository users.")
     p.set_defaults(handler=cmd_repo_list_users)
     arg = p.add_argument
     arg('users', metavar='REGEXP', nargs='?', default='.*',
         help="A regexp to limit the users to consider.")
-    add_options(p)
+    add_common_options(p)
 
 
 def cmd_repo_auth(opts):
@@ -448,7 +450,7 @@ def add_store_commands(parser):
     arg('destination', metavar='PATH', nargs='?', type='path', default=None,
         help="The path to the backup copy. Defaults to the source database "
              "file with a date + time suffix.")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('create', help="Create the store database.")
     p.set_defaults(handler=cmd_store_create)
@@ -456,7 +458,7 @@ def add_store_commands(parser):
     arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version at which to create the store database (default: "
              "latest).")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('upgrade', help="Upgrade the store database.")
     p.set_defaults(handler=cmd_store_upgrade)
@@ -464,7 +466,7 @@ def add_store_commands(parser):
     arg('--version', metavar='VERSION', dest='version', type=int, default=None,
         help="The version to which to upgrade the store database (default: "
              "latest).")
-    add_options(p)
+    add_common_options(p)
 
 
 def cmd_store_backup(opts):
@@ -517,13 +519,13 @@ def add_user_commands(parser):
         help="Expire the users' token at the given relative or absolute time.")
     arg('user', metavar='USER', nargs='+',
         help="The names of the users to create.")
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('list', help="List users.")
     p.set_defaults(handler=cmd_user_list)
     arg = p.add_argument
     add_users_re(arg)
-    add_options(p)
+    add_common_options(p)
 
     p = sp.add_parser('memberships', help="List group memberships for a user.")
     p.set_defaults(handler=cmd_user_memberships)
@@ -532,7 +534,7 @@ def add_user_commands(parser):
     arg('--direct', action='store_true', dest='direct',
         help="List only direct memberships.")
     add_users_re(arg)
-    add_options(p)
+    add_common_options(p)
 
 
 def cmd_user_create(opts):

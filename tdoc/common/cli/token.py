@@ -19,7 +19,7 @@ def add_commands(parser):
     cli.add_origin_option(arg)
     arg('user', metavar='USER', nargs='+',
         help="The users for whom to create tokens.")
-    cli.add_options(p)
+    cli.add_common_options(p)
 
     p = sp.add_parser('expire', help="Expire tokens.")
     p.set_defaults(handler=cmd_expire)
@@ -32,7 +32,7 @@ def add_commands(parser):
         help="Expire all tokens for the users passed as arguments.")
     arg('arg', metavar='ARG', nargs='+',
         help="The tokens to expire, or the users for whom to expire tokens.")
-    cli.add_options(p)
+    cli.add_common_options(p)
 
     p = sp.add_parser('list', help="List tokens.")
     p.set_defaults(handler=cmd_list)
@@ -42,7 +42,7 @@ def add_commands(parser):
     cli.add_origin_option(arg)
     arg('users', metavar='REGEXP', nargs='?', default='.*',
         help="A regexp to limit the users to consider.")
-    cli.add_options(p)
+    cli.add_common_options(p)
 
 
 def cmd_create(opts):
