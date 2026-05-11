@@ -208,7 +208,7 @@ def try_stat(path):
 
 
 def prefix_read(fname):
-    return (pathlib.Path(sys.prefix) / fname).read_text()
+    return (pathlib.Path(sys.prefix) / fname).read_text('utf-8')
 
 
 version_re = re.compile(f'(?m)^{re.escape(__project__)}==([^\\s;]+)(?:\\s|$)')

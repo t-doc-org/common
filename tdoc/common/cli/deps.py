@@ -100,7 +100,7 @@ class Checker:
 
     def check_requirements(self):
         for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
-            cur_reqs = self.parse_requirements(p.read_text())
+            cur_reqs = self.parse_requirements(p.read_text('utf-8'))
             want_reqs = self.parse_requirements(
                 util.requirements(only_groups=[p.stem],
                                   common=self.opts.common))
@@ -229,9 +229,9 @@ def generate_version_reqs(opts, version):
     reqs = util.requirements(pkgs=[f't-doc-common=={version}'],
                              only_pkgs=['t-doc-common'], common=opts.common)
     reqs += util.requirements(no_project=True, common=opts.common)
-    (opts.common / 'config' / f'{version}.req').write_text(reqs)
+    (opts.common / 'config' / f'{version}.req').write_text(reqs, 'utf-8')
 
 
 def generate_group_reqs(opts, group):
     reqs = util.requirements(only_groups=[group], common=opts.common)
-    (opts.common / 'config' / f'{group}.req').write_text(reqs)
+    (opts.common / 'config' / f'{group}.req').write_text(reqs, 'utf-8')
