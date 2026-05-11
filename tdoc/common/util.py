@@ -10,6 +10,7 @@ import re
 import shlex
 import ssl
 import subprocess
+import sys
 import tempfile
 import tomllib
 from urllib import request
@@ -98,7 +99,7 @@ def run(*args, success=(0,), **kwargs):
 
 
 def vrun(*args, common, **kwargs):
-    return run(common / 'run.py', *args, **kwargs)
+    return run(sys.executable, '-P', common / 'run.py', *args, **kwargs)
 
 
 def vrun_uv(*args, common, **kwargs):
