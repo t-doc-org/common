@@ -19,6 +19,10 @@ def add_commands(parser):
     p = sp.add_parser('check', help="Check dependencies for updates.")
     p.set_defaults(handler=cmd_check)
     arg = p.add_argument
+    arg('--cooldown', metavar='TIME', dest='cooldown', type='nrel_timestamp',
+        default='7d',
+        help="Updates more recent than the given relative or absolute time "
+             "are highlighted in red (default: %(default)s).")
     arg('--open', action='store_true', dest='open',
         help="Open all URLs in a browser.")
     cli.add_common_options(p)
@@ -38,6 +42,10 @@ def cmd_check(opts):
     checker.check_node()
     checker.check_python()
     checker.check_requirements()
+
+
+def format_date(dt):
+    return dt.replace(tzinfo=None).date().isoformat()
 
 
 class Checker:
@@ -125,11 +133,11 @@ class Checker:
 
     def report_packages(self, pkgs):
         pkgs.sort(key=lambda p: p.name)
-        for pkg in pkgs: pkg.report(self.opts.stdout, self.opts.open)
+        for pkg in pkgs:
+            pkg.report(self.opts.stdout, self.opts.open, self.opts.cooldown)
 
 
 gh_repo_re = re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)')
-subsec_re = re.compile(r'\.\d{1,6}')
 
 
 class Package:
@@ -146,13 +154,15 @@ class Package:
         res = self._info_cache[self.name] = util.fetch_json(self.info_url)
         return res
 
-    def report(self, o, open):
+    def report(self, o, open, cooldown):
         o.write(f"{o.LCYAN}{self.name}{o.NORM}\n")
         w = max(len(self.current), len(self.wanted))
         o.write(f"  current: {o.LGREEN}{self.current:{w}}{o.NORM}"
-                f" ({self.time(self.current)})\n")
+                f" ({format_date(self.time(self.current))})\n")
+        t = self.time(self.wanted)
+        color = o.LRED if t > cooldown else o.LMAGENTA
         o.write(f"  wanted : {o.LYELLOW}{self.wanted:{w}}{o.NORM} "
-                f"({o.LMAGENTA}{self.time(self.wanted)}{o.NORM})\n")
+                f"({color}{format_date(t)}{o.NORM})\n")
         for url in self.urls:
             o.write(f"  url: {url}\n")
             if open: webbrowser.open_new_tab(url)
@@ -174,7 +184,8 @@ class NpmPackage(Package):
             self.urls.append(f'https://github.com/{m[1]}/releases')
             break
 
-    def time(self, version): return self.info.time[version]
+    def time(self, version):
+        return util.parse_time(self.info.time[version])
 
     @property
     def versions_url(self):
@@ -188,7 +199,7 @@ class PythonPackage(Package):
     def info_url(self): return f'https://pypi.org/pypi/{self.name}/json'
 
     def time(self, version):
-        return max((subsec_re.sub('', p.upload_time_iso_8601)
+        return max((util.parse_time(p.upload_time_iso_8601)
                     for p in self.info.releases[version]),
                    default="unknown")
 
