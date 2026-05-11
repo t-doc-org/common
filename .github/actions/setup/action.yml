@@ -20,6 +20,10 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Set up environment
+      shell: bash
+      run: |
+        echo "TDOC_SANDBOX=github" >> "${GITHUB_ENV}"
     - name: Checkout t-doc/common repository
       uses: actions/checkout@v6
       with:
