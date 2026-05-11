@@ -154,6 +154,15 @@ def cmd_serve(opts):
 
 
 def sphinx_build(opts, target, *, build, tags=(), **kwargs):
+    # Prevent building untrusted sites outside of a sandbox.
+    if 'TDOC_SANDBOX' not in os.environ \
+            and not opts.cfg.get('site.trusted', False) \
+            and ((base := os.environ.get('TDOC_RUN_BASE')) is None
+                 or not opts.source.is_relative_to(base)):
+        raise Exception(
+            "Attempted building an untrusted site outside of a sandbox")
+
+    # Run sphinx.
     argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
             opts.source, build, '--fail-on-warning', '--jobs=auto']
     argv += [f'--tag={tag}' for tag in tags]

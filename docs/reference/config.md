@@ -410,6 +410,15 @@ This table configures options related to repository access.
 - `bcrypt_rounds` (default: `10`): The number of rounds to use when encrypting
   generated repository passwords with bcrypt.
 
+### `[site]`
+
+This table configures options related to site repositories.
+
+- `trusted` (default: `false`): When `true`, site repositories are trusted.
+  Untrusted sites can only be built via their own `run.py` script; building
+  via a local clone of the `common` repository
+  ([development workflow](../development.md#run)) must be done in a sandbox.
+
 ### `[store]`
 
 This table configures the database that stores site and user data.

@@ -25,7 +25,7 @@ export HISTFILESIZE=
 export HISTSIZE=
 shopt -s histappend
 
-# Change the window title
+# Update the window title
 case ${TERM} in
     xterm*|rxvt*|Eterm|aterm|kterm|gnome*|interix)
         PROMPT_COMMAND='history -a; echo -ne "\033]0;${USER}@${TDOC_SANDBOX}:${PWD/#$HOME/~}\007"';;
@@ -39,6 +39,10 @@ if [[ ${EUID} == 0 ]] ; then
 else
     PS1='\[\033[36m\]\u@${TDOC_SANDBOX} \[\033[01;34m\]\W \[\033[00m\]\$ '
 fi
+
+# Environment
+shopt -s checkwinsize
+export ACK_COLOR_MATCH="bold red"
 
 # Aliases
 if [[ ${EUID} == 0 ]]; then
@@ -55,8 +59,12 @@ alias ls="ls --color=auto --show-control-chars --group-directories-first -N"
 alias pd='pushd'
 alias pp='popd'
 
-shopt -s checkwinsize
-export ACK_COLOR_MATCH="bold red"
+trun() {
+    /t-doc/common/run.py "$@"
+}
+tdoc() {
+    trun tdoc "$@"
+}
 
 # Return success
 true
