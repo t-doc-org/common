@@ -106,7 +106,8 @@ def run(argv, stdin, stdout, stderr, base, ssl_ctx=None, **kwargs):
         with env.check_upgrade():
             args = argv[1:] if len(argv) > 1 else builder.default_command
             args[0] = env.bin_path(args[0])
-            with subprocess.Popen(args) as p:
+            with subprocess.Popen(
+                    args, env=os.environ | {'TDOC_RUN_BASE': str(base)}) as p:
                 signal.signal(signal.SIGTERM, lambda *args: p.terminate())
                 try:  # Do the same as subprocess.run()
                     p.communicate()
