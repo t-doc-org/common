@@ -253,7 +253,7 @@ class Env:
     @functools.cached_property
     def sysinfo(self):
         vars = {'base': self.path, 'platbase': self.path,
-                'installed_base': self.path, 'intsalled_platbase': self.path}
+                'installed_base': self.path, 'installed_platbase': self.path}
         return (pathlib.Path(sysconfig.get_path('scripts', scheme='venv',
                                                 vars=vars)),
                 sysconfig.get_config_vars().get('EXE', ''))
