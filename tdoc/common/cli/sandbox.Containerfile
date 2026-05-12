@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 FROM docker.io/python:3-slim
-RUN --mount=type=bind,source=/,dst=/mnt/tools \
+RUN --mount=type=bind,source=/,dst=/mnt/ctx \
     set -o errexit; \
     useradd -K USERGROUPS_ENAB=yes --uid=1000 \
         --create-home --no-log-init user; \
-    cp /mnt/tools/bashrc /root/.bashrc; \
-    cp /mnt/tools/bashrc /home/user/.bashrc;
+    cp /mnt/ctx/bashrc /root/.bashrc; \
+    cp /mnt/ctx/bashrc /home/user/.bashrc;
 RUN \
     set -o errexit; \
     apt-get update; \

@@ -94,9 +94,9 @@ class Checker:
 
     def check_python(self):
         pkgs = []
-        out = util.vrun_uv('lock', '--upgrade', '--dry-run', '--no-progress',
-                           '--color=never', common=self.opts.common,
-                           capture_output=True, text=True).stderr
+        out = util.run_uv('lock', '--upgrade', '--dry-run', '--no-progress',
+                          '--color=never', common=self.opts.common,
+                          capture_output=True, text=True).stderr
         for line in out.splitlines():
             if (m := self.uv_update_re.fullmatch(line)) is None: continue
             pkg = PythonPackage(m[1], m[2], m[3])

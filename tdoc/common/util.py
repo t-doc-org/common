@@ -89,8 +89,10 @@ def read_toml(path):
         return tomllib.load(f)
 
 
-def run(*args, success=(0,), **kwargs):
+def run(*args, success=(0,), common=None, **kwargs):
     if 'stdin' not in kwargs: kwargs['stdin'] = subprocess.DEVNULL
+    if common is not None:
+        args = (sys.executable, '-P', common / 'run.py', *args)
     p = subprocess.run(args, **kwargs)
     if p.returncode not in success:
         raise Exception(e if (e := (p.stderr or '').strip())
@@ -98,23 +100,24 @@ def run(*args, success=(0,), **kwargs):
     return p
 
 
-def vrun(*args, common, **kwargs):
-    return run(sys.executable, '-P', common / 'run.py', *args, **kwargs)
+def run_json(*args, **kwargs):
+    return json.loads(run(*args, capture_output=True, text=True,
+                          **kwargs).stdout)
 
 
-def vrun_uv(*args, common, **kwargs):
-    return vrun('uv', *args, common=common, cwd=common, **kwargs)
+def run_uv(*args, common, **kwargs):
+    return run('uv', *args, common=common, cwd=common, **kwargs)
 
 
 def requirements(*, common, pkgs=(), only_pkgs=(), only_groups=(),
                  no_project=False):
     def export(*args):
-        return vrun_uv('export', '--no-header', '--no-default-groups',
-                       '--format=requirements.txt', *args,
-                       *(f'--only-emit-package={p}' for p in only_pkgs),
-                       *(f'--only-group={g}' for g in only_groups),
-                       *(('--no-emit-project',) if no_project else ()),
-                       common=common, capture_output=True, text=True).stdout
+        return run_uv('export', '--no-header', '--no-default-groups',
+                      '--format=requirements.txt', *args,
+                      *(f'--only-emit-package={p}' for p in only_pkgs),
+                      *(f'--only-group={g}' for g in only_groups),
+                      *(('--no-emit-project',) if no_project else ()),
+                      common=common, capture_output=True, text=True).stdout
 
     if not pkgs: return export()
     run_toml = read_toml(common / 'config' / 'run.toml')
