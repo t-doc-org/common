@@ -56,8 +56,11 @@ class AnsiStream:
     """Wrapper around an output stream exposing ANSI sequences as attributes."""
     def __init__(self, stream, color=None):
         self.__stream = stream
-        if color is None: color = want_colors(stream)
-        self.__tags = _ansi_seqs if color else _nop_seqs
+        self.color(color)
+
+    def color(self, value):
+        if value is None: value = want_colors(self.__stream)
+        self.__tags = _ansi_seqs if value else _nop_seqs
 
     def __getattr__(self, name):
         try:
@@ -94,11 +97,13 @@ def get_arg_parser(stdin, stdout, stderr):
 
         def parse_args(self, *args, **kwargs):
             opts = super().parse_args(*args, **kwargs)
-            opts.stdin = stdin
             color = None if not hasattr(opts, 'color') or opts.color == 'auto' \
                     else opts.color == 'true'
-            opts.stdout = AnsiStream(stdout, color)
-            opts.stderr = AnsiStream(stderr, color)
+            if isinstance(stdout, AnsiStream): stdout.color(color)
+            if isinstance(stderr, AnsiStream): stderr.color(color)
+            opts.stdin = stdin
+            opts.stdout = stdout
+            opts.stderr = stderr
             return opts
 
     return Parser
@@ -146,6 +151,8 @@ def main(fn):
         if stdin is None: stdin = sys.stdin
         if stdout is None: stdout = sys.stdout
         if stderr is None: stderr = sys.stderr
+        stdout = AnsiStream(stdout, False)
+        stderr = AnsiStream(stderr, False)
         try:
             sys.exit(fn(argv, stdin, stdout, stderr))
         except SystemExit:
@@ -154,6 +161,7 @@ def main(fn):
             sys.exit(1)
         except BaseException as e:
             if '--debug' in argv: raise
-            stderr.write(f'\nERROR: {e}\n')
+            o = stderr
+            o.write(f'\n{o.LRED}ERROR:{o.NORM} {e}\n')
             sys.exit(1)
     return wrapper
