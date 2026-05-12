@@ -25,8 +25,7 @@ jobs:
       - name: Build sdist and wheel
         working-directory: ./repo
         run: |
-          echo "Building with uv ($(which uv))"
-          uv build --out-dir=dist --verbose
+          uv build --out-dir=dist
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
