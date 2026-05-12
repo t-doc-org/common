@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
@@ -7,7 +6,6 @@ from http import HTTPStatus
 import io
 import json
 import os
-import pathlib
 import re
 import shlex
 import shutil
@@ -17,46 +15,50 @@ import sys
 import threading
 from urllib import request
 
+from .. import cli, util
+
+# TODO: Colorize output
+
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
 
 
-class Error(Exception): pass
+def add_commands(parser):
+    p = parser.add_parser('test', help="Test-related commands.")
+    sp = p.add_subparsers(title="Sub-commands")
+    sp.required = True
+
+    p = sp.add_parser('site', help="Run tests on one or more sites.")
+    p.set_defaults(handler=cmd_site)
+    arg = p.add_argument
+    arg('--concurrency', metavar='N', dest='concurrency', type=concurrency,
+        default='auto',
+        help="The number of sites to test concurrently, 'auto' to auto-detect "
+             "the number of CPUs, or 'max' to test all sites concurrently "
+             "(default: %(default)s).")
+    arg('--interactive', action='store_true', dest='interactive',
+        help="Enable testing sites interactively.")
+    arg('repo', metavar='REPO', nargs='+', help="The site repository to test.")
+    cli.add_common_options(p)
 
 
-def main(argv, stdin, stdout, stderr):
-    base = pathlib.Path(argv[0]).parent.resolve().parent
-    os.chdir(base)
-    tests = base / '_tmp' / 'tests'
+def concurrency(v):
+    if v in ('auto', 'max'): return v
+    return int(concurrency)
 
-    # Parse command-line arguments.
-    concurrency = 'auto'
-    interactive = False
-    i = 1
-    while True:
-        if i >= len(argv) or not (arg := argv[i]).startswith('--'):
-            argv = argv[:1] + argv[i:]
-            break
-        elif arg == '--':
-            argv = argv[:1] + argv[i + 1:]
-            break
-        elif arg.startswith('--concurrency='):
-            concurrency = arg[14:]
-            if concurrency not in ('auto', 'max'):
-                concurrency = int(concurrency)
-        elif arg == '--interactive':
-            interactive = True
-        else:
-            raise Exception(f"Unknown option: {arg}")
-        i += 1
 
-    repos = sorted(set(argv[1:]))
-    width = max((len(repo) for repo in repos), default=0)
+def cmd_site(opts):
+    cli.require_common(opts)
+    os.chdir(opts.common)
+    tests = opts.common / '_tmp' / 'tests'
+
+    opts.repo = sorted(set(opts.repo))
+    width = max((len(repo) for repo in opts.repo), default=0)
     def label(repo): return f"{repo:{width}} | "
 
     lock = threading.Lock()
     def write(text):
-        with lock: stdout.write(text)
+        with lock: opts.stdout.write(text)
 
     def on_error(fn, path, e):
         if path == tests: return
@@ -68,7 +70,7 @@ def main(argv, stdin, stdout, stderr):
                      follow_symlinks=False)
             fn(path)
         except OSError:
-            stderr.write(f"ERROR: {fn.__name__}: {path}: {e}\n")
+            opts.stderr.write(f"ERROR: {fn.__name__}: {path}: {e}\n")
     shutil.rmtree(tests, onexc=on_error)
     tests.mkdir(parents=True, exist_ok=True)
     try:
@@ -76,24 +78,24 @@ def main(argv, stdin, stdout, stderr):
         wheel = build_wheel(tests)
 
         # Run tests.
-        if concurrency == 'auto':
+        if opts.concurrency == 'auto':
             max_workers = pc if (pc := os.process_cpu_count()) is not None \
                           else c if (c := os.cpu_count()) is not None else None
-        elif concurrency == 'max':
-            max_workers = len(repos)
+        elif opts.concurrency == 'max':
+            max_workers = len(opts.repo)
         else:
-            max_workers = concurrency
+            max_workers = opts.concurrency
         tasks = {}
         with futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
-            for repo in repos:
+            for repo in opts.repo:
                 def test(repo=repo):
                     prefix = label(repo)
                     run_tests(tests, repo, wheel, lambda t: write(prefix + t),
-                              interactive)
+                              opts)
                 tasks[repo] = ex.submit(test)
 
         # Display output of failures.
-        for repo in repos:
+        for repo in opts.repo:
             t = tasks[repo]
             if (e := t.exception()) is None: continue
             se = str(e)
@@ -102,7 +104,7 @@ def main(argv, stdin, stdout, stderr):
 
         # Display summary.
         write("\n")
-        for repo in repos:
+        for repo in opts.repo:
             t = tasks[repo]
             e = t.exception()
             write(f"{label(repo)}{'PASS' if e is None else 'FAIL'}\n")
@@ -124,7 +126,11 @@ def build_wheel(tests):
 
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
-def run_tests(tests, repo, wheel, write, interactive):
+
+class Error(Exception): pass
+
+
+def run_tests(tests, repo, wheel, write, opts):
     # Clone the document repository.
     repo_dir = tests / repo
     write("Cloning\n")
@@ -162,7 +168,7 @@ def run_tests(tests, repo, wheel, write, interactive):
     # Run the local server, wait for it to serve or exit.
     write("Running local server\n")
     args = ['tdoc', 'site', 'serve', '--debug', '--exit-on-failure']
-    if interactive: args += ['--exit-on-idle=2', '--open']
+    if opts.interactive: args += ['--exit-on-idle=2', '--open']
     # TODO: Manage server process in a background thread
     error = None
     p = vrun(*args, wait=False)
@@ -193,7 +199,7 @@ def run_tests(tests, repo, wheel, write, interactive):
 
             # Run server tests.
             exercise_server(write, urlopen)
-            if not interactive:
+            if not opts.interactive:
                 write("Terminating local server\n")
                 urlopen('/_api/terminate', json={'rc': 0})
     except BaseException as e:
@@ -358,15 +364,3 @@ def run(*args, **kwargs):
 
 
 to_json = json.JSONEncoder(separators=(',', ':')).encode
-
-
-if __name__ == '__main__':
-    try:
-        sys.exit(main(sys.argv, sys.stdin, sys.stdout, sys.stderr))
-    except SystemExit:
-        raise
-    except KeyboardInterrupt:
-        sys.exit(1)
-    except Error as e:
-        sys.stderr.write(f'\n{e}\n')
-        sys.exit(1)

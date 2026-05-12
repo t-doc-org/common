@@ -25,7 +25,8 @@ def main(argv, stdin, stdout, stderr):
     root = parser.add_subparsers(title='Sub-commands')
     root.required = True
 
-    from . import deps, group, log, repo, sandbox, site, store, token, user
+    from . import deps, group, log, repo, sandbox, site, store, test, token, \
+                  user
     deps.add_commands(root)
     group.add_commands(root)
     log.add_commands(root)
@@ -33,6 +34,7 @@ def main(argv, stdin, stdout, stderr):
     sandbox.add_commands(root)
     site.add_commands(root)
     store.add_commands(root)
+    test.add_commands(root)
     token.add_commands(root)
     user.add_commands(root)
 
