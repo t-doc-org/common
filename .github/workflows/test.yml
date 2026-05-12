@@ -23,7 +23,8 @@ jobs:
           path: repo
       - name: Run site tests
         run: |
-          ${{ steps.setup.outputs.python-path }} -P repo/tests/sites.py \
+          ${{ steps.setup.outputs.python-path }} -P repo/run.py \
+              tdoc test site \
               t-doc-org.github.io \
               canb \
               common \
