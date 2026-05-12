@@ -123,7 +123,7 @@ def build_wheel(tests, opts):
     p = util.run_uv('build', f'--out-dir={tests}', common=opts.common,
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     o = opts.stdout
-    if (m := wheel_re.search(p.stdout)) is None or True:
+    if (m := wheel_re.search(p.stdout)) is None:
         raise Exception(
             f"{o.BOLD}Failed to determine wheel name from 'uv build' "
             f"output:{o.NORM}\n{p.stdout}")
