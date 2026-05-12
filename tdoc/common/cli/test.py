@@ -224,10 +224,11 @@ def run_tests(tests, repo, wheel, write, opts):
             write("Killing local server\n")
             p.terminate()
         write("Waiting for local server termination\n")
-        if p.wait() != 0 and error is None:
-            output = f"\n\n{out.getvalue()}" if out is not None else ""
+        if (rc := p.wait()) != 0 and error is None:
+            output = f"\n{o.BOLD}Output:{o.NORM}\n{out.getvalue()}" \
+                     if out is not None else ""
             raise Exception(
-                f"The local server has terminated with an error.{output}")
+                f"{o.BOLD}Server failed:{o.NORM} exit status: {rc}{output}")
         if error is not None: raise error
 
 
