@@ -18,6 +18,7 @@ from urllib import request
 from .. import cli, util
 
 # TODO: Colorize output
+# TODO: Handle SIGTERM
 
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
 github_org = 'https://github.com/t-doc-org'
@@ -96,8 +97,7 @@ def cmd_site(opts):
 
         # Display output of failures.
         for repo in opts.repo:
-            t = tasks[repo]
-            if (e := t.exception()) is None: continue
+            if (e := tasks[repo].exception()) is None: continue
             se = str(e)
             eol = "" if se.endswith("\n") else "\n"
             write(f"\n{'=' * 79}\n{label(repo)}FAIL\n{'=' * 79}\n{se}{eol}")
@@ -116,8 +116,9 @@ def cmd_site(opts):
 wheel_re = re.compile(r't_doc_common-[^ ]+\.whl')
 
 def build_wheel(tests):
-    out = run(sys.executable, '-P', '-m', 'build', '--outdir', tests)
-    if (m := wheel_re.search(out)) is None:
+    p = util.run(sys.executable, '-P', '-m', 'build', '--outdir', tests,
+                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if (m := wheel_re.search(p.stdout)) is None:
         raise Exception("Failed to determine wheel name")
     wheel = tests / m.group(0)
     if not wheel.is_file(): raise Exception("Wheel not found")
@@ -127,40 +128,39 @@ def build_wheel(tests):
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
 
-class Error(Exception): pass
-
-
 def run_tests(tests, repo, wheel, write, opts):
     # Clone the document repository.
     repo_dir = tests / repo
+
+    def run(*args, **kwargs):
+        try:
+            return util.run(*args, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, check=True,
+                            **kwargs)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Command failed with return code {e.returncode}\n"
+                            f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
+                            f"\n{e.output}")
+
     write("Cloning\n")
     try:
-        run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
-            repo_dir, env=os.environ | {'GIT_ASKPASS': 'true'})
-    except CommandFailed:
+        util.run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
+                 repo_dir, env=os.environ | {'GIT_ASKPASS': 'false'},
+                 capture_output=True, check=True)
+    except subprocess.CalledProcessError:
         run('hg', 'clone', '--updaterev=main', f'{tdoc_org}/{repo}',
             repo_dir)
 
-    def vrun(*args, wait=True, out=(), **kwargs):
-        p = subprocess.Popen(
-            (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
-             '--', *args),
-            cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        if not wait: return p
-        with p:
-            try:  # Do the same as subprocess.run()
-                pout, _ = p.communicate()
-            except BaseException:
-                p.kill()
-                raise
-        if p.poll() != 0:
-            raise Error(f"Command: {shlex.join(args)}\nOutput:\n{pout}")
+    def vrun(*args, out=(), **kwargs):
+        p = run(sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
+                '--', *args, cwd=repo_dir)
         for regex in out:
-            if not re.search(regex, pout, re.MULTILINE):
-                raise Error(f"Command: {shlex.join(args)}\nRegex: {regex}\n"
-                            f"Output:\n{pout}")
-        return pout
+            if not re.search(regex, p.stdout, re.MULTILINE):
+                raise Exception(
+                    f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
+                    f"Regex: {regex}\n"
+                    f"Output:\n{p.stdout}")
+        return p.stdout
 
     # Run CLI tests.
     exercise_cli(repo_dir, write, vrun)
@@ -171,7 +171,11 @@ def run_tests(tests, repo, wheel, write, opts):
     if opts.interactive: args += ['--exit-on-idle=2', '--open']
     # TODO: Manage server process in a background thread
     error = None
-    p = vrun(*args, wait=False)
+    p = subprocess.Popen(
+        (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
+         '--', *args),
+        cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         out = io.StringIO()
         for line in p.stdout:
@@ -211,7 +215,7 @@ def run_tests(tests, repo, wheel, write, opts):
         write("Waiting for local server termination\n")
         if p.wait() != 0 and error is None:
             output = f"\n\n{out.getvalue()}" if out is not None else ""
-            raise Error(
+            raise Exception(
                 f"The local server has terminated with an error.{output}")
         if error is not None: raise error
 
@@ -344,23 +348,6 @@ def exercise_server(write, urlopen):
     # Check server health.
     write("Checking local server health\n")
     urlopen('/_api/health')
-
-
-class CommandFailed(Error):
-    def __init__(self, e):
-        super().__init__(
-            f"Command failed with return code {e.returncode}\n"
-            f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
-            f"\n{e.output}")
-
-
-def run(*args, **kwargs):
-    try:
-        return subprocess.run(args, stdin=subprocess.DEVNULL,
-                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, check=True, **kwargs).stdout
-    except subprocess.CalledProcessError as e:
-        raise CommandFailed(e)
 
 
 to_json = json.JSONEncoder(separators=(',', ':')).encode
