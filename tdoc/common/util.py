@@ -7,12 +7,14 @@ from http import client
 import itertools
 import json
 import os
+import pathlib
 import re
 import shlex
 import signal
 import ssl
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import tomllib
 from urllib import request
@@ -100,7 +102,7 @@ else:
 
 
 def run(*args, input=None, capture_output=False, timeout=None, check=False,
-        monitor=contextlib.nullcontext, success=(0,), common=None, **kwargs):
+        monitor=contextlib.nullcontext, success=(0,), prefix=False, **kwargs):
     """Run a command and return a CompletedProcess instance.
 
     This is a copy of subprocess.run() with additional functionality that cannot
@@ -118,8 +120,7 @@ def run(*args, input=None, capture_output=False, timeout=None, check=False,
                              'with capture_output.')
         kwargs['stdout'] = subprocess.PIPE
         kwargs['stderr'] = subprocess.PIPE
-    if common is not None:
-        args = (sys.executable, '-P', common / 'run.py', *args)
+    if prefix: args = (script_path(args[0]), *args[1:])
     with subprocess.Popen(args, **kwargs) as process, monitor(process):
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
@@ -141,6 +142,15 @@ def run(*args, input=None, capture_output=False, timeout=None, check=False,
             raise Exception(e if (e := (stderr or '').strip())
                             else f"Command failed (exit status: {retcode})")
     return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
+
+
+def script_path(name):
+    vars = {'base': sys.prefix, 'platbase': sys.prefix,
+            'installed_base': sys.prefix, 'installed_platbase': sys.prefix}
+    scripts = pathlib.Path(sysconfig.get_path('scripts', scheme='venv',
+                                              vars=vars))
+    ext = sysconfig.get_config_vars().get('EXE', '')
+    return scripts / f'{name}{ext}'
 
 
 def terminate_on(*sigs):
@@ -172,7 +182,7 @@ def run_json(*args, object_pairs_hook=Namespace, **kwargs):
 
 
 def run_uv(*args, common, **kwargs):
-    return run('uv', *args, common=common, cwd=common, **kwargs)
+    return run('uv', *args, prefix=True, cwd=common, **kwargs)
 
 
 def requirements(*, common, pkgs=(), only_pkgs=(), only_groups=(),
