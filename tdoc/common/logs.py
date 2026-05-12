@@ -127,8 +127,21 @@ class QueueHandler(handlers.QueueHandler):
     def prepare(self, rec): return rec
 
 
+class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
+    def __init__(self, *args, perms, **kwargs):
+        self._perms = perms
+        kwargs.pop('delay', None)  # Interferes with setting perms
+        super().__init__(*args, **kwargs)
+        os.fchmod(self.stream.fileno(), self._perms)
+
+    def doRollover(self):
+        super().doRollover()
+        os.fchmod(self.stream.fileno(), self._perms)
+
+
 def compress(src, dst):
     with open(src, 'rb') as inp, gzip.open(dst, 'wb') as out:
+        os.fchmod(out.fileobj.fileno(), os.stat(inp).st_mode & 0o777)
         shutil.copyfileobj(inp, out)
     os.remove(src)
 
@@ -165,11 +178,12 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
         for c in config.subs('files'):
             if not c.get('enabled', True): continue
             if (path := c.path('path')) is None: continue
-            fh = handlers.TimedRotatingFileHandler(
+            fh = TimedRotatingFileHandler(
                 path, encoding='utf-8', utc=True,
+                perms=c.get('permissions', 0o600),
                 when=c.get('rotate.when', 'W6'),
                 interval=c.get('rotate.interval', 1),
-                backupCount=c.get('rotate.keep', 4), )
+                backupCount=c.get('rotate.keep', 4))
             if c.get('compress', True):
                 fh.namer = lambda n: f'{n}.gz'
                 fh.rotator = compress

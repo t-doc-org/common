@@ -338,6 +338,7 @@ These tables define logging handlers that store records in text files.
   [log level](https://docs.python.org/3/library/logging.html#logging-levels)
   for this handler.
 - `path`: The path to the log file.
+- `permissions` (default: `0o600`): The permissions to set on log files.
 - `rotate`: The log file
   {py:class}`rotation parameters <logging.handlers.TimedRotatingFileHandler>`,
   as a table with the following keys:
