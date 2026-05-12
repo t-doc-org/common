@@ -86,9 +86,8 @@ class Checker:
         self.report_packages(pkgs)
 
     def npm_outdated(self):
-        p = util.run('npm', 'outdated', '--json', cwd=self.opts.common,
-                     capture_output=True, text=True, success=(0, 1))
-        return json.loads(p.stdout, object_pairs_hook=util.Namespace)
+        return util.run_json('npm', 'outdated', '--json', cwd=self.opts.common,
+                             success=(0, 1))
 
     uv_update_re = re.compile(r'^Update ([^ ]+) v([^ ]+) -> v([^ ]+)$')
 

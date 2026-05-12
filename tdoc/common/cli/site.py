@@ -11,10 +11,10 @@ import pathlib
 import posixpath
 import re
 import shutil
+import signal
 import socket
 import socketserver
 import stat
-import subprocess
 import sys
 import tempfile
 import threading
@@ -123,7 +123,8 @@ def pre_serve(opts):
             for a in sys.orig_argv]
     while True:
         opts.stderr.write("Starting server as a subprocess\n")
-        p = subprocess.run(argv)
+        p = util.run(*argv, stdin=opts.stdin, success=None,
+                     monitor=util.terminate_on(signal.SIGTERM))
         if p.returncode != rc_source_change: return p.returncode
         time.sleep(0.1)
 
@@ -168,8 +169,7 @@ def sphinx_build(opts, target, *, build, tags=(), **kwargs):
     argv += [f'--tag={tag}' for tag in tags]
     if opts.debug: argv += ['--show-traceback']
     argv += opts.sphinx_opts
-    return subprocess.run(argv, stdin=opts.stdin, stdout=opts.stdout,
-                          stderr=opts.stderr, **kwargs)
+    return util.run(*argv, success=None, **kwargs)
 
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):

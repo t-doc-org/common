@@ -115,9 +115,7 @@ def cmd_shell(opts):
             prune_images(filter=f'label={label_base}.python={opts.python}')
         o.write(f"{o.BOLD}Starting container{o.NORM}\n")
         start_container(opts, opts.common.parent)
-
-    # Start a new shell in the container.
-    return shell_in_container(opts)
+    shell_in_container(opts)
 
 
 def cmd_stop(opts):
@@ -207,12 +205,13 @@ while now < stop:
 
 def shell_in_container(opts):
     name = container_name(opts)
-    return run_long('podman', 'container', 'exec', '--interactive', '--tty',
-                    f'--user={opts.uid}', '--workdir=/t-doc',
-                    f'--env=TDOC_DEFAULT_PORT={opts.port}',
-                    f'--env=TDOC_SANDBOX={name}',
-                    f'--env=TERM={os.environ['TERM']}',
-                    name, '/bin/bash')
+    util.run('podman', 'container', 'exec', '--interactive', '--tty',
+             f'--user={opts.uid}', '--workdir=/t-doc',
+             f'--env=TDOC_DEFAULT_PORT={opts.port}',
+             f'--env=TDOC_SANDBOX={name}',
+             f'--env=TERM={os.environ['TERM']}',
+             name, '/bin/bash',
+             stdin=opts.stdin, monitor=util.terminate_on(signal.SIGTERM))
 
 
 def filter_args(filter):
@@ -234,14 +233,3 @@ def tmpfs(repo, name):
 def bind(repo, name):
     return f'--mount=type=bind,src={repo / name},' \
            f'dst=/t-doc/{repo.name}/{name},ro=false'
-
-
-def run_long(*args, **kwargs):
-    with subprocess.Popen(args) as p:
-        signal.signal(signal.SIGTERM, lambda *args: p.terminate())
-        try:  # Do the same as subprocess.run()
-            p.communicate()
-        except BaseException:
-            p.kill()
-            raise
-    return p.poll()

@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import datetime
 from http import client
 import itertools
@@ -8,6 +9,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import ssl
 import subprocess
 import sys
@@ -89,20 +91,80 @@ def read_toml(path):
         return tomllib.load(f)
 
 
-def run(*args, success=(0,), common=None, **kwargs):
-    if 'stdin' not in kwargs: kwargs['stdin'] = subprocess.DEVNULL
+try:
+    import msvcrt
+except ModuleNotFoundError:
+    _mswindows = False
+else:
+    _mswindows = True
+
+
+def run(*args, input=None, capture_output=False, timeout=None, check=False,
+        monitor=contextlib.nullcontext, success=(0,), common=None, **kwargs):
+    """Run a command and return a CompletedProcess instance.
+
+    This is a copy of subprocess.run() with additional functionality that cannot
+    be implemented on top of it (monitor).
+    """
+    if input is not None:
+        if kwargs.get('stdin') is not None:
+            raise ValueError('stdin and input arguments may not both be used.')
+        kwargs['stdin'] = subprocess.PIPE
+    elif 'stdin' not in kwargs:
+        kwargs['stdin'] = subprocess.DEVNULL
+    if capture_output:
+        if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+            raise ValueError('stdout and stderr arguments may not be used '
+                             'with capture_output.')
+        kwargs['stdout'] = subprocess.PIPE
+        kwargs['stderr'] = subprocess.PIPE
     if common is not None:
         args = (sys.executable, '-P', common / 'run.py', *args)
-    p = subprocess.run(args, **kwargs)
-    if p.returncode not in success:
-        raise Exception(e if (e := (p.stderr or '').strip())
-                        else f"Command failed (exit status: {p.returncode})")
-    return p
+    with subprocess.Popen(args, **kwargs) as process, monitor(process):
+        try:
+            stdout, stderr = process.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            if _mswindows:
+                exc.stdout, exc.stderr = process.communicate()
+            else:
+                process.wait()
+            raise
+        except BaseException:
+            process.kill()
+            raise
+        retcode = process.poll()
+        if check and retcode:
+            raise subprocess.CalledProcessError(retcode, process.args,
+                                                output=stdout, stderr=stderr)
+        if success is not None and retcode not in success:
+            raise Exception(e if (e := (stderr or '').strip())
+                            else f"Command failed (exit status: {retcode})")
+    return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-def run_json(*args, **kwargs):
+def terminate_on(*sigs):
+    @contextlib.contextmanager
+    def on_started(proc):
+        save = {}
+        try:
+            for sig in sigs:
+                save[sig] = signal.signal(sig, lambda *args: proc.terminate())
+            yield
+        finally:
+            for sig, fn in save.items(): signal.signal(sig, fn)
+    return on_started
+
+
+class Namespace(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+
+def run_json(*args, object_pairs_hook=Namespace, **kwargs):
     return json.loads(run(*args, capture_output=True, text=True,
-                          **kwargs).stdout)
+                          **kwargs).stdout,
+                      object_pairs_hook=object_pairs_hook)
 
 
 def run_uv(*args, common, **kwargs):
@@ -147,11 +209,6 @@ if ssl_ctx.post_handshake_auth is not None:
 def urlopen(*args, **kwargs):
     if 'context' not in kwargs: kwargs['context'] = ssl_ctx
     return request.urlopen(*args, **kwargs)
-
-
-class Namespace(dict):
-    def __getattr__(self, name):
-        return self[name]
 
 
 def fetch_json(*args, **kwargs):
