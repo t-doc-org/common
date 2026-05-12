@@ -17,7 +17,6 @@ from urllib import request
 
 from .. import cli, util
 
-# TODO: Colorize output
 # TODO: Handle SIGTERM
 
 tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
@@ -52,10 +51,12 @@ def cmd_site(opts):
     cli.require_common(opts)
     os.chdir(opts.common)
     tests = opts.common / '_tmp' / 'tests'
+    o = opts.stdout
 
     opts.repo = sorted(set(opts.repo))
     width = max((len(repo) for repo in opts.repo), default=0)
-    def label(repo): return f"{repo:{width}} | "
+    def label(repo):
+        return f"{o.CYAN}{repo:{width}}{o.NORM} {o.LBLACK}|{o.NORM} "
 
     lock = threading.Lock()
     def write(text):
@@ -75,7 +76,7 @@ def cmd_site(opts):
     shutil.rmtree(tests, onexc=on_error)
     tests.mkdir(parents=True, exist_ok=True)
     try:
-        write("Building wheel\n")
+        write(f"{o.BOLD}Building wheel{o.NORM}\n")
         wheel = build_wheel(tests)
 
         # Run tests.
@@ -100,14 +101,18 @@ def cmd_site(opts):
             if (e := tasks[repo].exception()) is None: continue
             se = str(e)
             eol = "" if se.endswith("\n") else "\n"
-            write(f"\n{'=' * 79}\n{label(repo)}FAIL\n{'=' * 79}\n{se}{eol}")
+            write(f"\n{o.LBLACK}{'=' * 79}{o.NORM}\n"
+                  f"{label(repo)}{o.LRED}FAIL{o.NORM}\n"
+                  f"{o.LBLACK}{'=' * 79}{o.NORM}\n{se}{eol}")
 
         # Display summary.
         write("\n")
         for repo in opts.repo:
             t = tasks[repo]
             e = t.exception()
-            write(f"{label(repo)}{'PASS' if e is None else 'FAIL'}\n")
+            result = f'{o.LGREEN}PASS{o.NORM}' if e is None \
+                     else f'{o.LRED}FAIL{o.NORM}'
+            write(f"{label(repo)}{result}\n")
     finally:
         shutil.rmtree(tests, onexc=on_error)
     return 1 if any(t.exception() is not None for t in tasks.values()) else 0
@@ -131,16 +136,19 @@ serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 def run_tests(tests, repo, wheel, write, opts):
     # Clone the document repository.
     repo_dir = tests / repo
+    o = opts.stdout
 
-    def run(*args, **kwargs):
+    def run(*args, cmd=None, **kwargs):
         try:
             return util.run(*args, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, check=True,
                             **kwargs)
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Command failed with return code {e.returncode}\n"
-                            f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
-                            f"\n{e.output}")
+            raise Exception(
+                f"{o.BOLD}Command failed:{o.NORM} exit status: {e.returncode}\n"
+                f"{o.BOLD}Command:{o.NORM}"
+                f" {shlex.join(str(a) for a in (cmd or args))}\n"
+                f"{o.BOLD}Output:{o.NORM}\n{e.output}")
 
     write("Cloning\n")
     try:
@@ -153,17 +161,18 @@ def run_tests(tests, repo, wheel, write, opts):
 
     def vrun(*args, out=(), **kwargs):
         p = run(sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
-                '--', *args, cwd=repo_dir)
+                '--', *args, cwd=repo_dir, cmd=args)
         for regex in out:
             if not re.search(regex, p.stdout, re.MULTILINE):
                 raise Exception(
-                    f"Command: {shlex.join(str(a) for a in e.cmd)}\n"
-                    f"Regex: {regex}\n"
-                    f"Output:\n{p.stdout}")
+                    f"{o.BOLD}Command:{o.NORM}"
+                    f" {shlex.join(str(a) for a in args)}\n"
+                    f"{o.BOLD}Regex:{o.NORM} {regex}\n"
+                    f"{o.BOLD}Output:{o.NORM}\n{p.stdout}")
         return p.stdout
 
     # Run CLI tests.
-    exercise_cli(repo_dir, write, vrun)
+    exercise_cli(repo_dir, write, opts, vrun)
 
     # Run the local server, wait for it to serve or exit.
     write("Running local server\n")
@@ -184,7 +193,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 continue
             out.write(line)
             if (m := serving_re.match(line)) is None: continue
-            write(line)
+            write(line.replace(m[1], f'{o.LBLUE}{m[1]}{o.NORM}'))
             base = m[1].rstrip('/')
             out = None
 
@@ -202,7 +211,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 return HTTPStatus(f.status), f.headers, data
 
             # Run server tests.
-            exercise_server(write, urlopen)
+            exercise_server(write, opts, urlopen)
             if not opts.interactive:
                 write("Terminating local server\n")
                 urlopen('/_api/terminate', json={'rc': 0})
@@ -220,7 +229,7 @@ def run_tests(tests, repo, wheel, write, opts):
         if error is not None: raise error
 
 
-def exercise_cli(repo_dir, write, vrun):
+def exercise_cli(repo_dir, write, opts, vrun):
     # Get version information. This creates the venv.
     write("Getting version information\n")
     vrun('tdoc', 'version', '--debug')
@@ -344,7 +353,7 @@ path = "tmp/store.sqlite"
     ])
 
 
-def exercise_server(write, urlopen):
+def exercise_server(write, opts, urlopen):
     # Check server health.
     write("Checking local server health\n")
     urlopen('/_api/health')
