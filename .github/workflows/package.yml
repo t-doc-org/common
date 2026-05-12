@@ -25,7 +25,8 @@ jobs:
       - name: Build sdist and wheel
         working-directory: ./repo
         run: |
-          ${{ steps.setup.outputs.python-path }} -P -m build
+          echo "Building with uv ($(which uv))"
+          uv build --out-dir=dist --verbose
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:

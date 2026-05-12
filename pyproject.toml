@@ -87,3 +87,6 @@ only-include = [
 artifacts = [
     "/tdoc/common/static.gen/",
 ]
+
+[tool.uv]
+no-build-isolation = true

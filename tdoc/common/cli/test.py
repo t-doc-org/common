@@ -76,7 +76,7 @@ def cmd_site(opts):
     tests.mkdir(parents=True, exist_ok=True)
     try:
         write(f"{o.BOLD}Building wheel{o.NORM}\n")
-        wheel = build_wheel(tests)
+        wheel = build_wheel(tests, opts)
 
         # Run tests.
         if opts.concurrency == 'auto':
@@ -119,11 +119,14 @@ def cmd_site(opts):
 
 wheel_re = re.compile(r't_doc_common-[^ ]+\.whl')
 
-def build_wheel(tests):
-    p = util.run(sys.executable, '-P', '-m', 'build', '--outdir', tests,
-                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    if (m := wheel_re.search(p.stdout)) is None:
-        raise Exception("Failed to determine wheel name")
+def build_wheel(tests, opts):
+    p = util.run_uv('build', f'--out-dir={tests}', common=opts.common,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    o = opts.stdout
+    if (m := wheel_re.search(p.stdout)) is None or True:
+        raise Exception(
+            f"{o.BOLD}Failed to determine wheel name from 'uv build' "
+            f"output:{o.NORM}\n{p.stdout}")
     wheel = tests / m.group(0)
     if not wheel.is_file(): raise Exception("Wheel not found")
     return wheel
