@@ -205,9 +205,10 @@ while now < stop:
 
 def shell_in_container(opts):
     name = container_name(opts)
+    port = p if (p := opts.port) is not None else default_port
     util.run('podman', 'container', 'exec', '--interactive', '--tty',
              f'--user={opts.uid}', '--workdir=/t-doc',
-             f'--env=TDOC_DEFAULT_PORT={opts.port}',
+             f'--env=TDOC_DEFAULT_PORT={port}',
              f'--env=TDOC_SANDBOX={name}',
              f'--env=TERM={os.environ['TERM']}',
              name, '/bin/bash',
