@@ -8,7 +8,8 @@ from docutils.parsers.rst import directives
 import pyjson5
 from sphinx.util import logging
 
-from . import __version__, Dyn, dyn, tdoc_config, to_json
+from . import __version__, Dyn, dyn, tdoc_config
+from .. import util
 
 _log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class JsxGraph(Dyn):
                 raise Exception(f"{{jsxgraph}} Invalid :template: value: {v}")
             attrs = {'data-template': m.group(1)}
             if (v := m.group(2)) is not None:
-                attrs['data-args'] = to_json(pyjson5.decode(f'[{v}]'))
+                attrs['data-args'] = util.to_json(pyjson5.decode(f'[{v}]'))
             node['attrs'] = attrs
         elif 'name' not in node:
             raise Exception("{jsxgraph} Graph must have a name")

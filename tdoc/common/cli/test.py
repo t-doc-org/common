@@ -4,7 +4,6 @@
 from concurrent import futures
 from http import HTTPStatus
 import io
-import json
 import os
 import re
 import shlex
@@ -201,7 +200,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 data = None
                 headers = {}
                 if json is not None:
-                    data = to_json(json).encode('utf-8')
+                    data = util.to_json(json).encode('utf-8')
                     headers['Content-Type'] = 'application/json'
                     headers['Content-Length'] = str(len(data))
                 req = request.Request(f'{base}{url}', data=data,
@@ -357,6 +356,3 @@ def exercise_server(write, opts, urlopen):
     # Check server health.
     write("Checking local server health\n")
     urlopen('/_api/health')
-
-
-to_json = json.JSONEncoder(separators=(',', ':')).encode

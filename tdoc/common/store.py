@@ -10,7 +10,7 @@ import time
 
 import bcrypt
 
-from . import database, logs
+from . import database, logs, util
 
 _log = logs.logger(__name__)
 max_id_len = 64  # Maximum length of globally-unique identifiers
@@ -213,7 +213,7 @@ class Oidc(database.ConnNamespace):
     def create_state(self, state, data):
         self.execute("""
             insert into oidc_states (state, created, data) values (?, ?, ?)
-        """, (state, time.time_ns(), database.to_json(data)))
+        """, (state, time.time_ns(), util.to_json(data)))
 
     def state(self, state):
         data = self.row("select data from oidc_states where state = ?",
@@ -241,7 +241,7 @@ class Oidc(database.ConnNamespace):
                 (issuer, subject, user, id_token, updated)
             values (?, ?, ?, ?, ?)
         """, (id_token['iss'], id_token['sub'], user,
-              database.to_json(id_token), time.time_ns()))
+              util.to_json(id_token), time.time_ns()))
 
     def remove_login(self, user, issuer, subject):
         id_token = self.row("""

@@ -37,10 +37,6 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
-to_json = json.JSONEncoder(separators=(',', ':')).encode
-to_json_sorted = json.JSONEncoder(separators=(',', ':'), sort_keys=True).encode
-
-
 def cors(origins=(), methods=(), headers=(), max_age=None):
     if origins == '*':
         def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
@@ -175,7 +171,7 @@ class Request:
         return []
 
     def respond_json(self, data):
-        body = to_json(data).encode('utf-8')
+        body = util.to_json(data).encode('utf-8')
         self.respond(http_status(HTTPStatus.OK), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),

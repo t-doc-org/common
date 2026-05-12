@@ -5,8 +5,6 @@ import base64
 import contextlib
 import copy
 import functools
-import html
-import json
 import pathlib
 import posixpath
 import re
@@ -15,13 +13,13 @@ import time
 from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx import config, errors, locale
-from sphinx.builders import html as sphinx_html
+from sphinx.builders import html
 from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
 from sphinx.util import display, docutils, fileutil, logging
 
 from . import patch
-from .. import __version__, deps
+from .. import __version__, deps, util
 
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
@@ -141,9 +139,6 @@ def meta(env, docname, key, default=None):
     return v
 
 
-to_json = json.JSONEncoder(separators=(',', ':')).encode
-
-
 def setup(app):
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
@@ -234,7 +229,7 @@ def update_intersphinx(app):
         dest = None
         for loc in locations:
             if loc is None:
-                loc = posixpath.join(uri, sphinx_html.INVENTORY_FILENAME)
+                loc = posixpath.join(uri, html.INVENTORY_FILENAME)
             if '://' not in loc:
                 if dest is None and not pathlib.Path(loc).is_absolute():
                     dest = app.srcdir / loc
@@ -259,7 +254,7 @@ def update_intersphinx(app):
 def set_base_html_context(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
-    app.config.html_context['tdoc'] = to_json(tdoc).replace('<', '\\x3c')
+    app.config.html_context['tdoc'] = util.to_json(tdoc).replace('<', '\\x3c')
 
     # Expand badge URLs.
     opts = app.builder.theme_options
@@ -331,7 +326,7 @@ def add_js(app, page, template, context, doctree):
             .setdefault('[+]', []).extend(exts)
 
     # Set up early and on-load JavaScript.
-    tdoc = to_json(tdoc).replace('<', '\\x3c')
+    tdoc = util.to_json(tdoc).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')

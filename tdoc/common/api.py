@@ -237,7 +237,7 @@ class EventsApi(wsgi.Dispatcher):
             resp = {'sid': watcher.sid}
             if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
-            yield wsgi.to_json(resp).encode('utf-8') + b'\n'
+            yield util.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
     @wsgi.json_endpoint('sub')
@@ -311,7 +311,7 @@ class Watcher:
 class Observable:
     @staticmethod
     def hash(req):
-        return hashlib.sha256(wsgi.to_json_sorted(req).encode('utf-8')).digest()
+        return hashlib.sha256(util.to_json_sorted(req).encode('utf-8')).digest()
 
     def __init__(self, req):
         self.key = self.hash(req)
@@ -352,7 +352,7 @@ class ValueObservable(Observable):
             self.send_locked(self._msg())
 
     def _msg(self):
-        return wsgi.to_json(self._value).encode('utf-8')
+        return util.to_json(self._value).encode('utf-8')
 
     def send_initial_locked(self, watcher, wid):
         watcher.send(wid, self._msg())
@@ -410,7 +410,7 @@ class DbObservable(DynObservable):
         self._poller.start()
 
     def _msg(self):
-        return wsgi.to_json(self._data).encode('utf-8')
+        return util.to_json(self._data).encode('utf-8')
 
     def send_initial_locked(self, watcher, wid):
         if self._data is not None: watcher.send(wid, self._msg())

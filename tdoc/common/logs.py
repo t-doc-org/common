@@ -252,16 +252,17 @@ class JSONEncoder(json.JSONEncoder):
         except Exception: pass
         return f'<{v.__class__.__name__}>'
 
-to_json = JSONEncoder(skipkeys=True, separators=(',', ':')).encode
+safe_json = JSONEncoder(skipkeys=True, separators=(',', ':')).encode
 
 
 class Connection(database.Connection):
     def log(self, recs):
-        rows = [(safe_time_ns(r.created), to_json(r.__dict__),
+        rows = [(safe_time_ns(r.created), safe_json(r.__dict__),
                  safe_int(r.levelno), safe_str(r.message), safe_str(r.msg),
-                 to_json(r.args), safe_str(r.exc_text), safe_str(r.stack_info),
-                 safe_str(r.name), safe_str(getattr(r, 'ctx', None)),
-                 safe_str(r.pathname), safe_int(r.lineno), safe_str(r.funcName))
+                 safe_json(r.args), safe_str(r.exc_text),
+                 safe_str(r.stack_info), safe_str(r.name),
+                 safe_str(getattr(r, 'ctx', None)), safe_str(r.pathname),
+                 safe_int(r.lineno), safe_str(r.funcName))
                 for r in recs]
         self.executemany("""
             insert into log (time, record, level, message, msg, args, exception,

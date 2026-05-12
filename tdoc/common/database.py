@@ -3,7 +3,6 @@
 
 import contextlib
 import datetime
-import json
 import re
 import sqlite3
 import textwrap
@@ -19,9 +18,6 @@ def to_datetime(nsec):
 
 def to_nsec(dt, default=None):
     return default if dt is None else util.datetime_to_nsec(dt)
-
-
-to_json = json.JSONEncoder(separators=(',', ':')).encode
 
 
 def placeholders(args): return ', '.join('?' * len(args))

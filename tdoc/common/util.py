@@ -156,6 +156,10 @@ def terminate_on(*sigs):
     return on_started
 
 
+to_json = json.JSONEncoder(separators=(',', ':')).encode
+to_json_sorted = json.JSONEncoder(separators=(',', ':'), sort_keys=True).encode
+
+
 class Namespace(dict):
     def __getattr__(self, name):
         return self[name]
