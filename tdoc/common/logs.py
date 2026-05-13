@@ -22,6 +22,16 @@ from . import database, config as _config, console, util
 
 globals().update(logging.getLevelNamesMapping())
 
+# The default format strings.
+default_stream_format = \
+    '{levelc}{leveli}{NORM}' \
+    ' {LBLACK}[{NORM}{ctxc}{ctx:20}{NORM}{LBLACK}]{NORM} {message}'
+default_file_format = '{asctime} {leveli} [{ctx:20}] [{name}] {message}'
+default_query_format = \
+    '{asctime} {levelc}{leveli}{NORM}' \
+    ' {LBLACK}[{NORM}{ctxc}{ctx:20}{NORM}{LBLACK}]{NORM}' \
+    ' {LBLACK}[{NORM}{LBLUE}{name}{NORM}{LBLACK}]{NORM} {message}'
+
 
 class Logger(logging.Logger):
     def _log(self, level, msg, args, exc_info=None, extra=None,
@@ -48,7 +58,7 @@ def pop_ctx(token):
 class CtxFilter(logging.Filter):
     def filter(self, rec):
         if not hasattr(rec, 'ctx'):
-            rec.ilevel = rec.levelname[0]
+            rec.leveli = rec.levelname[0]
             if (v := ctx.get()) is None: v = threading.current_thread().name
             rec.ctx = v[:20]
         return True
@@ -84,7 +94,7 @@ class Formatter(logging.Formatter):
         super().__init__(fmt, *args, style='{', **kwargs)
         self.fmt = fmt
         self.utc = utc
-        self.attrs = attrs if attrs is not None else {}
+        self.attrs = attrs if attrs is not None else console.nop_seqs
 
     def format(self, rec):
         normalize_record(rec)
@@ -98,8 +108,7 @@ class Formatter(logging.Formatter):
         t = dt.replace(tzinfo=None).isoformat(timespec='microseconds') + 'Z' \
             if self.utc else dt.astimezone().isoformat(timespec='microseconds')
         a = self.attrs
-        h, m = a.get('LCYAN', ''), a.get('CYAN', '')
-        d, n = a.get('LBLACK', ''), a.get('NORM', '')
+        h, m, d, n = a['LCYAN'], a['CYAN'], a['LBLACK'], a['NORM']
         return \
             f'{m}{t[:10]}{d}{t[10:11]}{m}{t[11:17]}{h}{t[17:26]}{d}{t[26:]}{n}'
 
@@ -132,25 +141,25 @@ _missing = SafeFormat(Missing())
 _ctx_colors = ['RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',
                'LRED', 'LGREEN', 'LYELLOW', 'LBLUE', 'LMAGENTA', 'LCYAN']
 
-def _cctx(rec, attrs):
+def _ctxc(rec, attrs):
     h = binascii.crc32(rec.get('ctx', '').encode('utf-8'))
-    return attrs.get(_ctx_colors[h % len(_ctx_colors)], '')
+    return attrs[_ctx_colors[h % len(_ctx_colors)]]
 
 
-def _clevel(rec, attrs):
+def _levelc(rec, attrs):
     level = rec.get('levelno', logging.NOTSET)
     color = 'LBLACK' if level < logging.INFO \
             else 'GREEN' if level < logging.WARNING \
             else 'YELLOW' if level < logging.ERROR \
             else 'LRED' if level < logging.CRITICAL else 'BOLD'
-    return attrs.get(color, '')
+    return attrs[color]
 
 
 class SafeRecFormat(SafeFormat):
     __slots__ = ('__a',)
     __f = {
-        'cctx': _cctx,
-        'clevel': _clevel,
+        'ctxc': _ctxc,
+        'levelc': _levelc,
     }
 
     def __init__(self, v, a):
@@ -191,16 +200,6 @@ def compress(src, dst):
         os.fchmod(out.fileobj.fileno(), os.stat(inp).st_mode & 0o777)
         shutil.copyfileobj(inp, out)
     os.remove(src)
-
-
-default_stream_format = \
-    '{clevel}{ilevel}{NORM}' \
-    ' {LBLACK}[{NORM}{cctx}{ctx:20}{NORM}{LBLACK}]{NORM} {message}'
-default_file_format = '{asctime} {ilevel} [{ctx:20}] [{name}] {message}'
-default_query_format = \
-    '{asctime} {clevel}{ilevel}{NORM}' \
-    ' {LBLACK}[{NORM}{cctx}{ctx:20}{NORM}{LBLACK}]{NORM}' \
-    ' {LBLACK}[{NORM}{LBLUE}{name}{NORM}{LBLACK}]{NORM} {message}'
 
 
 @contextlib.contextmanager

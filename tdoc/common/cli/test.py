@@ -253,6 +253,7 @@ def exercise_cli(repo_dir, write, opts, vrun):
     (repo_dir / 'tdoc.local.toml').write_text("""\
 [logging]
 level = "DEBUG"
+format = "{asctime} {leveli} {ctx} {name} {message}"
 
 [logging.stream]
 enabled = true
@@ -345,10 +346,10 @@ path = "tmp/store.sqlite"
     vrun(
         'tdoc', 'log', 'query', '--debug', '--utc', '--begin=10m', '--end=0s',
         '--level=info', "--where=record ->> '$.name' = 'tdoc.common.cli'",
-        '--format={asctime} {ilevel} {ctx} {name} {message}',
+        '--format=sub={args[argv][1]}',
         out=[
             r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z '
-            r'I main tdoc.common.cli CLI: .* store create ',
+            r'I main tdoc.common.cli CLI: .* store create .*\n  sub=store\n',
         ])
     vrun('tdoc', 'log', 'backup', '--debug', out=[
         r'^Backing up to: .*log\.sqlite'

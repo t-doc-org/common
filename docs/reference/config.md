@@ -302,6 +302,9 @@ site2 = "../site2/docs"
 
 This table configures the logging subsystem.
 
+- `format` (default:
+  [`default_query_format`](https://github.com/t-doc-org/common/blob/main/tdoc/common/logs.py)):
+  The [format string](#log-format-strings) to use for log query output.
 - `level` (default: `"NOTSET"`): The overall
   [log level](https://docs.python.org/3/library/logging.html#logging-levels).
 - `transport` (default: `"queue"`): Either `"queue"` to run the log handlers in
@@ -330,10 +333,9 @@ These tables define logging handlers that store records in text files.
 
 - `compress` (default: `true`): When `true`, compress log files after rotation.
 - `enabled` (default: `true`): Enables or disables the handler.
-- `format` (default: `"{asctime} {ilevel} [{ctx:20}] [{module}] {message}"`):
-  The {}-based
-  [format string](https://docs.python.org/3/library/logging.html#logrecord-attributes)
-  to use for writing to the file.
+- `format` (default:
+  [`default_file_format`](https://github.com/t-doc-org/common/blob/main/tdoc/common/logs.py)):
+  The [format string](#log-format-strings) to use for writing to the file.
 - `level` (default: `"NOTSET"`): The
   [log level](https://docs.python.org/3/library/logging.html#logging-levels)
   for this handler.
@@ -352,9 +354,9 @@ These tables define logging handlers that store records in text files.
 This table configures the logging handler that outputs log records to `stderr`.
 
 - `enabled` (default: `true`): Enables or disables the handler.
-- `format` (default: `"{ilevel} [{ctx:20}] {message}"`): The {}-based
-  [format string](https://docs.python.org/3/library/logging.html#logrecord-attributes)
-  to use for output.
+- `format` (default:
+  [`default_stream_format`](https://github.com/t-doc-org/common/blob/main/tdoc/common/logs.py)):
+  The [format string](#log-format-strings) to use for output.
 - `level` (default: `"NOTSET"`): The
   [log level](https://docs.python.org/3/library/logging.html#logging-levels)
   for this handler.
@@ -437,6 +439,27 @@ This table configures the database that stores site and user data.
   database.
 - `write_isolation_level` (default: `"immediate"`): The transaction behavior;
   one of `"deferred"`, `"exclusive"` or `"immediate"`.
+
+### Log format strings
+
+Log format strings are `{}`-based
+[format strings](https://docs.python.org/3/library/string.html#formatstrings)
+that determine how log records should be formatted. The following attributes are
+available within the format string:
+
+- The [`LogRecord` attributes](https://docs.python.org/3/library/logging.html#logrecord-attributes).
+- `ctx`: A string representing the context where the log record was created.
+  This is the thread name by default, but it can be set explicitly e.g. to a
+  request identifier.
+- `ctxc`: An ANSI sequence setting a color based on the value of `ctx`.
+- `levelc`: A color value appropriate for the
+  [log level](https://docs.python.org/3/library/logging.html#logging-levels).
+- `leveli`: The first letter of the
+  [log level](https://docs.python.org/3/library/logging.html#logging-levels)
+  name.
+- The [ANSI escape sequences](https://en.wikipedia.org/wiki/ANSI_escape_code)
+  defined in
+  [`ansi_seqs`](https://github.com/t-doc-org/common/blob/main/tdoc/common/console.py).
 
 ## `run.py` configuration
 

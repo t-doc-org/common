@@ -27,7 +27,7 @@ def want_colors(stream):
     return hasattr(stream, 'isatty') and stream.isatty()
 
 
-_ansi_seqs = {
+ansi_seqs = {
     'NORM': '\x1b[0m',
     'BOLD': '\x1b[1m',
 
@@ -49,7 +49,7 @@ _ansi_seqs = {
     'LCYAN': '\x1b[96m',
     'LWHITE': '\x1b[97m',
 }
-_nop_seqs = {k: '' for k in _ansi_seqs}
+nop_seqs = {k: '' for k in ansi_seqs}
 
 
 class AnsiStream:
@@ -66,7 +66,7 @@ class AnsiStream:
 def set_color(stream, value):
     if not isinstance(stream, AnsiStream): return
     if value is None: value = want_colors(stream._AnsiStream__stream)
-    stream._AnsiStream__tags = _ansi_seqs if value else _nop_seqs
+    stream._AnsiStream__tags = ansi_seqs if value else nop_seqs
 
 
 def color_tags(stream):

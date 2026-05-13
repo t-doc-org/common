@@ -36,9 +36,9 @@ def add_commands(parser):
         default=None,
         help="Output entries logged before the given relative or absolute "
              "time.")
-    arg('--format', metavar='FORMAT', dest='format',
-        default=logs.default_query_format,
-        help="The format to use for log entries (default: %(default)r).")
+    arg('--format', metavar='FORMAT', dest='format', default='',
+        help="An additional format string to append to the format string used "
+             "to format log entries.")
     arg('--index', metavar='N', dest='index', type=int, default=0,
         help="The index of the database handler in the config (default: "
              "%(default)s).")
@@ -87,9 +87,10 @@ def cmd_create(opts):
 
 @cli.disable_db_logs
 def cmd_query(opts):
-    # TODO: Get default format from config file
-    fmt = logs.Formatter(opts.format, utc=opts.utc,
-                         attrs=console.color_tags(opts.stdout))
+    fmt = opts.cfg.get('logging.format', logs.default_query_format)
+    if f := opts.format: fmt = f'{fmt}\n{f}'
+    formatter = logs.Formatter(fmt, utc=opts.utc,
+                               attrs=console.color_tags(opts.stdout))
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i == opts.index: break
     else:
@@ -103,7 +104,7 @@ def cmd_query(opts):
                 for rec, rid in db.query(row_id=rid, level=opts.level,
                                          begin=opts.begin, end=opts.end,
                                          where=opts.where):
-                    opts.stdout.write(f"{fmt.format(rec)}\n")
+                    opts.stdout.write(f"{formatter.format(rec)}\n")
             if not opts.watch: break
             time.sleep(1)
 
