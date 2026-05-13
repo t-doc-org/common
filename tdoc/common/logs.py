@@ -1,6 +1,7 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import binascii
 from collections import abc
 import contextlib
 import contextvars
@@ -17,7 +18,7 @@ import threading
 import time
 import traceback
 
-from . import database, config as _config, util
+from . import database, config as _config, console, util
 
 globals().update(logging.getLevelNamesMapping())
 
@@ -79,23 +80,28 @@ def normalize_record(rec):
 
 
 class Formatter(logging.Formatter):
-    def __init__(self, fmt, *args, utc=True, **kwargs):
+    def __init__(self, fmt, *args, utc=True, attrs=None, **kwargs):
         super().__init__(fmt, *args, style='{', **kwargs)
         self.fmt = fmt
         self.utc = utc
+        self.attrs = attrs if attrs is not None else {}
 
     def format(self, rec):
         normalize_record(rec)
         return super().format(rec).replace("\n", "\n  ")
 
     def formatMessage(self, rec):
-        return self.fmt.format_map(SafeFormat(rec.__dict__))
+        return self.fmt.format_map(SafeRecFormat(rec.__dict__, self.attrs))
 
     def formatTime(self, rec, datefmt=None):
         dt = datetime.datetime.fromtimestamp(rec.created, datetime.UTC)
-        if not self.utc:
-            return dt.astimezone().isoformat(timespec='microseconds')
-        return dt.replace(tzinfo=None).isoformat(timespec='microseconds') + 'Z'
+        t = dt.replace(tzinfo=None).isoformat(timespec='microseconds') + 'Z' \
+            if self.utc else dt.astimezone().isoformat(timespec='microseconds')
+        a = self.attrs
+        h, m = a.get('LCYAN', ''), a.get('CYAN', '')
+        d, n = a.get('LBLACK', ''), a.get('NORM', '')
+        return \
+            f'{m}{t[:10]}{d}{t[10:11]}{m}{t[11:17]}{h}{t[17:26]}{d}{t[26:]}{n}'
 
 
 class Missing:
@@ -123,6 +129,47 @@ class SafeFormat:
 _missing = SafeFormat(Missing())
 
 
+_ctx_colors = ['RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',
+               'LRED', 'LGREEN', 'LYELLOW', 'LBLUE', 'LMAGENTA', 'LCYAN']
+
+def _cctx(rec, attrs):
+    h = binascii.crc32(rec.get('ctx', '').encode('utf-8'))
+    return attrs.get(_ctx_colors[h % len(_ctx_colors)], '')
+
+
+def _clevel(rec, attrs):
+    level = rec.get('levelno', logging.NOTSET)
+    color = 'LBLACK' if level < logging.INFO \
+            else 'GREEN' if level < logging.WARNING \
+            else 'YELLOW' if level < logging.ERROR \
+            else 'LRED' if level < logging.CRITICAL else 'BOLD'
+    return attrs.get(color, '')
+
+
+class SafeRecFormat(SafeFormat):
+    __slots__ = ('__a',)
+    __f = {
+        'cctx': _cctx,
+        'clevel': _clevel,
+    }
+
+    def __init__(self, v, a):
+        super().__init__(v)
+        self.__a = a
+
+    def __getitem__(self, key):
+        if (v := self.__a.get(key)) is not None: return v
+        if (fn := self.__f.get(key)) is not None:
+            return fn(self._SafeFormat__v, self.__a)
+        return super().__getitem__(key)
+
+    def __getattr__(self, key):
+        if (v := self.__a.get(key)) is not None: return v
+        if (fn := self.__f.get(key)) is not None:
+            return fn(self._SafeFormat__v, self.__a)
+        return super().__getattr__(key)
+
+
 class QueueHandler(handlers.QueueHandler):
     def prepare(self, rec): return rec
 
@@ -146,8 +193,14 @@ def compress(src, dst):
     os.remove(src)
 
 
-default_stream_format = '{ilevel} [{ctx:20}] {message}'
+default_stream_format = \
+    '{clevel}{ilevel}{NORM}' \
+    ' {LBLACK}[{NORM}{cctx}{ctx:20}{NORM}{LBLACK}]{NORM} {message}'
 default_file_format = '{asctime} {ilevel} [{ctx:20}] [{name}] {message}'
+default_query_format = \
+    '{asctime} {clevel}{ilevel}{NORM}' \
+    ' {LBLACK}[{NORM}{cctx}{ctx:20}{NORM}{LBLACK}]{NORM}' \
+    ' {LBLACK}[{NORM}{LBLUE}{name}{NORM}{LBLACK}]{NORM} {message}'
 
 
 @contextlib.contextmanager
@@ -172,7 +225,8 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
             sh = logging.StreamHandler(stream=stderr)
             sh.setLevel(c.get('level', NOTSET))
             stack.callback(sh.flush)
-            sh.setFormatter(Formatter(c.get('format', default_stream_format)))
+            sh.setFormatter(Formatter(c.get('format', default_stream_format),
+                                      attrs=console.color_tags(stderr)))
             hs.append(sh)
 
         for c in config.subs('files'):

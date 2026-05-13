@@ -56,17 +56,21 @@ class AnsiStream:
     """Wrapper around an output stream exposing ANSI sequences as attributes."""
     def __init__(self, stream, color=None):
         self.__stream = stream
-        self.color(color)
-
-    def color(self, value):
-        if value is None: value = want_colors(self.__stream)
-        self.__tags = _ansi_seqs if value else _nop_seqs
+        set_color(self, color)
 
     def __getattr__(self, name):
-        try:
-            return self.__tags[name]
-        except KeyError:
-            return getattr(self.__stream, name)
+        if (t := self.__tags.get(name)) is not None: return t
+        return getattr(self.__stream, name)
+
+
+def set_color(stream, value):
+    if not isinstance(stream, AnsiStream): return
+    if value is None: value = want_colors(stream._AnsiStream__stream)
+    stream._AnsiStream__tags = _ansi_seqs if value else _nop_seqs
+
+
+def color_tags(stream):
+    return stream._AnsiStream__tags if isinstance(stream, AnsiStream) else {}
 
 
 def get_arg_parser(stdin, stdout, stderr):
@@ -99,8 +103,8 @@ def get_arg_parser(stdin, stdout, stderr):
             opts = super().parse_args(*args, **kwargs)
             color = None if not hasattr(opts, 'color') or opts.color == 'auto' \
                     else opts.color == 'true'
-            if isinstance(stdout, AnsiStream): stdout.color(color)
-            if isinstance(stderr, AnsiStream): stderr.color(color)
+            set_color(stdout, color)
+            set_color(stderr, color)
             opts.stdin = stdin
             opts.stdout = stdout
             opts.stderr = stderr

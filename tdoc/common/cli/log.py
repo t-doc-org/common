@@ -5,7 +5,7 @@ import contextlib
 import functools
 import time
 
-from .. import cli, logs
+from .. import cli, console, logs
 
 
 def add_commands(parser):
@@ -37,7 +37,7 @@ def add_commands(parser):
         help="Output entries logged before the given relative or absolute "
              "time.")
     arg('--format', metavar='FORMAT', dest='format',
-        default=logs.default_file_format,
+        default=logs.default_query_format,
         help="The format to use for log entries (default: %(default)r).")
     arg('--index', metavar='N', dest='index', type=int, default=0,
         help="The index of the database handler in the config (default: "
@@ -87,7 +87,9 @@ def cmd_create(opts):
 
 @cli.disable_db_logs
 def cmd_query(opts):
-    fmt = logs.Formatter(opts.format, utc=opts.utc)
+    # TODO: Get default format from config file
+    fmt = logs.Formatter(opts.format, utc=opts.utc,
+                         attrs=console.color_tags(opts.stdout))
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i == opts.index: break
     else:
