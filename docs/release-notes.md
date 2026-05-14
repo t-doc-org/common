@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-73)=
+## 0.73 *(2026-05-14)*
+
+- Added `tdoc` sub-commands to manage sandboxed shells for operating on
+  untrusted site repositories.
+- Migrated most of the scripts in `tools/` to `tdoc` sub-commands.
+- Colorized log and test output.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.72...0.73)
+
 (release-0-72)=
 ## 0.72 *(2026-04-19)*
 
