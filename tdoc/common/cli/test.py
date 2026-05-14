@@ -18,7 +18,7 @@ from .. import cli, util
 
 # TODO: Handle SIGTERM
 
-tdoc_org = 'ssh://rc.t-doc.org//home/rc/hg/t-doc'
+tdoc_org = 'https://rc.t-doc.org/hg'
 github_org = 'https://github.com/t-doc-org'
 
 
@@ -155,7 +155,7 @@ def run_tests(tests, repo, wheel, write, opts):
     write("Cloning\n")
     try:
         util.run('git', 'clone', '--branch=main', f'{github_org}/{repo}',
-                 repo_dir, env=os.environ | {'GIT_ASKPASS': 'false'},
+                 repo_dir, env=os.environ | {'GIT_ASKPASS': 'true'},
                  capture_output=True, check=True)
     except subprocess.CalledProcessError:
         run('hg', 'clone', '--updaterev=main', f'{tdoc_org}/{repo}',
