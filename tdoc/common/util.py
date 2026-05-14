@@ -145,10 +145,7 @@ def run(*args, input=None, capture_output=False, timeout=None, check=False,
 
 
 def script_path(name):
-    vars = {'base': sys.prefix, 'platbase': sys.prefix,
-            'installed_base': sys.prefix, 'installed_platbase': sys.prefix}
-    scripts = pathlib.Path(sysconfig.get_path('scripts', scheme='venv',
-                                              vars=vars))
+    scripts = pathlib.Path(sysconfig.get_path('scripts'))
     ext = sysconfig.get_config_vars().get('EXE', '')
     return scripts / f'{name}{ext}'
 
