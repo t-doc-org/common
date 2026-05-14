@@ -89,6 +89,7 @@ artifacts = [
 ]
 
 [tool.uv]
-# To create .venv, sync dev dependencies first.
-# $ uv sync --only-group=dev && uv sync
+# When installing into a new .venv with uv but without using run.py, sync dev
+# dependencies first (uv sync --only-group=dev). After that, sync as usual
+# (uv sync).
 no-build-isolation = true
