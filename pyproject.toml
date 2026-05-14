@@ -90,6 +90,5 @@ artifacts = [
 
 [tool.uv]
 # To create .venv, sync dev dependencies first.
-# $ uv sync --only-group=dev
-# $ uv sync
+# $ uv sync --only-group=dev && uv sync
 no-build-isolation = true
