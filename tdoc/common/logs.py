@@ -58,7 +58,6 @@ def pop_ctx(token):
 class CtxFilter(logging.Filter):
     def filter(self, rec):
         if not hasattr(rec, 'ctx'):
-            rec.leveli = rec.levelname[0]
             if (v := ctx.get()) is None: v = threading.current_thread().name
             rec.ctx = v[:20]
         return True
@@ -155,11 +154,16 @@ def _levelc(rec, attrs):
     return attrs[color]
 
 
+def _leveli(rec, attrs):
+    return rec.get('levelname', '?')[:1]
+
+
 class SafeRecFormat(SafeFormat):
     __slots__ = ('__a',)
     __f = {
         'ctxc': _ctxc,
         'levelc': _levelc,
+        'leveli': _leveli,
     }
 
     def __init__(self, v, a):
