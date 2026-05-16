@@ -66,14 +66,14 @@
         const newTheme = document.documentElement.dataset.theme;
         if (newTheme !== theme) {
             theme = newTheme;
-            document.dispatchEvent(new Event('theme-change'));
+            document.dispatchEvent(new Event('themechange'));
         }
     }).observe(document.documentElement,
                {attributes: true, attributeFilter: ['data-theme']});
 
     // Copy the data-theme attribute of the document to data-bs-theme, to
     // synchronize the Bootstrap theme.
-    document.addEventListener('theme-change', e => {
+    document.addEventListener('themechange', e => {
         const ds = document.documentElement.dataset;
         ds.bsTheme = ds.theme;
     });

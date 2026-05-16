@@ -6,6 +6,15 @@ jsdelivr = 'https://cdn.jsdelivr.net'
 # TODO: Add constraints on allowed versions
 
 info = {
+    'chartjs': {
+        'name': 'chart.js',
+        'version': '4.5.1',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'release_urls': [
+            'https://github.com/chartjs/Chart.js/releases',
+        ],
+    },
     'drauu': {
         'name': '@drauu/core',
         'version': '1.0.0',

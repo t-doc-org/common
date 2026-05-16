@@ -257,6 +257,6 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         }
 
         await render();
-        document.addEventListener('theme-change', render);
+        on(document).themechange(render);
     })();
 }

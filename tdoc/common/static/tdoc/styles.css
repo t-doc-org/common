@@ -1039,29 +1039,18 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     background-size: 28.28px 28.28px;
 }
 
-/* JSXGraph boards */
-.tdoc-dyn[data-type=jsxgraph] {
-    /* The magic value is used to detect the default in jsxgraph.js. */
-    aspect-ratio: 142857 / 142857;
+/* Dynamically-rendered blocks */
+.tdoc-dyn {
     margin: 1rem auto;
-    border-color: var(--pst-color-border);
-    border-radius: 0.25rem;
+    text-align: center;
 }
-:fullscreen > .tdoc-dyn[data-type=jsxgraph] {
-    border: none;
-    border-radius: 0;
+.tdoc-dyn.align-left {
+    text-align: left;
 }
-.tdoc-dyn[data-type=jsxgraph].align-left {
-    margin-left: 0;
+.tdoc-dyn.align-right {
+    text-align: right;
 }
-.tdoc-dyn[data-type=jsxgraph].align-right {
-    margin-right: 0;
-}
-html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
-    /* Override border attributes set on the element. */
-    border: 1px solid var(--pst-color-danger) !important;
-}
-.tdoc-dyn[data-type=jsxgraph] > div.spinner {
+.tdoc-dyn > div.spinner {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1069,6 +1058,26 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
     height: 100%;
     color: var(--pst-color-text-base);
     background-color: var(--pst-color-background);
+}
+.tdoc-dyn:is(.rendered, [data-processed]) > div.spinner {
+    display: none;
+}
+html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
+    /* Override border attributes set on the element. */
+    border: 1px solid var(--pst-color-danger) !important;
+    /* TODO: Ensure a minimum height */
+}
+
+/* JSXGraph boards */
+.tdoc-dyn[data-type=jsxgraph] {
+    /* The magic value is used to detect the default in jsxgraph.js. */
+    aspect-ratio: 142857 / 142857;
+    border-color: var(--pst-color-border);
+    border-radius: 0.25rem;
+}
+:fullscreen > .tdoc-dyn[data-type=jsxgraph] {
+    border: none;
+    border-radius: 0;
 }
 .JXG_navigation > .JXG_navigation_button {
     padding-top: 0.2rem;
@@ -1084,16 +1093,6 @@ html[data-tdoc-dev] .tdoc-dyn[data-type=jsxgraph]:not(.rendered) {
 }
 
 /* Mermaid diagrams */
-.tdoc-dyn[data-type=mermaid] {
-    margin: 1rem auto;
-    text-align: center;
-}
-.tdoc-dyn[data-type=mermaid].align-left {
-    text-align: left;
-}
-.tdoc-dyn[data-type=mermaid].align-right {
-    text-align: right;
-}
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
 }

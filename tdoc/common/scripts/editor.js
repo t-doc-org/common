@@ -268,7 +268,7 @@ function currentTheme() {
            darkTheme : lightTheme;
 }
 
-document.addEventListener('theme-change', e => {
+document.addEventListener('themechange', e => {
     const curTheme = currentTheme();
     for (const div of document.querySelectorAll('div.cm-editor')) {
         const editor = div.tdocEditor;

@@ -484,6 +484,9 @@ class Dyn(docutils.SphinxDirective):
         if self.has_content:
             node.append(nodes.Text(''.join(f'{line}\n'
                                            for line in self.content)))
+        else:
+            node.append(nodes.container('', nodes.Text("Rendering..."),
+                                        classes=['spinner']))
 
 
 class dyn(nodes.General, nodes.Element):
