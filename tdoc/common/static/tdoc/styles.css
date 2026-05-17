@@ -1042,13 +1042,12 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
 /* Dynamically-rendered blocks */
 .tdoc-dyn {
     margin: 1rem auto;
-    text-align: center;
 }
 .tdoc-dyn.align-left {
-    text-align: left;
+    margin-left: 0;
 }
 .tdoc-dyn.align-right {
-    text-align: right;
+    margin-right: 0;
 }
 .tdoc-dyn > div.spinner {
     display: flex;
@@ -1095,6 +1094,12 @@ html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
 /* Mermaid diagrams */
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
+}
+.tdoc-dyn[data-type=mermaid] {
+    width: fit-content;
+}
+.tdoc-dyn[data-type=mermaid] > svg {
+    display: block;
 }
 .tdoc-dyn[data-type=mermaid].background-light > svg {
     background-color: var(--tdoc-background-light);
