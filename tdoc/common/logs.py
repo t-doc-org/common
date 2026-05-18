@@ -201,7 +201,7 @@ class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
 
 def compress(src, dst):
     with open(src, 'rb') as inp, gzip.open(dst, 'wb') as out:
-        os.fchmod(out.fileobj.fileno(), os.stat(inp).st_mode & 0o777)
+        os.fchmod(out.fileobj.fileno(), os.stat(inp.fileno()).st_mode & 0o777)
         shutil.copyfileobj(inp, out)
     os.remove(src)
 
