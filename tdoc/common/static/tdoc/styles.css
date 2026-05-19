@@ -1,12 +1,6 @@
 /* Copyright 2024 Remy Blank <remy@c-space.org> */
 /* SPDX-License-Identifier: MIT */
 
-/* Variables */
-body {
-    --tdoc-background-light: #fff;
-    --tdoc-background-dark: #121212;
-}
-
 /* Utility classes */
 .hidden:not(#¶) {
     display: none;
@@ -1042,12 +1036,15 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
 /* Dynamically-rendered blocks */
 .tdoc-dyn {
     margin: 1rem auto;
+    text-align: center;
 }
 .tdoc-dyn.align-left {
     margin-left: 0;
+    text-align: left;
 }
 .tdoc-dyn.align-right {
     margin-right: 0;
+    text-align: right;
 }
 .tdoc-dyn > div.spinner {
     display: flex;
@@ -1099,17 +1096,8 @@ html[data-theme=dark] .tdoc-dyn[data-type=chartjs] > canvas {
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
 }
-.tdoc-dyn[data-type=mermaid] {
-    width: fit-content;
-}
-.tdoc-dyn[data-type=mermaid] > svg {
-    display: block;
-}
-.tdoc-dyn[data-type=mermaid].background-light > svg {
-    background-color: var(--tdoc-background-light);
-}
-.tdoc-dyn[data-type=mermaid].background-dark > svg {
-    background-color: var(--tdoc-background-dark);
+html[data-theme=dark] .tdoc-dyn[data-type=mermaid] > svg {
+    filter: invert(1) hue-rotate(180deg);
 }
 .mermaidTooltip {
     position: absolute;

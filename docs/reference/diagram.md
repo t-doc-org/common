@@ -22,28 +22,21 @@ overriding more general ones.
 - The `tdoc_mermaid` setting in `conf.py` (a `dict`) sets the default properties
   for the site.
 
-`````{admonition} Caveats
+`````{admonition} Caveat
 :class: attention
-- Only the `---` line separating the frontmatter from the diagram code must be
-  included; the `---` line preceding the frontmatter must be dropped.
-  ````{code-block}
-  ```{mermaid}
-  title: A diamond graph
-  config:
-    look: handDrawn
-  ---
-  flowchart TD;
-    A --> B & C;
-    B & C --> D;
-  ```
-  ````
-- The light theme uses the `theme` property set via the page {rst:dir}`metadata`
-  or the `tdoc_mermaid` setting. The dark theme uses the `darkTheme` property.
-- Setting the `theme` property via the frontmatter overrides the theme-based
-  selection. This will make the diagram unreadable on one of the themes. As a
-  workaround, set the `background-light` or `background-dark`
-  {rst:dir}`:class: <mermaid:class>` on the directive to add a static background
-  color.
+Only the `---` line separating the frontmatter from the diagram code must be
+included; the `---` line preceding the frontmatter must be dropped.
+````{code-block}
+```{mermaid}
+title: A diamond graph
+config:
+  look: handDrawn
+---
+flowchart TD;
+  A --> B & C;
+  B & C --> D;
+```
+````
 `````
 
 {.rubric}

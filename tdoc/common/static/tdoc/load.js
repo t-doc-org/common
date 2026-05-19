@@ -234,29 +234,7 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         ]);
         mermaid.registerLayoutLoaders(elk);
         await domLoaded;
-
-        const config = tdoc.dyn.mermaid;
-        const lightTheme = config.theme ?? 'default';
-        const darkTheme = config.darkTheme ?? 'dark';
-
-        const nodes = findDyn('mermaid');
-        for (const n of nodes) n.tdocContent = n.textContent;
-
-        async function render() {
-            mermaid.initialize({
-                ...config,
-                startOnLoad: false,
-                theme: document.documentElement.dataset.theme === 'dark' ?
-                       darkTheme : lightTheme,
-            });
-            for (const node of nodes) {
-                node.textContent = node.tdocContent;
-                delete node.dataset.processed;
-            }
-            await mermaid.run({nodes});
-        }
-
-        await render();
-        on(document).themechange(render);
+        mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
+        mermaid.run({nodes: findDyn('mermaid')});
     })();
 }

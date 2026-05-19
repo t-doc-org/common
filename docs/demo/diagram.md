@@ -41,11 +41,9 @@ flowchart LR;
     click informatique "https://informatique.t-doc.org/" "Computer science course"
 ```
 
-This flowchart has labels on the edges, sets the theme in the frontmatter with a
-static background, and has a hand-drawn look.
+This flowchart has labels on the edges and sets the theme in the frontmatter.
 
 ```{mermaid}
-:class: background-light
 title: How to repair a lamp
 config:
   theme: default
@@ -112,6 +110,9 @@ config:
       labelPadding: 10
     yAxis:
       labelPadding: 20
+  themeVariables:
+    xyChart:
+      backgroundColor: transparent
 ---
 xychart
     title "Sales Revenue"
