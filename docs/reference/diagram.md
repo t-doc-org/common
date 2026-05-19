@@ -19,8 +19,8 @@ overriding more general ones.
   [frontmatter](https://mermaid.js.org/intro/syntax-reference.html#frontmatter-for-diagram-code)
   block in the directive content sets properties for a single diagram.
 - The `mermaid:` {rst:dir}`metadata` sets the default properties for the page.
-- The `tdoc_mermaid` setting in `conf.py` (a `dict`) sets the default properties
-  for the site.
+- The `mermaid` key in the {confval}`metadata` option in `conf.py` (a `dict`)
+  sets the default properties for the site.
 
 `````{admonition} Caveat
 :class: attention

@@ -69,6 +69,18 @@ export const domLoaded = new Promise(resolve => {
     }
 });
 
+// Return true iff the argument is an object and not an array.
+export function isObject(v) {
+    return v !== null && typeof v === 'object' && !(v instanceof Array);
+}
+
+// Return true iff the argument is a plain Object.
+export function isPlainObject(v) {
+    if (typeof v !== 'object') return false;
+    const p = Object.getPrototypeOf(v);
+    return p === null || p.isPrototypeOf(Object);
+}
+
 // Escape text for inclusion in HTML.
 export function escape(text) {
     return text.replace(/[&<>"']/g, m => `&#${m.charCodeAt(0)};`);

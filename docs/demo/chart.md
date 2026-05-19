@@ -3,6 +3,13 @@
 
 # Charts
 
+```{metadata}
+chartjs:
+  plugins:
+    legend:
+      display: false
+```
+
 ## Chart.js
 
 This section renders charts using {rst:dir}`chartjs` directives.
@@ -56,7 +63,6 @@ data: {
 },
 options: {
   scales: {y: {beginAtZero: true}},
-  plugins: {legend: {display: false}},
 },
 ```
 
@@ -111,7 +117,6 @@ chart('v-bar', {
   },
   options: {
     scales: {y: {beginAtZero: true}},
-    plugins: {legend: {display: false}},
   },
 });
 
@@ -129,7 +134,6 @@ chart('h-bar', {
   },
   options: {
     indexAxis: 'y',
-    plugins: {legend: {display: false}},
   },
 });
 
@@ -143,7 +147,6 @@ chart('bubble', {
       hoverBorderColor: core.palette,
     }],
   },
-  options: {plugins: {legend: {display: false}}},
 });
 
 const pieColors = [core.colors.red, core.colors.blue, core.colors.yellow];
@@ -162,7 +165,7 @@ chart('pie', {
   options: {
     aspectRatio: 3 / 2,
     layout: {padding: 20},
-    plugins: {legend: {position: 'right'}},
+    plugins: {legend: {display: true, position: 'right'}},
   },
 });
 
@@ -182,7 +185,7 @@ chart('doughnut', {
     hoverBackgroundColor: pieColors,
     aspectRatio: 3 / 2,
     layout: {padding: 20},
-    plugins: {legend: {position: 'right'}},
+    plugins: {legend: {display: true, position: 'right'}},
   },
 });
 

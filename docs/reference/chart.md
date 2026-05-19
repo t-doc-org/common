@@ -14,7 +14,9 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 
 The charts are constructed in JavaScript, by importing the {js:mod}`chart`
 module and calling {js:func}`~chart.chart` for each {rst:dir}`chartjs`
-directive, referencing it by name.
+directive, referencing it by name and providing the chart configuration.
+Defaults can be set via the `chartjs:` {rst:dir}`metadata`, and are
+[expanded](#expansion).
 
 ````{code-block} html
 ```{chartjs} v-bar
@@ -85,11 +87,31 @@ JavaScript via {js:func}`~chart.template`.
 #### `json`
 
 This template renders a chart with a static JSON config. The chart configuration
-is provided in the directive content. Some attributes are special-cased for more
-flexibility.
+is provided in the directive content, and is [expanded](#expansion).
 
-- Setting an attribute named `color` or ending with `Color` to a string starting
-  with `@` looks up a color by name in
+````{code-block}
+```{chartjs} template:json
+type: 'bar',
+data: {
+  labels: ['Monday', 'Tuesday', 'Wednesday'],
+  datasets: [{
+    label: "Option A",
+    data: [7, 11, 3],
+    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
+    backgroundColor: '@blue/0.2',
+  }],
+},
+options: {
+  scales: {y: {beginAtZero: true}},
+  plugins: {legend: {display: false}},
+},
+```
+````
+
+### Expansion
+
+- Attributes named `color` or ending with `Color` with a value starting with `@`
+  are expanded by looking up the color by name in
   [`core.colors`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/core.js).
   The color name can optionally be followed by `/` and an alpha value in the
   range $\left[0; 1\right]$.

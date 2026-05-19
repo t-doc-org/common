@@ -21,6 +21,8 @@ In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields),
 t-doc uses the following document metadata fields as per-page configuration.
 
+- `chartjs:`: A map of config defaults for {rst:dir}`chartjs` charts.
+
 - `date:`: The date to use in headers and footers when printing. Defaults to the
   current date.
 
