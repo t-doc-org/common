@@ -25,6 +25,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinx_design',
     'tdoc.common.ext',
+    'tdoc.common.ext.chart',
     'tdoc.common.ext.defaults',
     'tdoc.common.ext.diagram',
     'tdoc.common.ext.exec',

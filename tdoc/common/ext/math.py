@@ -10,7 +10,6 @@ _log = logging.getLogger(__name__)
 
 def setup(app):
     app.add_directive('jsxgraph', JsxGraph)
-    app.add_directive('chartjs', ChartJs)
     app.connect('html-page-context', add_css_js)
     return {
         'version': __version__,
@@ -27,16 +26,9 @@ class JsxGraph(Dyn):
         node['classes'].append('jxgbox')
 
 
-class ChartJs(Dyn):
-    has_content = True
-    has_templates = True
-
-
 def add_css_js(app, page, template, context, doctree):
     if doctree and doctree.next_node(dyn.has_type('jsxgraph')) is not None:
         tdoc = tdoc_config(app, page, doctree, context)
         base = tdoc['versions']['jsxgraph']
         app.add_css_file(f'{base}/jsxgraph.css', priority=199)  # Before theme
         app.add_js_file('tdoc/jsxgraph.js', type='module')
-    if doctree and doctree.next_node(dyn.has_type('chartjs')) is not None:
-        app.add_js_file('tdoc/chart.js', type='module')
