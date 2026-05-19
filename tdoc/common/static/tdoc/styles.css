@@ -131,6 +131,8 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=navbar])
         .bd-header-article,
 html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=primary-sidebar])
         .bd-sidebar-primary,
+html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=primary-sidebar])
+        .header-article-item:has(> button.primary-toggle),
 html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=secondary-sidebar])
         :is(.bd-sidebar-secondary, #print-main-content),
 html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=prev-next])
