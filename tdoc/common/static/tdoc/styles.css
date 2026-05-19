@@ -1116,6 +1116,23 @@ html[data-theme=dark] .tdoc-dyn[data-type=mermaid] > svg {
     z-index: 100;
 }
 
+/* Graphviz diagrams */
+div.graphviz {
+    text-align: center;
+}
+div.graphviz.align-left {
+    text-align: left;
+}
+div.graphviz.align-right {
+    text-align: right;
+}
+div.graphviz > img.graphviz:not(#¶) {
+    background-color: transparent;
+}
+html[data-theme=dark] div.graphviz > :is(img.graphviz, object.graphviz, svg) {
+    filter: invert(1) hue-rotate(180deg);
+}
+
 /* Drop-down menus */
 .dropdown-menu {
     --bs-dropdown-link-color: var(--pst-color-text-muted);

@@ -125,8 +125,8 @@ xychart
 ## Graphviz
 
 ```{graphviz}
-:class: align-center
 digraph {
+    bgcolor="transparent"
     A -> B
     A -> C
     B -> D

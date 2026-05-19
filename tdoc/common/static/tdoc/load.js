@@ -238,3 +238,14 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         mermaid.run({nodes: findDyn('mermaid')});
     })();
 }
+
+// Handle graphviz diagrams.
+(async () => {
+    await domLoaded;
+    // Replace <object> elements with their SVG content, so that they can be
+    // styled.
+    for (const el of qsa(document, 'object.graphviz')) {
+        el.parentNode.classList.add(...el.classList);
+        el.replaceWith(el.contentDocument.documentElement);
+    }
+})();

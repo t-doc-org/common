@@ -258,6 +258,29 @@ config:
 flowchart LR;
     node(Node)
 ```
+
+# Graphviz
+
+```{graphviz}
+:class: align-left
+digraph {
+    bgcolor="transparent"
+    A
+}
+```
+```{graphviz}
+digraph {
+    bgcolor="transparent"
+    A
+}
+```
+```{graphviz}
+:class: align-right
+digraph {
+    bgcolor="transparent"
+    A
+}
+```
 ````
 
 ## Hide elements

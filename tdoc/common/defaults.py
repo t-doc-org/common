@@ -45,12 +45,7 @@ suppress_warnings = [
 ]
 
 # Extension options.
-# The graphviz extension embeds SVG images as <object> tags. This causes them
-# to be loaded as separate documents, which doesn't play well with the
-# Cross-Origin Isolation workaround (the requests don't get intercepted, lack
-# the necessary headers, and therefore get blocked). PNG images are embedded
-# as <img>, which don't have this issue.
-graphviz_output_format = 'png'
+graphviz_output_format = 'svg'
 todo_include_todos = True
 
 # MyST options.
