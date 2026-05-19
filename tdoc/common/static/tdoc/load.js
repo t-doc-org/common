@@ -240,12 +240,18 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
 }
 
 // Handle graphviz diagrams.
-(async () => {
-    await domLoaded;
+domLoaded.then(() => {
     // Replace <object> elements with their SVG content, so that they can be
     // styled.
     for (const el of qsa(document, 'object.graphviz')) {
-        el.parentNode.classList.add(...el.classList);
-        el.replaceWith(el.contentDocument.documentElement);
+        const embed = () => {
+            el.parentNode.classList.add(...el.classList);
+            el.replaceWith(el.getSVGDocument().documentElement);
+        };
+        if (el.getSVGDocument()) {
+            embed();
+        } else {
+            on(el).load(embed);
+        }
     }
-})();
+});
