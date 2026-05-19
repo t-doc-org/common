@@ -12,6 +12,7 @@ import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
+import pyjson5
 from sphinx import config, errors, locale
 from sphinx.builders import html
 from sphinx.environment import collectors
@@ -171,9 +172,8 @@ def setup(app):
     app.add_node(dyn, html=(visit_dyn, depart_dyn))
     app.connect('tdoc-html-page-config', add_dyn_config)
     app.add_env_collector(UniqueChecker('dyn-name',
-        lambda doctree: ((n, (n['type'], name) if (name := n.get('name'))
-                                               else None)
-                         for n in doctree.findall(dyn)),
+        lambda doctree: ((n, (n['type'], name)) for n in doctree.findall(dyn)
+                         if (name := n.get('name')) and not n.get('template')),
         lambda v: f"{{{v[0]}}}: Duplicate name: {v[1]}"))
 
     return {
@@ -463,30 +463,52 @@ class UniqueChecker(collectors.EnvironmentCollector):
                 doctree.reporter.error(self.err(v), base_node=node)
 
 
+template_re = re.compile(r'(?s)([a-zA-Z0-9_-]+)(?:\((.*)\))?')
+
+
 class Dyn(docutils.SphinxDirective):
+    optional_arguments = 1
     option_spec = {
         'class': directives.class_option,
         'style': directives.unchanged,
+        'template': directives.unchanged,
     }
+    has_templates = False
 
     @report_exceptions
     def run(self):
         node = dyn(type=self.name)
         self.set_source_info(node)
         self.state.document.set_id(node)
-        if self.arguments: node['name'] = self.arguments[0]
+        name = self.arguments[0] if self.arguments else None
+        if name and name.startswith('template:'):
+            node['template'] = name[9:]
+            v = ''.join(f'{line}\n' for line in self.content)
+            node['args'] = util.to_json(pyjson5.decode(f'{{{v}}}'))
+        elif (v := self.options.get('template')) is not None:
+            # TODO(0.75): Remove :template:, make argument required
+            if name:
+                raise Exception(f"{{{self.name}}} Directive with :template: "
+                                "must not have a name")
+            if (m := template_re.fullmatch(v.strip())) is None:
+                raise Exception(
+                    f"{{{self.name}}} Invalid :template: value: {v}")
+            node['template'] = m.group(1)
+            if (v := m.group(2)) is not None:
+                node['args'] = util.to_json(pyjson5.decode(f'[{v}]'))
+        elif name is not None:
+            node['name'] = name
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
         self.populate(node)
+        if 'name' not in node and not ('template' in node or node.children):
+            raise Exception(f"{{{self.name}}} Directive must have a name")
+        if not self.has_templates and 'template' in node:
+            raise Exception(
+                f"{{{self.name}}} Directive doesn't support templates")
         return [node]
 
-    def populate(self, node):
-        if self.has_content:
-            node.append(nodes.Text(''.join(f'{line}\n'
-                                           for line in self.content)))
-        else:
-            node.append(nodes.container('', nodes.Text("Rendering..."),
-                                        classes=['spinner']))
+    def populate(self, node): pass
 
 
 class dyn(nodes.General, nodes.Element):
@@ -499,9 +521,13 @@ def visit_dyn(self, node):
     attrs = {'data-type': node['type']}
     if v := node.get('name'): attrs['data-name'] = v
     if v := node.get('style'): attrs['style'] = v
+    if v := node.get('template'): attrs['data-template'] = v
+    if v := node.get('args'): attrs['data-args'] = v
     if (v := node.get('attrs')) is not None: attrs |= v
     self.body.append(self.starttag(node, 'div', '', classes=['tdoc-dyn'],
                                    **attrs))
+    if not node.children:
+        self.body.append('<div class="spinner">Rendering...</div>')
 
 
 def depart_dyn(self, node):

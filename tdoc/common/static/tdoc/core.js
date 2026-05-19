@@ -359,8 +359,8 @@ export const palette = [
   colors.blue,
   colors.red,
   colors.green,
-  colors.purple,
   colors.orange,
+  colors.purple,
   colors.yellow,
   colors.grey,
 ];

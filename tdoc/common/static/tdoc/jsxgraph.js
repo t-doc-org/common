@@ -188,12 +188,17 @@ export async function template(name, fn) {
     await domLoaded;
     for (const el of qsa(document, `\
 div.tdoc-dyn[data-type=jsxgraph][data-template="${CSS.escape(name)}"]`)) {
-        const args = el.dataset.args ? JSON.parse(el.dataset.args) : [];
-        fn(el, ...args);
+        const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
+        fn(el, args);
     }
 }
 
-template('grid', (el, width = 35, height = 10, grid = {}, board = {}) => {
+template('grid', (el, args) => {
+    // TODO(0.75): Remove backward-compatibility handling of arrays
+    if (args instanceof Array) {
+        args = {width: args[0], height: args[1], grid: args[2], board: args[3]};
+    }
+    const {width = 35, height = 10, grid = {}, board = {}} = args;
     initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
@@ -203,26 +208,30 @@ template('grid', (el, width = 35, height = 10, grid = {}, board = {}) => {
     ]);
 });
 
-template('axes', (el, boundingBox = [-11, 11, 11, -11], opts = {},
-                  board = {}) => {
+template('axes', (el, args) => {
+    // TODO(0.75): Remove backward-compatibility handling of arrays
+    if (args instanceof Array) {
+        args = {boundingBox: args[0], options: args[1], board: args[2]};
+    }
+    const {boundingBox = [-11, 11, 11, -11], options = {}, board = {}} = args;
     initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
             defaultAxes: {
                 x: {ticks: {
                     insertTicks: false,
-                    ticksDistance: opts.majorX ?? opts.major ?? 1,
-                    minorTicks: opts.minorX ?? opts.minor ?? 0,
+                    ticksDistance: options.majorX ?? options.major ?? 1,
+                    minorTicks: options.minorX ?? options.minor ?? 0,
                 }},
                 y: {ticks: {
                     insertTicks: false,
-                    ticksDistance: opts.majorY ?? opts.major ?? 1,
-                    minorTicks: opts.minorY ?? opts.minor ?? 0,
+                    ticksDistance: options.majorY ?? options.major ?? 1,
+                    minorTicks: options.minorY ?? options.minor ?? 0,
                 }},
             },
         },
-        withAxesLabels(opts.labelsX ?? opts.labels,
-                       opts.labelsY ?? opts.labels),
-        {grid: opts.grid ?? {}}, nonInteractive, board,
+        withAxesLabels(options.labelsX ?? options.labels,
+                       options.labelsY ?? options.labels),
+        {grid: options.grid ?? {}}, nonInteractive, board,
     ]);
 });

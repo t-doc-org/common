@@ -7,8 +7,9 @@
 :maxdepth: 1
 elements
 layout
-diagram
 math
+chart
+diagram
 quiz
 poll
 python

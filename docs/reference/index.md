@@ -8,8 +8,9 @@
 config
 elements
 layout
-diagram
 math
+chart
+diagram
 quiz
 poll
 exec

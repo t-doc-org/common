@@ -1064,7 +1064,6 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
 html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
     /* Override border attributes set on the element. */
     border: 1px solid var(--pst-color-danger) !important;
-    /* TODO: Ensure a minimum height */
 }
 
 /* JSXGraph boards */
@@ -1376,4 +1375,9 @@ mjx-container[display="true"]:not(#¶) {
 /* Avoid that form controls change size on focus. */
 .form-control:focus, .form-control:focus-visible {
     border: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+/* Random cosmetic fixes */
+dd ul, dd table {
+    margin-bottom: 1rem;  /* Revert basic.css */
 }

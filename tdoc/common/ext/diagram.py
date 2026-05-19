@@ -23,4 +23,5 @@ class Mermaid(Dyn):
 
     def populate(self, node):
         if self.content.count('---') == 1: node.append(nodes.Text("---\n"))
-        super().populate(node)
+        node.append(nodes.Text(''.join(f'{line}\n'
+                                       for line in self.content)))

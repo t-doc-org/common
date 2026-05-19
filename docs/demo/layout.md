@@ -154,7 +154,6 @@ This is the solution to exercise {numref}`block-ex:c`.
 
 ## Admonitions
 
-
 ````{admonition} Horizontal alignment
 :class: note dropdown expand
 The `pydata_sphinx_theme` CSS breaks the layout of admonition content, in
@@ -215,20 +214,20 @@ x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
 
 # JSXGraph
 
-```{jsxgraph}
-:template: grid(35, 2)
+```{jsxgraph} template:grid
 :style: width: 50%;
 :class: align-left
+width: 35, height: 2,
 ```
-```{jsxgraph}
-:template: grid(35, 2)
+```{jsxgraph} template:grid
 :style: width: 50%;
-:class: align-middle
+:class: align-center
+width: 35, height: 2,
 ```
-```{jsxgraph}
-:template: grid(35, 2)
+```{jsxgraph} template:grid
 :style: width: 50%;
 :class: align-right
+width: 35, height: 2,
 ```
 
 # Mermaid

@@ -240,7 +240,7 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         const darkTheme = config.darkTheme ?? 'dark';
 
         const nodes = findDyn('mermaid');
-        for (const n of nodes) n.tdocCode = n.innerHTML;
+        for (const n of nodes) n.tdocContent = n.textContent;
 
         async function render() {
             mermaid.initialize({
@@ -250,7 +250,7 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
                        darkTheme : lightTheme,
             });
             for (const node of nodes) {
-                node.innerHTML = node.tdocCode;
+                node.textContent = node.tdocContent;
                 delete node.dataset.processed;
             }
             await mermaid.run({nodes});
