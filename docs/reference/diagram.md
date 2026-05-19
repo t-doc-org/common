@@ -49,3 +49,8 @@ A space-separated list of CSS classes to add to the diagram container.
 CSS styles to apply to the diagram container.
 ```
 ``````
+
+## Graphviz
+
+[Graphviz](https://graphviz.org/) diagrams can be added with the
+{rst:dir}`graphviz` directive.
