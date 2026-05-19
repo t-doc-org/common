@@ -1128,6 +1128,10 @@ div.graphviz.align-left {
 div.graphviz.align-right {
     text-align: right;
 }
+div.graphviz > svg {
+    max-width: 100%;
+    height: auto;
+}
 div.graphviz > img.graphviz:not(#¶) {
     background-color: transparent;
 }
