@@ -3,7 +3,6 @@
 
 import {colors, domLoaded, elmt, findDyn, on, qs, qsa} from './core.js';
 
-// TODO: Handle theme changes: change defaults and redraw on theme changes
 // TODO: Allow specifying an array of configs
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);

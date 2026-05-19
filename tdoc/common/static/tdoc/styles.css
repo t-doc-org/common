@@ -1090,6 +1090,11 @@ html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
     }
 }
 
+/* Chart.js charts */
+html[data-theme=dark] .tdoc-dyn[data-type=chartjs] > canvas {
+    filter: invert(1) hue-rotate(180deg);
+}
+
 /* Mermaid diagrams */
 .tdoc-dyn[data-type=mermaid]:not([data-processed]) {
     display: none;
