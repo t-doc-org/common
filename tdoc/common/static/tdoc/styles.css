@@ -1069,6 +1069,11 @@ html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
     aspect-ratio: 142857 / 142857;
     border-color: var(--pst-color-border);
     border-radius: 0.25rem;
+    background-color: var(--pst-color-background);
+}
+html[data-theme=dark] .tdoc-dyn[data-type=jsxgraph]
+        > :is(svg, div[class^=JXG]) {
+    filter: invert(1) hue-rotate(180deg);
 }
 :fullscreen > .tdoc-dyn[data-type=jsxgraph] {
     border: none;
