@@ -34,12 +34,7 @@ def add_commands(parser):
     p = parser.add_parser('site', help="Site-related commands.")
     sp = p.add_subparsers(title="Sub-commands")
     sp.required = True
-    _add_commands(sp)
-    # TODO(0.73): Remove aliases
-    _add_commands(parser)
 
-
-def _add_commands(sp):
     p = sp.add_parser('build', help="Build a site.")
     p.set_defaults(handler=cmd_build)
     arg = p.add_argument
