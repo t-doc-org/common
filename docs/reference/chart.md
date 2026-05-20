@@ -115,6 +115,8 @@ binning.
 
 - `bins`: The definition of the histogram bins.
   - `count`: The number of bins.
+  - `max`: The largest sample value that needs to be handled. When unset, this
+    is computed from the samples.
   - `min`: The lower limit of the first bin. When unset, this is computed from
     the samples.
   - `origin` (default: `0`): The origin of the binning when `width` is set and

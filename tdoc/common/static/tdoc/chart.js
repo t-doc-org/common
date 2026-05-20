@@ -97,25 +97,26 @@ template('histogram', (el, args) => {
         if (s < min) min = s;
         if (s > max) max = s;
     }
-    let bm = args.bins?.min, bw = args.bins?.width, bc = args.bins?.count;
+    let bmin = args.bins?.min, bw = args.bins?.width, bc = args.bins?.count;
+    const bmax = Math.max(args.bins?.max ?? -Infinity, max);
     if (bw === undefined) {
-        bm = Math.min(bm ?? Infinity, min);
+        bmin = Math.min(bmin ?? Infinity, min);
         if (bc === undefined) bc = Math.ceil(Math.sqrt(args.samples.length));
-        bw = (max - bm) / bc;
+        bw = (bmax - bmin) / bc;
         if (bw <= 0) bw = 1;
     } else {
-        if (bm === undefined) {
+        if (bmin === undefined) {
             const bo = args.bins?.origin ?? 0;
-            bm = bo + Math.floor((min - bo) / bw) * bw;
+            bmin = bo + Math.floor((min - bo) / bw) * bw;
         }
-        bc = Math.max(bc ?? 0, Math.floor((max - bm) / bw) + 1);
+        bc = Math.max(bc ?? 0, Math.floor((bmax - bmin) / bw) + 1);
     }
 
     // Compute histogram data.
     const data = [];
-    for (let b = 0; b < bc; ++b) data.push({x: bm + (b + 0.5) * bw, y: 0});
+    for (let b = 0; b < bc; ++b) data.push({x: bmin + (b + 0.5) * bw, y: 0});
     for (const s of args.samples) {
-        let b = Math.floor((s - bm) / bw);
+        let b = Math.floor((s - bmin) / bw);
         if (b >= data.length) b = data.length - 1;
         ++data[b].y;
     }
@@ -131,7 +132,7 @@ template('histogram', (el, args) => {
             scales: {
                 x: {
                     type: 'linear',
-                    min: bm, max: bm + data.length * bw,
+                    min: bmin, max: bmin + data.length * bw,
                     offset: false,
                     grid: {offset: false},
                     ticks: {stepSize: bw},

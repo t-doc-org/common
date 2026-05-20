@@ -69,7 +69,7 @@ options: {
 ### Template: `histogram`
 
 ```{chartjs} template:histogram
-bins: {min: 0, width: 2, count: 12},
+bins: {min: 0, max: 23, width: 2},
 options: {
   scales: {
     x: {title: {display: true, text: "Hours"}},
