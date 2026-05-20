@@ -108,6 +108,38 @@ options: {
 ```
 ````
 
+#### `histogram`
+
+This template renders a histogram from an array of samples, using uniform
+binning.
+
+- `bins`: The definition of the histogram bins.
+  - `count`: The number of bins.
+  - `min`: The lower limit of the first bin. When unset, this is computed from
+    the samples.
+  - `origin` (default: `0`): The origin of the binning when `width` is set and
+    `min` isn't.
+  - `width`: The width of the bins. When unset, this is computed from `count`
+    and the samples.
+- `options`: A map of options to merge into the `options` field of the chart.
+- `samples`: The array of samples.
+
+````{code-block}
+```{chartjs} template:histogram
+bins: {min: 0, width: 2, count: 12},
+options: {
+  scales: {
+    x: {title: {display: true, text: "Hours"}},
+    y: {title: {display: true, text: "Visitors"}},
+  }
+},
+samples: [
+  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
+  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+],
+```
+````
+
 ### Expansion
 
 - Attributes named `color` or ending with `Color` with a value starting with `@`

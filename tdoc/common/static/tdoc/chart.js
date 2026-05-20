@@ -85,7 +85,76 @@ div.tdoc-dyn[data-type=chartjs][data-template="${CSS.escape(name)}"]`)) {
     }
 }
 
-template('json', (el, config) => {
+template('json', (el, args) => {
+    expandColors(args);
+    chart(el, args);
+});
+
+template('histogram', (el, args) => {
+    // Define bins.
+    let min = Infinity, max = -Infinity;
+    for (const s of args.samples) {
+        if (s < min) min = s;
+        if (s > max) max = s;
+    }
+    let bm = args.bins?.min, bw = args.bins?.width, bc = args.bins?.count;
+    if (bw === undefined) {
+        bm = Math.min(bm ?? Infinity, min);
+        if (bc === undefined) bc = Math.ceil(Math.sqrt(args.samples.length));
+        bw = (max - bm) / bc;
+        if (bw <= 0) bw = 1;
+    } else {
+        if (bm === undefined) {
+            const bo = args.bins?.origin ?? 0;
+            bm = bo + Math.floor((min - bo) / bw) * bw;
+        }
+        bc = Math.max(bc ?? 0, Math.floor((max - bm) / bw) + 1);
+    }
+
+    // Compute histogram data.
+    const data = [];
+    for (let b = 0; b < bc; ++b) data.push({x: bm + (b + 0.5) * bw, y: 0});
+    for (const s of args.samples) {
+        let b = Math.floor((s - bm) / bw);
+        if (b >= data.length) b = data.length - 1;
+        ++data[b].y;
+    }
+
+    const config = {
+        type: 'bar',
+        data: {datasets: [{data}]},
+        options: {
+            barPercentage: 1, categoryPercentage: 1,
+            borderWidth: 0.5, borderColor: colors.blue,
+            backgroundColor: colors.blue.with({a: 0.2}),
+            hoverBorderColor: colors.blue,
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: bm, max: bm + data.length * bw,
+                    offset: false,
+                    grid: {offset: false},
+                    ticks: {stepSize: bw},
+                },
+                y: {beginAtZero: true, ticks: {stepSize: 1}},
+            },
+            plugins: {
+                legend: {display: false},
+                tooltip: {
+                    callbacks: {
+                        title: items => {
+                            if (items.length === 0) return "";
+                            const x = items[0].parsed.x;
+                            // TODO: Get labels from axis
+                            const c = x === data[data.length - 1].x ? "]" : "[";
+                            return `[${x - 0.5 * bw}; ${x + 0.5 * bw}${c}`;
+                        },
+                    },
+                },
+            },
+        },
+    };
+    merge(config.options, args.options ?? {});
     expandColors(config);
     chart(el, config);
 });
