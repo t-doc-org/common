@@ -556,7 +556,6 @@ class OidcAuthApi(wsgi.Dispatcher):
                     name = self.token_name(id_token)
                     logins.append({
                         'name': name,
-                        'email': name,  # TODO(0.70): Remove this key
                         'issuer': icfg['label'],
                         'updated': updated.timestamp(),
                         'iss': id_token['iss'],
