@@ -43,7 +43,7 @@ jobs:
         if: ${{ !inputs.dev }}
         run: |
           ${{ steps.setup.outputs.python-path }} -P repo/run.py \
-              tdoc build --source=repo/docs --build=_build html
+              tdoc site build --source=repo/docs --build=_build html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
       - name: Upload GitHub Pages artifact
