@@ -293,9 +293,7 @@ t-doc.password = <span class="pass user-select-all"></span>
 <tr><td class="px-2" colspan="4">No logins</td></tr>`);
         }
         for (const login of info.logins) {
-            // TODO(0.68): Remove the fallback for string values.
-            const updated = typeof login.updated === 'string' ? login.updated
-                            : localIso(new Date(login.updated * 1e3));
+            const updated = localIso(new Date(login.updated * 1e3));
             const row = logins.appendChild(elmt`\
 <tr><td class="px-2">${login.name}</td><td class="px-2 text-nowrap">\
 ${login.issuer}</td><td class="px-2 text-nowrap">${updated}</td>\
