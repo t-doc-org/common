@@ -41,6 +41,8 @@ t-doc uses the following document metadata fields for per-page configuration.
 
 - `hide:`: A set of [elements to hide](layout.md#hide-elements) on the page.
 
+- `jsxgraph:`: A map of config defaults for {rst:dir}`jsxgraph` graphs.
+
 - `mathjax:`: A map of
   [MathJax configuration](https://docs.mathjax.org/en/stable/web/configuration.html)
   overrides.

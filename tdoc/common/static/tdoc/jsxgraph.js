@@ -163,7 +163,7 @@ export function merge(...attrs) {
 // by its wrapper element. Calls fn(board) if fn is provided, and returns the
 // board.
 export async function initBoard(el, attrs, fn) {
-    attrs = merge(attrs);
+    attrs = merge(tdoc.dyn.jsxgraph, attrs);
     el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {

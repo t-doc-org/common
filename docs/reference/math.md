@@ -14,7 +14,8 @@ This directive creates a graph based on
 
 The graphs are constructed in JavaScript, by importing the {js:mod}`jsxgraph`
 module and calling {js:func}`~jsxgraph.initBoard` for each {rst:dir}`jsxgraph`
-directive, referencing it by name.
+directive, referencing it by name. Defaults can be set via the `jsxgraph:`
+{rst:dir}`metadata`.
 
 ````{code-block} html
 ```{jsxgraph} sin

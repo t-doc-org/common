@@ -3,6 +3,10 @@
 
 # Math
 
+```{metadata} json
+jsxgraph: {showFullscreen: true},
+```
+
 ## Math notation
 
 The equation $ax^2 + bx + c = 0$ has two solutions in $\mathbb{C}$:
@@ -130,7 +134,7 @@ const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 initBoard('sincos', {
   boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
-  zoom: {factorY: 1}, showFullscreen: true,
+  zoom: {factorY: 1},
   defaultAxes: {
     x: {
       ticks: {
@@ -171,6 +175,7 @@ initBoard('sincos', {
 initBoard('centroid', {
   boundingBox: [-3.2, 3.2, 3.2, -3.2],
   defaults: {
+    point: {strokeWidth: 0},
     line: {strokeWidth: 1.5},
   },
 }, board => {
@@ -190,7 +195,7 @@ initBoard('centroid', {
 
 initBoard('trig-circle', {
   boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
-  pan: {enabled: false}, zoom: {enabled: false}, showFullscreen: true,
+  pan: {enabled: false}, zoom: {enabled: false},
   defaultAxes: {
     x: {
       name: '\\(x, \\alpha\\)',
@@ -207,7 +212,10 @@ initBoard('trig-circle', {
   },
 }, board => {
   // Place the circle.
-  const c = board.create('circle', [[0, 0], 1], {
+  const origin = board.create('point', [0, 0], {
+    fixed: true, visible: false, withLabel: false,
+  });
+  const c = board.create('circle', [origin, 1], {
     strokeColor: JXG.palette.black,
   });
 
@@ -233,7 +241,7 @@ initBoard('trig-circle', {
   const ax1 = board.create('point', [1, 0], {
     fixed: true, visible: false, withLabel: false,
   });
-  board.create('angle', [ax1, [0, 0], p], {
+  board.create('angle', [ax1, origin, p], {
     name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
     radius: 0.2, orthoType: 'none',
     strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
