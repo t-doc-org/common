@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-74)=
+## 0.74 *(2026-05-20)*
+
+- Added the {rst:dir}`chartjs` directive.
+- Improved dark theme support for {rst:dir}`jsxgraph`, {rst:dir}`mermaid` and
+  {rst:dir}`graphviz` directives.
+- Added support for JSON5 in {rst:dir}`metadata` directives.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.73...0.74)
+
 (release-0-73)=
 ## 0.73 *(2026-05-14)*
 
