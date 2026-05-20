@@ -129,18 +129,34 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
-// Find dyn elements of a specific type. If a name is given, only that element
-// is returned, and an exception is thrown if it cannot be found. Otherwise, all
-// dyn elements of that type are returned.
-export function findDyn(type, name) {
-    if (!name) {
+// Resolve dyn elements of a specific type. If el is missing, all dyn elements
+// of that type are returned. If el is a string, the dyn element with that name
+// is returned, or an exception is thrown if it cannot be found. Otherwise, el
+// is returned unchanged.
+export async function resolveDyn(type, el) {
+    if (el && typeof el !== 'string') return el;
+    await domLoaded;
+    if (!el) {
         return qsa(document, `div.tdoc-dyn[data-type="${CSS.escape(type)}"]`);
     }
     const node = qs(document, `\
 div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
-[data-name="${CSS.escape(name)}"]`);
-    if (!node) throw new Error(`{${type}} not found: ${name}`);
+[data-name="${CSS.escape(el)}"]`);
+    if (!node) throw new Error(`{${type}} not found: ${el}`);
     return node;
+}
+
+// Return all dyn elements of a specific type that instantiate the given
+// template.
+export async function instantiateDynTemplate(type, name, fn) {
+    await domLoaded;
+    const els = qsa(document, `\
+div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
+[data-template="${CSS.escape(name)}"]`);
+    for (const el of els) {
+        const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
+        fn(el, args);
+    }
 }
 
 // Enable or disable one or more elements.

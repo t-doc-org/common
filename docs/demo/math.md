@@ -313,7 +313,7 @@ initBoard('trig-circle', {
 });
 
 template('regular-polygon', (el, {sides}) => {
-  initBoard(el, {
+  return initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {
     const s1 = 1 / sides;

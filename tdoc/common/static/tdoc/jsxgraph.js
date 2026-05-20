@@ -1,7 +1,9 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {domLoaded, findDyn, gcd, mathJaxReady, qs, qsa} from './core.js';
+import {
+    domLoaded, gcd, instantiateDynTemplate, mathJaxReady, qs, qsa, resolveDyn,
+} from './core.js';
 
 export {gcd};
 
@@ -162,10 +164,7 @@ export function merge(...attrs) {
 // board.
 export async function initBoard(el, attrs, fn) {
     attrs = merge(attrs);
-    if (typeof el === 'string') {
-        await domLoaded;
-        el = findDyn('jsxgraph', el);
-    }
+    el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
@@ -184,13 +183,8 @@ export async function initBoard(el, attrs, fn) {
 }
 
 // Define a template.
-export async function template(name, fn) {
-    await domLoaded;
-    for (const el of qsa(document, `\
-div.tdoc-dyn[data-type=jsxgraph][data-template="${CSS.escape(name)}"]`)) {
-        const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
-        fn(el, args);
-    }
+export function template(name, fn) {
+    return instantiateDynTemplate('jsxgraph', name, fn);
 }
 
 template('grid', (el, args) => {
@@ -199,7 +193,7 @@ template('grid', (el, args) => {
         args = {width: args[0], height: args[1], grid: args[2], board: args[3]};
     }
     const {width = 35, height = 10, grid = {}, board = {}} = args;
-    initBoard(el, [
+    return initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
             grid: {majorStep: 1, minorElements: 0},
@@ -214,7 +208,7 @@ template('axes', (el, args) => {
         args = {boundingBox: args[0], options: args[1], board: args[2]};
     }
     const {boundingBox = [-11, 11, 11, -11], options = {}, board = {}} = args;
-    initBoard(el, [
+    return initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
             defaultAxes: {

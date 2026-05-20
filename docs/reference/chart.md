@@ -12,11 +12,10 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 - [Chart types](https://www.chartjs.org/docs/latest/charts/area.html)
 - [Chart.js examples](https://www.chartjs.org/docs/latest/samples/)
 
-The charts are constructed in JavaScript, by importing the {js:mod}`chart`
-module and calling {js:func}`~chart.chart` for each {rst:dir}`chartjs`
-directive, referencing it by name and providing the chart configuration.
-Defaults can be set via the `chartjs:` {rst:dir}`metadata`, and are
-[expanded](#expansion).
+The charts are rendered in JavaScript, by importing the {js:mod}`chart`
+module and calling {js:func}`~chart.chart` (or one of the other renderers) for
+each {rst:dir}`chartjs` directive, referencing them by name. Defaults can be set
+via the `chartjs:` {rst:dir}`metadata`.
 
 ````{code-block} html
 ```{chartjs} v-bar
@@ -29,15 +28,13 @@ chart('v-bar', {
   type: 'bar',
   data: {
     labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-    datasets: [{
-      label: '',
-      data: [65, 59, 80, 81, 56, 55, 40],
-      borderWidth: 1,
-      borderColor: core.palette,
-      backgroundColor: core.palette.map(c => c.with({a: 0.2})),
-    }],
+    datasets: [{data: [65, 59, 80, 81, 56, 55, 40]}],
   },
-  options: {scales: {y: {beginAtZero: true}}},
+  options: {
+    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
+    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
+    scales: {y: {beginAtZero: true}},
+  },
 });
 </script>
 ````
@@ -46,7 +43,7 @@ Alternatively, templates can be instantiated by prefixing the template name with
 `template:` and passing arguments in the directive content.
 
 ````{code-block}
-```{chartjs} template:json
+```{chartjs} template:chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
@@ -84,13 +81,13 @@ the directive content as a [JSON5](https://spec.json5.org/) array.
 The predefined templates are described below. Custom templates can be created in
 JavaScript via {js:func}`~chart.template`.
 
-#### `json`
+#### `chart`
 
-This template renders a chart with a static JSON config. The chart configuration
-is provided in the directive content, and is [expanded](#expansion).
+This template renders a chart from a static JSON config. Rendering is performed
+with {js:func}`~chart.chart`.
 
 ````{code-block}
-```{chartjs} template:json
+```{chartjs} template:chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
@@ -111,18 +108,18 @@ options: {
 #### `histogram`
 
 This template renders a histogram from an array of samples, using uniform
-binning.
+binning. Rendering is performed with {js:func}`~chart.histogram`.
 
 - `bins`: The definition of the histogram bins.
   - `count`: The number of bins.
   - `max`: The largest sample value that needs to be handled. When unset, this
-    is computed from the samples.
-  - `min`: The lower limit of the first bin. When unset, this is computed from
+    is derived from the samples.
+  - `min`: The lower limit of the first bin. When unset, this is derived from
     the samples.
   - `origin` (default: `0`): The origin of the binning when `width` is set and
     `min` isn't.
-  - `width`: The width of the bins. When unset, this is computed from `count`
-    and the samples.
+  - `width`: The width of the bins. When unset, this is derived from `count` and
+    the samples.
 - `options`: A map of options to merge into the `options` field of the chart.
 - `samples`: The array of samples.
 
@@ -144,8 +141,11 @@ samples: [
 
 ### Expansion
 
-- Attributes named `color` or ending with `Color` with a value starting with `@`
-  are expanded by looking up the color by name in
+Certain chart config attributes are expanded before rendering to make static
+configs more flexible.
+
+- Attributes named `color` or ending with `Color`, with a value starting with
+  `@`, are expanded by looking up the color by name in
   [`core.colors`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/core.js).
   The color name can optionally be followed by `/` and an alpha value in the
   range $\left[0; 1\right]$.
@@ -166,9 +166,9 @@ provides functionality related to {rst:dir}`chartjs` directives.
 Render the content of a {rst:dir}`chartjs` directive.
 
 :arg !string|HTMLElement el: The name of the {rst:dir}`chartjs` directive to
-construct, or the wrapper DOM element that should contain the chart.
+render, or the wrapper DOM element that should contain the chart.
 :arg !Object config: The chart configuration.
-:returns: A `Promise` that resolves to the  created `Chart` instance.
+:returns: A `Promise` that resolves to the created `Chart` instance.
 ```
 
 `````{js:function} template(name, fn)
@@ -214,4 +214,14 @@ template('random-bars', (el, {count, min, max}) => {
 });
 </script>
 ````
+
+```{js:function} histogram(el, args)
+Render a histogram in a {rst:dir}`chartjs` directive.
+
+:arg !string|HTMLElement el: The name of the {rst:dir}`chartjs` directive to
+render, or the wrapper DOM element that should contain the chart.
+:arg !Object args: The histogram arguments, as described for the
+[`histogram`](#histogram) template.
+:returns: A `Promise` that resolves to the created `Chart` instance.
+```
 `````

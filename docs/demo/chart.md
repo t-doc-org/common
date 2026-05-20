@@ -43,25 +43,26 @@ This section renders charts using {rst:dir}`chartjs` directives.
 :style: width: 70%;
 ```
 
-### Template: `json`
+### Template: `chart`
 
-```{chartjs} template:json
+```{chartjs} template:chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
   datasets: [{
     label: "Option A",
     data: [7, 11, 3],
-    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
+    borderColor: '@blue', hoverBorderColor: '@blue',
     backgroundColor: '@blue/0.2',
   }, {
     label: "Option B",
     data: [6, 9, 2],
-    borderWidth: 1, borderColor: '@red', hoverBorderColor: '@red',
+    borderColor: '@red', hoverBorderColor: '@red',
     backgroundColor: '@red/0.2',
   }],
 },
 options: {
+  borderWidth: 1,
   scales: {y: {beginAtZero: true}},
 },
 ```
@@ -119,6 +120,12 @@ const [core, {chart, template}] =
 const months = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 
+function data(count, min, max) {
+  const values = [];
+  for (let i = 0; i < count; ++i) values.push(core.randomInt(min, max));
+  return values;
+}
+
 function xyrData(count, min, max, maxR) {
   const values = [];
   for (let i = 0; i < count; ++i) {
@@ -132,14 +139,11 @@ chart('v-bar', {
   type: 'bar',
   data: {
     labels: months.slice(0, 7),
-    datasets: [{
-      data: [65, 59, 80, 81, 56, 55, 40],
-      borderWidth: 1, borderColor: core.colors.blue,
-      backgroundColor: core.colors.blue.with({a: 0.2}),
-      hoverBorderColor: core.colors.blue,
-    }],
+    datasets: [{data: data(7, 50, 100)}],
   },
   options: {
+    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
+    backgroundColor: '@blue/0.2',
     scales: {y: {beginAtZero: true}},
   },
 });
@@ -148,28 +152,23 @@ chart('h-bar', {
   type: 'bar',
   data: {
     labels: months.slice(0, 7),
-    datasets: [{
-      axis: 'y',
-      data: [65, 59, 80, 81, 56, 55, 40],
-      borderWidth: 1, borderColor: core.palette,
-      backgroundColor: core.palette.map(c => c.with({a: 0.2})),
-      hoverBorderColor: core.palette,
-    }],
+    datasets: [{axis: 'y', data: [65, 59, 80, 81, 56, 55, 40]}],
   },
   options: {
     indexAxis: 'y',
+    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
+    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
   },
 });
 
 chart('bubble', {
   type: 'bubble',
   data: {
-    datasets: [{
-      data: xyrData(50, 0, 50, 15),
-      borderWidth: 1, borderColor: core.palette,
-      backgroundColor: core.palette.map(c => c.with({a: 0.2})),
-      hoverBorderColor: core.palette,
-    }],
+    datasets: [{data: xyrData(50, 0, 50, 15)}],
+  },
+  options: {
+    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
+    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
   },
 });
 
@@ -178,17 +177,14 @@ chart('pie', {
   type: 'pie',
   data: {
     labels: ["Red", "Blue", "Yellow"],
-    datasets: [{
-      data: [300, 50, 100],
-      borderWidth: 1,
-      borderColor: pieColors,
-      backgroundColor: pieColors.map(c => c.with({a: 0.2})),
-      hoverOffset: 50, hoverBorderWidth: 1, hoverBorderColor: pieColors,
-    }],
+    datasets: [{data: [300, 50, 100]}],
   },
   options: {
     aspectRatio: 3 / 2,
     layout: {padding: 20},
+    borderWidth: 1, borderColor: pieColors,
+    backgroundColor: pieColors.map(c => c.with({a: 0.2})),
+    hoverOffset: 50, hoverBorderWidth: 1, hoverBorderColor: pieColors,
     plugins: {legend: {display: true, position: 'right'}},
   },
 });
@@ -203,12 +199,12 @@ chart('doughnut', {
     ],
   },
   options: {
+    aspectRatio: 3 / 2,
+    layout: {padding: 20},
     borderAlign: 'inner',
     backgroundColor: pieColors,
     hoverBorderWidth: 2, hoverBorderColor: pieColors,
     hoverBackgroundColor: pieColors,
-    aspectRatio: 3 / 2,
-    layout: {padding: 20},
     plugins: {legend: {display: true, position: 'right'}},
   },
 });
@@ -219,17 +215,15 @@ template('random-bars', (el, {count, min, max}) => {
     labels.push(`L${i + 1}`);
     data.push(core.randomInt(min, max));
   }
-  chart(el, {
+  return chart(el, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        data, borderWidth: 1, borderColor: core.colors.blue,
-        backgroundColor: core.colors.blue.with({a: 0.2}),
-        hoverBorderColor: core.colors.blue,
-      }],
+      datasets: [{data}],
     },
     options: {
+      borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
+      backgroundColor: '@blue/0.2',
       scales: {y: {beginAtZero: true}},
       plugins: {legend: {display: false}},
     },

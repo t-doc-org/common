@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    colors, domLoaded, elmt, findDyn, isPlainObject, isObject, on, qs, qsa,
+    colors, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject, on, qs, qsa, resolveDyn,
 } from './core.js';
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
@@ -18,11 +18,11 @@ function visit(obj, fn) {
 }
 
 // Merge the attributes of src into dst.
-function merge(dst, src) {
+function mergeAttr(dst, src) {
     for (const [k, sv] of Object.entries(src)) {
         const dv = dst[k];
         if (isPlainObject(sv) && isObject(dv)) {
-            merge(dv, sv);
+            mergeAttr(dv, sv);
          } else {
             dst[k] = structuredClone(sv);
         }
@@ -51,7 +51,7 @@ function expandColors(config) {
 }
 
 // Set defaults.
-merge(Chart.defaults, tdoc.dyn.chartjs);
+mergeAttr(Chart.defaults, tdoc.dyn.chartjs);
 expandColors(Chart.defaults);
 
 // Handle resizing when printing.
@@ -65,10 +65,8 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    if (typeof el === 'string') {
-        await domLoaded;
-        el = findDyn('chartjs', el);
-    }
+    expandColors(config);
+    el = await resolveDyn('chartjs', el);
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
     el.classList.add('rendered');
@@ -76,37 +74,31 @@ export async function chart(el, config) {
 }
 
 // Define a template.
-export async function template(name, fn) {
-    await domLoaded;
-    for (const el of qsa(document, `\
-div.tdoc-dyn[data-type=chartjs][data-template="${CSS.escape(name)}"]`)) {
-        const args = el.dataset.args ? JSON.parse(el.dataset.args) : [];
-        fn(el, args);
-    }
+export function template(name, fn) {
+    return instantiateDynTemplate('chartjs', name, fn);
 }
 
-template('json', (el, args) => {
-    expandColors(args);
-    chart(el, args);
-});
+template('chart', chart);
 
-template('histogram', (el, args) => {
+export async function histogram(el, {bins, options, samples}) {
+    el = await resolveDyn('chartjs', el);
+
     // Define bins.
     let min = Infinity, max = -Infinity;
-    for (const s of args.samples) {
+    for (const s of samples) {
         if (s < min) min = s;
         if (s > max) max = s;
     }
-    let bmin = args.bins?.min, bw = args.bins?.width, bc = args.bins?.count;
-    const bmax = Math.max(args.bins?.max ?? -Infinity, max);
+    let bmin = bins?.min, bw = bins?.width, bc = bins?.count;
+    const bmax = Math.max(bins?.max ?? -Infinity, max);
     if (bw === undefined) {
         bmin = Math.min(bmin ?? Infinity, min);
-        if (bc === undefined) bc = Math.ceil(Math.sqrt(args.samples.length));
+        if (bc === undefined) bc = Math.ceil(Math.sqrt(samples.length));
         bw = (bmax - bmin) / bc;
         if (bw <= 0) bw = 1;
     } else {
         if (bmin === undefined) {
-            const bo = args.bins?.origin ?? 0;
+            const bo = bins?.origin ?? 0;
             bmin = bo + Math.floor((min - bo) / bw) * bw;
         }
         bc = Math.max(bc ?? 0, Math.floor((bmax - bmin) / bw) + 1);
@@ -115,7 +107,7 @@ template('histogram', (el, args) => {
     // Compute histogram data.
     const data = [];
     for (let b = 0; b < bc; ++b) data.push({x: bmin + (b + 0.5) * bw, y: 0});
-    for (const s of args.samples) {
+    for (const s of samples) {
         let b = Math.floor((s - bmin) / bw);
         if (b >= data.length) b = data.length - 1;
         ++data[b].y;
@@ -155,7 +147,8 @@ template('histogram', (el, args) => {
             },
         },
     };
-    merge(config.options, args.options ?? {});
-    expandColors(config);
-    chart(el, config);
-});
+    mergeAttr(config.options, options ?? {});
+    return await chart(el, config);
+}
+
+template('histogram', histogram);
