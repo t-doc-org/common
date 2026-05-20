@@ -32,19 +32,22 @@ info = {
     },
     'mathjax': {
         'name': 'mathjax',
-        'version': '4.1.1',
+        'version': '4.1.2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
+        'release_urls': [
+            'https://github.com/mathjax/MathJax-src/releases',
+        ],
     },
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.12.3',
+        'version': '11.15.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '0.2.0',
+        'version': '0.2.1',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
