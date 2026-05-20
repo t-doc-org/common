@@ -9,17 +9,21 @@
 
 ## Document metadata
 
-````{rst:directive} .. metadata::
+````{rst:directive} .. metadata:: [format]
 This directive sets document metadata at the page level. The content of the
-directive is a [YAML](https://yaml.org/) document which is converted to a Python
-{py:class}`dict` and merged into the document metadata.
+directive is parsed into a Python {py:class}`dict` and merged into the document
+metadata. The following `format` values are supported:
+
+- `json`: The content is a [JSON5](https://spec.json5.org/) object (without
+  enclosing `{}`).
+- `yaml` (default): The content is a [YAML](https://yaml.org/) document.
 
 The {confval}`metadata` `conf.py` option defines site-wide default document
 metadata.
 
 In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields),
-t-doc uses the following document metadata fields as per-page configuration.
+t-doc uses the following document metadata fields for per-page configuration.
 
 - `chartjs:`: A map of config defaults for {rst:dir}`chartjs` charts.
 

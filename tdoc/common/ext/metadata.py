@@ -5,6 +5,7 @@ import copy
 import yaml
 
 from docutils import nodes
+import pyjson5
 from sphinx.util import docutils, logging
 
 from . import __version__, merge_dict, report_exceptions
@@ -25,16 +26,25 @@ def setup(app):
     }
 
 
+parsers = {
+    'json': lambda s: pyjson5.decode(f'{{{s}}}'),
+    'yaml': yaml.safe_load,
+}
+
+
 class metadata(nodes.Element): pass
 
 
 class Metadata(docutils.SphinxDirective):
+    optional_arguments = 1
     has_content = True
 
     @report_exceptions
     def run(self):
-        node = metadata(
-            attrs=yaml.safe_load(''.join(f'{line}\n' for line in self.content)))
+        fmt = self.arguments[0] if self.arguments else 'yaml'
+        if (parse := parsers.get(fmt)) is None:
+            raise Exception(f"{{metadata}} Invalid format: {fmt}")
+        node = metadata(attrs=parse(''.join(f'{ln}\n' for ln in self.content)))
         self.set_source_info(node)
         return [node]
 

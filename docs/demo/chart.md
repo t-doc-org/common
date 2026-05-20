@@ -3,11 +3,8 @@
 
 # Charts
 
-```{metadata}
-chartjs:
-  plugins:
-    legend:
-      display: false
+```{metadata} json
+chartjs: {plugins: {legend: {display: false}}},
 ```
 
 ## Chart.js

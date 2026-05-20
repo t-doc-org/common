@@ -76,7 +76,8 @@ CSS styles to apply to the chart container.
 
 Templates are instantiated by specifying the template name prefixed by
 `template:` as the directive argument. The template arguments are provided in
-the directive content as a [JSON5](https://spec.json5.org/) array.
+the directive content as a [JSON5](https://spec.json5.org/) object (without
+enclosing `{}`).
 
 The predefined templates are described below. Custom templates can be created in
 JavaScript via {js:func}`~chart.template`.
