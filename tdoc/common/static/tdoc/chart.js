@@ -50,6 +50,10 @@ function expandColors(config) {
     });
 }
 
+function formatTick(scale, value) {
+    return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
+}
+
 // Set defaults.
 mergeAttr(Chart.defaults, tdoc.dyn.chartjs);
 expandColors(Chart.defaults);
@@ -137,10 +141,12 @@ export async function histogram(el, {bins, options, samples}) {
                     callbacks: {
                         title: items => {
                             if (items.length === 0) return "";
-                            const x = items[0].parsed.x;
-                            // TODO: Get labels from axis
+                            const it = items[0];
+                            const sx = it.chart.scales.x, x = it.parsed.x;
+                            const rl = formatTick(sx, x - 0.5 * bw);
+                            const ru = formatTick(sx, x + 0.5 * bw);
                             const c = x === data[data.length - 1].x ? "]" : "[";
-                            return `[${x - 0.5 * bw}; ${x + 0.5 * bw}${c}`;
+                            return `[${rl}; ${ru}${c}`;
                         },
                     },
                 },
