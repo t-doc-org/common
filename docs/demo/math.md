@@ -92,8 +92,8 @@ width: 35, height: 10,
 
 Millimeter grid (approximate) for precise drawing
 
-```{jsxgraph}
-:template: grid(17.5, 5, {minorElements: 9})
+```{jsxgraph} template:grid
+width: 17.5, height: 5, grid: {minorElements: 9},
 ```
 
 ### Template: `axes`
