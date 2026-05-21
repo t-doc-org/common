@@ -19,8 +19,14 @@ def setup(app):
 
 
 class ChartJs(Dyn):
+    required_arguments = 1
     has_content = True
     has_templates = True
+
+    def populate(self, node):
+        if 'template' not in node and self.content:
+            raise Exception(
+                "{chartjs} Non-templated directive must not have content")
 
 
 def add_css_js(app, page, template, context, doctree):

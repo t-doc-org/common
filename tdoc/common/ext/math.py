@@ -19,11 +19,15 @@ def setup(app):
 
 
 class JsxGraph(Dyn):
+    required_arguments = 1
     has_content = True
     has_templates = True
 
     def populate(self, node):
         node['classes'].append('jxgbox')
+        if 'template' not in node and self.content:
+            raise Exception(
+                "{jsxgraph} Non-templated directive must not have content")
 
 
 def add_css_js(app, page, template, context, doctree):

@@ -467,11 +467,9 @@ template_re = re.compile(r'(?s)([a-zA-Z0-9_-]+)(?:\((.*)\))?')
 
 
 class Dyn(docutils.SphinxDirective):
-    optional_arguments = 1
     option_spec = {
         'class': directives.class_option,
         'style': directives.unchanged,
-        'template': directives.unchanged,
     }
     has_templates = False
 
@@ -485,24 +483,11 @@ class Dyn(docutils.SphinxDirective):
             node['template'] = name[9:]
             v = ''.join(f'{line}\n' for line in self.content)
             node['args'] = util.to_json(pyjson5.decode(f'{{{v}}}'))
-        elif (v := self.options.get('template')) is not None:
-            # TODO(0.75): Remove :template:, make argument required
-            if name:
-                raise Exception(f"{{{self.name}}} Directive with :template: "
-                                "must not have a name")
-            if (m := template_re.fullmatch(v.strip())) is None:
-                raise Exception(
-                    f"{{{self.name}}} Invalid :template: value: {v}")
-            node['template'] = m.group(1)
-            if (v := m.group(2)) is not None:
-                node['args'] = util.to_json(pyjson5.decode(f'[{v}]'))
         elif name is not None:
             node['name'] = name
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
         self.populate(node)
-        if 'name' not in node and not ('template' in node or node.children):
-            raise Exception(f"{{{self.name}}} Directive must have a name")
         if not self.has_templates and 'template' in node:
             raise Exception(
                 f"{{{self.name}}} Directive doesn't support templates")

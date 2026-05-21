@@ -187,12 +187,7 @@ export function template(name, fn) {
     return instantiateDynTemplate('jsxgraph', name, fn);
 }
 
-template('grid', (el, args) => {
-    // TODO(0.75): Remove backward-compatibility handling of arrays
-    if (args instanceof Array) {
-        args = {width: args[0], height: args[1], grid: args[2], board: args[3]};
-    }
-    const {width = 35, height = 10, grid = {}, board = {}} = args;
+template('grid', (el, {width = 35, height = 10, grid = {}, board = {}}) => {
     return initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
@@ -202,12 +197,8 @@ template('grid', (el, args) => {
     ]);
 });
 
-template('axes', (el, args) => {
-    // TODO(0.75): Remove backward-compatibility handling of arrays
-    if (args instanceof Array) {
-        args = {boundingBox: args[0], options: args[1], board: args[2]};
-    }
-    const {boundingBox = [-11, 11, 11, -11], options = {}, board = {}} = args;
+template('axes', (el, {boundingBox = [-11, 11, 11, -11], options = {},
+                       board = {}}) => {
     return initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
