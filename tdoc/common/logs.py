@@ -192,11 +192,13 @@ class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
         self._perms = perms
         kwargs.pop('delay', None)  # Interferes with setting perms
         super().__init__(*args, **kwargs)
-        os.fchmod(self.stream.fileno(), self._perms)
+        with contextlib.suppress(OSError):
+            os.fchmod(self.stream.fileno(), self._perms)
 
     def doRollover(self):
         super().doRollover()
-        os.fchmod(self.stream.fileno(), self._perms)
+        with contextlib.suppress(OSError):
+            os.fchmod(self.stream.fileno(), self._perms)
 
 
 def compress(src, dst):
