@@ -120,8 +120,9 @@ def cmd_site(opts):
 wheel_re = re.compile(r't_doc_common-[^ ]+\.whl')
 
 def build_wheel(tests, opts):
-    p = util.run_uv('build', f'--out-dir={tests}', common=opts.common,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    p = util.run_uv('build', f'--python={sys.executable}', f'--out-dir={tests}',
+                    common=opts.common, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, text=True)
     o = opts.stdout
     if (m := wheel_re.search(p.stdout)) is None:
         raise Exception(
