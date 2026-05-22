@@ -32,20 +32,29 @@ function mergeAttr(dst, src) {
 
 const colorRe = /^@([a-zA-Z0-9_]+)(?:\/(\d?\.\d*))?$/;
 
+function mapColor(v) {
+    const m = v.match(colorRe);
+    if (!m) return v;
+    let c = colors[m[1]];
+    if (c === undefined) {
+        console.warn(`Unknown color: ${v}`);
+        return v;
+    }
+    if (m[2] !== undefined) c = c.with({a: parseFloat(m[2])});
+    return c.rgb();
+}
+
 // Expand @color references.
 function expandColors(config) {
     visit(config, (obj, k, v) => {
-        if (typeof k === 'string' && (k === 'color' || k.endsWith('Color'))
-                && typeof v === 'string') {
-            const m = v.match(colorRe);
-            if (!m) return;
-            let c = colors[m[1]];
-            if (c === undefined) {
-                console.warn(`Unknown color: ${v}`);
-                return;
+        if (typeof k === 'string' && (k === 'color' || k.endsWith('Color'))) {
+            if (typeof v === 'string') {
+                obj[k] = mapColor(v);
+            } else if (v instanceof Array) {
+                for (const [i, it] of v.entries()) {
+                    if (typeof it === 'string') v[i] = mapColor(it);
+                }
             }
-            if (m[2] !== undefined) c = c.with({a: parseFloat(m[2])});
-            obj[k] = c.rgb();
         }
     });
 }

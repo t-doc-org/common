@@ -72,7 +72,7 @@ options: {
   scales: {
     x: {title: {display: true, text: "Hours"}},
     y: {title: {display: true, text: "Visitors"}},
-  }
+  },
 },
 samples: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
