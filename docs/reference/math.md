@@ -92,19 +92,18 @@ width: 17.5, height: 5, grid: {minorElements: 9},
 This template renders a set of axes and an optional grid.
 
 - `boundingBox` (default: `[-11, 11, 11, -11]`): The bounding box of the graph.
-- `options`: Optional attributes.
-  - `majorX`, `majorY`, `major`: The distance between major ticks on the X axis,
-    Y axis, or both. The default is `1`.
-  - `minorX`, `minorY`, `minor`: The number of minor ticks between major ticks
-    on the X axis, Y axis, or both. The default is `0`.
-  - `labelsX`, `labelsY`, `labels`: The labels to draw for major ticks on the X
-    axis, Y axis or both. When a number is given, only the labels for multiples
-    of that number are drawn. When an array is given, only the listed labels are
-    drawn. The default is to draw all labels.
-  - `grid`:
-    [`Grid`](https://jsxgraph.uni-bayreuth.de/docs/symbols/Grid.html)
-    attribute overrides, or `false` to disable the grid. The default is to draw
-    grid lines at major ticks of both axes.
+- `majorX`, `majorY`, `major`: The distance between major ticks on the X axis,
+  Y axis, or both. The default is `1`.
+- `minorX`, `minorY`, `minor`: The number of minor ticks between major ticks
+  on the X axis, Y axis, or both. The default is `0`.
+- `labelsX`, `labelsY`, `labels`: The labels to draw for major ticks on the X
+  axis, Y axis or both. When a number is given, only the labels for multiples
+  of that number are drawn. When an array is given, only the listed labels are
+  drawn. The default is to draw all labels.
+- `grid`:
+  [`Grid`](https://jsxgraph.uni-bayreuth.de/docs/symbols/Grid.html)
+  attribute overrides, or `false` to disable the grid. The default is to draw
+  grid lines at major ticks of both axes.
 - `board`:
   [`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html)
   attribute overrides.
@@ -112,7 +111,8 @@ This template renders a set of axes and an optional grid.
 ````{code-block}
 ```{jsxgraph} template:axes
 boundingBox: [-2, 5, 25, -5],
-options: {majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1}},
+majorX: 5, minorX: 4, majorY: 2, minorY: 1,
+grid: {majorStep: 1},
 ```
 ````
 
@@ -129,27 +129,21 @@ The [`JXG`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.html) namespace of
 the JSXGraph library.
 ```
 
-```{js:data} nonInteractive
-Mix-in board attributes to disable interactive features.
+```{js:data} attrs
+A object containing named attribute sets. Custom sets can be defined by
+assigning to object attributes. The following sets are pre-defined:
+
+- `nonInteractive`: Disable interactive features.
 ```
 
 ```{js:function} withAxesLabels(xs, ys)
-Return mix-in board attributes to to draw only selected labels on the default
-axes. For number arguments, the labels that are their multiples are drawn. For
-array arguments, only the listed values are drawn.
+Return mix-in board attributes to draw only selected labels on the default axes.
+For number arguments, the labels that are their multiples are drawn. For array
+arguments, only the listed values are drawn.
 
 :arg !number|Array xs: The labels to draw on the X axis.
 :arg !number|Array ys: The labels to draw on the Y axis.
 :returns: An attribute object.
-```
-
-```{js:function} merge(...attrs)
-Merge multiple attributes objects. `Array` arguments have their items merged
-recursively.
-
-:arg !Array[Object|Array] attrs: The attribute objects to merge. Later arguments
-override earlier ones.
-:returns: The merged attribute object.
 ```
 
 ```{js:function} initBoard(el, attrs[, fn])
@@ -163,8 +157,8 @@ specified in
 :arg !string|HTMLElement el: The name of the {rst:dir}`jsxgraph` directive to
 construct, or the wrapper DOM element that should contain the graph.
 :arg !Object|Array attrs: The board attributes, passed to
-`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are merged
-with {js:func}`~merge`.
+`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are
+merged.
 :arg !function fn: An optional function that is called with the
 [`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) as an
 argument.

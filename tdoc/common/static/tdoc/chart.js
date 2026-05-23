@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject, on, qs,
-    qsa, resolveDyn,
+    asyncGet, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject,
+    mergeAttrs, on, qs, qsa, resolveDyn,
 } from './core.js';
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
@@ -19,16 +19,25 @@ function visit(obj, fn) {
 }
 
 // Merge the attributes of src into dst.
-function mergeAttr(dst, src) {
+function mergeTo(dst, src) {
     for (const [k, sv] of Object.entries(src)) {
         const dv = dst[k];
         if (isPlainObject(sv) && isObject(dv)) {
-            mergeAttr(dv, sv);
-         } else {
+            mergeTo(dv, sv);
+        } else {
+            // TODO: Avoid cloning; check what JSXGraph does
             dst[k] = structuredClone(sv);
         }
     }
     return dst;
+}
+
+// A set of pre-defined attributes.
+export const attrs = asyncGet({});
+
+// Merge attribute sets, with later sets overriding earlier ones.
+function merge(...as) {
+    return mergeAttrs(mergeTo, attrs, ...as);
 }
 
 // Format a tick value on a scale.
@@ -37,7 +46,7 @@ function formatTick(scale, value) {
 }
 
 // Set defaults.
-mergeAttr(Chart.defaults, tdoc.dyn.chartjs);
+mergeTo(Chart.defaults, tdoc.dyn.chartjs);
 
 // Handle resizing when printing.
 function resizeAll() {
@@ -64,7 +73,7 @@ export function template(name, fn) {
 
 template('chart', chart);
 
-export async function histogram(el, {bins, options, samples}) {
+export async function histogram(el, {bins, options = {}, samples}) {
     el = await resolveDyn('chartjs', el);
 
     // Define bins.
@@ -130,7 +139,7 @@ export async function histogram(el, {bins, options, samples}) {
             },
         },
     };
-    mergeAttr(config.options, options ?? {});
+    mergeTo(config.options, await merge(options));
     return await chart(el, config);
 }
 

@@ -129,6 +129,32 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
+// Return a proxy that makes all attribute accesses asynchronous, where the
+// attribute must first be set before accesses complete.
+export function asyncGet(obj) {
+    const {promise, resolve} = Promise.withResolvers();
+    return new Proxy(obj, {
+        promise, resolve,
+
+        async get(obj, prop, recv) {
+            for (;;) {
+                const v = obj[prop];
+                if (v !== undefined) return v;
+                await this.promise;
+            }
+        },
+
+        set(obj, prop, value, recv) {
+            obj[prop] = value;
+            const r = this.resolve;
+            ({promise: this.promise, resolve: this.resolve} =
+                Promise.withResolvers());
+            r();
+            return true;
+        },
+    });
+}
+
 // Resolve dyn elements of a specific type. If el is missing, all dyn elements
 // of that type are returned. If el is a string, the dyn element with that name
 // is returned, or an exception is thrown if it cannot be found. Otherwise, el
@@ -157,6 +183,24 @@ div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
         const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
         fn(el, args);
     }
+}
+
+// Merge attribute sets, with later sets overriding earlier ones.
+export async function mergeAttrs(mergeTo, attrs, ...as) {
+    const res = {};
+    const mergeToRes = async (...as) => {
+        for (let a of as) {
+            if (a instanceof Promise) a = await a;
+            if (typeof a === 'string') a = await attrs[a];
+            if (a instanceof Array) {
+                await mergeToRes(...a);
+            } else {
+                mergeTo(res, a);
+            }
+        }
+    };
+    await mergeToRes(...as);
+    return res;
 }
 
 // Enable or disable one or more elements.

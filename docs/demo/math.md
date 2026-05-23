@@ -100,15 +100,13 @@ width: 17.5, height: 5, grid: {minorElements: 9},
 
 ```{jsxgraph} template:axes
 boundingBox: [-2, 5, 25, -5],
-options: {majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1}},
+majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1},
 ```
 
 ```{jsxgraph} template:axes
 boundingBox: [-1, 8, 25, -1],
-options: {
-   labelsX: [1, 2, 4, 8, 16], majorY: 2, minorY: 1,
-   grid: {majorStep: [10, 2], minorElements: [9, 1]},
-},
+labelsX: [1, 2, 4, 8, 16], majorY: 2, minorY: 1,
+grid: {majorStep: [10, 2], minorElements: [9, 1]},
 ```
 
 ### Custom template

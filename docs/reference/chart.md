@@ -121,7 +121,7 @@ binning. Rendering is performed with {js:func}`~chart.histogram`.
     `min` isn't.
   - `width`: The width of the bins. When unset, this is derived from `count` and
     the samples.
-- `options`: A map of options to merge into the `options` field of the chart.
+- `options`: Options to merge into the `options` field of the chart.
 - `samples`: The array of samples.
 
 ````{code-block}
@@ -147,6 +147,11 @@ This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/chart.js))
 provides functionality related to {rst:dir}`chartjs` directives.
 `````
+
+```{js:data} attrs
+A object containing named attribute sets. Custom sets can be defined by
+assigning to object attributes.
+```
 
 ```{js:function} chart(el, config)
 Render the content of a {rst:dir}`chartjs` directive.

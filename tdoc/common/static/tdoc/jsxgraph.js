@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    domLoaded, gcd, instantiateDynTemplate, mathJaxReady, qs, qsa, resolveDyn,
+    asyncGet, domLoaded, gcd, instantiateDynTemplate, mathJaxReady, mergeAttrs,
+    qs, qsa, resolveDyn,
 } from './core.js';
 
 export {gcd};
@@ -103,8 +104,17 @@ JXG.merge(JXG.Options, {
     },
 });
 
+// A set of pre-defined attributes.
+export const attrs = asyncGet({});
+
+// Merge attribute sets, with later sets overriding earlier ones.
+function merge(...as) {
+    return mergeAttrs((dst, src) => JXG.mergeAttr(dst, src, true),
+                      attrs, ...as);
+}
+
 // Mix-in board attributes to disable interactive features.
-export const nonInteractive = {
+export const nonInteractive = attrs.nonInteractive = {
     showNavigation: false,
     registerEvents: {keyboard: false, pointer: false, wheel: false},
 };
@@ -143,27 +153,11 @@ function includesClose(values, v, epsilon = 1e-6) {
     return values.some(value => Math.abs(value - v) < epsilon);
 }
 
-// Merge attribute sets, with later sets overriding earlier ones.
-export function merge(...attrs) {
-    const res = {};
-    const mergeToRes = (...as) => {
-        for (const a of as) {
-            if (a instanceof Array) {
-                mergeToRes(...a);
-            } else {
-                JXG.mergeAttr(res, a, true);
-            }
-        }
-    };
-    mergeToRes(...attrs);
-    return res;
-}
-
 // Initialize a board for a {jsxgraph} directive, identified either by name or
 // by its wrapper element. Calls fn(board) if fn is provided, and returns the
 // board.
 export async function initBoard(el, attrs, fn) {
-    attrs = merge(tdoc.dyn.jsxgraph, attrs);
+    attrs = await merge(tdoc.dyn.jsxgraph, attrs);
     el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {
@@ -197,26 +191,27 @@ template('grid', (el, {width = 35, height = 10, grid = {}, board = {}}) => {
     ]);
 });
 
-template('axes', (el, {boundingBox = [-11, 11, 11, -11], options = {},
-                       board = {}}) => {
+template('axes', (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
+                       minorX, minorY, minor, labelsX, labelsY, labels,
+                       grid, board}) => {
     return initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
             defaultAxes: {
                 x: {ticks: {
                     insertTicks: false,
-                    ticksDistance: options.majorX ?? options.major ?? 1,
-                    minorTicks: options.minorX ?? options.minor ?? 0,
+                    ticksDistance: majorX ?? major ?? 1,
+                    minorTicks: minorX ?? minor ?? 0,
                 }},
                 y: {ticks: {
                     insertTicks: false,
-                    ticksDistance: options.majorY ?? options.major ?? 1,
-                    minorTicks: options.minorY ?? options.minor ?? 0,
+                    ticksDistance: majorY ?? major ?? 1,
+                    minorTicks: minorY ?? minor ?? 0,
                 }},
             },
         },
-        withAxesLabels(options.labelsX ?? options.labels,
-                       options.labelsY ?? options.labels),
-        {grid: options.grid ?? {}}, nonInteractive, board,
+        withAxesLabels(labelsX ?? labels,
+                       labelsY ?? labels),
+        {grid: grid ?? {}}, nonInteractive, board ?? [],
     ]);
 });
