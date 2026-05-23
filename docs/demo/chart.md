@@ -49,13 +49,13 @@ data: {
   datasets: [{
     label: "Option A",
     data: [7, 11, 3],
-    borderColor: '@blue', hoverBorderColor: '@blue',
-    backgroundColor: '@blue/0.2',
+    borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+    backgroundColor: '#36a2eb33',
   }, {
     label: "Option B",
     data: [6, 9, 2],
-    borderColor: '@red', hoverBorderColor: '@red',
-    backgroundColor: '@red/0.2',
+    borderColor: '#ff6384', hoverBorderColor: '#ff6384',
+    backgroundColor: '#ff638433',
   }],
 },
 options: {
@@ -69,6 +69,8 @@ options: {
 ```{chartjs} template:histogram
 bins: {min: 0, max: 23, width: 2},
 options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
   scales: {
     x: {title: {display: true, text: "Hours"}},
     y: {title: {display: true, text: "Visitors"}},
@@ -114,6 +116,9 @@ samples: [
 const [core, {chart, template}] =
   await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
 
+const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
+                '#ffcd56', '#c9cbcf'];
+const bgColors = colors.map(c => `${c}33`);
 const months = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 
@@ -139,8 +144,8 @@ chart('v-bar', {
     datasets: [{data: data(7, 50, 100)}],
   },
   options: {
-    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
-    backgroundColor: '@blue/0.2',
+    borderWidth: 1, borderColor: colors[0], hoverBorderColor: colors[0],
+    backgroundColor: bgColors[0],
     scales: {y: {beginAtZero: true}},
   },
 });
@@ -153,8 +158,8 @@ chart('h-bar', {
   },
   options: {
     indexAxis: 'y',
-    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
-    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
+    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+    backgroundColor: bgColors,
   },
 });
 
@@ -164,12 +169,12 @@ chart('bubble', {
     datasets: [{data: xyrData(50, 0, 50, 15)}],
   },
   options: {
-    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
-    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
+    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+    backgroundColor: bgColors,
   },
 });
 
-const pieColors = [core.colors.red, core.colors.blue, core.colors.yellow];
+const pieIdx = cs => [1, 0, 5].map(i => cs[i]);
 chart('pie', {
   type: 'pie',
   data: {
@@ -179,9 +184,10 @@ chart('pie', {
   options: {
     aspectRatio: 3 / 2,
     layout: {padding: 20},
-    borderWidth: 1, borderColor: pieColors,
-    backgroundColor: pieColors.map(c => c.with({a: 0.2})),
-    hoverOffset: 50, hoverBorderWidth: 1, hoverBorderColor: pieColors,
+    borderWidth: 1, borderColor: pieIdx(colors),
+    backgroundColor: pieIdx(bgColors),
+    hoverOffset: 50, hoverBorderWidth: 1,
+    hoverBorderColor: pieIdx(colors),
     plugins: {legend: {display: true, position: 'right'}},
   },
 });
@@ -199,9 +205,9 @@ chart('doughnut', {
     aspectRatio: 3 / 2,
     layout: {padding: 20},
     borderAlign: 'inner',
-    backgroundColor: pieColors,
-    hoverBorderWidth: 2, hoverBorderColor: pieColors,
-    hoverBackgroundColor: pieColors,
+    backgroundColor: pieIdx(colors),
+    hoverBorderWidth: 2, hoverBorderColor: pieIdx(colors),
+    hoverBackgroundColor: pieIdx(colors),
     plugins: {legend: {display: true, position: 'right'}},
   },
 });
@@ -219,8 +225,8 @@ template('random-bars', (el, {count, min, max}) => {
       datasets: [{data}],
     },
     options: {
-      borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
-      backgroundColor: '@blue/0.2',
+      borderWidth: 1, borderColor: colors[0], hoverBorderColor: colors[0],
+      backgroundColor: bgColors[0],
       scales: {y: {beginAtZero: true}},
       plugins: {legend: {display: false}},
     },

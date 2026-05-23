@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    colors, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject, on, qs, qsa, resolveDyn,
+    domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject, on, qs,
+    qsa, resolveDyn,
 } from './core.js';
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
@@ -30,42 +31,13 @@ function mergeAttr(dst, src) {
     return dst;
 }
 
-const colorRe = /^@([a-zA-Z0-9_]+)(?:\/(\d?\.\d*))?$/;
-
-function mapColor(v) {
-    const m = v.match(colorRe);
-    if (!m) return v;
-    let c = colors[m[1]];
-    if (c === undefined) {
-        console.warn(`Unknown color: ${v}`);
-        return v;
-    }
-    if (m[2] !== undefined) c = c.with({a: parseFloat(m[2])});
-    return c.rgb();
-}
-
-// Expand @color references.
-function expandColors(config) {
-    visit(config, (obj, k, v) => {
-        if (typeof k === 'string' && (k === 'color' || k.endsWith('Color'))) {
-            if (typeof v === 'string') {
-                obj[k] = mapColor(v);
-            } else if (v instanceof Array) {
-                for (const [i, it] of v.entries()) {
-                    if (typeof it === 'string') v[i] = mapColor(it);
-                }
-            }
-        }
-    });
-}
-
+// Format a tick value on a scale.
 function formatTick(scale, value) {
     return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
 }
 
 // Set defaults.
 mergeAttr(Chart.defaults, tdoc.dyn.chartjs);
-expandColors(Chart.defaults);
 
 // Handle resizing when printing.
 function resizeAll() {
@@ -78,7 +50,6 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    expandColors(config);
     el = await resolveDyn('chartjs', el);
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
@@ -131,9 +102,6 @@ export async function histogram(el, {bins, options, samples}) {
         data: {datasets: [{data}]},
         options: {
             barPercentage: 1, categoryPercentage: 1,
-            borderWidth: 0.5, borderColor: colors.blue,
-            backgroundColor: colors.blue.with({a: 0.2}),
-            hoverBorderColor: colors.blue,
             scales: {
                 x: {
                     type: 'linear',

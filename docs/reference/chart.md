@@ -140,21 +140,6 @@ samples: [
 ```
 ````
 
-### Expansion
-
-Certain chart config attributes are expanded before rendering to make static
-configs more flexible.
-
-- Attributes named `color` or ending with `Color`, with a value starting with
-  `@`, are expanded by looking up the color by name in
-  [`core.colors`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/core.js).
-  The color name can optionally be followed by `/` and an alpha value in the
-  range $\left[0; 1\right]$.
-
-  - `"@blue"` &rarr; `"rgb(54, 162, 235)"`
-  - `"@red"` &rarr; `"rgb(255, 99, 132)"`
-  - `"@blue/0.2"` &rarr; `"rgba(54, 162, 235, 0.2)"`
-
 ### `tdoc/chart.js`
 
 `````{js:module} chart
