@@ -22,8 +22,10 @@ via the `chartjs:` {rst:dir}`metadata`.
 ```
 
 <script type="module">
-const [core, {chart}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
+const [{chart}] = await tdoc.imports('tdoc/chart.js');
 
+const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
+                '#ffcd56', '#c9cbcf'];
 chart('v-bar', {
   type: 'bar',
   data: {
@@ -31,8 +33,8 @@ chart('v-bar', {
     datasets: [{data: [65, 59, 80, 81, 56, 55, 40]}],
   },
   options: {
-    borderWidth: 1, borderColor: core.palette, hoverBorderColor: core.palette,
-    backgroundColor: core.palette.map(c => c.with({a: 0.2})),
+    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+    backgroundColor: colors.map(c => `${c}33`),
     scales: {y: {beginAtZero: true}},
   },
 });
@@ -50,8 +52,8 @@ data: {
   datasets: [{
     label: "Option A",
     data: [7, 11, 3],
-    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
-    backgroundColor: '@blue/0.2',
+    borderWidth: 1, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+    backgroundColor: '#36a2eb33',
   }],
 },
 options: {
@@ -80,12 +82,12 @@ the directive content as a [JSON5](https://spec.json5.org/) object (without
 enclosing `{}`).
 
 The predefined templates are described below. Custom templates can be created in
-JavaScript via {js:func}`~chart.template`.
+JavaScript via {js:data}`~chart.templates`.
 
 #### `chart`
 
-This template renders a chart from a static JSON config. Rendering is performed
-with {js:func}`~chart.chart`.
+This template renders a chart from a static JSON config. The directive content
+is passed directly to {js:func}`~chart.chart`.
 
 ````{code-block}
 ```{chartjs} template:chart
@@ -95,8 +97,8 @@ data: {
   datasets: [{
     label: "Option A",
     data: [7, 11, 3],
-    borderWidth: 1, borderColor: '@blue', hoverBorderColor: '@blue',
-    backgroundColor: '@blue/0.2',
+    borderWidth: 1, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+    backgroundColor: '#36a2eb33',
   }],
 },
 options: {
@@ -109,7 +111,7 @@ options: {
 #### `histogram`
 
 This template renders a histogram from an array of samples, using uniform
-binning. Rendering is performed with {js:func}`~chart.histogram`.
+binning.
 
 - `bins`: The definition of the histogram bins.
   - `count`: The number of bins.
@@ -149,7 +151,7 @@ provides functionality related to {rst:dir}`chartjs` directives.
 `````
 
 ```{js:data} attrs
-A object containing named attribute sets. Custom sets can be defined by
+An object containing named attribute sets. Custom sets can be defined by
 assigning to object attributes.
 ```
 
@@ -162,14 +164,13 @@ render, or the wrapper DOM element that should contain the chart.
 :returns: A `Promise` that resolves to the created `Chart` instance.
 ```
 
-`````{js:function} template(name, fn)
-Render all {rst:dir}`chartjs` directives referencing the template with the given
-name.
-
-:arg !string name: The name of the template.
-:arg !function fn: A function to be called for each {rst:dir}`chartjs` directive
-to render. The function receives the wrapper DOM element as its first argument,
-and the content of the directive as a JSON object as its second argument.
+`````{js:data} templates
+An object containing named templates. In addition to the
+[pre-defined templates](#templates) described above, custom templates can be
+added by setting functions as object attributes. A template function is called
+for each {rst:dir}`chartjs` directive that specifies the template name. The
+function receives the wrapper DOM element as its first argument, and
+the content of the directive as a JSON object as its second argument.
 
 ````{code-block} html
 ```{chartjs} template:random-bars
@@ -180,39 +181,28 @@ count: 5, min: 100, max: 500,
 ```
 
 <script type="module">
-const [core, {template}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
-template('random-bars', (el, {count, min, max}) => {
+const [core, {templates}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
+
+templates['random-bars'] = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);
     data.push(core.randomInt(min, max));
   }
-  chart(el, {
+  return chart(el, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        data, borderWidth: 1, borderColor: core.colors.blue,
-        backgroundColor: core.colors.blue.with({a: 0.2}),
-        hoverBorderColor: core.colors.blue,
-      }],
+      datasets: [{data}],
     },
     options: {
+      borderWidth: 1, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+      backgroundColor: '#36a2eb33',
       scales: {y: {beginAtZero: true}},
       plugins: {legend: {display: false}},
     },
   })
-});
+};
 </script>
 ````
-
-```{js:function} histogram(el, args)
-Render a histogram in a {rst:dir}`chartjs` directive.
-
-:arg !string|HTMLElement el: The name of the {rst:dir}`chartjs` directive to
-render, or the wrapper DOM element that should contain the chart.
-:arg !Object args: The histogram arguments, as described for the
-[`histogram`](#histogram) template.
-:returns: A `Promise` that resolves to the created `Chart` instance.
-```
 `````

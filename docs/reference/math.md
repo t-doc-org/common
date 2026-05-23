@@ -66,7 +66,7 @@ the directive content as a [JSON5](https://spec.json5.org/) object (without
 enclosing `{}`).
 
 The predefined templates are described below. Custom templates can be created in
-JavaScript via {js:func}`~jsxgraph.template`.
+JavaScript via {js:data}`~jsxgraph.templates`.
 
 #### `grid`
 
@@ -130,7 +130,7 @@ the JSXGraph library.
 ```
 
 ```{js:data} attrs
-A object containing named attribute sets. Custom sets can be defined by
+An object containing named attribute sets. Custom sets can be defined by
 assigning to object attributes. The following sets are pre-defined:
 
 - `nonInteractive`: Disable interactive features.
@@ -166,15 +166,13 @@ argument.
 [`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html).
 ```
 
-`````{js:function} template(name, fn)
-Render all {rst:dir}`jsxgraph` directives referencing the template with the
-given name.
-
-:arg !string name: The name of the template.
-:arg !function fn: A function to be called for each {rst:dir}`jsxgraph`
-directive to render. The function receives the wrapper DOM element as its first
-argument, and the content of the directive as a JSON object as its second
-argument.
+`````{js:data} templates
+An object containing named templates. In addition to the
+[pre-defined templates](#templates) described above, custom templates can be
+added by setting functions as object attributes. A template function is called
+for each {rst:dir}`jsxgraph` directive that specifies the template name. The
+function receives the wrapper DOM element as its first argument, and
+the content of the directive as a JSON object as its second argument.
 
 ````{code-block} html
 ```{jsxgraph} template:regular-polygon
@@ -185,9 +183,10 @@ sides: 5,
 ```
 
 <script type="module">
-const [{initBoard, template}] = await tdoc.imports('tdoc/jsxgraph.js');
-template('regular-polygon', (el, {sides}) => {
-  initBoard(el, {
+const [{initBoard, templates}] = await tdoc.imports('tdoc/jsxgraph.js');
+
+templates['regular-polygon'] = (el, {sides}) => {
+  return initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {
     const s1 = 1 / sides;
@@ -197,7 +196,7 @@ template('regular-polygon', (el, {sides}) => {
       sides,
     ]);
   });
-});
+};
 </script>
 ````
 `````

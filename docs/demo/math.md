@@ -128,7 +128,7 @@ grid: {majorStep: [10, 2], minorElements: [9, 1]},
 ````
 
 <script type="module">
-const [{initBoard, JXG, template}] = await tdoc.imports('tdoc/jsxgraph.js');
+const [{initBoard, JXG, templates}] = await tdoc.imports('tdoc/jsxgraph.js');
 
 initBoard('sincos', {
   boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
@@ -318,7 +318,7 @@ initBoard('trig-circle', {
   });
 });
 
-template('regular-polygon', (el, {sides}) => {
+templates['regular-polygon'] = (el, {sides}) => {
   return initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {
@@ -329,5 +329,5 @@ template('regular-polygon', (el, {sides}) => {
       sides,
     ]);
   });
-});
+};
 </script>

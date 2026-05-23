@@ -113,7 +113,7 @@ samples: [
 ````
 
 <script type="module">
-const [core, {chart, template}] =
+const [core, {chart, templates}] =
   await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
@@ -212,7 +212,7 @@ chart('doughnut', {
   },
 });
 
-template('random-bars', (el, {count, min, max}) => {
+templates['random-bars'] = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);
@@ -231,5 +231,5 @@ template('random-bars', (el, {count, min, max}) => {
       plugins: {legend: {display: false}},
     },
   })
-});
+};
 </script>

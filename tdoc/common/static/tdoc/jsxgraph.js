@@ -3,7 +3,7 @@
 
 import {
     asyncGet, domLoaded, gcd, instantiateDynTemplate, mathJaxReady, mergeAttrs,
-    qs, qsa, resolveDyn,
+    onSet, qs, qsa, resolveDyn,
 } from './core.js';
 
 export {gcd};
@@ -176,12 +176,21 @@ export async function initBoard(el, attrs, fn) {
     return board;
 }
 
+// Template container.
+export const templates = onSet({}, (obj, name, fn) => {
+    if (obj[name] !== undefined) {
+        throw new Error(`{jsxgraph} Duplicate template: ${name}`);
+    }
+    instantiateDynTemplate('jsxgraph', name, fn);
+});
+
 // Define a template.
+// TODO(0.76): Remove
 export function template(name, fn) {
-    return instantiateDynTemplate('jsxgraph', name, fn);
+    templates[name] = fn;
 }
 
-template('grid', (el, {width = 35, height = 10, grid = {}, board = {}}) => {
+templates.grid = (el, {width = 35, height = 10, grid = {}, board = {}}) => {
     return initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
@@ -189,9 +198,9 @@ template('grid', (el, {width = 35, height = 10, grid = {}, board = {}}) => {
         },
         {grid}, nonInteractive, board,
     ]);
-});
+};
 
-template('axes', (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
+templates.axes = (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
                        minorX, minorY, minor, labelsX, labelsY, labels,
                        grid, board}) => {
     return initBoard(el, [
@@ -214,4 +223,4 @@ template('axes', (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
                        labelsY ?? labels),
         {grid: grid ?? {}}, nonInteractive, board ?? [],
     ]);
-});
+};

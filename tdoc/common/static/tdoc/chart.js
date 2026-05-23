@@ -3,7 +3,7 @@
 
 import {
     asyncGet, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject,
-    mergeAttrs, on, qs, qsa, resolveDyn,
+    mergeAttrs, on, onSet, qs, qsa, resolveDyn,
 } from './core.js';
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
@@ -59,6 +59,7 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
+    // TODO: Merge multiple configs
     el = await resolveDyn('chartjs', el);
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
@@ -66,16 +67,17 @@ export async function chart(el, config) {
     return c;
 }
 
-// Define a template.
-export function template(name, fn) {
-    return instantiateDynTemplate('chartjs', name, fn);
-}
+// Template container.
+export const templates = onSet({}, (obj, name, fn) => {
+    if (obj[name] !== undefined) {
+        throw new Error(`{chartjs} Duplicate template: ${name}`);
+    }
+    instantiateDynTemplate('chartjs', name, fn);
+});
 
-template('chart', chart);
+templates.chart = chart;
 
-export async function histogram(el, {bins, options = {}, samples}) {
-    el = await resolveDyn('chartjs', el);
-
+templates.histogram = async (el, {bins, options = {}, samples}) => {
     // Define bins.
     let min = Infinity, max = -Infinity;
     for (const s of samples) {
@@ -141,6 +143,4 @@ export async function histogram(el, {bins, options = {}, samples}) {
     };
     mergeTo(config.options, await merge(options));
     return await chart(el, config);
-}
-
-template('histogram', histogram);
+};

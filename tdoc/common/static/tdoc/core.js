@@ -155,6 +155,17 @@ export function asyncGet(obj) {
     });
 }
 
+// Return a proxy that calls a function whenever an attribute is set.
+export function onSet(obj, set) {
+    return new Proxy(obj, {
+        set(obj, prop, value, recv) {
+            set(obj, prop, value);
+            obj[prop] = value;
+            return true;
+        },
+    });
+}
+
 // Resolve dyn elements of a specific type. If el is missing, all dyn elements
 // of that type are returned. If el is a string, the dyn element with that name
 // is returned, or an exception is thrown if it cannot be found. Otherwise, el
