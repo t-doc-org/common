@@ -142,10 +142,11 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
     display: none;
 }
 
-/* Keep the margin below the title even if the TOC is removed. */
+/* Keep some space between the title and the article when the TOC is removed. */
 @media print {
-    .bd-main .bd-content #jb-print-docs-body h1 {
-        margin-bottom: 2.75rem;
+    html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=primary-sidebar])
+            .bd-main .bd-content .bd-article {
+        padding-top: 1.5rem;
     }
 }
 
