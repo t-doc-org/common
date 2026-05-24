@@ -40,7 +40,7 @@ class Serial {
              (!f.usbProductId || (i.usbProductId === f.usbProductId)) &&
              (!f.bluetoothServiceClassId ||
                (i.bluetoothServiceClassId === f.bluetoothServiceClassId)));
-        if (filter instanceof Array) {
+        if (Array.isArray(filter)) {
             if (filter.length === 0) return true;
             for (const f of filter) {
                 if (matches(f)) return true;

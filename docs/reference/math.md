@@ -14,8 +14,7 @@ This directive creates a graph based on
 
 The graphs are constructed in JavaScript, by importing the {js:mod}`jsxgraph`
 module and calling {js:func}`~jsxgraph.initBoard` for each {rst:dir}`jsxgraph`
-directive, referencing it by name. Defaults can be set via the `jsxgraph:`
-{rst:dir}`metadata`.
+directive, referencing it by name.
 
 ````{code-block} html
 ```{jsxgraph} sin
@@ -46,6 +45,9 @@ The aspect ratio of graph containers with `keepAspectRatio: true` (the default)
 is set automatically from the `boundingBox`. Otherwise, the aspect ratio
 defaults to `1 / 1`, and can be overridden with the
 {rst:dir}`:style: <jsxgraph:style>` option.
+
+Defaults can be set via the `jsxgraph:` {rst:dir}`metadata`, and are merged into
+[`JXG.Options`](https://jsxgraph.uni-bayreuth.de/docs/symbols/src/src_options.js.html).
 
 {.rubric}
 Options

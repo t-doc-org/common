@@ -214,7 +214,7 @@ const checks = {
     json(args) { args.solution = JSON.parse(args.solution); },
     indirect(args) { args.apply(checkFns(args.text)); },
     equal(args) {
-        if (args.solution instanceof Array) {
+        if (Array.isArray(args.solution)) {
             args.ok = args.solution.includes(args.answer);
         } else if (typeof args.solution === 'object') {
             const res = args.solution[args.answer] ?? false;
@@ -274,7 +274,7 @@ async function checkArgs(field) {
                 const v = this[name];
                 if (v === undefined) continue;
                 try {
-                    if (v instanceof Array) {
+                    if (Array.isArray(v)) {
                         this[name] = v.map(v => fn(v));
                     } else if (typeof v === 'string') {
                         this[name] = fn(v);

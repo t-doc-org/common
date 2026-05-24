@@ -103,6 +103,7 @@ JXG.merge(JXG.Options, {
         minor: {face: 'line', strokeOpacity: 0.3},
     },
 });
+JXG.merge(JXG.Options, tdoc.dyn.jsxgraph);
 
 // A set of pre-defined attributes.
 export const attrs = asyncGet({});
@@ -130,7 +131,7 @@ export function withAxesLabels(xs, ys) {
             if (Math.abs(v) < JXG.Math.eps) v = 0;
             v /= this.evalVisProp('scale');
             return (typeof vs === 'number' && !multipleOf(v, vs))
-                   || (vs instanceof Array && !includesClose(vs, v)) ?
+                   || (Array.isArray(vs) && !includesClose(vs, v)) ?
                    '' : generateLabelText.call(this, tick, zero, value);
         }
         return format;
@@ -157,7 +158,7 @@ function includesClose(values, v, epsilon = 1e-6) {
 // by its wrapper element. Calls fn(board) if fn is provided, and returns the
 // board.
 export async function initBoard(el, attrs, fn) {
-    attrs = await merge(tdoc.dyn.jsxgraph, attrs);
+    attrs = await merge(attrs);
     el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {
@@ -169,8 +170,7 @@ export async function initBoard(el, attrs, fn) {
     }
     await mathJaxReady;
     const board = JXG.JSXGraph.initBoard(el, attrs);
-    const defaults = attrs.defaults ?? {};
-    if (defaults) JXG.merge(board.options, defaults);
+    JXG.merge(board.options, attrs.defaults ?? {});
     if (fn) fn(board);
     el.classList.add('rendered');
     return board;

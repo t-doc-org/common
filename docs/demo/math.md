@@ -4,7 +4,7 @@
 # Math
 
 ```{metadata} json
-jsxgraph: {showFullscreen: true},
+jsxgraph: {board: {showFullscreen: true}},
 ```
 
 ## Math notation

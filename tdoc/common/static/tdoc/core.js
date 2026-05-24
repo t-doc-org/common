@@ -71,7 +71,7 @@ export const domLoaded = new Promise(resolve => {
 
 // Return true iff the argument is an object and not an array.
 export function isObject(v) {
-    return v !== null && typeof v === 'object' && !(v instanceof Array);
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
 
 // Return true iff the argument is a plain Object.
@@ -203,7 +203,7 @@ export async function mergeAttrs(mergeTo, attrs, ...as) {
         for (let a of as) {
             if (a instanceof Promise) a = await a;
             if (typeof a === 'string') a = await attrs[a];
-            if (a instanceof Array) {
+            if (Array.isArray(a)) {
                 await mergeToRes(...a);
             } else {
                 mergeTo(res, a);
