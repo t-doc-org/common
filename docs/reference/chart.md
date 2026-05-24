@@ -14,8 +14,7 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 
 The charts are rendered in JavaScript, by importing the {js:mod}`chart`
 module and calling {js:func}`~chart.chart` (or one of the other renderers) for
-each {rst:dir}`chartjs` directive, referencing them by name. Defaults can be set
-via the `chartjs:` {rst:dir}`metadata`.
+each {rst:dir}`chartjs` directive, referencing them by name.
 
 ````{code-block} html
 ```{chartjs} v-bar
@@ -62,6 +61,9 @@ options: {
 },
 ```
 ````
+
+Defaults can be set via the `chartjs:` {rst:dir}`metadata`, and are merged into
+[`Chart.defaults`](https://www.chartjs.org/docs/latest/configuration/#global-configuration).
 
 {.rubric}
 Options
@@ -160,7 +162,8 @@ Render the content of a {rst:dir}`chartjs` directive.
 
 :arg !string|HTMLElement el: The name of the {rst:dir}`chartjs` directive to
 render, or the wrapper DOM element that should contain the chart.
-:arg !Object config: The chart configuration.
+:arg !Object|Array config: The chart configuration, passed to the `Chart`
+constructor. If an `Array` of configs is provided, they are merged.
 :returns: A `Promise` that resolves to the created `Chart` instance.
 ```
 

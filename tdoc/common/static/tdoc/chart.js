@@ -8,29 +8,33 @@ import {
 
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
 
-// Call fn on each attribute of obj, and recurse into arrays and objects.
-function visit(obj, fn) {
-    const it = obj instanceof Array ? obj.entries() :
-               isObject(obj) ? Object.entries(obj) : [];
-    for (const [k, v] of it) {
-        fn(obj, k, v);
-        visit(v, fn);
-    }
-}
-
-// Merge the attributes of src into dst.
+// Merge src into dst.
 function mergeTo(dst, src) {
-    for (const [k, sv] of Object.entries(src)) {
-        const dv = dst[k];
-        if (isPlainObject(sv) && isObject(dv)) {
+    const it = Array.isArray(src) ? src.entries() : Object.entries(src);
+    for (const [k, sv] of it) {
+        if (Array.isArray(sv)) {
+            // Only merge into arrays of objects; overwrite otherwise.
+            let dv = dst[k];
+            if (dv === undefined || dv === null || !Array.isArray(dv)
+                    || !dv.every(v => isObject(v))) {
+                dv = dst[k] = [];
+            }
             mergeTo(dv, sv);
-        } else {
-            // TODO: Avoid cloning; check what JSXGraph does
-            dst[k] = structuredClone(sv);
+        } else if (isObject(sv) && typeof sv.valueOf() !== 'string') {
+            let dv = dst[k];
+            if (dv === undefined || dv === null || !isObject(dv)) {
+                dv = dst[k] = {};
+            }
+            mergeTo(dv, sv);
+        } else if (sv !== undefined && sv !== null) {
+            dst[k] = sv;
         }
     }
     return dst;
 }
+
+// Set global defaults.
+mergeTo(Chart.defaults, tdoc.dyn.chartjs);
 
 // A set of pre-defined attributes.
 export const attrs = asyncGet({});
@@ -45,9 +49,6 @@ function formatTick(scale, value) {
     return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
 }
 
-// Set defaults.
-mergeTo(Chart.defaults, tdoc.dyn.chartjs);
-
 // Handle resizing when printing.
 function resizeAll() {
     for (const id in Chart.instances) Chart.instances[id].resize();
@@ -59,7 +60,7 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    // TODO: Merge multiple configs
+    config = await merge(config);
     el = await resolveDyn('chartjs', el);
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
@@ -108,7 +109,7 @@ templates.histogram = async (el, {bins, options = {}, samples}) => {
         ++data[b].y;
     }
 
-    const config = {
+    return await chart(el, [{
         type: 'bar',
         data: {datasets: [{data}]},
         options: {
@@ -140,7 +141,5 @@ templates.histogram = async (el, {bins, options = {}, samples}) => {
                 },
             },
         },
-    };
-    mergeTo(config.options, await merge(options));
-    return await chart(el, config);
+    }, {options}]);
 };
