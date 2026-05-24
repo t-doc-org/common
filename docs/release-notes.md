@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-75)=
+## 0.75 *(2026-05-24)*
+
+- Added merging of multiple configs in {rst:dir}`chartjs`.
+- Added named attribute sets for {rst:dir}`chartjs` and {rst:dir}`jsxgraph`
+  directives.
+- Made template registration simpler and more flexible for {rst:dir}`chartjs`
+  and {rst:dir}`jsxgraph` directives.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.74...0.75)
+
 (release-0-74)=
 ## 0.74 *(2026-05-20)*
 
