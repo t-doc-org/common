@@ -115,7 +115,7 @@ function merge(...as) {
 }
 
 // Mix-in board attributes to disable interactive features.
-export const nonInteractive = attrs.nonInteractive = {
+attrs.nonInteractive = {
     showNavigation: false,
     registerEvents: {keyboard: false, pointer: false, wheel: false},
 };
