@@ -51,15 +51,6 @@ info = {
             'https://github.com/upsetjs/chartjs-chart-venn/releases',
         ],
     },
-    'chartjs-chart-wordcloud': {
-        'name': 'chartjs-chart-wordcloud',
-        'version': '4.4.5',
-        'tag': 'latest',
-        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
-        'release_urls': [
-            'https://github.com/sgratzl/chartjs-chart-wordcloud/releases',
-        ],
-    },
     'chartjs-plugin-annotation': {
         'name': 'chartjs-plugin-annotation',
         'version': '3.1.0',

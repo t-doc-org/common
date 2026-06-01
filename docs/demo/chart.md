@@ -62,7 +62,8 @@ This section renders charts using {rst:dir}`chartjs` directives.
 
 ### Venn diagrams
 
-([Documentation](https://upset.js.org/chartjs-chart-venn/))
+([Documentation](https://upset.js.org/chartjs-chart-venn/),
+[data structure](https://github.com/upsetjs/chartjs-chart-venn#venn-diagram))
 
 ```{chartjs} venn
 :style: |

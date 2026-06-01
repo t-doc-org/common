@@ -13,7 +13,6 @@ const plugins = {
     'chartjs-chart-error-bars': {path: 'index.umd.min.js'},
     'chartjs-chart-graph': {path: 'index.umd.min.js'},
     'chartjs-chart-venn': {path: 'index.umd.min.js'},
-    'chartjs-chart-wordcloud': {path: 'index.umd.min.js'},
     'chartjs-plugin-annotation': {path: 'chartjs-plugin-annotation.min.js'},
     'chartjs-plugin-datalabels': {
         path: 'chartjs-plugin-datalabels.min.js',
@@ -42,7 +41,7 @@ const ready = (async () => {
         },
     });
     mergeTo(Chart.defaults, tdoc.dyn.chartjs);
-})();  // Background
+})();
 
 // Merge src into dst.
 function mergeTo(dst, src) {
