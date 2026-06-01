@@ -40,6 +40,46 @@ This section renders charts using {rst:dir}`chartjs` directives.
 :style: width: 70%;
 ```
 
+### Boxplot & violin charts
+
+([Documentation](https://www.sgratzl.com/chartjs-chart-boxplot/))
+
+```{chartjs} boxplot
+```
+
+```{chartjs} violin
+```
+
+### Error bar charts
+
+([Documentation](https://www.sgratzl.com/chartjs-chart-error-bars/))
+
+```{chartjs} bar-error-bars
+```
+
+```{chartjs} line-error-bars
+```
+
+### Venn diagrams
+
+([Documentation](https://upset.js.org/chartjs-chart-venn/))
+
+```{chartjs} venn
+:style: |
+: width: 70%; border: 1px solid var(--pst-color-border);
+: border-radius: 0.25rem; padding: 2rem 0;
+```
+
+### Graph charts
+
+([Documentation](https://www.sgratzl.com/chartjs-chart-graph/))
+
+```{chartjs} tree
+```
+
+```{chartjs} graph
+```
+
 ### Template: `chart`
 
 ```{chartjs} template:chart
@@ -157,9 +197,10 @@ const bgColors = colors.map(c => `${c}33`);
 const months = ["January", "February", "March", "April", "May", "June", "July",
                 "August", "September", "October", "November", "December"];
 
-function data(count, min, max) {
+function data(count, min, max, extra=[]) {
   const values = [];
   for (let i = 0; i < count; ++i) values.push(core.randomInt(min, max));
+  values.push(...extra);
   return values;
 }
 
@@ -244,6 +285,132 @@ chart('doughnut', {
     hoverBorderWidth: 2, hoverBorderColor: pieIdx(colors),
     hoverBackgroundColor: pieIdx(colors),
     plugins: {legend: {display: true, position: 'right'}},
+  },
+});
+
+const boxViolin = {
+  data: {
+    labels: ['A', 'B', 'C'],
+    datasets: [{
+      label: 'Dataset 1',
+      data: [data(100, 0, 100), data(100, 0, 20, [110]), data(100, 20, 70)],
+      borderColor: colors[0], hoverBorderColor: colors[0],
+      backgroundColor: bgColors[0],
+    }, {
+      label: 'Dataset 2',
+      data: [data(100, 60, 100, [5, 10]), data(100, 0, 100), data(100, 0, 20)],
+      borderColor: colors[1], hoverBorderColor: colors[1],
+      backgroundColor: bgColors[1],
+    }],
+  },
+};
+chart('boxplot', {'type': 'boxplot', ...boxViolin});
+chart('violin', {'type': 'violin', ...boxViolin});
+
+const errorBar = {
+  data: {
+    labels: ['A', 'B', 'C'],
+    datasets: [{data: [
+      {y: 4, yMin: 1, yMax: 6},
+      {y: 2, yMin: 1, yMax: 4},
+      {y: 5, yMin: 4, yMax: 6},
+    ]}],
+  },
+};
+chart('bar-error-bars', {
+  type: 'barWithErrorBars', ...errorBar,
+  options: {
+    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+    backgroundColor: bgColors,
+  },
+});
+chart('line-error-bars', {
+  type: 'lineWithErrorBars', ...errorBar,
+  options: {borderColor: colors[0], backgroundColor: bgColors[0]},
+});
+
+chart('venn', {
+  type: 'venn',
+  data: {
+    labels: ['A', 'B', 'A ∩ B'],
+    datasets: [{
+      data: [
+        {sets: ['A'], value: 'A'},
+        {sets: ['B'], value: 'B'},
+        {sets: ['A', 'B'], value: 'A ∩ B'},
+      ],
+    }],
+  },
+  options: {
+    borderWidth: 1, borderColor: colors,
+    backgroundColor: bgColors,
+    scales: {
+      x: {ticks: {font: {size: 16}}},   // Labels within the sets
+      y: {ticks: {display: false}},     // Labels next to the sets
+    },
+    plugins: {tooltip: false},
+  },
+});
+
+const treeData = [
+  {name: "1"},
+  {name: "11", parent: 0},
+  {name: "111", parent: 1},
+  {name: "1111", parent: 2},
+  {name: "1112", parent: 2},
+  {name: "112", parent: 1},
+  {name: "1121", parent: 5},
+  {name: "1122", parent: 5},
+  {name: "113", parent: 1},
+  {name: "1131", parent: 8},
+  {name: "1132", parent: 8},
+  {name: "12", parent: 0, width: 7},
+  {name: "121", parent: 11, width: 10},
+  {name: "1211", parent: 12},
+  {name: "1212", parent: 12},
+  {name: "122", parent: 11, width: 5},
+  {name: "1221", parent: 15},
+  {name: "1222", parent: 15},
+  {name: "123", parent: 11, width: 10},
+  {name: "1231", parent: 18},
+  {name: "1232", parent: 18},
+  {name: "13", parent: 0},
+  {name: "131", parent: 21},
+];
+chart('tree', {
+  type: 'tree',
+  data: {
+    labels: treeData.map(d => d.name),
+    datasets: [{
+      data: treeData,
+      edgeLineBorderWidth: ctx => treeData[ctx.parsed.target].width ?? 3,
+    }],
+  },
+  options: {
+    tree: {mode: 'tree'},
+    borderColor: colors[6] + '99',
+    pointRadius: 5,
+    pointBorderColor: colors[0], pointBackgroundColor: colors[0],
+  },
+});
+
+const graphData = await core.fetchJson('/_static/miserables.json',
+                                       {method: 'GET'});
+chart('graph', {
+  type: 'forceDirectedGraph',
+  data: {
+    labels: graphData.nodes.map(d => d.id),
+    datasets: [{
+      data: graphData.nodes,
+      edges: graphData.links,
+    }],
+  },
+  options: {
+    tree: {mode: 'tree'},
+    borderColor: colors[6] + '99',
+    pointRadius: 5,
+    pointBorderColor: colors[0], pointBackgroundColor: colors[0],
+    plugins: {deferred: false},  // Rendering fails when deferred
   },
 });
 

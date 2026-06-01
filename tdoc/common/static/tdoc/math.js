@@ -149,7 +149,7 @@ export class Distribution {
         } else if (Array.isArray(value) || value instanceof Sample) {
             for (const v of value) ++counts[bins.find(v)];
         } else {
-            throw new Error(`Unsupported value type: ${value}`);
+            throw new Error(`Unsupported sample value type: ${value}`);
         }
     }
 

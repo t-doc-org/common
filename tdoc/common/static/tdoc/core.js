@@ -468,12 +468,15 @@ export async function fromBase64(data) {
 
 // Perform a fetch on a JSON API.
 export async function fetchJson(url, opts) {
+    const method = opts?.method ?? 'POST';
+    const hasBody = method !== 'GET';
     const resp = await fetch(url, {
-        method: 'POST', cache: 'no-store', referrer: '',
-        body: JSON.stringify(opts?.req ?? {}), ...opts,
+        method, cache: 'no-store', referrer: '',
+        body: hasBody ? JSON.stringify(opts?.req ?? {}) : undefined,
+        ...opts,
         headers: {
             'Cache-Control': 'no-store',
-            'Content-Type': 'application/json',
+            ...hasBody ? {'Content-Type': 'application/json'} : undefined,
             ...opts?.headers,
         },
     });

@@ -15,6 +15,51 @@ info = {
             'https://github.com/chartjs/Chart.js/releases',
         ],
     },
+    'chartjs-chart-boxplot': {
+        'name': '@sgratzl/chartjs-chart-boxplot',
+        'version': '4.4.5',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
+        'release_urls': [
+            'https://github.com/sgratzl/chartjs-chart-boxplot/releases',
+        ],
+    },
+    'chartjs-chart-error-bars': {
+        'name': 'chartjs-chart-error-bars',
+        'version': '4.4.5',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
+        'release_urls': [
+            'https://github.com/sgratzl/chartjs-chart-error-bars/releases',
+        ],
+    },
+    'chartjs-chart-graph': {
+        'name': 'chartjs-chart-graph',
+        'version': '4.3.5',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
+        'release_urls': [
+            'https://github.com/sgratzl/chartjs-chart-graph/releases',
+        ],
+    },
+    'chartjs-chart-venn': {
+        'name': 'chartjs-chart-venn',
+        'version': '4.3.7',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
+        'release_urls': [
+            'https://github.com/upsetjs/chartjs-chart-venn/releases',
+        ],
+    },
+    'chartjs-chart-wordcloud': {
+        'name': 'chartjs-chart-wordcloud',
+        'version': '4.4.5',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
+        'release_urls': [
+            'https://github.com/sgratzl/chartjs-chart-wordcloud/releases',
+        ],
+    },
     'chartjs-plugin-annotation': {
         'name': 'chartjs-plugin-annotation',
         'version': '3.1.0',

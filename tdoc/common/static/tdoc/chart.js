@@ -7,14 +7,42 @@ import {
 } from './core.js';
 import {Bins, Sample} from './math.js';
 
-// TODO: Add more plugins: chartjs-chart-boxplot, chartjs-chart-error-bars,
-//       chartjs-chart-graph, chartjs-chart-wordcloud, chartjs-chart-venn
-await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
-await Promise.all(['annotation', 'datalabels', 'deferred']
-    .map(n => import(`\
-${tdoc.versions[`chartjs-plugin-${n}`]}/chartjs-plugin-${n}.min.js`)));
-Chart.register(ChartDeferred);
-Chart.register(ChartDataLabels);
+// TODO: Add plugins from page metadata
+const plugins = {
+    'chartjs-chart-boxplot': {path: 'index.umd.min.js'},
+    'chartjs-chart-error-bars': {path: 'index.umd.min.js'},
+    'chartjs-chart-graph': {path: 'index.umd.min.js'},
+    'chartjs-chart-venn': {path: 'index.umd.min.js'},
+    'chartjs-chart-wordcloud': {path: 'index.umd.min.js'},
+    'chartjs-plugin-annotation': {path: 'chartjs-plugin-annotation.min.js'},
+    'chartjs-plugin-datalabels': {
+        path: 'chartjs-plugin-datalabels.min.js',
+        register: ['ChartDataLabels'],
+    },
+    'chartjs-plugin-deferred': {
+        path: 'chartjs-plugin-deferred.min.js', register: ['ChartDeferred'],
+    },
+};
+const ready = (async () => {
+    await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
+    const urls = [...Object.entries(plugins)].map(
+        ([n, {path}]) => `${tdoc.versions[n]}/${path}`)
+    await Promise.all(urls.map(u => import(u)));
+    for (const {register} of Object.values(plugins)) {
+        for (const n of register ?? []) Chart.register(globalThis[n]);
+    }
+
+    // Set global defaults.
+    mergeTo(Chart.defaults, {
+        datasets: {
+            venn: {layout: {padding: 10}},
+        },
+        plugins: {
+            datalabels: {display: false},
+        },
+    });
+    mergeTo(Chart.defaults, tdoc.dyn.chartjs);
+})();  // Background
 
 // Merge src into dst.
 function mergeTo(dst, src) {
@@ -41,13 +69,11 @@ function mergeTo(dst, src) {
     return dst;
 }
 
-// Set global defaults.
-mergeTo(Chart.defaults, {
-    plugins: {
-        datalabels: {display: false},
-    },
-});
-mergeTo(Chart.defaults, tdoc.dyn.chartjs);
+// Call ChartVenn.extractSets() once ChartVenn has been loaded.
+export async function extractSets(...args) {
+    await ready;
+    return ChartVenn.extractSets(...args);
+}
 
 // A set of pre-defined attributes.
 export const attrs = asyncGet({});
@@ -75,6 +101,7 @@ on(window).afterprint(resizeAll);
 export async function chart(el, config) {
     config = await merge(config);
     el = await resolveDyn('chartjs', el);
+    await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
     el.classList.add('rendered');
@@ -108,9 +135,11 @@ const barWidth = {
 };
 
 // TODO: Allow taking a distribution instead of a sample
+// TODO: Optionally use frequencies instead of counts
 
-templates.histogram = async (el, {uniform, custom, options = {},
-                                  annotations = {}, sample}) => {
+templates.histogram = async (el, {
+    uniform, custom, options = {}, annotations = {}, sample,
+}) => {
     sample = new Sample(sample);
 
     // Compute the bins.
