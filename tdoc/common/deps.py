@@ -15,6 +15,33 @@ info = {
             'https://github.com/chartjs/Chart.js/releases',
         ],
     },
+    'chartjs-plugin-annotation': {
+        'name': 'chartjs-plugin-annotation',
+        'version': '3.1.0',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'release_urls': [
+            'https://github.com/chartjs/chartjs-plugin-annotation/releases',
+        ],
+    },
+    'chartjs-plugin-datalabels': {
+        'name': 'chartjs-plugin-datalabels',
+        'version': '2.2.0',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'release_urls': [
+            'https://github.com/chartjs/chartjs-plugin-datalabels/releases',
+        ],
+    },
+    'chartjs-plugin-deferred': {
+        'name': 'chartjs-plugin-deferred',
+        'version': '2.0.0',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
+        'release_urls': [
+            'https://github.com/chartjs/chartjs-plugin-deferred/releases',
+        ],
+    },
     'drauu': {
         'name': '@drauu/core',
         'version': '1.0.0',

@@ -5,8 +5,16 @@ import {
     asyncGet, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject,
     mergeAttrs, on, onSet, qs, qsa, resolveDyn,
 } from './core.js';
+import {Bins, Sample} from './math.js';
 
+// TODO: Add more plugins: chartjs-chart-boxplot, chartjs-chart-error-bars,
+//       chartjs-chart-graph, chartjs-chart-wordcloud, chartjs-chart-venn
 await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
+await Promise.all(['annotation', 'datalabels', 'deferred']
+    .map(n => import(`\
+${tdoc.versions[`chartjs-plugin-${n}`]}/chartjs-plugin-${n}.min.js`)));
+Chart.register(ChartDeferred);
+Chart.register(ChartDataLabels);
 
 // Merge src into dst.
 function mergeTo(dst, src) {
@@ -34,6 +42,11 @@ function mergeTo(dst, src) {
 }
 
 // Set global defaults.
+mergeTo(Chart.defaults, {
+    plugins: {
+        datalabels: {display: false},
+    },
+});
 mergeTo(Chart.defaults, tdoc.dyn.chartjs);
 
 // A set of pre-defined attributes.
@@ -78,51 +91,67 @@ export const templates = onSet({}, (obj, name, fn) => {
 
 templates.chart = chart;
 
-templates.histogram = async (el, {bins, options = {}, samples}) => {
-    // Define bins.
-    let min = Infinity, max = -Infinity;
-    for (const s of samples) {
-        if (s < min) min = s;
-        if (s > max) max = s;
-    }
-    let bmin = bins?.min, bw = bins?.width, bc = bins?.count;
-    const bmax = Math.max(bins?.max ?? -Infinity, max);
-    if (bw === undefined) {
-        bmin = Math.min(bmin ?? Infinity, min);
-        if (bc === undefined) bc = Math.ceil(Math.sqrt(samples.length));
-        bw = (bmax - bmin) / bc;
-        if (bw <= 0) bw = 1;
-    } else {
-        if (bmin === undefined) {
-            const bo = bins?.origin ?? 0;
-            bmin = bo + Math.floor((min - bo) / bw) * bw;
-        }
-        bc = Math.max(bc ?? 0, Math.floor((bmax - bmin) / bw) + 1);
-    }
+const fnRe = /^([^(]+)(?:\((.*)\))?$/;
 
-    // Compute histogram data.
-    const data = [];
-    for (let b = 0; b < bc; ++b) data.push({x: bmin + (b + 0.5) * bw, y: 0});
-    for (const s of samples) {
-        let b = Math.floor((s - bmin) / bw);
-        if (b >= data.length) b = data.length - 1;
-        ++data[b].y;
+// A plugin that sets the bar width from the "w" data attribute.
+const barWidth = {
+    id: 'bar-width',
+    beforeDatasetDraw(chart, args, options) {
+        const md = chart.getDatasetMeta(args.index);
+        const s = md.xScale;
+        for (const [i, bar] of md.data.entries()) {
+            const d = chart.data.datasets[args.index].data[i];
+            bar.width = s.getPixelForValue(d.x + d.w / 2)
+                        - s.getPixelForValue(d.x - d.w / 2);
+        }
+    },
+};
+
+// TODO: Allow taking a distribution instead of a sample
+
+templates.histogram = async (el, {uniform, custom, options = {},
+                                  annotations = {}, sample}) => {
+    sample = new Sample(sample);
+
+    // Compute the bins.
+    const bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
+                 Bins.uniform({...uniform, sample});
+
+    // Compute the distribution and the chart data.
+    const dist = sample.distribution(bins);
+    const data = dist.map(
+        (lo, hi, c) => ({x: (lo + hi) / 2, y: c, w: hi - lo}));
+
+    // Set up annotations.
+    for (const [n, ann] of Object.entries(annotations)) {
+        const res = [];
+        if (typeof ann === 'function') {
+            res.push(ann(sample));
+        } else {
+            const m = n.match(fnRe);
+            const name = m ? m[1] : n;
+            const fn = await templates.histogram.annotations[name];
+            const args = m && m[2] !== undefined ? JSON.parse(`[${m[2]}]`) : [];
+            res.push(fn({sample, dist}, ...args), ann);
+        }
+        annotations[n] = await merge(...res);
     }
 
     return await chart(el, [{
         type: 'bar',
         data: {datasets: [{data}]},
+        plugins: [barWidth],
         options: {
-            barPercentage: 1, categoryPercentage: 1,
+            barThickness: 0,  // Overridden by barWidth
             scales: {
                 x: {
                     type: 'linear',
-                    min: bmin, max: bmin + data.length * bw,
+                    min: dist.bins.lowerBound, max: dist.bins.upperBound,
                     offset: false,
                     grid: {offset: false},
-                    ticks: {stepSize: bw},
+                    ticks: {stepSize: dist.bins.minWidth},
                 },
-                y: {beginAtZero: true, ticks: {stepSize: 1}},
+                y: {beginAtZero: true, ticks: {stepSize: 1}, grace: '10%'},
             },
             plugins: {
                 legend: {display: false},
@@ -132,14 +161,75 @@ templates.histogram = async (el, {bins, options = {}, samples}) => {
                             if (items.length === 0) return "";
                             const it = items[0];
                             const sx = it.chart.scales.x, x = it.parsed.x;
-                            const rl = formatTick(sx, x - 0.5 * bw);
-                            const ru = formatTick(sx, x + 0.5 * bw);
-                            const c = x === data[data.length - 1].x ? "]" : "[";
-                            return `[${rl}; ${ru}${c}`;
+                            const i = dist.bins.find(x);
+                            const [lo, hi] = dist.bins.bounds(i);
+                            const flo = formatTick(sx, lo);
+                            const fhi = formatTick(sx, hi);
+                            const c = i == dist.bins.length - 1 ? "]" : "[";
+                            return `[${flo}; ${fhi}${c}`;
                         },
                     },
                 },
+                annotation: {annotations},
             },
         },
     }, {options}]);
 };
+
+attrs.line = {
+    type: 'line', drawTime: 'afterDatasetsDraw', z: 0,
+    borderWidth: 1, borderDash: [6, 4],
+    label: {
+        display: true, position: 'start', drawTime: 'afterDatasetsDraw', z: 10,
+    },
+};
+attrs.hLine = [attrs.line, {scaleID: 'y'}];
+attrs.vLine = [attrs.line, {scaleID: 'x'}];
+
+templates.histogram.annotations = asyncGet({});
+templates.histogram.annotations.hLine = ({}, v) => {
+    return [attrs.hLine, {value: v, endValue: v, label: {content: `${v}`}}];
+};
+templates.histogram.annotations.vLine = ({}, v) => {
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `${v}`}}];
+};
+templates.histogram.annotations.min = ({sample}) => {
+    const v = sample.min;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
+};
+templates.histogram.annotations.max = ({sample}) => {
+    const v = sample.max;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
+};
+templates.histogram.annotations.median = ({sample}) => {
+    const v = sample.median;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
+};
+templates.histogram.annotations.quartile = ({sample}, k) => {
+    const v = sample.quartile(k);
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
+};
+templates.histogram.annotations.percentile = ({sample}, p) => {
+    const v = sample.percentile(p);
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
+};
+templates.histogram.annotations.quantile = ({sample}, p) => {
+    const v = sample.quantile(p);
+    return [attrs.vLine,
+            {value: v, endValue: v, label: {content: `${p}-quantile`}}];
+};
+templates.histogram.annotations.mean = ({sample}) => {
+    const v = sample.mean;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
+};
+templates.histogram.annotations.stdDev = ({sample}, f) => {
+    const m = sample.mean, sd = sample.stdDev;
+    const v = m + f * sd;
+    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+    const af = Math.abs(f);
+    return [attrs.vLine, {
+        value: v, endValue: v,
+        label: {content: `${sf}${af !== 1 ? af : ''}σ`},
+    }];
+};
+// TODO: avgDevFromMean, avgDevFromMedian

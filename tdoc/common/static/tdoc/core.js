@@ -202,7 +202,9 @@ export async function mergeAttrs(mergeTo, attrs, ...as) {
     const mergeToRes = async (...as) => {
         for (let a of as) {
             if (a instanceof Promise) a = await a;
-            if (typeof a === 'string') a = await attrs[a];
+            if (attrs !== undefined && typeof a === 'string') {
+                a = await attrs[a];
+            }
             if (Array.isArray(a)) {
                 await mergeToRes(...a);
             } else {
@@ -356,6 +358,7 @@ export function focusIfVisible(el) {
 }
 
 // Return the greatest common divisor of two natural numbers.
+// TODO(0.77): Remove in favor of math.gcd()
 export function gcd(a, b) {
     while (b != 0) {
         [a, b] = [b, a % b]

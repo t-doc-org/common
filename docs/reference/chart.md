@@ -11,6 +11,10 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 - [Chart.js documentation](https://www.chartjs.org/docs/latest/)
 - [Chart types](https://www.chartjs.org/docs/latest/charts/area.html)
 - [Chart.js examples](https://www.chartjs.org/docs/latest/samples/)
+- Available plugins:
+  [annotation](https://www.chartjs.org/chartjs-plugin-annotation/master/guide/),
+  [data labels](https://chartjs-plugin-datalabels.netlify.app/guide/),
+  [deferred](https://chartjs-plugin-deferred.netlify.app/guide/)
 
 The charts are rendered in JavaScript, by importing the {js:mod}`chart`
 module and calling {js:func}`~chart.chart` (or one of the other renderers) for
@@ -112,32 +116,43 @@ options: {
 
 #### `histogram`
 
-This template renders a histogram from an array of samples, using uniform
-binning.
+This template renders a histogram from a sample.
 
-- `bins`: The definition of the histogram bins.
+- `uniform`: Use bins of uniform width (default). The keys define how the bins
+  are computed:
   - `count`: The number of bins.
-  - `max`: The largest sample value that needs to be handled. When unset, this
-    is derived from the samples.
+  - `max`: The largest value that needs to be handled. When unset, this is
+    derived from the sample.
   - `min`: The lower limit of the first bin. When unset, this is derived from
-    the samples.
+    the sample.
   - `origin` (default: `0`): The origin of the binning when `width` is set and
     `min` isn't.
   - `width`: The width of the bins. When unset, this is derived from `count` and
-    the samples.
+    the sample.
+- `custom`: Use custom bins. The value is an array of bin boundaries.
+- `annotations`: Annotations to add to the chart, based on the sample. The
+  following keys are supported, and the value :
+  - `min`, `max`, `median`, `mean`: TODO
+  - `quartile(K)`, `percentile(P)`, `quantile(P)`: TODO
+  - `stdDev(F)`: TODO
 - `options`: Options to merge into the `options` field of the chart.
-- `samples`: The array of samples.
+- `sample`: The statistical sample to plot.
 
 ````{code-block}
 ```{chartjs} template:histogram
-bins: {min: 0, width: 2, count: 12},
+uniform: {min: 0, width: 2, count: 12},
+annotations: {
+  'stdDev(-1)': {borderColor: '#ff6384', label: {backgroundColor: '#ff6384cc'}},
+  mean: {label: {content: "average"}},
+  'stdDev(1)': {borderColor: '#ff6384', label: {backgroundColor: '#ff6384cc'}},
+},
 options: {
   scales: {
     x: {title: {display: true, text: "Hours"}},
     y: {title: {display: true, text: "Visitors"}},
   }
 },
-samples: [
+sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
 ],
