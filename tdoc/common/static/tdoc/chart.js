@@ -98,6 +98,7 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
+    // TODO: Add support for annotations
     config = await merge(config);
     el = await resolveDyn('chartjs', el);
     await ready;
@@ -119,6 +120,84 @@ templates.chart = chart;
 
 const fnRe = /^([^(]+)(?:\((.*)\))?$/;
 
+// Annotation container.
+export const annotations = asyncGet({})
+
+// Resolve annotations chart config options.
+async function resolveAnnotations(anns, data) {
+    // TODO: Change annotations to an array of objects
+    for (const [n, ann] of Object.entries(anns)) {
+        const res = [];
+        if (typeof ann === 'function') {
+            res.push(ann(data));
+        } else {
+            const m = n.match(fnRe);
+            const name = m ? m[1] : n;
+            const fn = await annotations[name];
+            const args = m && m[2] !== undefined ? JSON.parse(`[${m[2]}]`) : [];
+            res.push(fn(data, ...args), ann);
+        }
+        anns[n] = await merge(...res);
+    }
+}
+
+attrs.line = {
+    type: 'line', drawTime: 'afterDatasetsDraw', z: 0,
+    borderWidth: 1, borderDash: [6, 4],
+    label: {
+        display: true, position: 'start', drawTime: 'afterDatasetsDraw', z: 10,
+    },
+};
+attrs.hLine = [attrs.line, {scaleID: 'y'}];
+attrs.vLine = [attrs.line, {scaleID: 'x'}];
+
+annotations.hLine = ({}, v) => {
+    return [attrs.hLine, {value: v, endValue: v, label: {content: `${v}`}}];
+};
+annotations.vLine = ({}, v) => {
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `${v}`}}];
+};
+annotations.min = ({sample}) => {
+    const v = sample.min;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
+};
+annotations.max = ({sample}) => {
+    const v = sample.max;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
+};
+annotations.median = ({sample}) => {
+    const v = sample.median;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
+};
+annotations.quartile = ({sample}, k) => {
+    const v = sample.quartile(k);
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
+};
+annotations.percentile = ({sample}, p) => {
+    const v = sample.percentile(p);
+    return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
+};
+annotations.quantile = ({sample}, p) => {
+    const v = sample.quantile(p);
+    return [attrs.vLine,
+            {value: v, endValue: v, label: {content: `${p}-quantile`}}];
+};
+annotations.mean = ({sample}) => {
+    const v = sample.mean;
+    return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
+};
+annotations.stdDev = ({sample}, f) => {
+    const m = sample.mean, sd = sample.stdDev;
+    const v = m + f * sd;
+    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+    const af = Math.abs(f);
+    return [attrs.vLine, {
+        value: v, endValue: v,
+        label: {content: `${sf}${af !== 1 ? af : ''}σ`},
+    }];
+};
+// TODO: avgDev{from: 'median' | 'mean'}
+
 // A plugin that sets the bar width from the "w" data attribute.
 const barWidth = {
     id: 'bar-width',
@@ -137,34 +216,16 @@ const barWidth = {
 // TODO: Optionally use frequencies instead of counts
 
 templates.histogram = async (el, {
-    uniform, custom, options = {}, annotations = {}, sample,
+    sample, uniform, custom, options = {}, annotations = {},
 }) => {
     sample = new Sample(sample);
-
-    // Compute the bins.
     const bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
                  Bins.uniform({...uniform, sample});
-
-    // Compute the distribution and the chart data.
     const dist = sample.distribution(bins);
     const data = dist.map(
         (lo, hi, c) => ({x: (lo + hi) / 2, y: c, w: hi - lo}));
 
-    // Set up annotations.
-    for (const [n, ann] of Object.entries(annotations)) {
-        const res = [];
-        if (typeof ann === 'function') {
-            res.push(ann(sample));
-        } else {
-            const m = n.match(fnRe);
-            const name = m ? m[1] : n;
-            const fn = await templates.histogram.annotations[name];
-            const args = m && m[2] !== undefined ? JSON.parse(`[${m[2]}]`) : [];
-            res.push(fn({sample, dist}, ...args), ann);
-        }
-        annotations[n] = await merge(...res);
-    }
-
+    await resolveAnnotations(annotations, {sample, dist});
     return await chart(el, [{
         type: 'bar',
         data: {datasets: [{data}]},
@@ -204,60 +265,48 @@ templates.histogram = async (el, {
     }, {options}]);
 };
 
-attrs.line = {
-    type: 'line', drawTime: 'afterDatasetsDraw', z: 0,
-    borderWidth: 1, borderDash: [6, 4],
-    label: {
-        display: true, position: 'start', drawTime: 'afterDatasetsDraw', z: 10,
-    },
-};
-attrs.hLine = [attrs.line, {scaleID: 'y'}];
-attrs.vLine = [attrs.line, {scaleID: 'x'}];
+templates['cumulative-distribution-function'] = async (el, {
+    sample, min, max, step, normalize = true, options = {}, annotations = {},
+}) => {
+    sample = new Sample(sample);
+    const cdf = sample.cumulativeDistributionFunction(normalize);
+    const data = [];
+    let px, py;
+    for (let [x, y] of cdf) {
+        if (x === -Infinity) x = -Number.MAX_VALUE;
+        if (py !== undefined) data.push({x, y: py}, {});
+        data.push({x, y});
+        [px, py] = [x, y];
+    }
+    data.push({x: Number.MAX_VALUE, y: py});
 
-templates.histogram.annotations = asyncGet({});
-templates.histogram.annotations.hLine = ({}, v) => {
-    return [attrs.hLine, {value: v, endValue: v, label: {content: `${v}`}}];
+    await resolveAnnotations(annotations, {sample});
+    return await chart(el, [{
+        type: 'scatter',
+        data: {datasets: [{data}]},
+        options: {
+            showLine: true,
+            scales: {
+                x: {
+                    min: min ?? sample.min - 0.05 * sample.range,
+                    max: max ?? sample.max + 0.05 * sample.range,
+                    ticks: {stepSize: step, includeBounds: false},
+                },
+                y: {
+                    max: 1.1 * cdf[cdf.length - 1][1],
+                    beginAtZero: true,
+                    ticks: {includeBounds: false},
+                },
+            },
+            pointRadius: 3, pointBorderWidth: 1,
+            pointBackgroundColor: ctx => ctx.index % 3 === 0 ?
+                                         ctx.chart.options.pointBorderColor :
+                                         '#fff',
+            plugins: {
+                legend: {display: false},
+                annotation: {annotations},
+            },
+        },
+    }, {options}]);
 };
-templates.histogram.annotations.vLine = ({}, v) => {
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `${v}`}}];
-};
-templates.histogram.annotations.min = ({sample}) => {
-    const v = sample.min;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
-};
-templates.histogram.annotations.max = ({sample}) => {
-    const v = sample.max;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
-};
-templates.histogram.annotations.median = ({sample}) => {
-    const v = sample.median;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
-};
-templates.histogram.annotations.quartile = ({sample}, k) => {
-    const v = sample.quartile(k);
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
-};
-templates.histogram.annotations.percentile = ({sample}, p) => {
-    const v = sample.percentile(p);
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
-};
-templates.histogram.annotations.quantile = ({sample}, p) => {
-    const v = sample.quantile(p);
-    return [attrs.vLine,
-            {value: v, endValue: v, label: {content: `${p}-quantile`}}];
-};
-templates.histogram.annotations.mean = ({sample}) => {
-    const v = sample.mean;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
-};
-templates.histogram.annotations.stdDev = ({sample}, f) => {
-    const m = sample.mean, sd = sample.stdDev;
-    const v = m + f * sd;
-    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
-    const af = Math.abs(f);
-    return [attrs.vLine, {
-        value: v, endValue: v,
-        label: {content: `${sf}${af !== 1 ? af : ''}σ`},
-    }];
-};
-// TODO: avgDevFromMean, avgDevFromMedian
+

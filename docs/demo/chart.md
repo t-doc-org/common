@@ -9,9 +9,10 @@ chartjs: {plugins: {legend: {display: false}}},
 
 ## Chart.js
 
-This section renders charts using {rst:dir}`chartjs` directives.
+This section renders charts of various types using {rst:dir}`chartjs`
+directives.
 
-### Bar charts
+### Bar chart
 
 ([Documentation](https://www.chartjs.org/docs/latest/charts/bar.html))
 
@@ -21,14 +22,21 @@ This section renders charts using {rst:dir}`chartjs` directives.
 ```{chartjs} h-bar
 ```
 
-### Bubble charts
+### Line chart
+
+([Documentation](https://www.chartjs.org/docs/latest/charts/line.html))
+
+```{chartjs} line
+```
+
+### Bubble chart
 
 ([Documentation](https://www.chartjs.org/docs/latest/charts/bubble.html))
 
 ```{chartjs} bubble
 ```
 
-### Pie & doughnut charts
+### Pie & doughnut chart
 
 ([Documentation](https://www.chartjs.org/docs/latest/charts/doughnut.html))
 
@@ -40,7 +48,7 @@ This section renders charts using {rst:dir}`chartjs` directives.
 :style: width: 70%;
 ```
 
-### Boxplot & violin charts
+### Boxplot & violin chart
 
 ([Documentation](https://www.sgratzl.com/chartjs-chart-boxplot/))
 
@@ -50,7 +58,7 @@ This section renders charts using {rst:dir}`chartjs` directives.
 ```{chartjs} violin
 ```
 
-### Error bar charts
+### Error bar chart
 
 ([Documentation](https://www.sgratzl.com/chartjs-chart-error-bars/))
 
@@ -71,7 +79,7 @@ This section renders charts using {rst:dir}`chartjs` directives.
 : border-radius: 0.25rem; padding: 2rem 0;
 ```
 
-### Graph charts
+### Graph chart
 
 ([Documentation](https://www.sgratzl.com/chartjs-chart-graph/))
 
@@ -107,7 +115,7 @@ options: {
 
 ### Template: `histogram`
 
-A histogram from a sample.
+The histogram of a sample.
 
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
@@ -166,6 +174,45 @@ sample: [
 ],
 ```
 
+### Template: `cumulative-distribution-function`
+
+The cumulative distribution function of a sample.
+
+```{chartjs} template:cumulative-distribution-function
+min: 0, max: 24, step: 2,
+options: {
+  borderColor: '#36a2eb', pointBorderColor: '#36a2eb',
+  scales: {
+    x: {title: {display: true, text: "Hours"}},
+    y: {title: {display: true, text: "Visitor frequency"}},
+  },
+},
+annotations: {
+  min: {},
+  'quantile(0.01)': {label: {rotation: -90}},
+  'percentile(5)': {},
+  'quartile(1)': {},
+  median: {},
+  'quartile(3)': {label: {position: 'end'}},
+  'percentile(95)': {label: {position: 'end'}},
+  'quantile(0.99)': {label: {position: 'end', rotation: -90}},
+  max: {label: {position: 'end'}},
+  'hLine(0.5)': {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
+},
+sample: [
+  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
+  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+  13, 11, 8, 11, 14, 10, 10, 10, 9, 11, 14, 11, 7, 12, 8, 9, 15, 9, 10, 11,
+  6, 16, 10, 8, 13, 9, 10, 12, 10, 10, 10, 12, 9, 13, 17, 12, 9, 14, 10, 13,
+  15, 10, 12, 10, 14, 10, 7, 13, 10, 8, 6, 8, 9, 8, 11, 17, 8, 9, 9, 14,
+  6, 8, 8, 9, 9, 10, 5, 11, 9, 10, 12, 8, 8, 8, 11, 3, 6, 20, 5, 14,
+  15, 6, 9, 13, 11, 8, 14, 8, 14, 14, 8, 8, 16, 7, 8, 10, 12, 12, 10, 13,
+  9, 11, 12, 7, 7, 11, 12, 9, 8, 14, 6, 12, 9, 9, 15, 7, 12, 11, 11, 13,
+  6, 10, 8, 15, 8, 12, 5, 18, 6, 10, 6, 6, 11, 8, 11, 5, 12, 5, 11, 6,
+  10, 11, 11, 7, 17, 9, 7, 14, 14, 9, 5, 7, 13, 12, 8, 12, 11, 15, 9, 12,
+],
+```
+
 ### Custom template
 
 ````{list-grid}
@@ -187,6 +234,10 @@ sample: [
   count: 20, min: 10, max: 50,
   ```
 ````
+
+### Custom annotation
+
+% TODO: Add an example
 
 <script type="module">
 const [core, {chart, templates}] =
@@ -237,6 +288,24 @@ chart('h-bar', {
     indexAxis: 'y',
     borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
     backgroundColor: bgColors,
+  },
+});
+
+chart('line', {
+  type: 'line',
+  data: {
+    labels: months.slice(0, 7),
+    datasets: [{
+      data: data(7, 0, 100),
+      borderColor: colors[0], backgroundColor: colors[0],
+    }, {
+      data: data(7, 50, 100),
+      borderColor: colors[1], backgroundColor: colors[1],
+    }],
+  },
+  options: {
+    borderWidth: 2,
+    scales: {y: {beginAtZero: true}},
   },
 });
 
@@ -327,7 +396,7 @@ chart('bar-error-bars', {
 });
 chart('line-error-bars', {
   type: 'lineWithErrorBars', ...errorBar,
-  options: {borderColor: colors[0], backgroundColor: bgColors[0]},
+  options: {borderColor: colors[0], backgroundColor: colors[0]},
 });
 
 chart('venn', {

@@ -17,11 +17,8 @@ export class Sample {
     get length() { return this.dataset.length; }
     [Symbol.iterator]() { return this.dataset[Symbol.iterator](); }
 
-    // Generate a distribution from the sample, using the given bins.
-    distribution(bins) {
-        const dist = new Distribution(bins);
-        dist.add(this);
-        return dist;
+    get range() {
+        return this.dataset[this.dataset.length - 1] - this.dataset[0];
     }
 
     get min() { return this.dataset[0]; }
@@ -66,6 +63,32 @@ export class Sample {
         let res = 0;
         for (const v of this.dataset) res += Math.abs(v - m);
         return res / this.dataset.length;
+    }
+
+    // Compute a distribution from the sample, using the given bins.
+    distribution(bins) {
+        const dist = new Distribution(bins);
+        dist.add(this);
+        return dist;
+    }
+
+    // Generate the cumulative distribution function. Returns an array of
+    // [value, frequency] pairs with increasing value.
+    cumulativeDistributionFunction(normalize = true) {
+        const cdf = [[-Infinity, 0]];
+        for (const v of this.dataset) {
+            const last = cdf[cdf.length - 1];
+            if (v === last[0]) {
+                ++last[1];
+            } else {
+                cdf.push([v, last[1] + 1]);
+            }
+        }
+        if (normalize) {
+            const len = this.dataset.length;
+            for (let i = 1; i < cdf.length; ++i) cdf[i][1] /= len;
+        }
+        return cdf;
     }
 }
 
