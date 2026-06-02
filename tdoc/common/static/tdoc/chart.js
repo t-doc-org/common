@@ -282,15 +282,11 @@ templates['cumulative-distribution-function'] = async (el, {
 }) => {
     sample = new Sample(sample);
     const cdf = sample.cumulativeDistributionFunction(normalize);
-    const data = [];
-    let px, py;
+    const data = [{x: -Number.MAX_VALUE, y: 0}];
     for (let [x, y] of cdf) {
-        if (x === -Infinity) x = -Number.MAX_VALUE;
-        if (py !== undefined) data.push({x, y: py}, {});
-        data.push({x, y});
-        [px, py] = [x, y];
+        data.push({x, y: data[data.length - 1].y}, {}, {x, y});
     }
-    data.push({x: Number.MAX_VALUE, y: py});
+    data.push({x: Number.MAX_VALUE, y: data[data.length - 1].y});
 
     await resolveAnnotations(annotations, {sample});
     return await chart(el, [{

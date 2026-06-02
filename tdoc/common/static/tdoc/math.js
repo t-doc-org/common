@@ -72,13 +72,15 @@ export class Sample {
         return dist;
     }
 
-    // Generate the cumulative distribution function. Returns an array of
-    // [value, frequency] pairs with increasing value.
+    // Compute the cumulative distribution function. Returns a strictly
+    // increasing array of [value, cumulative_frequency] pairs.
     cumulativeDistributionFunction(normalize = true) {
-        const cdf = [[-Infinity, 0]];
+        const cdf = [];
         for (const v of this.dataset) {
             const last = cdf[cdf.length - 1];
-            if (v === last[0]) {
+            if (last === undefined) {
+                cdf.push([v, 1]);
+            } else if (v === last[0]) {
                 ++last[1];
             } else {
                 cdf.push([v, last[1] + 1]);
@@ -86,7 +88,7 @@ export class Sample {
         }
         if (normalize) {
             const len = this.dataset.length;
-            for (let i = 1; i < cdf.length; ++i) cdf[i][1] /= len;
+            for (let i = 0; i < cdf.length; ++i) cdf[i][1] /= len;
         }
         return cdf;
     }
