@@ -123,9 +123,17 @@ annotations: {
   min: {},
   'quantile(0.01)': {label: {rotation: -90}},
   'percentile(5)': {},
+  'avgDev(-1)': {
+    borderColor: '#9966ff',
+    label: {position: '20%', backgroundColor: '#9966ffcc'},
+  },
   'quartile(1)': {},
-  median: {},
+  median: {borderColor: '#9966ff', label: {backgroundColor: '#9966ffcc'}},
   'quartile(3)': {},
+  'avgDev(1)': {
+    borderColor: '#9966ff',
+    label: {position: '20%', backgroundColor: '#9966ffcc'},
+  },
   'percentile(95)': {},
   'quantile(0.99)': {label: {rotation: -90}},
   max: {},

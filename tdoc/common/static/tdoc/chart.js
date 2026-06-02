@@ -187,8 +187,7 @@ annotations.mean = ({sample}) => {
     return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
 };
 annotations.stdDev = ({sample}, f) => {
-    const m = sample.mean, sd = sample.stdDev;
-    const v = m + f * sd;
+    const v = sample.mean + f * sample.stdDev;
     const sf = f < 0 ? '-' : f > 0 ? '+' : '';
     const af = Math.abs(f);
     return [attrs.vLine, {
@@ -196,7 +195,20 @@ annotations.stdDev = ({sample}, f) => {
         label: {content: `${sf}${af !== 1 ? af : ''}σ`},
     }];
 };
-// TODO: avgDev{from: 'median' | 'mean'}
+annotations.avgDev = ({sample}, f, from = 'median') => {
+    const m = from === 'median' ? sample.median :
+              from === 'mean' ? sample.mean : undefined;
+    if (m === undefined) {
+        throw new Error(`{chartjs} avgDev: unsupported 'from': ${from}`);
+    }
+    const v = m + f * sample.avgDev(m);
+    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+    const af = Math.abs(f);
+    return [attrs.vLine, {
+        value: v, endValue: v,
+        label: {content: `${sf}${af !== 1 ? af : ''}AAD`},
+    }];
+};
 
 // A plugin that sets the bar width from the "w" data attribute.
 const barWidth = {
