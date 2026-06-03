@@ -205,6 +205,7 @@ export async function mergeAttrs(mergeTo, attrs, ...as) {
             if (attrs !== undefined && typeof a === 'string') {
                 a = await attrs[a];
             }
+            if (a === undefined) continue;
             if (Array.isArray(a)) {
                 await mergeToRes(...a);
             } else {

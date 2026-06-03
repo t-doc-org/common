@@ -119,47 +119,33 @@ The histogram of a sample.
 
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
-annotations: {
-  min: {},
-  'quantile(0.01)': {label: {rotation: -90}},
-  'percentile(5)': {},
-  'avgDev(-1)': {
+annotations: [{
+  min: {}, max: {},
+  quartile_1: {k: 1}, quartile_3: {k: 3},
+  percentile_5: {p: 5}, percentile_95: {p: 95},
+}, {
+  quantile_01: {p: 0.01}, quantile_99: {p: 0.99},
+  options: {label: {rotation: -90}},
+}, {
+  median: {options: {label: {position: 'start'}}},
+  avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
+  options: {
     borderColor: '#9966ff',
     label: {position: '20%', backgroundColor: '#9966ffcc'},
   },
-  'quartile(1)': {},
-  median: {borderColor: '#9966ff', label: {backgroundColor: '#9966ffcc'}},
-  'quartile(3)': {},
-  'avgDev(1)': {
-    borderColor: '#9966ff',
-    label: {position: '20%', backgroundColor: '#9966ffcc'},
-  },
-  'percentile(95)': {},
-  'quantile(0.99)': {label: {rotation: -90}},
-  max: {},
-  'stdDev(-2)': {
+}, {
+  mean: {options: {label: {content: "average"}}},
+  stdDev_m2: {f: -2}, stdDev_m1: {f: -1}, stdDev_p1: {f: 1}, stdDev_p2: {f: 2},
+  options: {
     borderColor: '#ff6384',
     label: {position: '40%', backgroundColor: '#ff6384cc'},
   },
-  'stdDev(-1)': {
-    borderColor: '#ff6384',
-    label: {position: '40%', backgroundColor: '#ff6384cc'},
+}, {
+  hLine: {y: 25}, vLine: {x: 23},
+  options: {
+    borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'},
   },
-  mean: {
-    borderColor: '#ff6384',
-    label: {content: "average", position: '40%', backgroundColor: '#ff6384cc'},
-  },
-  'stdDev(1)': {
-    borderColor: '#ff6384',
-    label: {position: '40%', backgroundColor: '#ff6384cc'},
-  },
-  'stdDev(2)': {
-    borderColor: '#ff6384',
-    label: {position: '40%', backgroundColor: '#ff6384cc'},
-  },
-  'hLine(25)': {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
-  'vLine(23)': {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
-},
+}],
 options: {
   borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
   backgroundColor: '#36a2eb33',
@@ -195,18 +181,17 @@ options: {
     y: {title: {display: true, text: "Visitor frequency"}},
   },
 },
-annotations: {
-  min: {},
-  'quantile(0.01)': {label: {rotation: -90}},
-  'percentile(5)': {},
-  'quartile(1)': {},
-  median: {},
-  'quartile(3)': {label: {position: 'end'}},
-  'percentile(95)': {label: {position: 'end'}},
-  'quantile(0.99)': {label: {position: 'end', rotation: -90}},
-  max: {label: {position: 'end'}},
-  'hLine(0.5)': {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
-},
+annotations: [{
+  min: {}, percentile: {k: 5}, quartile: {k: 1}, median: {},
+  quantile: {p: 0.01, options: {label: {rotation: -90}}},
+}, {
+  quartile: {k: 3}, percentile: {p: 95}, max: {},
+  quantile: {p: 0.99, options: {label: {rotation: -90}}},
+  options: {label: {position: 'end'}},
+}, {
+  hLine: {y: 0.5},
+  options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
+}],
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,

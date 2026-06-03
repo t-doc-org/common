@@ -8,13 +8,13 @@
 `````{rst:directive} .. chartjs:: [template:]name
 This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 
-- [Chart.js documentation](https://www.chartjs.org/docs/latest/)
-- [Chart types](https://www.chartjs.org/docs/latest/charts/area.html)
-- [Chart.js examples](https://www.chartjs.org/docs/latest/samples/)
+- Chart.js: [documentation](https://www.chartjs.org/docs/latest/),
+  [chart types](https://www.chartjs.org/docs/latest/charts/area.html),
+  [examples](https://www.chartjs.org/docs/latest/samples/)
 - Available plugins:
-  [annotation](https://www.chartjs.org/chartjs-plugin-annotation/master/guide/),
-  [data labels](https://chartjs-plugin-datalabels.netlify.app/guide/),
-  [deferred](https://chartjs-plugin-deferred.netlify.app/guide/)
+  - [chartjs-plugin-annotation](https://www.chartjs.org/chartjs-plugin-annotation/master/)
+  - [chartjs-plugin-datalabels](https://chartjs-plugin-datalabels.netlify.app/)
+  - [chartjs-plugin-deferred](https://chartjs-plugin-deferred.netlify.app/)
 
 The charts are rendered in JavaScript, by importing the {js:mod}`chart`
 module and calling {js:func}`~chart.chart` (or one of the other renderers) for

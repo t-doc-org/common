@@ -118,27 +118,29 @@ export const templates = onSet({}, (obj, name, fn) => {
 
 templates.chart = chart;
 
-const fnRe = /^([^(]+)(?:\((.*)\))?$/;
-
 // Annotation container.
 export const annotations = asyncGet({})
 
-// Resolve annotations chart config options.
-async function resolveAnnotations(anns, data) {
-    // TODO: Change annotations to an array of objects
-    for (const [n, ann] of Object.entries(anns)) {
-        const res = [];
-        if (typeof ann === 'function') {
-            res.push(ann(data));
-        } else {
-            const m = n.match(fnRe);
-            const name = m ? m[1] : n;
-            const fn = await annotations[name];
-            const args = m && m[2] !== undefined ? JSON.parse(`[${m[2]}]`) : [];
-            res.push(fn(data, ...args), ann);
+const annNameRe = /^([^_]*)(?:_.*)?$/;
+
+// Render annotations into chart config options.
+async function renderAnnotations(anns, data) {
+    if (anns?.[Symbol.iterator] === undefined) anns = [anns];
+    const res = {};
+    let id = 0;
+    for (const a of anns) {
+        if (typeof a === 'function') {
+            res[`tdoc$ann$${id++}`] = a(data);
+            continue;
         }
-        anns[n] = await merge(...res);
+        const options = a.options;
+        for (const [k, args] of Object.entries(a)) {
+            if (k === 'options') continue;
+            const fn = await annotations[k.match(annNameRe)[1]];
+            res[`tdoc$ann$${id++}`] = await merge(fn(args, data), a.options, args.options);
+        }
     }
+    return res;
 }
 
 attrs.line = {
@@ -151,42 +153,42 @@ attrs.line = {
 attrs.hLine = [attrs.line, {scaleID: 'y'}];
 attrs.vLine = [attrs.line, {scaleID: 'x'}];
 
-annotations.hLine = ({}, v) => {
-    return [attrs.hLine, {value: v, endValue: v, label: {content: `${v}`}}];
+annotations.hLine = ({y}) => {
+    return [attrs.hLine, {value: y, endValue: y, label: {content: `${y}`}}];
 };
-annotations.vLine = ({}, v) => {
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `${v}`}}];
+annotations.vLine = ({x}) => {
+    return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
 };
-annotations.min = ({sample}) => {
+annotations.min = ({}, {sample}) => {
     const v = sample.min;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
 };
-annotations.max = ({sample}) => {
+annotations.max = ({}, {sample}) => {
     const v = sample.max;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
 };
-annotations.median = ({sample}) => {
+annotations.median = ({}, {sample}) => {
     const v = sample.median;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
 };
-annotations.quartile = ({sample}, k) => {
+annotations.quartile = ({k}, {sample}) => {
     const v = sample.quartile(k);
     return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
 };
-annotations.percentile = ({sample}, p) => {
+annotations.percentile = ({p}, {sample}) => {
     const v = sample.percentile(p);
     return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
 };
-annotations.quantile = ({sample}, p) => {
+annotations.quantile = ({p}, {sample}) => {
     const v = sample.quantile(p);
     return [attrs.vLine,
             {value: v, endValue: v, label: {content: `${p}-quantile`}}];
 };
-annotations.mean = ({sample}) => {
+annotations.mean = ({}, {sample}) => {
     const v = sample.mean;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
 };
-annotations.stdDev = ({sample}, f) => {
+annotations.stdDev = ({f}, {sample}) => {
     const v = sample.mean + f * sample.stdDev;
     const sf = f < 0 ? '-' : f > 0 ? '+' : '';
     const af = Math.abs(f);
@@ -195,7 +197,7 @@ annotations.stdDev = ({sample}, f) => {
         label: {content: `${sf}${af !== 1 ? af : ''}σ`},
     }];
 };
-annotations.avgDev = ({sample}, f, from = 'median') => {
+annotations.avgDev = ({f, from = 'median'}, {sample}) => {
     const m = from === 'median' ? sample.median :
               from === 'mean' ? sample.mean : undefined;
     if (m === undefined) {
@@ -228,7 +230,7 @@ const barWidth = {
 // TODO: Optionally use frequencies instead of counts
 
 templates.histogram = async (el, {
-    sample, uniform, custom, options = {}, annotations = {},
+    sample, uniform, custom, options = {}, annotations = [],
 }) => {
     sample = new Sample(sample);
     const bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
@@ -237,7 +239,7 @@ templates.histogram = async (el, {
     const data = dist.map(
         (lo, hi, c) => ({x: (lo + hi) / 2, y: c, w: hi - lo}));
 
-    await resolveAnnotations(annotations, {sample, dist});
+    const anns = await renderAnnotations(annotations, {sample, dist});
     return await chart(el, [{
         type: 'bar',
         data: {datasets: [{data}]},
@@ -271,14 +273,14 @@ templates.histogram = async (el, {
                         },
                     },
                 },
-                annotation: {annotations},
+                annotation: {annotations: anns},
             },
         },
     }, {options}]);
 };
 
 templates['cumulative-distribution-function'] = async (el, {
-    sample, min, max, step, normalize = true, options = {}, annotations = {},
+    sample, min, max, step, normalize = true, options = {}, annotations = [],
 }) => {
     sample = new Sample(sample);
     const cdf = sample.cumulativeDistributionFunction(normalize);
@@ -288,7 +290,7 @@ templates['cumulative-distribution-function'] = async (el, {
     }
     data.push({x: Number.MAX_VALUE, y: data[data.length - 1].y});
 
-    await resolveAnnotations(annotations, {sample});
+    const anns = await renderAnnotations(annotations, {sample});
     return await chart(el, [{
         type: 'scatter',
         data: {datasets: [{data}]},
@@ -312,7 +314,7 @@ templates['cumulative-distribution-function'] = async (el, {
                                          '#fff',
             plugins: {
                 legend: {display: false},
-                annotation: {annotations},
+                annotation: {annotations: anns},
             },
         },
     }, {options}]);
