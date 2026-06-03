@@ -134,17 +134,16 @@ annotations: [{
     label: {position: '20%', backgroundColor: '#9966ffcc'},
   },
 }, {
-  mean: {options: {label: {content: "average"}}},
+  mean: {},
   stdDev_m2: {f: -2}, stdDev_m1: {f: -1}, stdDev_p1: {f: 1}, stdDev_p2: {f: 2},
   options: {
     borderColor: '#ff6384',
     label: {position: '40%', backgroundColor: '#ff6384cc'},
   },
 }, {
-  hLine: {y: 25}, vLine: {x: 23},
-  options: {
-    borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'},
-  },
+  hLine: {y: 25, options: {label: {content: "half-capacity"}}},
+  vLine: {x: 22, options: {label: {content: "closing time", rotation: -90}}},
+  options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
 }],
 options: {
   borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
@@ -170,19 +169,19 @@ sample: [
 
 ### Template: `cumulative-distribution-function`
 
-The cumulative distribution function of a sample.
+The normalized cumulative distribution function of a sample.
 
 ```{chartjs} template:cumulative-distribution-function
-min: 0, max: 24, step: 2,
+min: 0, max: 24, step: 2, normalize: true,
 options: {
   borderColor: '#36a2eb', pointBorderColor: '#36a2eb',
   scales: {
     x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitor frequency"}},
+    y: {title: {display: true, text: "Visitors (normalized)"}},
   },
 },
 annotations: [{
-  min: {}, percentile: {k: 5}, quartile: {k: 1}, median: {},
+  min: {}, percentile: {p: 5}, quartile: {k: 1}, median: {},
   quantile: {p: 0.01, options: {label: {rotation: -90}}},
 }, {
   quartile: {k: 3}, percentile: {p: 95}, max: {},

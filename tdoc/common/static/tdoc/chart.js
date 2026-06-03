@@ -159,6 +159,12 @@ annotations.hLine = ({y}) => {
 annotations.vLine = ({x}) => {
     return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
 };
+annotations.count = ({f = 1}, {sample}) => {
+    const v = f * sample.count;
+    const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
+    return [attrs.hLine,
+            {value: v, endValue: v, label: {content: `${p}count`}}];
+};
 annotations.min = ({}, {sample}) => {
     const v = sample.min;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
@@ -227,15 +233,15 @@ const barWidth = {
 };
 
 // TODO: Allow taking a distribution instead of a sample
-// TODO: Optionally use frequencies instead of counts
 
 templates.histogram = async (el, {
-    sample, uniform, custom, options = {}, annotations = [],
+    sample, uniform, custom, normalize = false, options = {}, annotations = [],
 }) => {
     sample = new Sample(sample);
     const bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
                  Bins.uniform({...uniform, sample});
     const dist = sample.distribution(bins);
+    if (normalize) dist.normalize();
     const data = dist.map(
         (lo, hi, c) => ({x: (lo + hi) / 2, y: c, w: hi - lo}));
 
@@ -254,7 +260,10 @@ templates.histogram = async (el, {
                     grid: {offset: false},
                     ticks: {stepSize: dist.bins.minWidth},
                 },
-                y: {beginAtZero: true, ticks: {stepSize: 1}, grace: '10%'},
+                y: {
+                    beginAtZero: true, grace: '10%',
+                    ticks: {stepSize: normalize ? undefined : 1},
+                },
             },
             plugins: {
                 legend: {display: false},
@@ -280,7 +289,7 @@ templates.histogram = async (el, {
 };
 
 templates['cumulative-distribution-function'] = async (el, {
-    sample, min, max, step, normalize = true, options = {}, annotations = [],
+    sample, min, max, step, normalize = false, options = {}, annotations = [],
 }) => {
     sample = new Sample(sample);
     const cdf = sample.cumulativeDistributionFunction(normalize);

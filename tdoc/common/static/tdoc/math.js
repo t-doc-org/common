@@ -17,15 +17,16 @@ export class Sample {
     get length() { return this.dataset.length; }
     [Symbol.iterator]() { return this.dataset[Symbol.iterator](); }
 
-    get range() {
-        return this.dataset[this.dataset.length - 1] - this.dataset[0];
-    }
-
+    get count() { return this.dataset.length; }
     get min() { return this.dataset[0]; }
     get max() { return this.dataset[this.dataset.length - 1]; }
     get median() { return this.quantile(0.5); }
     quartile(k) { return this.quantile(k / 4); }
     percentile(p) { return this.quantile(p / 100); }
+
+    get range() {
+        return this.dataset[this.dataset.length - 1] - this.dataset[0];
+    }
 
     quantile(p) {
         // TODO: Improve
@@ -189,6 +190,13 @@ export class Distribution {
         const res = [];
         for (const [lo, hi, c] of this) res.push(fn(lo, hi, c));
         return res;
+    }
+
+    normalize() {
+        const counts = this.counts;
+        let sum = 0;
+        for (let i = 0; i < counts.length; ++i) sum += counts[i];
+        for (let i = 0; i < counts.length; ++i) counts[i] /= sum;
     }
 
     // TODO: Add the same props and methods as Sample, but computed on the
