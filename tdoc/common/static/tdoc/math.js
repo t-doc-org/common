@@ -9,61 +9,55 @@ export function gcd(a, b) {
 
 // A statistical sample.
 export class Sample {
-    constructor(dataset) {
-        dataset.sort((a, b) => a - b);
-        this.dataset = dataset;
+    constructor(values) {
+        values.sort((a, b) => a - b);
+        this.values = values;
     }
 
-    get length() { return this.dataset.length; }
-    [Symbol.iterator]() { return this.dataset[Symbol.iterator](); }
+    get length() { return this.values.length; }
+    [Symbol.iterator]() { return this.values[Symbol.iterator](); }
 
-    get count() { return this.dataset.length; }
-    get min() { return this.dataset[0]; }
-    get max() { return this.dataset[this.dataset.length - 1]; }
+    get count() { return this.values.length; }
+    get min() { return this.values[0]; }
+    get max() { return this.values[this.values.length - 1]; }
+    get range() { return this.values[this.values.length - 1] - this.values[0]; }
     get median() { return this.quantile(0.5); }
     quartile(k) { return this.quantile(k / 4); }
     percentile(p) { return this.quantile(p / 100); }
 
-    get range() {
-        return this.dataset[this.dataset.length - 1] - this.dataset[0];
-    }
-
     quantile(p) {
-        // TODO: Improve
-        const len = this.dataset.length;
+        const len = this.values.length;
         if (len === 0) return NaN;
-        if (len === 1) return this.dataset[0];
         const ri = (len - 1) * p, i = Math.floor(ri), f = ri - i;
-        if (i === len - 1) return this.dataset[len - 1];
-        return (1 - f) * this.dataset[i] + f * this.dataset[i + 1];
+        return (1 - f) * this.values[i] + (f > 0 ? f * this.values[i + 1] : 0);
     }
 
     get mean() {
-        if (this.dataset.length < 1) return NaN;
+        if (this.values.length < 1) return NaN;
         if (this._mean !== undefined) return this._mean;
         let res = 0;
-        for (const v of this.dataset) res += v;
-        res = this._mean = res / this.dataset.length;
+        for (const v of this.values) res += v;
+        res = this._mean = res / this.values.length;
         return res;
     }
 
     get variance() {
-        if (this.dataset.length < 2) return NaN;
+        if (this.values.length < 2) return NaN;
         if (this._variance !== undefined) return this._variance;
         const m = this.mean;
         let res = 0;
-        for (const v of this.dataset) res += Math.pow(v - m, 2);
-        res = this._variance = res / (this.dataset.length - 1);
+        for (const v of this.values) res += Math.pow(v - m, 2);
+        res = this._variance = res / (this.values.length - 1);
         return res;
     }
 
     get stdDev() { return Math.sqrt(this.variance); }
 
     avgDev(m) {
-        if (this.dataset.length < 1) return NaN;
+        if (this.values.length < 1) return NaN;
         let res = 0;
-        for (const v of this.dataset) res += Math.abs(v - m);
-        return res / this.dataset.length;
+        for (const v of this.values) res += Math.abs(v - m);
+        return res / this.values.length;
     }
 
     // Compute a distribution from the sample, using the given bins.
@@ -77,7 +71,7 @@ export class Sample {
     // increasing array of [value, cumulative_frequency] pairs.
     cumulativeDistributionFunction(normalize = true) {
         const cdf = [];
-        for (const v of this.dataset) {
+        for (const v of this.values) {
             const last = cdf[cdf.length - 1];
             if (last === undefined) {
                 cdf.push([v, 1]);
@@ -88,7 +82,7 @@ export class Sample {
             }
         }
         if (normalize) {
-            const len = this.dataset.length;
+            const len = this.values.length;
             for (let i = 0; i < cdf.length; ++i) cdf[i][1] /= len;
         }
         return cdf;
