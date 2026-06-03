@@ -8,6 +8,18 @@ import {
 import {Bins, Distribution, Sample} from './math.js';
 
 // TODO: Add plugins from page metadata
+
+// Allow disabling plugins by default by setting their options to false in page
+// metadata. This doesn't work in Chart.defaults, but it does in per-chart
+// options, so we mix it in there.
+const disabledPlugins = {options: {plugins: {}}};
+for (const [k, v] of Object.entries(tdoc.dyn.chartjs.plugins)) {
+    if (v !== false) continue;
+    disabledPlugins.options.plugins[k] = v;
+    delete tdoc.dyn.chartjs.plugins[k];
+}
+
+// Load Chart.js and plugins.
 const plugins = {
     'chartjs-chart-boxplot': {path: 'index.umd.min.js'},
     'chartjs-chart-error-bars': {path: 'index.umd.min.js'},
@@ -99,7 +111,7 @@ on(window).afterprint(resizeAll);
 // by its wrapper element.
 export async function chart(el, config) {
     // TODO: Add support for annotations
-    config = await merge(config);
+    config = await merge(disabledPlugins, config);
     el = await resolveDyn('chartjs', el);
     await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
