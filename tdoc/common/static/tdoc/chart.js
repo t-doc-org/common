@@ -269,7 +269,7 @@ templates.histogram = async (el, {
         distribution = sample.distribution(bins);
     } else if (distribution !== undefined) {
         bins = Bins.custom({bins: distribution.map(it => it[0])});
-        distribution = Distribution.from(distribution);
+        distribution = Distribution.of(distribution);
     } else {
         throw new Error(
             "{chartjs} histogram: Either sample or distribution is required");
@@ -323,17 +323,29 @@ templates.histogram = async (el, {
 };
 
 templates['cumulative-distribution-function'] = async (el, {
-    sample, min, max, step, normalize = false, options = {}, annotations = [],
+    sample, distribution, min, max, step, normalize = false, options = {},
+    annotations = [],
 }) => {
-    sample = new Sample(sample);
-    const cdf = sample.cumulativeDistributionFunction(normalize);
+    let ds, cdf;
+    if (sample !== undefined) {
+        ds = sample = new Sample(sample);
+        distribution = undefined;
+        cdf = sample.cumulativeDistributionFunction(normalize);
+    } else if (distribution !== undefined) {
+        ds = distribution = Distribution.of(distribution);
+        cdf = distribution.cumulativeDistributionFunction(normalize);
+    } else {
+        throw new Error(`\
+{chartjs} cumulative-distribution-function: Either sample or distribution is\
+ required`);
+    }
     const data = [{x: -Number.MAX_VALUE, y: 0}];
     for (let [x, y] of cdf) {
         data.push({x, y: data[data.length - 1].y}, {}, {x, y});
     }
     data.push({x: Number.MAX_VALUE, y: data[data.length - 1].y});
 
-    const anns = await renderAnnotations(annotations, {sample});
+    const anns = await renderAnnotations(annotations, {sample, distribution});
     return await chart(el, [{
         type: 'scatter',
         data: {datasets: [{data}]},
@@ -341,8 +353,8 @@ templates['cumulative-distribution-function'] = async (el, {
             showLine: true,
             scales: {
                 x: {
-                    min: min ?? sample.min - 0.05 * sample.range,
-                    max: max ?? sample.max + 0.05 * sample.range,
+                    min: min ?? ds.min - 0.05 * ds.range,
+                    max: max ?? ds.max + 0.05 * ds.range,
                     ticks: {stepSize: step, includeBounds: false},
                 },
                 y: {

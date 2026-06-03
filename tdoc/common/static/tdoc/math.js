@@ -141,6 +141,8 @@ export class Bins {
     get length() { return this.bins.length - 1; }
     get lowerBound() { return this.bins[0]; }
     get upperBound() { return this.bins[this.bins.length - 1]; }
+    lo(i) { return this.bins[i]; }
+    hi(i) { return this.bins[i + 1]; }
     bounds(i) { return [this.bins[i], this.bins[i + 1]]; }
 
     get minWidth() {
@@ -174,7 +176,7 @@ Value is out of bounds [${this.lowerBound}; ${this.upperBound}]: ${v}`);
 
 // A statistical distribution.
 export class Distribution {
-    static from(data) {
+    static of(data) {
         const bins = Bins.custom({bins: data.map(it => it[0])});
         const dist = new Distribution(bins);
         const counts = dist.counts;
@@ -309,5 +311,23 @@ export class Distribution {
             }
         };
         return sum(gen()) / count;
+    }
+
+    // Compute the cumulative distribution function. Returns a strictly
+    // increasing array of [value, cumulative_frequency] pairs.
+    cumulativeDistributionFunction(normalize = true) {
+        const cdf = [];
+        const bins = this.bins, counts = this.counts, len = counts.length;
+        let count = 0, e = 0;
+        for (let i = 0; i < len; ++i) {
+            const c = counts[i];
+            if (c === 0) continue;
+            [count, e] = add(c, count, e);
+            cdf.push([bins.lo(i), count + e]);
+        }
+        if (normalize) {
+            for (let i = 0; i < cdf.length; ++i) cdf[i][1] /= count;
+        }
+        return cdf;
     }
 }

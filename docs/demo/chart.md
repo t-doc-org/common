@@ -115,7 +115,8 @@ options: {
 
 ### Template: `histogram`
 
-The histogram of a sample.
+A histogram computed from a sample, with annotations computed from the sample
+as well.
 
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
@@ -166,7 +167,8 @@ sample: [
 ],
 ```
 
-The histogram of a distribution.
+A histogram of a distribution, with annotations computed from the distribution
+as well.
 
 ```{chartjs} template:histogram
 annotations: [{
@@ -198,14 +200,14 @@ options: {
   },
 },
 distribution: [
-  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 5], [12, 4],
+  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
   [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24]
 ],
 ```
 
 ### Template: `cumulative-distribution-function`
 
-The normalized cumulative distribution function of a sample.
+A normalized cumulative distribution function computed from a sample.
 
 ```{chartjs} template:cumulative-distribution-function
 min: 0, max: 24, step: 2, normalize: true,
@@ -238,6 +240,34 @@ sample: [
   9, 11, 12, 7, 7, 11, 12, 9, 8, 14, 6, 12, 9, 9, 15, 7, 12, 11, 11, 13,
   6, 10, 8, 15, 8, 12, 5, 18, 6, 10, 6, 6, 11, 8, 11, 5, 12, 5, 11, 6,
   10, 11, 11, 7, 17, 9, 7, 14, 14, 9, 5, 7, 13, 12, 8, 12, 11, 15, 9, 12,
+],
+```
+
+A normalized cumulative distribution function computed from a distribution.
+
+```{chartjs} template:cumulative-distribution-function
+min: 0, max: 24, step: 2, normalize: true,
+options: {
+  borderColor: '#36a2eb', pointBorderColor: '#36a2eb',
+  scales: {
+    x: {title: {display: true, text: "Hours"}},
+    y: {title: {display: true, text: "Visitors (normalized)"}},
+  },
+},
+annotations: [{
+  min: {}, percentile: {p: 5}, quartile: {k: 1}, median: {},
+  quantile: {p: 0.01, options: {label: {position: '30%', rotation: -90}}},
+}, {
+  quartile: {k: 3}, percentile: {p: 95}, max: {},
+  quantile: {p: 0.99, options: {label: {position: '75%', rotation: -90}}},
+  options: {label: {position: 'end'}},
+}, {
+  hLine: {y: 0.5},
+  options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
+}],
+distribution: [
+  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
+  [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24]
 ],
 ```
 
