@@ -5,7 +5,7 @@ import {
     asyncGet, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject,
     mergeAttrs, on, onSet, qs, qsa, resolveDyn,
 } from './core.js';
-import {Bins, Sample} from './math.js';
+import {Bins, Distribution, Sample} from './math.js';
 
 // TODO: Add plugins from page metadata
 const plugins = {
@@ -159,43 +159,52 @@ annotations.hLine = ({y}) => {
 annotations.vLine = ({x}) => {
     return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
 };
-annotations.count = ({f = 1}, {sample}) => {
-    const v = f * sample.count;
+annotations.count = ({f = 1, dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = f * ds.count;
     const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
     return [attrs.hLine,
             {value: v, endValue: v, label: {content: `${p}count`}}];
 };
-annotations.min = ({}, {sample}) => {
-    const v = sample.min;
+annotations.min = ({dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.min;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
 };
-annotations.max = ({}, {sample}) => {
-    const v = sample.max;
+annotations.max = ({dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.max;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
 };
-annotations.median = ({}, {sample}) => {
-    const v = sample.median;
+annotations.median = ({dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.median;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
 };
-annotations.quartile = ({k}, {sample}) => {
-    const v = sample.quartile(k);
+annotations.quartile = ({k, dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.quartile(k);
     return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
 };
-annotations.percentile = ({p}, {sample}) => {
-    const v = sample.percentile(p);
+annotations.percentile = ({p, dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.percentile(p);
     return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
 };
-annotations.quantile = ({p}, {sample}) => {
-    const v = sample.quantile(p);
+annotations.quantile = ({p, dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.quantile(p);
     return [attrs.vLine,
             {value: v, endValue: v, label: {content: `${p}-quantile`}}];
 };
-annotations.mean = ({}, {sample}) => {
-    const v = sample.mean;
+annotations.mean = ({dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.mean;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
 };
-annotations.stdDev = ({f}, {sample}) => {
-    const v = sample.mean + f * sample.stdDev;
+annotations.stdDev = ({f, dist = false}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const v = ds.mean + f * ds.stdDev;
     const sf = f < 0 ? '-' : f > 0 ? '+' : '';
     const af = Math.abs(f);
     return [attrs.vLine, {
@@ -203,13 +212,15 @@ annotations.stdDev = ({f}, {sample}) => {
         label: {content: `${sf}${af !== 1 ? af : ''}σ`},
     }];
 };
-annotations.avgDev = ({f, from = 'median'}, {sample}) => {
-    const m = from === 'median' ? sample.median :
-              from === 'mean' ? sample.mean : undefined;
+annotations.avgDev = ({f, from = 'median', dist = false},
+                      {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    const m = from === 'median' ? ds.median :
+              from === 'mean' ? ds.mean : undefined;
     if (m === undefined) {
         throw new Error(`{chartjs} avgDev: unsupported 'from': ${from}`);
     }
-    const v = m + f * sample.avgDev(m);
+    const v = m + f * ds.avgDev(m);
     const sf = f < 0 ? '-' : f > 0 ? '+' : '';
     const af = Math.abs(f);
     return [attrs.vLine, {
@@ -235,17 +246,27 @@ const barWidth = {
 // TODO: Allow taking a distribution instead of a sample
 
 templates.histogram = async (el, {
-    sample, uniform, custom, normalize = false, options = {}, annotations = [],
+    sample, uniform, custom, distribution, normalize = false, options = {},
+    annotations = [],
 }) => {
-    sample = new Sample(sample);
-    const bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
-                 Bins.uniform({...uniform, sample});
-    const dist = sample.distribution(bins);
-    if (normalize) dist.normalize();
-    const data = dist.map(
+    let bins;
+    if (sample !== undefined) {
+        sample = new Sample(sample);
+        bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
+                                      Bins.uniform({...uniform, sample});
+        distribution = sample.distribution(bins);
+    } else if (distribution !== undefined) {
+        bins = Bins.custom({bins: distribution.map(it => it[0])});
+        distribution = Distribution.from(distribution);
+    } else {
+        throw new Error(
+            "{chartjs} histogram: Either sample or distribution is required");
+    }
+    if (normalize) distribution.normalize();
+    const data = distribution.map(
         (lo, hi, c) => ({x: (lo + hi) / 2, y: c, w: hi - lo}));
 
-    const anns = await renderAnnotations(annotations, {sample, dist});
+    const anns = await renderAnnotations(annotations, {sample, distribution});
     return await chart(el, [{
         type: 'bar',
         data: {datasets: [{data}]},
@@ -255,10 +276,10 @@ templates.histogram = async (el, {
             scales: {
                 x: {
                     type: 'linear',
-                    min: dist.bins.lowerBound, max: dist.bins.upperBound,
+                    min: distribution.bins.lowerBound, max: distribution.bins.upperBound,
                     offset: false,
                     grid: {offset: false},
-                    ticks: {stepSize: dist.bins.minWidth},
+                    ticks: {stepSize: distribution.bins.minWidth},
                 },
                 y: {
                     beginAtZero: true, grace: '10%',
@@ -273,11 +294,12 @@ templates.histogram = async (el, {
                             if (items.length === 0) return "";
                             const it = items[0];
                             const sx = it.chart.scales.x, x = it.parsed.x;
-                            const i = dist.bins.find(x);
-                            const [lo, hi] = dist.bins.bounds(i);
+                            const i = distribution.bins.find(x);
+                            const [lo, hi] = distribution.bins.bounds(i);
                             const flo = formatTick(sx, lo);
                             const fhi = formatTick(sx, hi);
-                            const c = i == dist.bins.length - 1 ? "]" : "[";
+                            const c = i == distribution.bins.length - 1 ? "]"
+                                                                        : "[";
                             return `[${flo}; ${fhi}${c}`;
                         },
                     },

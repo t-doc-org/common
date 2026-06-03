@@ -127,11 +127,10 @@ annotations: [{
   quantile_01: {p: 0.01}, quantile_99: {p: 0.99},
   options: {label: {rotation: -90}},
 }, {
-  median: {options: {label: {position: 'start'}}},
-  avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
+  median: {}, avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
   options: {
     borderColor: '#9966ff',
-    label: {position: '20%', backgroundColor: '#9966ffcc'},
+    label: {position: '25%', backgroundColor: '#9966ffcc'},
   },
 }, {
   mean: {},
@@ -164,6 +163,43 @@ sample: [
   9, 11, 12, 7, 7, 11, 12, 9, 8, 14, 6, 12, 9, 9, 15, 7, 12, 11, 11, 13,
   6, 10, 8, 15, 8, 12, 5, 18, 6, 10, 6, 6, 11, 8, 11, 5, 12, 5, 11, 6,
   10, 11, 11, 7, 17, 9, 7, 14, 14, 9, 5, 7, 13, 12, 8, 12, 11, 15, 9, 12,
+],
+```
+
+The histogram of a distribution.
+
+```{chartjs} template:histogram
+annotations: [{
+  min: {}, max: {},
+  quartile_1: {k: 1}, quartile_3: {k: 3},
+  percentile_5: {p: 5}, percentile_95: {p: 95},
+}, {
+  quantile_01: {p: 0.01}, quantile_99: {p: 0.99},
+  options: {label: {position: '30%', rotation: -90}},
+}, {
+  median: {}, avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
+  options: {
+    borderColor: '#9966ff',
+    label: {position: '20%', backgroundColor: '#9966ffcc'},
+  },
+}, {
+  mean: {}, stdDev_m1: {f: -1}, stdDev_p1: {f: 1},
+  options: {
+    borderColor: '#ff6384',
+    label: {position: '30%', backgroundColor: '#ff6384cc'},
+  },
+}],
+options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
+  scales: {
+    x: {title: {display: true, text: "Hours"}},
+    y: {title: {display: true, text: "Visitors"}},
+  },
+},
+distribution: [
+  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 5], [12, 4],
+  [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24]
 ],
 ```
 

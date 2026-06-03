@@ -7,11 +7,28 @@ export function gcd(a, b) {
     return a;
 }
 
+// Add v to sum, using Neumaier's algorithm.
+// https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
+export function add(v, sum, e = 0) {
+    const t = sum + v;
+    return Math.abs(sum) >= Math.abs(v) ? [t, e + (sum - t) + v]
+                                        : [t, e + (v - t) + sum];
+}
+
+// Return the sum of the values of an iterable, using Neumaier's algorithm.
+// https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
+export function sum(values) {
+    let sum = 0, e = 0;
+    for (const v of values) [sum, e] = add(v, sum, e);
+    return sum;
+}
+
 // A statistical sample.
 export class Sample {
     constructor(values) {
         values.sort((a, b) => a - b);
         this.values = values;
+        this._cache = {};
     }
 
     get length() { return this.values.length; }
@@ -20,7 +37,7 @@ export class Sample {
     get count() { return this.values.length; }
     get min() { return this.values[0]; }
     get max() { return this.values[this.values.length - 1]; }
-    get range() { return this.values[this.values.length - 1] - this.values[0]; }
+    get range() { return this.max - this.min; }
     get median() { return this.quantile(0.5); }
     quartile(k) { return this.quantile(k / 4); }
     percentile(p) { return this.quantile(p / 100); }
@@ -33,31 +50,31 @@ export class Sample {
     }
 
     get mean() {
-        if (this.values.length < 1) return NaN;
-        if (this._mean !== undefined) return this._mean;
-        let res = 0;
-        for (const v of this.values) res += v;
-        res = this._mean = res / this.values.length;
-        return res;
+        if (this._cache.mean !== undefined) return this._cache.mean;
+        if (this.values.length < 1) return this._cache.mean = NaN;
+        return this._cache.mean = sum(this.values) / this.values.length;
     }
 
     get variance() {
-        if (this.values.length < 2) return NaN;
-        if (this._variance !== undefined) return this._variance;
+        if (this._cache.variance !== undefined) return this._cache.variance;
+        const values = this.values;
+        if (values.length < 2) return this._cache.variance = NaN;
         const m = this.mean;
-        let res = 0;
-        for (const v of this.values) res += Math.pow(v - m, 2);
-        res = this._variance = res / (this.values.length - 1);
-        return res;
+        function* gen() {
+            for (const v of values) yield Math.pow(v - m, 2);
+        }
+        return this._cache.variance = sum(gen()) / (values.length - 1);
     }
 
     get stdDev() { return Math.sqrt(this.variance); }
 
     avgDev(m) {
-        if (this.values.length < 1) return NaN;
-        let res = 0;
-        for (const v of this.values) res += Math.abs(v - m);
-        return res / this.values.length;
+        const values = this.values;
+        if (values.length < 1) return NaN;
+        function* gen() {
+            for (const v of values) yield Math.abs(v - m);
+        }
+        return sum(gen()) / values.length;
     }
 
     // Compute a distribution from the sample, using the given bins.
@@ -157,9 +174,20 @@ Value is out of bounds [${this.lowerBound}; ${this.upperBound}]: ${v}`);
 
 // A statistical distribution.
 export class Distribution {
+    static from(data) {
+        const bins = Bins.custom({bins: data.map(it => it[0])});
+        const dist = new Distribution(bins);
+        const counts = dist.counts;
+        for (const [v, c] of data) {
+            if (c !== undefined) counts[bins.find(v)] += c;
+        }
+        return dist;
+    }
+
     constructor(bins) {
         this.bins = bins;
         this.counts = Array(bins.length).fill(0);
+        this._cache = {};
     }
 
     add(value) {
@@ -171,6 +199,7 @@ export class Distribution {
         } else {
             throw new Error(`Unsupported sample value type: ${value}`);
         }
+        this._cache = {};
     }
 
     get length() { return this.bins.length; }
@@ -187,12 +216,98 @@ export class Distribution {
     }
 
     normalize() {
-        const counts = this.counts;
-        let sum = 0;
-        for (let i = 0; i < counts.length; ++i) sum += counts[i];
+        const sum = this.sum, counts = this.counts;
         for (let i = 0; i < counts.length; ++i) counts[i] /= sum;
+        this._cache = {};
     }
 
-    // TODO: Add the same props and methods as Sample, but computed on the
-    // distribution
+    get count() {
+        if (this._cache.count !== undefined) return this._cache.count;
+        return this._cache.count = sum(this.counts);
+    }
+
+    get min() {
+        if (this._cache.min !== undefined) return this._cache.min;
+        for (const [i, c] of this.counts.entries()) {
+            if (c <= 0) continue;
+            const res = this._cache.min = this.bins.bounds(i)[0];
+            return res;
+        }
+        return this._cache.min = NaN;
+    }
+
+    get max() {
+        const counts = this.counts;
+        for (let i = counts.length - 1; i >= 0; --i) {
+            const c = counts[i];
+            if (c <= 0) continue;
+            const res = this._cache.max = this.bins.bounds(i)[1];
+            return res;
+        }
+        return this._cache.max = NaN;
+    }
+
+    get range() { return this.max - this.min; }
+    get median() { return this.quantile(0.5); }
+    quartile(k) { return this.quantile(k / 4); }
+    percentile(p) { return this.quantile(p / 100); }
+
+    quantile(p) {
+        const count = this.count;
+        if (count === 0) return NaN;
+        const th = p * count, counts = this.counts;
+        let cnt = 0, e = 0;
+        for (let i = 0; i < counts.length; ++i) {
+            const c = counts[i];
+            [cnt, e] = add(c, cnt, e);
+            if (c === 0 || cnt < th) continue;
+            const [lo, hi] = this.bins.bounds(i);
+            const f = (cnt - th) / c;
+            return f * lo + (1 - f) * hi;
+        }
+        return NaN;
+    }
+
+    get mean() {
+        if (this._cache.mean !== undefined) return this._cache.mean;
+        const count = this.count;
+        if (count === 0) return this._cache.mean = NaN;
+        const bins = this.bins, counts = this.counts;
+        function* gen() {
+            for (let i = 0; i < counts.length; ++i) {
+                const [lo, hi] = bins.bounds(i);
+                yield counts[i] * 0.5 * (lo + hi);
+            }
+        };
+        return this._cache.mean = sum(gen()) / count;
+    }
+
+    get variance() {
+        if (this._cache.variance !== undefined) return this._cache.variance;
+        const count = this.count;
+        if (count < 2) return this._cache.variance = NaN;
+        const m = this.mean, bins = this.bins, counts = this.counts;
+        function* gen() {
+            for (let i = 0; i < counts.length; ++i) {
+                const [lo, hi] = bins.bounds(i);
+                yield counts[i] * Math.pow(0.5 * (lo + hi) - m, 2);
+            }
+        };
+        return this._cache.variance = sum(gen()) / (count - 1);
+    }
+
+    get stdDev() { return Math.sqrt(this.variance); }
+
+    avgDev(m) {
+        const count = this.count;
+        if (count < 1) return NaN;
+        const bins = this.bins, counts = this.counts;
+        function* gen() {
+            for (let i = 0; i < counts.length; ++i) {
+                const [lo, hi] = bins.bounds(i);
+                yield counts[i] * Math.abs(0.5 * (lo + hi) - m);
+            }
+        };
+        return sum(gen()) / count;
+    }
 }
