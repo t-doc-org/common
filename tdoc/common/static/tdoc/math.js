@@ -11,8 +11,8 @@ export function gcd(a, b) {
 // https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
 export function add(v, sum, e = 0) {
     const t = sum + v;
-    return Math.abs(sum) >= Math.abs(v) ? [t, e + (sum - t) + v]
-                                        : [t, e + (v - t) + sum];
+    return Math.abs(sum) >= Math.abs(v) ? [t, e + ((sum - t) + v)]
+                                        : [t, e + ((v - t) + sum)];
 }
 
 // Return the sum of the values of an iterable, using Neumaier's algorithm.
@@ -20,7 +20,7 @@ export function add(v, sum, e = 0) {
 export function sum(values) {
     let sum = 0, e = 0;
     for (const v of values) [sum, e] = add(v, sum, e);
-    return sum;
+    return sum + e;
 }
 
 // A statistical sample.
@@ -260,9 +260,9 @@ export class Distribution {
         for (let i = 0; i < counts.length; ++i) {
             const c = counts[i];
             [cnt, e] = add(c, cnt, e);
-            if (c === 0 || cnt < th) continue;
+            if (c === 0 || cnt + e < th) continue;
             const [lo, hi] = this.bins.bounds(i);
-            const f = (cnt - th) / c;
+            const f = ((cnt + e) - th) / c;
             return f * lo + (1 - f) * hi;
         }
         return NaN;
