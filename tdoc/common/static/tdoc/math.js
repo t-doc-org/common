@@ -323,22 +323,23 @@ export class Distribution {
     }
 
     get modes() {
+        // TODO: Fix the calculation for non-uniform distributions and maxima
+        //       that span multiple bins.
         const res = [];
         const bins = this.bins, counts = this.counts, len = counts.length;
         let prev = 0, max, ib;
-        for (let i = 0; i < len; ++i) {
-            const c = counts[i];
+        for (let i = 0; i < len + 1; ++i) {
+            const c = i < len ? counts[i] : 0;
             if (c > prev && (max === undefined || c > max)) {
                 [max, ib] = [c, i];
             } else if (max !== undefined && c < max) {
                 const lo = bins.lo(ib), hi = bins.hi(i - 1);
-                const cm = counts[ib], cb = ib > 0 ? counts[ib - 1] : cm;
+                const cm = counts[ib], cb = ib > 0 ? counts[ib - 1] : 0;
                 res.push(lo + (hi - lo) * (cm - cb) / (2 * cm - cb - c));
                 max = undefined;
             }
             prev = c;
         }
-        if (max !== undefined) res.push(bins.hi(len - 1));
         return res;
     }
 
