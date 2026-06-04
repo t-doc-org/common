@@ -3,9 +3,9 @@ version = "stable"
 hermetic = true
 
 [tags]
-testing = "0.75"
-stable = "0.75"
-previous = "0.74"
+testing = "0.76"
+stable = "0.76"
+previous = "0.75"
 
 [python]
 minimum = "3.12"
