@@ -137,19 +137,27 @@ async function renderAnnotations(anns, data) {
     if (anns?.[Symbol.iterator] === undefined) anns = [anns];
     const res = {};
     let id = 0;
-    for (const a of anns) {
-        if (typeof a === 'function') {
-            res[`tdoc$ann$${id++}`] = a(data);
+    for (const as of anns) {
+        if (typeof as === 'function') {
+            for (const a of as(data)) res[`tdoc$ann$${id++}`] = a;
             continue;
         }
-        const options = a.options;
-        for (const [k, args] of Object.entries(a)) {
+        const options = as.options;
+        for (const [k, args] of Object.entries(as)) {
             if (k === 'options') continue;
             const fn = await annotations[k.match(annNameRe)[1]];
-            res[`tdoc$ann$${id++}`] = await merge(fn(args, data), a.options, args.options);
+            for (const a of fn(args, data)) {
+                res[`tdoc$ann$${id++}`] = await merge(a, as.options,
+                                                      args.options);
+            }
         }
     }
     return res;
+}
+
+function map(arr, fn) {
+    if (Array.isArray(arr)) return arr.map(fn);
+    return [fn(arr)];
 }
 
 attrs.line = {
@@ -163,69 +171,86 @@ attrs.hLine = [attrs.line, {scaleID: 'y'}];
 attrs.vLine = [attrs.line, {scaleID: 'x'}];
 
 annotations.hLine = ({y}) => {
-    return [attrs.hLine, {value: y, endValue: y, label: {content: `${y}`}}];
+    return map(y, y => {
+        return [attrs.hLine, {value: y, endValue: y, label: {content: `${y}`}}];
+    });
 };
 annotations.vLine = ({x}) => {
-    return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
+    return map(x, x => {
+        return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
+    });
 };
 annotations.count = ({f = 1, dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    const v = f * ds.count;
-    const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
-    return [attrs.hLine,
-            {value: v, endValue: v, label: {content: `${p}count`}}];
+    const count = ds.count;
+    return map(f, f => {
+        const v = f * count;
+        const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
+        return [attrs.hLine,
+                {value: v, endValue: v, label: {content: `${p}count`}}];
+    });
 };
 annotations.min = ({dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.min;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "min"}}];
+    return [[attrs.vLine, {value: v, endValue: v, label: {content: "min"}}]];
 };
 annotations.max = ({dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.max;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "max"}}];
+    return [[attrs.vLine, {value: v, endValue: v, label: {content: "max"}}]];
 };
 annotations.median = ({dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.median;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "median"}}];
+    return [[attrs.vLine, {value: v, endValue: v, label: {content: "median"}}]];
 };
 annotations.quartile = ({k, dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    const v = ds.quartile(k);
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `Q${k}`}}];
+    return map(k, k => {
+        const v = ds.quartile(k);
+        return [attrs.vLine,
+                {value: v, endValue: v, label: {content: `Q${k}`}}];
+    });
 };
 annotations.percentile = ({p, dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    const v = ds.percentile(p);
-    return [attrs.vLine, {value: v, endValue: v, label: {content: `P${p}`}}];
+    return map(p, p => {
+        const v = ds.percentile(p);
+        return [attrs.vLine,
+                {value: v, endValue: v, label: {content: `P${p}`}}];
+    });
 };
 annotations.quantile = ({p, dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    const v = ds.quantile(p);
-    return [attrs.vLine,
-            {value: v, endValue: v, label: {content: `${p}-quantile`}}];
+    return map(p, p => {
+        const v = ds.quantile(p);
+        return [attrs.vLine,
+                {value: v, endValue: v, label: {content: `${p}-quantile`}}];
+    });
 };
 annotations.mean = ({dist = false}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.mean;
-    return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
+    return [[attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}]];
 };
 annotations.stdDev = ({f, population = false, dist = false},
                       {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    let s = ds.stdDev;
+    let m = ds.mean, s = ds.stdDev;
     if (population) {
         const c = ds.count;
         s *= Math.sqrt(c / (c - 1));
     }
-    const v = ds.mean + f * s;
-    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
-    const af = Math.abs(f);
-    return [attrs.vLine, {
-        value: v, endValue: v,
-        label: {content: `${sf}${af !== 1 ? af : ''}σ`},
-    }];
+    return map(f, f => {
+        const v = m + f * s;
+        const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+        const af = Math.abs(f);
+        return [attrs.vLine, {
+            value: v, endValue: v,
+            label: {content: `${sf}${af !== 1 ? af : ''}σ`},
+        }];
+    });
 };
 annotations.avgDev = ({f, from = 'median', dist = false},
                       {sample, distribution}) => {
@@ -235,13 +260,16 @@ annotations.avgDev = ({f, from = 'median', dist = false},
     if (m === undefined) {
         throw new Error(`{chartjs} avgDev: unsupported 'from': ${from}`);
     }
-    const v = m + f * ds.avgDev(m);
-    const sf = f < 0 ? '-' : f > 0 ? '+' : '';
-    const af = Math.abs(f);
-    return [attrs.vLine, {
-        value: v, endValue: v,
-        label: {content: `${sf}${af !== 1 ? af : ''}AAD`},
-    }];
+    const ad = ds.avgDev(m);
+    return map(f, f => {
+        const v = m + f * ad;
+        const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+        const af = Math.abs(f);
+        return [attrs.vLine, {
+            value: v, endValue: v,
+            label: {content: `${sf}${af !== 1 ? af : ''}AAD`},
+        }];
+    });
 };
 
 // A plugin that sets the bar width from the "w" data attribute.

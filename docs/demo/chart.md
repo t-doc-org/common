@@ -121,21 +121,18 @@ as well.
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
 annotations: [{
-  min: {}, max: {},
-  quartile_1: {k: 1}, quartile_3: {k: 3},
-  percentile_5: {p: 5}, percentile_95: {p: 95},
+  min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
 }, {
-  quantile_01: {p: 0.01}, quantile_99: {p: 0.99},
+  quantile: {p: [0.01, 0.99]},
   options: {label: {rotation: -90}},
 }, {
-  median: {}, avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
+  median: {}, avgDev: {f: [-1, 1]},
   options: {
     borderColor: '#9966ff',
     label: {position: '25%', backgroundColor: '#9966ffcc'},
   },
 }, {
-  mean: {},
-  stdDev_m2: {f: -2}, stdDev_m1: {f: -1}, stdDev_p1: {f: 1}, stdDev_p2: {f: 2},
+  mean: {}, stdDev: {f: [-2, -1, 1, 2]},
   options: {
     borderColor: '#ff6384',
     label: {position: '40%', backgroundColor: '#ff6384cc'},
@@ -172,20 +169,18 @@ as well.
 
 ```{chartjs} template:histogram
 annotations: [{
-  min: {}, max: {},
-  quartile_1: {k: 1}, quartile_3: {k: 3},
-  percentile_5: {p: 5}, percentile_95: {p: 95},
+  min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
 }, {
-  quantile_01: {p: 0.01}, quantile_99: {p: 0.99},
+  quantile: {p: [0.01, 99]},
   options: {label: {position: '30%', rotation: -90}},
 }, {
-  median: {}, avgDev_m1: {f: -1}, avgDev_p1: {f: 1},
+  median: {}, avgDev: {f: [-1, 1]},
   options: {
     borderColor: '#9966ff',
     label: {position: '20%', backgroundColor: '#9966ffcc'},
   },
 }, {
-  mean: {}, stdDev_m1: {f: -1}, stdDev_p1: {f: 1},
+  mean: {}, stdDev: {f: [-1, 1]},
   options: {
     borderColor: '#ff6384',
     label: {position: '30%', backgroundColor: '#ff6384cc'},
