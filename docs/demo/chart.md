@@ -144,8 +144,8 @@ annotations: [{
     label: {position: 'end', rotation: -90, backgroundColor: '#ff9f40cc'},
   },
 }, {
-  hLine: {y: 25, options: {label: {content: "half-capacity"}}},
-  vLine: {x: 22, options: {label: {content: "closing time", rotation: -90}}},
+  hLine: {y: 25, label: "half-capacity"},
+  vLine: {x: 22, label: "closing time", options: {label: {rotation: -90}}},
   options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
 }],
 options: {

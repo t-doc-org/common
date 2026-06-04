@@ -170,71 +170,79 @@ attrs.line = {
 attrs.hLine = [attrs.line, {scaleID: 'y'}];
 attrs.vLine = [attrs.line, {scaleID: 'x'}];
 
-annotations.hLine = ({y}) => {
+annotations.hLine = ({y, label}) => {
     return map(y, y => {
-        return [attrs.hLine, {value: y, endValue: y, label: {content: `${y}`}}];
+        return [attrs.hLine,
+                {value: y, endValue: y, label: {content: label ?? `${y}`}}];
     });
 };
-annotations.vLine = ({x}) => {
+annotations.vLine = ({x, label}) => {
     return map(x, x => {
-        return [attrs.vLine, {value: x, endValue: x, label: {content: `${x}`}}];
+        return [attrs.vLine,
+                {value: x, endValue: x, label: {content: label ?? `${x}`}}];
     });
 };
-annotations.count = ({f = 1, dist = false}, {sample, distribution}) => {
+annotations.count = ({f = 1, dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const count = ds.count;
     return map(f, f => {
         const v = f * count;
         const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
-        return [attrs.hLine,
-                {value: v, endValue: v, label: {content: `${p}count`}}];
+        return [attrs.hLine, {
+            value: v, endValue: v, label: {content: label ?? `${p}count`},
+        }];
     });
 };
-annotations.min = ({dist = false}, {sample, distribution}) => {
+annotations.min = ({dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.min;
-    return [[attrs.vLine, {value: v, endValue: v, label: {content: "min"}}]];
+    return [[attrs.vLine,
+             {value: v, endValue: v, label: {content: label ?? "min"}}]];
 };
-annotations.max = ({dist = false}, {sample, distribution}) => {
+annotations.max = ({dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.max;
-    return [[attrs.vLine, {value: v, endValue: v, label: {content: "max"}}]];
+    return [[attrs.vLine,
+             {value: v, endValue: v, label: {content: label ?? "max"}}]];
 };
-annotations.median = ({dist = false}, {sample, distribution}) => {
+annotations.median = ({dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.median;
-    return [[attrs.vLine, {value: v, endValue: v, label: {content: "median"}}]];
+    return [[attrs.vLine,
+             {value: v, endValue: v, label: {content: label ?? "median"}}]];
 };
-annotations.quartile = ({k, dist = false}, {sample, distribution}) => {
+annotations.quartile = ({k, dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     return map(k, k => {
         const v = ds.quartile(k);
         return [attrs.vLine,
-                {value: v, endValue: v, label: {content: `Q${k}`}}];
+                {value: v, endValue: v, label: {content: label ?? `Q${k}`}}];
     });
 };
-annotations.percentile = ({p, dist = false}, {sample, distribution}) => {
+annotations.percentile = ({p, dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     return map(p, p => {
         const v = ds.percentile(p);
         return [attrs.vLine,
-                {value: v, endValue: v, label: {content: `P${p}`}}];
+                {value: v, endValue: v, label: {content: label ?? `P${p}`}}];
     });
 };
-annotations.quantile = ({p, dist = false}, {sample, distribution}) => {
+annotations.quantile = ({p, dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     return map(p, p => {
         const v = ds.quantile(p);
-        return [attrs.vLine,
-                {value: v, endValue: v, label: {content: `${p}-quantile`}}];
+        return [attrs.vLine, {
+            value: v, endValue: v, label: {content: label ?? `${p}-quantile`},
+        }];
     });
 };
-annotations.mean = ({dist = false}, {sample, distribution}) => {
+annotations.mean = ({dist = false, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const v = ds.mean;
-    return [[attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}]];
+    return [[attrs.vLine,
+             {value: v, endValue: v, label: {content: label ?? "mean"}}]];
 };
-annotations.stdDev = ({f, population = false, dist = false},
+annotations.stdDev = ({f, population = false, dist = false, label},
                       {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     let m = ds.mean, s = ds.stdDev;
@@ -244,15 +252,16 @@ annotations.stdDev = ({f, population = false, dist = false},
     }
     return map(f, f => {
         const v = m + f * s;
-        const sf = f < 0 ? '-' : f > 0 ? '+' : '';
-        const af = Math.abs(f);
-        return [attrs.vLine, {
-            value: v, endValue: v,
-            label: {content: `${sf}${af !== 1 ? af : ''}σ`},
-        }];
+        let content = label;
+        if (content === undefined) {
+            const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+            const af = Math.abs(f);
+            content = `${sf}${af !== 1 ? af : ''}σ`;
+        }
+        return [attrs.vLine, {value: v, endValue: v, label: {content}}];
     });
 };
-annotations.avgDev = ({f, from = 'median', dist = false},
+annotations.avgDev = ({f, from = 'median', dist = false, label},
                       {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     const m = from === 'median' ? ds.median :
@@ -263,15 +272,16 @@ annotations.avgDev = ({f, from = 'median', dist = false},
     const ad = ds.avgDev(m);
     return map(f, f => {
         const v = m + f * ad;
-        const sf = f < 0 ? '-' : f > 0 ? '+' : '';
-        const af = Math.abs(f);
-        return [attrs.vLine, {
-            value: v, endValue: v,
-            label: {content: `${sf}${af !== 1 ? af : ''}AAD`},
-        }];
+        let content = label;
+        if (content === undefined) {
+            const sf = f < 0 ? '-' : f > 0 ? '+' : '';
+            const af = Math.abs(f);
+            content = `${sf}${af !== 1 ? af : ''}AAD`;
+        }
+        return [attrs.vLine, {value: v, endValue: v, label: {content}}];
     });
 };
-annotations.mode = ({k, dist = true}, {sample, distribution}) => {
+annotations.mode = ({k, dist = true, label}, {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
     let modes = ds.modes;
     const ms = k !== undefined ? map(k, k => modes[k - 1]) : modes;
@@ -279,7 +289,7 @@ annotations.mode = ({k, dist = true}, {sample, distribution}) => {
     for (const m of ms) {
         if (m === undefined) continue;
         res.push([attrs.vLine,
-                  {value: m, endValue: m, label: {content: `mode`}}]);
+                  {value: m, endValue: m, label: {content: label ?? `mode`}}]);
     }
     return res;
 }
