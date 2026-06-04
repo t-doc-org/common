@@ -5,6 +5,7 @@ import {
     asyncGet, domLoaded, gcd, instantiateDynTemplate, mathJaxReady, mergeAttrs,
     onSet, qs, qsa, resolveDyn,
 } from './core.js';
+import {Distribution, Sample} from './math.js';
 
 export {gcd};
 
@@ -184,19 +185,13 @@ export const templates = onSet({}, (obj, name, fn) => {
     instantiateDynTemplate('jsxgraph', name, fn);
 });
 
-// Define a template.
-// TODO(0.76): Remove
-export function template(name, fn) {
-    templates[name] = fn;
-}
-
 templates.grid = (el, {width = 35, height = 10, grid = {}, board = {}}) => {
     return initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
             grid: {majorStep: 1, minorElements: 0},
         },
-        {grid}, nonInteractive, board,
+        {grid}, attrs.nonInteractive, board,
     ]);
 };
 
@@ -221,6 +216,84 @@ templates.axes = (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
         },
         withAxesLabels(labelsX ?? labels,
                        labelsY ?? labels),
-        {grid: grid ?? {}}, nonInteractive, board ?? [],
+        {grid: grid ?? {}}, attrs.nonInteractive, board ?? [],
     ]);
+};
+
+templates['cumulative-distribution-function'] = async (el, {
+    sample, distribution, min, max, step, normalize = false, yAnchor = 0.06,
+    defaults = {}, options = {},
+}) => {
+    let ds, cdf;
+    if (sample !== undefined) {
+        ds = sample = new Sample(sample);
+        distribution = undefined;
+        cdf = sample.cumulativeDistributionFunction(normalize);
+    } else if (distribution !== undefined) {
+        ds = distribution = Distribution.of(distribution);
+        cdf = distribution.cumulativeDistributionFunction(normalize);
+    } else {
+        throw new Error(`\
+{jsxgraph} cumulative-distribution-function: Either sample or distribution is\
+ required`);
+    }
+
+    min ??= ds.min - 0.05 * ds.range;
+    max ??= ds.max + 0.05 * ds.range;
+    const last = cdf[cdf.length - 1][1];
+    const bounds = [min - yAnchor * (max - min), 1.1 * last, max, -0.2 * last];
+
+    function f(x) {
+        if (x < cdf[0][0]) return 0;
+        for (let i = 1; i < cdf.length; ++i) {
+            if (x < cdf[i][0]) return cdf[i - 1][1];
+        }
+        return cdf[cdf.length - 1][1];
+    }
+
+    return initBoard(el, [
+        defaults,
+        {
+            boundingBox: bounds, keepAspectRatio: false, axis: true,
+            zoom: {factorY: 1},
+            defaultAxes: {
+                x: {
+                    ticks: {
+                        insertTicks: true, majorHeight: -1, minorHeight: 10,
+                        drawZero: true, includeBoundaries: true,
+                        strokeOpacity: 0.25,
+                    },
+                },
+                y: {
+                    name: '\\[f\\]',
+                    position: 'fixed', anchor: 'left',
+                    anchorDist: `${1 - 1 / (1 + yAnchor)}fr`,
+                    ticks: {
+                        insertTicks: true, majorHeight: -1, minorHeight: 10,
+                        strokeOpacity: 0.25,
+                    },
+                },
+            },
+            defaults: {
+                functiongraph: {strokeWidth: 3},
+                point: {size: 2, strokeWidth: 1, fixed: true, withLabel: false},
+            },
+        },
+        options,
+    ], board => {
+        board.create('functiongraph',
+                     [f, min - 0.5 * (max - min), max + 0.5 * (max - min)]);
+        for (let i = 0; i < cdf.length; ++i) {
+            const v = cdf[i][0];
+            board.create('point', [v, i === 0 ? 0 : cdf[i - 1][1]],
+                         {fillColor: JXG.palette.white});
+            board.create('point', [v, cdf[i][1]]);
+        }
+        board.on('boundingbox', () => {
+            const box = board.getBoundingBox(), nbox = [...box];
+            nbox[1] = bounds[1];
+            nbox[3] = bounds[3];
+            if (nbox.some((v, i) => v !== box[i])) board.setBoundingBox(nbox);
+        });
+    });
 };

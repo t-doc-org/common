@@ -7,8 +7,6 @@ import {
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
-// TODO: Add plugins from page metadata
-
 // Allow disabling plugins by default by setting their options to false in page
 // metadata. This doesn't work in Chart.defaults, but it does in per-chart
 // options, so we mix it in there.
@@ -110,7 +108,6 @@ on(window).afterprint(resizeAll);
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    // TODO: Add support for annotations
     config = await merge(disabledPlugins, config);
     el = await resolveDyn('chartjs', el);
     await ready;
@@ -254,8 +251,6 @@ const barWidth = {
         }
     },
 };
-
-// TODO: Allow taking a distribution instead of a sample
 
 templates.histogram = async (el, {
     sample, uniform, custom, distribution, normalize = false, options = {},

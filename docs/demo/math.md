@@ -109,6 +109,48 @@ labelsX: [1, 2, 4, 8, 16], majorY: 2, minorY: 1,
 grid: {majorStep: [10, 2], minorElements: [9, 1]},
 ```
 
+### Template: `cumulative-distribution-function`
+
+A normalized cumulative distribution function computed from a sample.
+
+```{jsxgraph} template:cumulative-distribution-function
+:style: aspect-ratio: 2 / 1;
+min: 0, max: 24, step: 2, normalize: true,
+options: {
+  defaults: {
+    point: {strokeColor: '#0072B2', fillColor: '#0072B2'},
+  },
+},
+sample: [
+  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
+  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+  13, 11, 8, 11, 14, 10, 10, 10, 9, 11, 14, 11, 7, 12, 8, 9, 15, 9, 10, 11,
+  6, 16, 10, 8, 13, 9, 10, 12, 10, 10, 10, 12, 9, 13, 17, 12, 9, 14, 10, 13,
+  15, 10, 12, 10, 14, 10, 7, 13, 10, 8, 6, 8, 9, 8, 11, 17, 8, 9, 9, 14,
+  6, 8, 8, 9, 9, 10, 5, 11, 9, 10, 12, 8, 8, 8, 11, 3, 6, 20, 5, 14,
+  15, 6, 9, 13, 11, 8, 14, 8, 14, 14, 8, 8, 16, 7, 8, 10, 12, 12, 10, 13,
+  9, 11, 12, 7, 7, 11, 12, 9, 8, 14, 6, 12, 9, 9, 15, 7, 12, 11, 11, 13,
+  6, 10, 8, 15, 8, 12, 5, 18, 6, 10, 6, 6, 11, 8, 11, 5, 12, 5, 11, 6,
+  10, 11, 11, 7, 17, 9, 7, 14, 14, 9, 5, 7, 13, 12, 8, 12, 11, 15, 9, 12,
+],
+```
+
+A non-normalized cumulative distribution function computed from a distribution.
+
+```{jsxgraph} template:cumulative-distribution-function
+:style: aspect-ratio: 2 / 1;
+min: 0, max: 24, step: 2,
+options: {
+  defaults: {
+    point: {strokeColor: '#0072B2', fillColor: '#0072B2'},
+  },
+},
+distribution: [
+  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
+  [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24],
+],
+```
+
 ### Custom template
 
 ````{list-grid}
