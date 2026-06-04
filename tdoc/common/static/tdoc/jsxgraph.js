@@ -220,8 +220,15 @@ templates.axes = (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
     ]);
 };
 
+const negLabelRe = /^\\\([-\u2212]/;
+
+function noNegLabels(...args) {
+    const v = generateLabelText.call(this, ...args);
+    return v.match(negLabelRe) ? '' : v;
+}
+
 templates['cumulative-distribution-function'] = async (el, {
-    sample, distribution, min, max, step, normalize = false, yAnchor = 0.06,
+    sample, distribution, min, max, step, normalize = false, yAnchor = 0.08,
     defaults = {}, options = {},
 }) => {
     let ds, cdf;
@@ -241,7 +248,7 @@ templates['cumulative-distribution-function'] = async (el, {
     min ??= ds.min - 0.05 * ds.range;
     max ??= ds.max + 0.05 * ds.range;
     const last = cdf[cdf.length - 1][1];
-    const bounds = [min - yAnchor * (max - min), 1.1 * last, max, -0.2 * last];
+    const bounds = [min - yAnchor * (max - min), 1.1 * last, max, -0.15 * last];
 
     function f(x) {
         if (x < cdf[0][0]) return 0;
@@ -271,6 +278,7 @@ templates['cumulative-distribution-function'] = async (el, {
                     ticks: {
                         insertTicks: true, majorHeight: -1, minorHeight: 10,
                         strokeOpacity: 0.25,
+                        generateLabelText: noNegLabels,
                     },
                 },
             },
