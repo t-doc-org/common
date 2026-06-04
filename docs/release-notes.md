@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-76)=
+## 0.76 *(2026-06-04)*
+
+- Added more {rst:dir}`chartjs` chart types.
+- Added annotation functionality to {rst:dir}`chartjs` charts.
+- Added the `cumulative-distribution-function` templates for {rst:dir}`chartjs`
+  and {rst:dir}`jsxgraph`.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.75...0.76)
+
 (release-0-75)=
 ## 0.75 *(2026-05-24)*
 
