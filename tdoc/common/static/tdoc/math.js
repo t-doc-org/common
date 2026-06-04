@@ -152,6 +152,8 @@ export class Bins {
     lo(i) { return this.bins[i]; }
     hi(i) { return this.bins[i + 1]; }
     bounds(i) { return [this.bins[i], this.bins[i + 1]]; }
+    mid(i) { return 0.5 * (this.bins[i] + this.bins[i + 1]); }
+    width(i) { return (this.bins[i + 1] - this.bins[i]); }
 
     get minWidth() {
         let res = Infinity;
@@ -323,22 +325,45 @@ export class Distribution {
     }
 
     get modes() {
-        // TODO: Fix the calculation for non-uniform distributions and maxima
-        //       that span multiple bins.
         const res = [];
         const bins = this.bins, counts = this.counts, len = counts.length;
-        let prev = 0, max, ib;
-        for (let i = 0; i < len + 1; ++i) {
-            const c = i < len ? counts[i] : 0;
-            if (c > prev && (max === undefined || c > max)) {
-                [max, ib] = [c, i];
-            } else if (max !== undefined && c < max) {
-                const lo = bins.lo(ib), hi = bins.hi(i - 1);
-                const cm = counts[ib], cb = ib > 0 ? counts[ib - 1] : 0;
-                res.push(lo + (hi - lo) * (cm - cb) / (2 * cm - cb - c));
-                max = undefined;
+        if (len === 0) return [];
+        if (len === 1) return counts[0] > 0 ? [bins.mid(0)] : [];
+        let prev = 0, ib, cb, cm;
+        for (let ia = 0; ia <= len; ++ia) {
+            const ca = ia < len ? counts[ia] : 0;
+            if (ca > prev && (cm === undefined || ca > cm)) {
+                [ib, cb, cm] = [ia - 1, prev, ca];
+            } else if (cm !== undefined && ca < cm) {
+                // Compute the axis of the parabola fitting the mid-points of
+                // the tops of the bars before, at and after the maximum (with
+                // the central bar being the combined bars of equal maximum
+                // height).
+                let bc, ac;
+                if (ib >= 0) {
+                    bc = bins.mid(ib);
+                } else {
+                    // The first bar is a maximum. Extrapolate the bin width
+                    // linearly from the first two bins.
+                    const [lo0, hi0] = bins.bounds(0), w0 = hi0 - lo0;
+                    const [lo1, hi1] = bins.bounds(1), w1 = hi1 - lo1;
+                    bc = lo0 - 0.5 * w0 * w0 / w1;
+                }
+                if (ia < len) {
+                    ac = bins.mid(ia);
+                } else {
+                    // The last bar is a maximum. Extrapolate the bin width
+                    // linearly from the last two bins.
+                    const [lo1, hi1] = bins.bounds(len - 1), w1 = hi1 - lo1;
+                    const [lo2, hi2] = bins.bounds(len - 2), w2 = hi2 - lo2;
+                    ac = hi1 + 0.5 * w1 * w1 / w2;
+                }
+                const mc = 0.5 * (bins.lo(ib + 1) + bins.hi(ia - 1));
+                const k = 0.25 * (ca - cb) / (2 * cm - ca - cb);
+                res.push((0.5 - k) * bc + (0.5 + k) * ac);
+                cm = undefined;
             }
-            prev = c;
+            prev = ca;
         }
         return res;
     }
