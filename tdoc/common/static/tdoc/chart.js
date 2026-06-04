@@ -11,7 +11,7 @@ import {Bins, Distribution, Sample} from './math.js';
 // metadata. This doesn't work in Chart.defaults, but it does in per-chart
 // options, so we mix it in there.
 const disabledPlugins = {options: {plugins: {}}};
-for (const [k, v] of Object.entries(tdoc.dyn.chartjs.plugins)) {
+for (const [k, v] of Object.entries(tdoc.dyn.chartjs.plugins ?? {})) {
     if (v !== false) continue;
     disabledPlugins.options.plugins[k] = v;
     delete tdoc.dyn.chartjs.plugins[k];

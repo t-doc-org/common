@@ -220,11 +220,9 @@ templates.axes = (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
     ]);
 };
 
-const negLabelRe = /^\\\([-\u2212]/;
-
-function noNegLabels(...args) {
-    const v = generateLabelText.call(this, ...args);
-    return v.match(negLabelRe) ? '' : v;
+function noNegLabels(tick, zero, value) {
+    return this.getDistanceFromZero(zero, tick) >= 0 ?
+           generateLabelText.call(this, tick, zero, value) : '';
 }
 
 templates['cumulative-distribution-function'] = async (el, {
