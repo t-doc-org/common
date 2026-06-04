@@ -222,7 +222,7 @@ options: {
   borderColor: '#36a2eb',
   scales: {
     x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors"}},
+    y: {title: {display: true, text: "Visitors (normalized)"}},
   },
 },
 annotations: [{
@@ -258,7 +258,7 @@ options: {
   borderColor: '#36a2eb',
   scales: {
     x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors (normalized)"}},
+    y: {title: {display: true, text: "Visitors"}},
   },
 },
 annotations: [{
@@ -299,10 +299,6 @@ distribution: [
   count: 20, min: 10, max: 50,
   ```
 ````
-
-### Custom annotation
-
-% TODO: Add an example
 
 <script type="module">
 const [core, {chart, templates}] =

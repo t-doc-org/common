@@ -187,6 +187,7 @@ Value is out of bounds [${this.lowerBound}; ${this.upperBound}]: ${v}`);
 // A statistical distribution.
 export class Distribution {
     static of(data) {
+        data.sort((a, b) => a[0] - b[0]);
         const bins = Bins.custom({bins: data.map(it => it[0])});
         const dist = new Distribution(bins);
         const counts = dist.counts;

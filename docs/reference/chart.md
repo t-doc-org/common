@@ -116,10 +116,15 @@ options: {
 
 #### `histogram`
 
-This template renders a histogram from a sample.
+This template renders the [histogram](https://en.wikipedia.org/wiki/Histogram)
+of a sample or a distribution.
 
-- `uniform`: Use bins of uniform width (default). The keys define how the bins
-  are computed:
+- `sample`: The statistical sample for which to plot the histogram.
+- `distribution`: The distribution for which to plot the histogram, an array of
+  `[x, count]` pairs where `x` is the lower bound of the bin, and the last
+  element must have a zero (or `undefined`) count.
+- `uniform`: Use bins of uniform width (default) to compute the distribution
+  from the sample. The keys define how the bins are computed:
   - `count`: The number of bins.
   - `max`: The largest value that needs to be handled. When unset, this is
     derived from the sample.
@@ -129,24 +134,17 @@ This template renders a histogram from a sample.
     `min` isn't.
   - `width`: The width of the bins. When unset, this is derived from `count` and
     the sample.
-- `custom`: Use custom bins. The value is an array of bin boundaries.
-- `annotations`: Annotations to add to the chart, based on the sample. The
-  following keys are supported, and the value :
-  - `min`, `max`, `median`, `mean`: TODO
-  - `quartile(K)`, `percentile(P)`, `quantile(P)`: TODO
-  - `stdDev(F)`: TODO
+- `custom`: Use custom bins to compute the distribution from the sample. The
+  value is an array of bin boundaries.
+- `normalize` (default: `false`): When true, represent frequencies instead of
+  counts.
 - `options`: Options to merge into the `options` field of the chart.
-- `sample`: The statistical sample to plot.
 
 ````{code-block}
 ```{chartjs} template:histogram
-uniform: {min: 0, width: 2, count: 12},
-annotations: {
-  'stdDev(-1)': {borderColor: '#ff6384', label: {backgroundColor: '#ff6384cc'}},
-  mean: {label: {content: "average"}},
-  'stdDev(1)': {borderColor: '#ff6384', label: {backgroundColor: '#ff6384cc'}},
-},
+uniform: {min: 0, max: 24, width: 2},
 options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', backgroundColor: '#36a2eb33',
   scales: {
     x: {title: {display: true, text: "Hours"}},
     y: {title: {display: true, text: "Visitors"}},
@@ -155,6 +153,40 @@ options: {
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+],
+```
+````
+
+#### `cumulative-distribution-function`
+
+This template renders the
+[cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
+of a sample or a distribution.
+
+- `sample`: The statistical sample for which to plot the CDF.
+- `distribution`: The distribution for which to plot the CDF, an array of
+  `[x, count]` pairs where `x` is the lower bound of the bin, and the last
+  element must have a zero (or `undefined`) count.
+- `min`: The minimum value to represent on the horizontal axis.
+- `max`: The maximum value to represent on the horizontal axis.
+- `step`: The smallest tick interval to represent on the horizontal axis.
+- `normalize` (default: `true`): When true, represent cumulative frequencies
+  instead of counts.
+- `options`: Options to merge into the `options` field of the chart.
+
+````{code-block}
+```{chartjs} template:cumulative-distribution-function
+min: 0, max: 24, step: 2,
+options: {
+  borderColor: '#36a2eb',
+  scales: {
+    x: {title: {display: true, text: "Hours"}},
+    y: {title: {display: true, text: "Visitors (normalized)"}},
+  },
+},
+distribution: [
+  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
+  [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24],
 ],
 ```
 ````

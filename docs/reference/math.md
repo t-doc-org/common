@@ -118,6 +118,46 @@ grid: {majorStep: 1},
 ```
 ````
 
+#### `cumulative-distribution-function`
+
+This template renders the
+[cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
+of a sample or a distribution.
+
+- `sample`: The statistical sample for which to plot the CDF.
+- `distribution`: The distribution for which to plot the CDF, an array of
+  `[x, count]` pairs where `x` is the lower bound of the bin, and the last
+  element must have a zero (or `undefined`) count.
+- `min`: The minimum value to represent on the horizontal axis.
+- `max`: The maximum value to represent on the horizontal axis.
+- `step`: The smallest tick interval to represent on the horizontal axis.
+- `normalize` (default: `true`): When true, represent cumulative frequencies
+  instead of counts.
+- `yAnchor` (default: `0.08`): The horizontal location to anchor the vertical
+  axis at, as a fraction of the graph width.
+- `defaults`:
+  [`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html)
+  attribute defaults.
+- `options`:
+  [`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html)
+  attribute overrides.
+
+````{code-block}
+```{jsxgraph} template:cumulative-distribution-function
+:style: aspect-ratio: 2 / 1;
+min: 0, max: 24, step: 2,
+options: {
+  defaults: {
+    point: {strokeColor: '#0072B2', fillColor: '#0072B2'},
+  },
+},
+sample: [
+  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
+  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+],
+```
+````
+
 ### `tdoc/jsxgraph.js`
 
 `````{js:module} jsxgraph
