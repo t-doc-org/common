@@ -405,9 +405,12 @@ templates['cumulative-distribution-function'] = async (el, {
                 },
             },
             pointRadius: 3, pointBorderWidth: 1,
-            pointBackgroundColor: ctx => ctx.index % 3 === 0 ?
-                                         ctx.chart.options.pointBorderColor :
-                                         '#fff',
+            pointBackgroundColor: ctx => {
+                return ctx.index % 3 === 0 ?
+                       ctx.chart.options.pointBorderColor
+                       ?? ctx.chart.options.borderColor
+                       ?? Chart.defaults.borderColor : '#fff';
+            },
             plugins: {
                 legend: {display: false},
                 annotation: {annotations: anns},
