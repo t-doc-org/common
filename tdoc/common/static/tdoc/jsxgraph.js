@@ -226,7 +226,7 @@ function noNegLabels(tick, zero, value) {
 }
 
 templates['cumulative-distribution-function'] = async (el, {
-    sample, distribution, min, max, step, normalize = false, yAnchor = 0.08,
+    sample, distribution, min, max, step, normalize = true, yAnchor = 0.08,
     defaults = {}, options = {},
 }) => {
     let ds, cdf;

@@ -115,7 +115,7 @@ A normalized cumulative distribution function computed from a sample.
 
 ```{jsxgraph} template:cumulative-distribution-function
 :style: aspect-ratio: 2 / 1;
-min: 0, max: 24, step: 2, normalize: true,
+min: 0, max: 24, step: 2,
 options: {
   defaults: {
     point: {strokeColor: '#0072B2', fillColor: '#0072B2'},
@@ -139,7 +139,7 @@ A non-normalized cumulative distribution function computed from a distribution.
 
 ```{jsxgraph} template:cumulative-distribution-function
 :style: aspect-ratio: 2 / 1;
-min: 0, max: 24, step: 2,
+min: 0, max: 24, step: 2, normalize: false,
 options: {
   defaults: {
     point: {strokeColor: '#0072B2', fillColor: '#0072B2'},

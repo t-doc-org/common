@@ -318,7 +318,7 @@ templates.histogram = async (el, {
 };
 
 templates['cumulative-distribution-function'] = async (el, {
-    sample, distribution, min, max, step, normalize = false, options = {},
+    sample, distribution, min, max, step, normalize = true, options = {},
     annotations = [],
 }) => {
     let ds, cdf;

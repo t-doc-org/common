@@ -210,12 +210,12 @@ distribution: [
 A normalized cumulative distribution function computed from a sample.
 
 ```{chartjs} template:cumulative-distribution-function
-min: 0, max: 24, step: 2, normalize: true,
+min: 0, max: 24, step: 2,
 options: {
   borderColor: '#36a2eb', pointBorderColor: '#36a2eb',
   scales: {
     x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors (normalized)"}},
+    y: {title: {display: true, text: "Visitors"}},
   },
 },
 annotations: [{
@@ -243,10 +243,10 @@ sample: [
 ],
 ```
 
-A normalized cumulative distribution function computed from a distribution.
+A non-normalized cumulative distribution function computed from a distribution.
 
 ```{chartjs} template:cumulative-distribution-function
-min: 0, max: 24, step: 2, normalize: true,
+min: 0, max: 24, step: 2, normalize: false,
 options: {
   borderColor: '#36a2eb', pointBorderColor: '#36a2eb',
   scales: {
@@ -262,7 +262,7 @@ annotations: [{
   quantile: {p: 0.99, options: {label: {position: '75%', rotation: -90}}},
   options: {label: {position: 'end'}},
 }, {
-  hLine: {y: 0.5},
+  count: {f: 0.5},
   options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
 }],
 distribution: [
