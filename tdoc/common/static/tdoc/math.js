@@ -80,6 +80,11 @@ export class Sample {
         return sum(gen()) / values.length;
     }
 
+    get modes() {
+        // TODO: Implement
+        throw new Error("Sample.modes not implemented");
+    }
+
     // Compute a distribution from the sample, using the given bins.
     distribution(bins) {
         const dist = new Distribution(bins);
@@ -315,6 +320,26 @@ export class Distribution {
             }
         };
         return sum(gen()) / count;
+    }
+
+    get modes() {
+        const res = [];
+        const bins = this.bins, counts = this.counts, len = counts.length;
+        let prev = 0, max, ib;
+        for (let i = 0; i < len; ++i) {
+            const c = counts[i];
+            if (c > prev && (max === undefined || c > max)) {
+                [max, ib] = [c, i];
+            } else if (max !== undefined && c < max) {
+                const lo = bins.lo(ib), hi = bins.hi(i - 1);
+                const cm = counts[ib], cb = ib > 0 ? counts[ib - 1] : cm;
+                res.push(lo + (hi - lo) * (cm - cb) / (2 * cm - cb - c));
+                max = undefined;
+            }
+            prev = c;
+        }
+        if (max !== undefined) res.push(bins.hi(len - 1));
+        return res;
     }
 
     // Compute the cumulative distribution function. Returns a strictly

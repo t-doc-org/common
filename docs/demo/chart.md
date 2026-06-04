@@ -138,6 +138,12 @@ annotations: [{
     label: {position: '40%', backgroundColor: '#ff6384cc'},
   },
 }, {
+  mode: {},
+  options: {
+    borderColor: '#ff9f40',
+    label: {position: 'end', rotation: -90, backgroundColor: '#ff9f40cc'},
+  },
+}, {
   hLine: {y: 25, options: {label: {content: "half-capacity"}}},
   vLine: {x: 22, options: {label: {content: "closing time", rotation: -90}}},
   options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
@@ -184,6 +190,12 @@ annotations: [{
   options: {
     borderColor: '#ff6384',
     label: {position: '30%', backgroundColor: '#ff6384cc'},
+  },
+}, {
+  mode: {},
+  options: {
+    borderColor: '#ff9f40',
+    label: {position: 'end', rotation: -90, backgroundColor: '#ff9f40cc'},
   },
 }],
 options: {

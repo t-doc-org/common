@@ -271,6 +271,18 @@ annotations.avgDev = ({f, from = 'median', dist = false},
         }];
     });
 };
+annotations.mode = ({k, dist = true}, {sample, distribution}) => {
+    const ds = sample && !dist ? sample : distribution;
+    let modes = ds.modes;
+    const ms = k !== undefined ? map(k, k => modes[k - 1]) : modes;
+    const res = [];
+    for (const m of ms) {
+        if (m === undefined) continue;
+        res.push([attrs.vLine,
+                  {value: m, endValue: m, label: {content: `mode`}}]);
+    }
+    return res;
+}
 
 // A plugin that sets the bar width from the "w" data attribute.
 const barWidth = {
