@@ -58,12 +58,15 @@ export class Sample {
     get variance() {
         if (this._cache.variance !== undefined) return this._cache.variance;
         const values = this.values;
-        if (values.length < 2) return this._cache.variance = NaN;
+        if (values.length === 0) return this._cache.variance = NaN;
         const m = this.mean;
         function* gen() {
-            for (const v of values) yield Math.pow(v - m, 2);
+            for (const v of values) {
+                const d = v - m;
+                yield d * d;
+            }
         }
-        return this._cache.variance = sum(gen()) / (values.length - 1);
+        return this._cache.variance = sum(gen()) / values.length;
     }
 
     get stdDev() { return Math.sqrt(this.variance); }
@@ -287,15 +290,16 @@ export class Distribution {
     get variance() {
         if (this._cache.variance !== undefined) return this._cache.variance;
         const count = this.count;
-        if (count < 2) return this._cache.variance = NaN;
+        if (count === 0) return this._cache.variance = NaN;
         const m = this.mean, bins = this.bins, counts = this.counts;
         function* gen() {
             for (let i = 0; i < counts.length; ++i) {
                 const [lo, hi] = bins.bounds(i);
-                yield counts[i] * Math.pow(0.5 * (lo + hi) - m, 2);
+                const d = 0.5 * (lo + hi) - m;
+                yield d * d;
             }
         };
-        return this._cache.variance = sum(gen()) / (count - 1);
+        return this._cache.variance = sum(gen()) / count;
     }
 
     get stdDev() { return Math.sqrt(this.variance); }

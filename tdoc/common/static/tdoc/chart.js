@@ -211,9 +211,15 @@ annotations.mean = ({dist = false}, {sample, distribution}) => {
     const v = ds.mean;
     return [attrs.vLine, {value: v, endValue: v, label: {content: "mean"}}];
 };
-annotations.stdDev = ({f, dist = false}, {sample, distribution}) => {
+annotations.stdDev = ({f, population = false, dist = false},
+                      {sample, distribution}) => {
     const ds = sample && !dist ? sample : distribution;
-    const v = ds.mean + f * ds.stdDev;
+    let s = ds.stdDev;
+    if (population) {
+        const c = ds.count;
+        s *= Math.sqrt(c / (c - 1));
+    }
+    const v = ds.mean + f * s;
     const sf = f < 0 ? '-' : f > 0 ? '+' : '';
     const af = Math.abs(f);
     return [attrs.vLine, {
