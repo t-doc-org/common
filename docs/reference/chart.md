@@ -12,6 +12,11 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
   [chart types](https://www.chartjs.org/docs/latest/charts/area.html),
   [examples](https://www.chartjs.org/docs/latest/samples/)
 - Available plugins:
+  - [chartjs-chart-boxplot](https://www.sgratzl.com/chartjs-chart-boxplot/)
+  - [chartjs-chart-error-bars](https://www.sgratzl.com/chartjs-chart-error-bars/)
+  - [chartjs-chart-graph](https://www.sgratzl.com/chartjs-chart-graph/)
+  - [chartjs-chart-venn](https://upset.js.org/chartjs-chart-venn/)
+    ([data structure](https://github.com/upsetjs/chartjs-chart-venn#venn-diagram))
   - [chartjs-plugin-annotation](https://www.chartjs.org/chartjs-plugin-annotation/master/)
   - [chartjs-plugin-datalabels](https://chartjs-plugin-datalabels.netlify.app/)
   - [chartjs-plugin-deferred](https://chartjs-plugin-deferred.netlify.app/)
