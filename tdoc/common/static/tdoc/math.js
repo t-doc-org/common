@@ -188,11 +188,17 @@ Value is out of bounds [${this.lowerBound}; ${this.upperBound}]: ${v}`);
 export class Distribution {
     static of(data) {
         data.sort((a, b) => a[0] - b[0]);
+        const last = data[data.length - 1][1];
+        if (last !== undefined && last !== 0) {
+            throw new Error(
+                "The last count of a distribution must be zero or undefined");
+        }
         const bins = Bins.custom({bins: data.map(it => it[0])});
         const dist = new Distribution(bins);
         const counts = dist.counts;
-        for (const [v, c] of data) {
-            if (c !== undefined) counts[bins.find(v)] += c;
+        for (let i = 0; i < bins.length; ++i) {
+            const c = data[i][1];
+            if (c !== undefined) counts[i] += c
         }
         return dist;
     }
