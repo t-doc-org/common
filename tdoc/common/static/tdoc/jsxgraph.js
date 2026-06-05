@@ -104,7 +104,7 @@ JXG.merge(JXG.Options, {
         minor: {face: 'line', strokeOpacity: 0.3},
     },
 });
-JXG.merge(JXG.Options, tdoc.dyn.jsxgraph);
+JXG.merge(JXG.Options, tdoc.dyn?.jsxgraph ?? {});
 
 // A set of pre-defined attributes.
 export const attrs = asyncGet({});
