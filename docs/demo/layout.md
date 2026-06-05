@@ -212,21 +212,56 @@ x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
 |$f(x)$|$1$|$3$|$5$|$7$
 ```
 
+# Chart.js
+
+```{chartjs} template:chart
+:class: align-left
+:style: width: 50%; aspect-ratio: 4 / 1;
+type: 'bar',
+data: {
+  labels: ['A', 'B', 'C'],
+  datasets: [{data: [12, 34, 56]}],
+},
+options: { plugins: {legend: {display: false}}},
+```
+
+```{chartjs} template:chart
+:class: align-center
+:style: width: 50%; aspect-ratio: 4 / 1;
+type: 'bar',
+data: {
+  labels: ['A', 'B', 'C'],
+  datasets: [{data: [12, 34, 56]}],
+},
+options: { plugins: {legend: {display: false}}},
+```
+
+```{chartjs} template:chart
+:class: align-right
+:style: width: 50%; aspect-ratio: 4 / 1;
+type: 'bar',
+data: {
+  labels: ['A', 'B', 'C'],
+  datasets: [{data: [12, 34, 56]}],
+},
+options: { plugins: {legend: {display: false}}},
+```
+
 # JSXGraph
 
 ```{jsxgraph} template:grid
-:style: width: 50%;
 :class: align-left
+:style: width: 50%;
 width: 35, height: 2,
 ```
 ```{jsxgraph} template:grid
-:style: width: 50%;
 :class: align-center
+:style: width: 50%;
 width: 35, height: 2,
 ```
 ```{jsxgraph} template:grid
-:style: width: 50%;
 :class: align-right
+:style: width: 50%;
 width: 35, height: 2,
 ```
 
