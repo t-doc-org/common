@@ -387,6 +387,31 @@ table.align-right {
     margin-right: 0;
 }
 
+/* Framed blocks */
+div.frame.docutils.container {
+    margin-bottom: 1rem;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    padding: 1rem;
+}
+div.frame.docutils.container > p.rubric {
+    margin-bottom: 0.5rem;
+    border-bottom: none;
+}
+div.frame.docutils.container > :first-child:not(#¶) {
+    margin-top: 0;
+}
+div.frame.docutils.container > :last-child:not(#¶) {
+    margin-bottom: 0;
+}
+
+/* BUG(pydata-sphinx-theme): Rubric headings have "display: flex" for no
+   apparent reason. This causes issues when the headings contain formatted
+   text. */
+p.rubric {
+    display: block;
+}
+
 /* Fix the layout of admonition content. pydata-sphinx-theme sets left and right
    margins on all direct descendants, which breaks horizontal alignment classes.
    Use padding on the container instead, and remove the margins through

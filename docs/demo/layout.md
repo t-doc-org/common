@@ -27,6 +27,30 @@ The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
 4.  Describe the main components of a computer.
     {leader}`.|100%`{leader}`.|100%`{leader}`.|100%`
 
+## Frames
+
+This section shows framed blocks of content.
+
+```{container} frame
+# Example {num}`frame`
+
+This is the first paragraph of two.
+
+This is the second.
+
+# Example {num}`frame:named`
+
+This example has a single paragraph.
+```
+
+The text between two frames has appropriate margins.
+
+```{container} frame
+# Example {num}`frame:name2`
+
+This example is short.
+```
+
 ## Numbering & points
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that
