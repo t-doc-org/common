@@ -240,42 +240,39 @@ x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
 
 ```{chartjs} template:chart
 :class: align-left
-:style: width: 50%;
+:style: width: 50%; aspect-ratio: 4;
 type: 'bar',
 data: {
   labels: ['A', 'B', 'C'],
   datasets: [{data: [12, 34, 56]}],
 },
 options: {
-  aspectRatio: 4,
   plugins: {legend: {display: false}},
 },
 ```
 
 ```{chartjs} template:chart
 :class: align-center
-:style: width: 50%;
+:style: width: 50%; aspect-ratio: 4;
 type: 'bar',
 data: {
   labels: ['A', 'B', 'C'],
   datasets: [{data: [12, 34, 56]}],
 },
 options: {
-  aspectRatio: 4,
   plugins: {legend: {display: false}},
 },
 ```
 
 ```{chartjs} template:chart
 :class: align-right
-:style: width: 50%;
+:style: width: 50%; aspect-ratio: 4;
 type: 'bar',
 data: {
   labels: ['A', 'B', 'C'],
   datasets: [{data: [12, 34, 56]}],
 },
 options: {
-  aspectRatio: 4,
   plugins: {legend: {display: false}},
 },
 ```

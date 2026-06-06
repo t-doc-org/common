@@ -41,11 +41,11 @@ directives.
 ([Documentation](https://www.chartjs.org/docs/latest/charts/doughnut.html))
 
 ```{chartjs} pie
-:style: width: 70%;
+:style: width: 70%; aspect-ratio: 3 / 2;
 ```
 
 ```{chartjs} doughnut
-:style: width: 70%;
+:style: width: 70%; aspect-ratio: 3 / 2;
 ```
 
 ### Boxplot & violin chart
@@ -389,7 +389,6 @@ chart('pie', {
     datasets: [{data: [300, 50, 100]}],
   },
   options: {
-    aspectRatio: 3 / 2,
     layout: {padding: 20},
     borderWidth: 1, borderColor: pieIdx(colors),
     backgroundColor: pieIdx(bgColors),
@@ -409,7 +408,6 @@ chart('doughnut', {
     ],
   },
   options: {
-    aspectRatio: 3 / 2,
     layout: {padding: 20},
     borderAlign: 'inner',
     backgroundColor: pieIdx(colors),

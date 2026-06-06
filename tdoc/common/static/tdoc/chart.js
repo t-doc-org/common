@@ -107,20 +107,33 @@ function formatTick(scale, value) {
     return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
 }
 
+// Get the aspect ratio of an element.
+function getAspectRatio(el) {
+    const ar = getComputedStyle(el).aspectRatio;
+    const parts = ar.split(' ');
+    for (const [i, p] of parts.entries()) {
+        const n = parseFloat(p);
+        if (Number.isNaN(n)) continue;
+        if (parts[i + 1] !== '/') continue;
+        const d = parseFloat(parts[i + 2]);
+        if (Number.isNaN(d)) continue;
+        return n / d;
+    }
+}
+
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    config = await merge(disabledPlugins, config);
     el = await resolveDyn('chartjs', el);
+    const ar = getAspectRatio(el);
+    config = await merge(disabledPlugins, config, {
+        options: ar !== undefined ? {aspectRatio: ar, maintainAspectRatio: true}
+                                  : {maintainAspectRatio: false},
+    });
     await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
-    if (c.options.maintainAspectRatio) {
-        // BUG(chart.js): The fix for responsive resizing in styles.css causes
-        // continuous vertical jitter. Set the same aspect ratio on the
-        // container as the canvas, to avoid the resize loop.
-        el.style.aspectRatio = c.aspectRatio;
-    }
+    if (ar !== undefined) c.canvas.style.aspectRatio = ar;  // Prevents jitter
     el.classList.add('rendered');
     return c;
 }
