@@ -1121,6 +1121,19 @@ html[data-theme=dark] .tdoc-dyn[data-type=jsxgraph]
 }
 
 /* Chart.js charts */
+.tdoc-dyn[data-type=chartjs] {
+    position: relative;
+}
+.tdoc-dyn[data-type=chartjs] > canvas {
+    /* BUG(chart.js): Responsive resizing doesn't work properly when the canvas
+       grows, because it keeps the container's previous height. Let the
+       container adjust its height to the canvas so that the latter can grow.
+       This also solves issues with printing, where the canvas would extend
+       horizontally beyond the container. */
+    width: 100% !important;
+    height: auto !important;
+}
+
 html[data-theme=dark] .tdoc-dyn[data-type=chartjs] > canvas {
     filter: invert(1) hue-rotate(180deg);
 }

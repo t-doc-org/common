@@ -43,6 +43,7 @@ const ready = (async () => {
 
     // Set global defaults.
     mergeTo(Chart.defaults, {
+        // onResize: (chart, size) => { console.log("onResize", size); },
         datasets: {
             venn: {layout: {padding: 10}},
         },
@@ -52,6 +53,15 @@ const ready = (async () => {
     });
     mergeTo(Chart.defaults, tdoc.dyn?.chartjs ?? {});
 })();
+
+// Repaint all charts when printing. This improves print quality, despite the
+// canvas size apparently not changing.
+function repaintAll() {
+    for (const c of Object.values(Chart.instances)) c.resize();
+}
+
+on(window).beforeprint(repaintAll);
+on(window).afterprint(repaintAll);
 
 // Merge src into dst.
 function mergeTo(dst, src) {
@@ -97,14 +107,6 @@ function formatTick(scale, value) {
     return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
 }
 
-// Handle resizing when printing.
-function resizeAll() {
-    for (const id in Chart.instances) Chart.instances[id].resize();
-}
-
-on(window).beforeprint(resizeAll);
-on(window).afterprint(resizeAll);
-
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
@@ -113,6 +115,12 @@ export async function chart(el, config) {
     await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
+    if (c.options.maintainAspectRatio) {
+        // BUG(chart.js): The fix for responsive resizing in styles.css causes
+        // continuous vertical jitter. Set the same aspect ratio on the
+        // container as the canvas, to avoid the resize loop.
+        el.style.aspectRatio = c.aspectRatio;
+    }
     el.classList.add('rendered');
     return c;
 }
