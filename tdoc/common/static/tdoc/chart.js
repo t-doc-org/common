@@ -43,25 +43,43 @@ const ready = (async () => {
 
     // Set global defaults.
     mergeTo(Chart.defaults, {
-        // onResize: (chart, size) => { console.log("onResize", size); },
+        printDevicePixelRatio: 8,
         datasets: {
             venn: {layout: {padding: 10}},
         },
         plugins: {
             datalabels: {display: false},
         },
+        // onResize: (chart, size) => { console.log("onResize", size); },
     });
     mergeTo(Chart.defaults, tdoc.dyn?.chartjs ?? {});
 })();
 
-// Repaint all charts when printing. This improves print quality, despite the
-// canvas size apparently not changing.
-function repaintAll() {
-    for (const c of Object.values(Chart.instances)) c.resize();
+// Repaint all charts when printing. This improves print quality.
+function repaintAll(forPrint) {
+    for (const c of Object.values(Chart.instances)) {
+        // BUG: When printing, the repaint is normally performed at a much
+        // higher resolution, even though the canvas size appears not to change.
+        // This is visible by zoomin in on the print preview. But on some pages,
+        // a subset of the charts render at low resolution, causing bad print
+        // quality. Work around this by temporarily setting a higher device
+        // pixel ratio.
+        if (forPrint && c.options.printDevicePixelRatio) {
+            c._tdoc_devicePixelRatio = c.options.devicePixelRatio;
+            c.options.devicePixelRatio = c.options.printDevicePixelRatio;
+        } else {
+            const dpr = c._tdoc_devicePixelRatio;
+            if (dpr !== undefined) {
+                c.options.devicePixelRatio = dpr;
+                delete c._tdoc_devicePixelRatio;
+            }
+        }
+        c.resize();
+    }
 }
 
-on(window).beforeprint(repaintAll);
-on(window).afterprint(repaintAll);
+on(window).beforeprint(() => repaintAll(true));
+on(window).afterprint(() => repaintAll(false));
 
 // Merge src into dst.
 function mergeTo(dst, src) {
