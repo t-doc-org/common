@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-77)=
+## 0.77 *(2026-06-07)*
+
+- Added styling for framed containers.
+- Set a default print stylesheet.
+- Fixed rendering issues with {rst:dir}`chartjs` directives when resizing and
+  printing.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.76...0.77)
+
 (release-0-76)=
 ## 0.76 *(2026-06-04)*
 
