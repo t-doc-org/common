@@ -306,7 +306,8 @@ class Env:
         return p.stdout
 
     def pip(self, *args, json_output=False, **kwargs):
-        out = self.python('-m', 'pip', '--require-virtualenv', *args, **kwargs)
+        out = self.python('-m', 'pip', '--disable-pip-version-check',
+                          '--require-virtualenv', *args, **kwargs)
         if not json_output: return out
         return json.loads(out, object_pairs_hook=Namespace)
 
