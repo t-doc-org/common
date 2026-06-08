@@ -248,7 +248,7 @@ def exercise_cli(repo_dir, write, opts, vrun):
     write("Cleaning HTML output\n")
     vrun('tdoc', 'site', 'clean', '--debug')
 
-    # Create the store.
+    # Create the log database.
     write("Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
     (repo_dir / 'tdoc.local.toml').write_text("""\
@@ -269,17 +269,22 @@ path = "tmp/log.sqlite"
 [store]
 path = "tmp/store.sqlite"
 """)
-    vrun('tdoc', 'log', 'create', '--debug', '--version=1', out=[
+    vrun('tdoc', 'log', 'create', '--debug', '--local', '--version=1', out=[
         r'^Created \(version: 1\): .*log\.sqlite$',
     ])
-    # TODO: Test a log database upgrade
+    vrun('tdoc', 'log', 'upgrade', '--debug', '--version=2', out=[
+        r'^Upgrading \(version: 1\): .*log\.sqlite$',
+        r'^ *Backing up database to: .*log\.sqlite'
+            r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
+    ])
+    # TODO: Upgrade to latest version
     vrun('tdoc', 'log', 'upgrade', '--debug', out=[
         r'^Already up-to-date \(version: \d+\): .*log\.sqlite$',
     ])
 
     # Create the store.
     write("Creating store\n")
-    vrun('tdoc', 'store', 'create', '--debug', '--dev', '--version=3', out=[
+    vrun('tdoc', 'store', 'create', '--debug', '--local', '--version=3', out=[
         r'^Created \(version: 3\): .*store\.sqlite$',
     ])
     vrun('tdoc', 'store', 'upgrade', '--debug', '--version=4', out=[

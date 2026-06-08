@@ -275,7 +275,7 @@
 (release-0-45)=
 ## 0.45 *(2025-05-17)*
 
-- Made automatic rebuilds in the dev server incremental. This significantly
+- Made automatic rebuilds in the local server incremental. This significantly
   speeds up the edit-view loop.
 - **This release breaks the rendering of {rst:role}`numref` references to
   {rst:role}`num` roles.** The links are correct, but their numbering is wrong.
@@ -440,8 +440,8 @@
 (release-0-23)=
 ## 0.23 *(2024-12-07)*
 
-- Converted the dev server to WSGI.
-- Added support for a backend store to the dev server.
+- Converted the local server to WSGI.
+- Added support for a backend store to the local server.
 - Fixed more cosmetic issues with collapsed admonitions.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.22...0.23)
 
@@ -484,7 +484,7 @@
 - Added the {rst:dir}`solution` directive and the "Toggle solutions" navbar
   button.
 - Fixed the flickering on page load due to `sphinx_togglebutton`.
-- Added an option to exclude files from watching in the dev server.
+- Added an option to exclude files from watching in the local server.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.16...0.17)
 
 (release-0-16)=
@@ -559,7 +559,7 @@
 (release-0-9)=
 ## 0.9 *(2024-09-12)*
 
-- Added automatic page reloading on successful builds in the dev server.
+- Added automatic page reloading on successful builds in the local server.
 - Fixed encoding issues with {rst:dir}`{exec} :include: <exec:include>`.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.8...0.9)
 
@@ -596,14 +596,14 @@
 (release-0-4)=
 ## 0.4 *(2024-08-22)*
 
-- Added checking for updates in the dev server.
+- Added checking for updates in the local server.
 - Added install, use and development documentation.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.3...0.4)
 
 (release-0-3)=
 ## 0.3 *(2024-08-19)*
 
-- Added automatic rebuilding on source file changes in the dev server.
+- Added automatic rebuilding on source file changes in the local server.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.2...0.3)
 
 (release-0-2)=

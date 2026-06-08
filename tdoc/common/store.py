@@ -42,7 +42,7 @@ class Connection(database.Connection):
         """, keys))
 
     def check_origin(self, origin):
-        if not origin and not self.dev:
+        if not origin and not self.local:
             raise Exception("No origin specified")
 
     @functools.cached_property
@@ -663,13 +663,8 @@ class Store(database.Database):
                 ws.seq = seq
                 updated.update(ws)
 
-    def version_1(self, db, dev, now):
-        db.create("""
-            create table meta (
-                key text primary key,
-                value any
-            ) strict
-        """)
+    def version_1(self, db, local, now):
+        super().version_1(db, local, now)
         db.create("""
             create table auth (
                 token text primary key,
@@ -684,11 +679,10 @@ class Store(database.Database):
                 data text
             ) strict
         """)
-        db.execute("insert into meta values ('dev', ?)", (bool(dev),))
-        if not dev: return
+        if not local: return
         db.execute("insert into auth (token, perms) values ('*', '*')")
 
-    def version_2(self, db, dev, now):
+    def version_2(self, db, local, now):
         # Convert the meta table to "without rowid".
         db.create("""
             create table meta_ (
@@ -748,7 +742,7 @@ class Store(database.Database):
             ) strict, without rowid
         """)
 
-        if not dev: return
+        if not local: return
         db.execute("""
             insert into users (id, name, created) values (1, 'admin', ?)
         """, (now,))
@@ -761,7 +755,7 @@ class Store(database.Database):
                 values ('', 1, '*', false)
         """)
 
-    def version_3(self, db, dev, now):
+    def version_3(self, db, local, now):
         # Create tables for poll state.
         db.create("""
             create table polls (
@@ -786,7 +780,7 @@ class Store(database.Database):
             ) strict
         """)
 
-    def version_4(self, db, dev, now):
+    def version_4(self, db, local, now):
         db.create("""
             create table notifications (
                 key text primary key,
@@ -794,7 +788,7 @@ class Store(database.Database):
             ) strict, without rowid
         """)
 
-    def version_5(self, db, dev, now):
+    def version_5(self, db, local, now):
         # Remove the uniqueness constraint on user names.
         db.create("""
             create table users_ (
@@ -828,12 +822,12 @@ class Store(database.Database):
         """)
         db.create("create index user_oidcs on oidc_users (user)")
 
-    def version_6(self, db, dev, now):
+    def version_6(self, db, local, now):
         # Drop unused tables.
         db.execute("drop table auth")
         db.execute("drop table log")
 
-    def version_7(self, db, dev, now):
+    def version_7(self, db, local, now):
         # Create table for repository authentication.
         db.create("""
             create table repo_auth (
@@ -844,7 +838,7 @@ class Store(database.Database):
             ) strict
         """)
 
-    def version_8(self, db, dev, now):
+    def version_8(self, db, local, now):
         # Add the "enabled" column and allow rows without a password.
         db.create("""
             create table repo_auth_ (
@@ -861,3 +855,13 @@ class Store(database.Database):
         """)
         db.execute("drop table repo_auth")
         db.execute("alter table repo_auth_ rename to repo_auth")
+
+    def version_9(self, db, local, now):
+        # Rename the 'dev' key in meta to 'local'.
+        if not any(db.execute("select 1 from meta where key = 'local'")):
+            db.execute("""
+                insert into meta values (
+                    'local',
+                    coalesce((select value from meta where key = 'dev'), 0))
+            """)
+            db.execute("delete from meta where key = 'dev'")

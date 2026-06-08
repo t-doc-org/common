@@ -8,7 +8,7 @@ import {
 } from './core.js';
 
 // Handle auto-reload on source change.
-if (tdoc.dev) {
+if (tdoc.local) {
     let build;
     api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
         if (!data) return;

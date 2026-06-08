@@ -617,8 +617,8 @@ class OidcAuthApi(wsgi.Dispatcher):
     def handle_login(self, wr, req):
         token = wr.token
 
-        # Handle "log in as" in dev mode.
-        if wr.dev and (ruser := req.get('user')):
+        # Handle "log in as" in local mode.
+        if wr.local and (ruser := req.get('user')):
             with wr.write_db as db:
                 try:
                     uid = db.users.uid(ruser)

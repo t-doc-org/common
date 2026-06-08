@@ -183,19 +183,19 @@ into `_venv`.
   ````{tab-item} Windows
   :sync: windows
   ```{code-block} shell-session
-  run.py tdoc store create --dev
+  run.py tdoc store create --local
   ```
   ````
   ````{tab-item} macOS
   :sync: macos
   ```{code-block} shell-session
-  ./run.py tdoc store create --dev
+  ./run.py tdoc store create --local
   ```
   ````
   ````{tab-item} Linux
   :sync: linux
   ```{code-block} shell-session
-  ./run.py tdoc store create --dev
+  ./run.py tdoc store create --local
   ```
   ````
   `````

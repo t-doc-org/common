@@ -70,8 +70,11 @@ class Connection(sqlite3.Connection):
         return default
 
     @property
-    def dev(self):
-        return bool(self.meta('dev', False))
+    def local(self):
+        local = self.meta('local', None)
+        # TODO(0.79): Remove fallback to 'dev''
+        if local is None: local = self.meta('dev', False)
+        return local
 
     def check_foreign_keys(self):
         violations = []
@@ -174,7 +177,7 @@ class Database:
     def __enter__(self):
         if self.path is None:
             self.mem_db = self.connect(mode='ro')
-            self.create(dev=True)  # Create in-memory DB
+            self.create(local=True)  # Create in-memory DB
         return self
 
     def __exit__(self, typ, value, tb):
@@ -214,7 +217,7 @@ class Database:
         with contextlib.closing(self.connect(path=dest, mode='rwc')) as ddb:
             db.backup(ddb)
 
-    def create(self, version=None, dev=False):
+    def create(self, version=None, local=False):
         self._version_valid(version)
         if self.exists: raise Exception(f"Database already exists: {self.path}")
         with contextlib.closing(
@@ -222,7 +225,7 @@ class Database:
             db.execute("pragma foreign_keys = off")
             with db:
                 to_version = self._upgrade(db, from_version=0,
-                                           to_version=version, dev=dev)
+                                           to_version=version, local=local)
             return to_version
 
     def upgrade(self, version=None, on_version=None):
@@ -233,7 +236,7 @@ class Database:
             with db:
                 from_version = db.meta('version')
                 to_version = self._upgrade(db, from_version=from_version,
-                                           to_version=version, dev=db.dev,
+                                           to_version=version, local=db.local,
                                            on_version=on_version)
         return from_version, to_version
 
@@ -243,7 +246,7 @@ class Database:
             if v == version: return
         raise Exception(f"Invalid database version: {version}")
 
-    def _upgrade(self, db, from_version, to_version, dev, on_version=None):
+    def _upgrade(self, db, from_version, to_version, local, on_version=None):
         now = time.time_ns()
         version = from_version
         for v, fn in self.versions(from_version + 1):
@@ -251,7 +254,7 @@ class Database:
             if on_version is not None: on_version(v)
             # For complex schema upgrades, follow:
             # https://sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes
-            fn(db, dev, now)
+            fn(db, local, now)
             db.execute("""
                 insert or replace into meta (key, value) values ('version', ?)
             """, (v,))
@@ -267,10 +270,11 @@ class Database:
             yield version, fn
             version += 1
 
-    def version_1(self, db, dev, now):
+    def version_1(self, db, local, now):
         db.create("""
             create table meta (
                 key text primary key,
                 value any
             ) strict, without rowid
         """)
+        db.execute("insert into meta values ('local', ?)", (bool(local),))

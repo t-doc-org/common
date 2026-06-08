@@ -81,7 +81,7 @@ def cmd_create(opts):
         if lst.exists:
             opts.stdout.write(f"Already exists: {lst.path}\n")
             continue
-        version = lst.create(version=opts.version, dev=opts.dev)
+        version = lst.create(version=opts.version, local=opts.local)
         opts.stdout.write(f"Created (version: {version}): {lst.path}\n")
 
 

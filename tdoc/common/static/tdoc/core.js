@@ -13,7 +13,7 @@ export const rootUrl = new URL('../..', import.meta.url);
 
 // Information about the page.
 export const page = {
-    origin: tdoc.dev ? '' : location.origin,
+    origin: tdoc.local ? '' : location.origin,
     path: location.pathname
           + (location.pathname.endsWith('/') ? 'index.html' : ''),
 
@@ -601,10 +601,10 @@ export class FifoBuffer {
 // across all sites.
 class DomainStorage {
     static async create() {
-        if (!(tdoc.dev || tdoc.domain_storage.origin)) return localStorage;
+        if (!(tdoc.local || tdoc.domain_storage.origin)) return localStorage;
         const {port1, port2} = new MessageChannel();
-        const origin = tdoc.dev ? location.origin
-                                : tdoc.domain_storage.origin;
+        const origin = tdoc.local ? location.origin
+                                  : tdoc.domain_storage.origin;
         await domLoaded;
         const iframe = document.body.appendChild(elmt`\
 <iframe class="tdoc-domain-storage" src="${origin}/_static/tdoc/domain.html">\

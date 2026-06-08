@@ -440,8 +440,8 @@ class LogStore(database.Database):
                     self.stderr.write(f"Failed to purge log table: {e}\n")
             next_purge = now + self.purge_interval
 
-    def version_1(self, db, dev, now):
-        super().version_1(db, dev, now)
+    def version_1(self, db, local, now):
+        super().version_1(db, local, now)
         db.create("""
             create table log (
                 time int not null,
@@ -460,3 +460,16 @@ class LogStore(database.Database):
             ) strict
         """)
         db.create("create index log_time on log (time)")
+
+    def version_2(self, db, local, now):
+        # Rename the 'dev' key in meta to 'local'.
+        if not any(db.execute("select 1 from meta where key = 'local'")):
+            # The 'dev' key used to not be set for logs databases. Assume such
+            # databases were local. The few non-local ones will have to be fixed
+            # by hand.
+            db.execute("""
+                insert into meta values (
+                    'local',
+                    coalesce((select value from meta where key = 'dev'), 1))
+            """)
+            db.execute("delete from meta where key = 'dev'")

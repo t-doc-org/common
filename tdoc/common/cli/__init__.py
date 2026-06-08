@@ -81,8 +81,8 @@ def add_common_options(parser):
         help="The path to the config file.")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
-    arg('--dev', action='store_true', dest='dev',
-        help="Create databases for dev mode.")
+    arg('--local', action='store_true', dest='local',
+        help="Create databases for local mode.")
 
 
 def add_origin_option(arg):
@@ -105,7 +105,7 @@ def on_upgrade(opts, st, db, version, latest):
     o = opts.stdout
     if db is None:
         o.write(f"""\
-{o.LYELLOW}A database needs to be created:{o.NORM} dev={opts.dev}
+{o.LYELLOW}A database needs to be created:{o.NORM} local={opts.local}
   {st.path}
 Would you like to create it (y/n)? """)
     elif latest < version:
@@ -128,7 +128,7 @@ Would you like to perform the upgrade (y/n)? """)
     o.write("\n")
     if resp not in ('y', 'yes', 'o', 'oui', 'j', 'ja'): return
     if db is None:
-        st.create(dev=opts.dev)
+        st.create(local=opts.local)
     else:
         upgrade_database(opts, st, db, version, latest)
     return True
@@ -175,7 +175,3 @@ def comma_separated(s):
 
 def cmd_version(opts):
     opts.stdout.write(f"{__project__}-{__version__}\n")
-
-
-# if __name__ == '__main__':
-#     main()

@@ -16,7 +16,7 @@ onHashParams(['api'], api => {
 });
 
 export const [url, backendSuffix] = (() => {
-    if (tdoc.dev) return ['/_api', ''];
+    if (tdoc.local) return ['/_api', ''];
     if (tdoc.api_url) return [tdoc.api_url, ''];
     const loc = new URL(location);
     if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
@@ -225,7 +225,7 @@ Log in</button>\
 </div></div></div>\
 `;
         const loginForm = qs(el, 'form.login');
-        loginForm.classList.toggle('hidden', !tdoc.dev);
+        loginForm.classList.toggle('hidden', !tdoc.local);
         const input = qs(loginForm, 'input#tdoc-login-user');
         const loginBtn = qs(loginForm, 'button.login');
         enable(input.value, loginBtn);

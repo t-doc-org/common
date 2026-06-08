@@ -95,7 +95,7 @@ class Request:
         if (v := self.env.get('HTTP_ORIGIN')) is None:
             raise Error(HTTPStatus.PRECONDITION_FAILED,
                         "Missing Origin: header")
-        return v if not self.dev else ''
+        return v if not self.local else ''
 
     @property
     def token(self):
@@ -180,7 +180,7 @@ class Request:
         return [body]
 
 
-Request.attr('dev')
+Request.attr('local')
 
 
 class Dispatcher:

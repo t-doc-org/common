@@ -1086,7 +1086,7 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
 .tdoc-dyn:is(.rendered, [data-processed]) > div.spinner {
     display: none;
 }
-html[data-tdoc-dev] .tdoc-dyn:not(.rendered, [data-processed]) {
+html[data-tdoc-local] .tdoc-dyn:not(.rendered, [data-processed]) {
     /* Override border attributes set on the element. */
     border: 1px solid var(--pst-color-danger) !important;
 }
@@ -1290,7 +1290,7 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
 .sidebar-primary-items__start .sidebar-primary-item .tdoc-badge img {
     display: block;
 }
-html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
+html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-local])
         .sidebar-primary-items__start .sidebar-primary-item:has(.tdoc-badge) {
     display: none;
 }

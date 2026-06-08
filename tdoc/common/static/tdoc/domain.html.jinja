@@ -10,12 +10,12 @@
 'use strict';
 (async () => {
     const ds = tdoc.domain_storage;
-    if (!tdoc.dev && !(ds.allowed_origins && ds.allowed_keys)) return;
+    if (!tdoc.local && !(ds.allowed_origins && ds.allowed_keys)) return;
     const origins = new RegExp(ds.allowed_origins ?? '');
     const keys = new RegExp(ds.allowed_keys ?? '');
     const port = await new Promise(resolve => {
         function onInit(e) {
-            if (!((tdoc.dev && e.origin === location.origin)
+            if (!((tdoc.local && e.origin === location.origin)
                   || origins.test(e.origin))) {
                 return;
             }
@@ -29,7 +29,7 @@
     });
 
     function check(key) {
-        if (!(tdoc.dev || keys.test(key))) throw new Error("Forbidden key");
+        if (!(tdoc.local || keys.test(key))) throw new Error("Forbidden key");
         return key;
     }
 

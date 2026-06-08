@@ -126,7 +126,7 @@ def pre_serve(opts):
 
 @cli.pre_run(pre_serve)
 def cmd_serve(opts):
-    opts.dev = True
+    opts.local = True
     addr = (opts.bind if opts.bind != 'ALL' else '', opts.port)
     families = {info[0] for info in socket.getaddrinfo(
                     addr[0] or None, opts.port, type=socket.SOCK_STREAM,
@@ -341,7 +341,7 @@ class Application(wsgi.Dispatcher):
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
-                               tags=['tdoc-dev'])
+                               tags=['tdoc-local'])
             if res.returncode == 0: return True
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
@@ -449,7 +449,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 
     def handle_request(self, handler, wr):
         wr.env['wsgi.multithread'] = True
-        wr.dev = True
+        wr.local = True
         return handler(wr.env, wr.respond, wr)
 
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),

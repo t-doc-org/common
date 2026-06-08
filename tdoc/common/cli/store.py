@@ -46,7 +46,7 @@ def cmd_backup(opts):
 
 def cmd_create(opts):
     st = store.Store(opts.cfg.sub('store'))
-    version = st.create(version=opts.version, dev=opts.dev)
+    version = st.create(version=opts.version, local=opts.local)
     opts.stdout.write(f"Created (version: {version}): {st.path}\n")
 
 

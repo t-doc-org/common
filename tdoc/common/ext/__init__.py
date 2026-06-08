@@ -163,7 +163,7 @@ def setup(app):
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
-    if 'tdoc-dev' in app.tags:
+    if 'tdoc-local' in app.tags:
         app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('html-page-context', add_draw_button, priority=500.6)
     app.connect('html-page-context', add_user_button, priority=500.7)
@@ -221,7 +221,7 @@ def on_config_inited(app, config):
 
 
 def update_intersphinx(app):
-    if 'tdoc-dev' not in app.tags: return
+    if 'tdoc-local' not in app.tags: return
     cl = app.config.intersphinx_cache_limit
     cache_time = time.time() - cl * 24 * 3600 if cl >= 0 else 0
     inv_config = _load._InvConfig.from_config(app.config)
@@ -290,7 +290,7 @@ def expand_badge(badge, repo_url):
 def set_html_context(app, page, template, context, doctree):
     context['tdoc_version'] = __version__
     context.setdefault('html_attrs', {})
-    if 'tdoc-dev' in app.tags: context['html_attrs']['data-tdoc-dev'] = ''
+    if 'tdoc-local' in app.tags: context['html_attrs']['data-tdoc-local'] = ''
     if v := app.config.license: context['license'] = v
     if v := app.config.license_url: context['license_url'] = v
 
@@ -349,11 +349,11 @@ def tdoc_config(app, page=None, doctree=None, context=None):
         'enable_sab': app.config.tdoc_enable_sab,
         'repos': app.config.tdoc_repos,
     }
-    if is_dev := 'tdoc-dev' in app.tags: tdoc['dev'] = True
+    if is_local := 'tdoc-local' in app.tags: tdoc['local'] = True
     versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
     for name, info in deps.info.items():
         if '://' not in (v := versions.setdefault(name, info['version'])):
-            versions[name] = f'/_cache/{name}/{v}' if is_dev \
+            versions[name] = f'/_cache/{name}/{v}' if is_local \
                              else info['url'](info['name'], v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
