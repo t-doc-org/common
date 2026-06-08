@@ -168,6 +168,7 @@ def handle_upgrades(builder, env, stderr):
         env = new_env
     except Exception as e:
         if builder.debug: raise
+        if is_dev(builder.version) or is_wheel(builder.version): raise
         stderr.write(f"\nThe upgrade failed: {e}\n"
                      "Continuing with the previous version.\n")
     stderr.write("\n")
@@ -272,6 +273,7 @@ class Env:
 
     def create(self, requirements=None):
         self.builder.root.mkdir(exist_ok=True)
+        if self.path.exists(): self.remove()
         token = self.env.set((self, requirements))
         try:
             self.builder.create(self.path)
@@ -434,7 +436,8 @@ class EnvBuilder(venv.EnvBuilder):
 
     def find(self):
         pat = 'dev' if is_dev(self.version) \
-              else 'wheel' if is_wheel(self.version) else f'{self.version}-*'
+              else 'wheel' if is_wheel(self.version) \
+              else f'{self.version}-*'
         envs = [Env(path, self) for path in self.root.glob(pat)]
         envs.sort(key=lambda e: e.path, reverse=True)
         matching = [e for e in envs if e.requirements is not None]
