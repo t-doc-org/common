@@ -268,8 +268,12 @@ def set_base_html_context(app):
               if (eb := expand_badge(b, repo_url)) is not None]
     if badges:
         opts['tdoc_badges'] = badges
-        pse = opts.setdefault('primary_sidebar_end', [])
-        if 'tdoc-badges' not in pse: pse.append('tdoc-badges')
+        st = app.builder.theme.sidebar_templates
+        if 'tdoc-badges.html' not in st:
+            try: i = st.index('search-button-field.html')
+            except ValueError: i = len(st)
+            app.builder.theme.sidebar_templates = \
+                (*st[:i], 'tdoc-badges.html', *st[i:])
 
 
 def expand_badge(badge, repo_url):

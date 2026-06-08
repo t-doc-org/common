@@ -1282,16 +1282,16 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
 }
 
 /* Badges in the primary sidebar */
-.sidebar-primary-items__end .sidebar-primary-item:has(.tdoc-badge) {
+.sidebar-primary-items__start .sidebar-primary-item:has(.tdoc-badge) {
     display: flex;
     flex-flow: row wrap;
     gap: 0.5rem;
 }
-.sidebar-primary-items__end .sidebar-primary-item .tdoc-badge img {
+.sidebar-primary-items__start .sidebar-primary-item .tdoc-badge img {
     display: block;
 }
 html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-dev])
-        .sidebar-primary-items__end .sidebar-primary-item:has(.tdoc-badge) {
+        .sidebar-primary-items__start .sidebar-primary-item:has(.tdoc-badge) {
     display: none;
 }
 
