@@ -214,12 +214,14 @@ class Database:
 
     def backup(self, db, dest):
         if dest.exists(): raise Exception("Backup destination already exists")
+        dest.touch(0o600)
         with contextlib.closing(self.connect(path=dest, mode='rwc')) as ddb:
             db.backup(ddb)
 
     def create(self, version=None, local=False):
         self._version_valid(version)
         if self.exists: raise Exception(f"Database already exists: {self.path}")
+        if self.path is not None: self.path.touch(0o600)
         with contextlib.closing(
                 self.connect(mode='rwc', isolation_level='immediate')) as db:
             db.execute("pragma foreign_keys = off")
