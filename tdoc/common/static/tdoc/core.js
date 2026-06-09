@@ -93,12 +93,14 @@ export function text(value) {
 
 // Perform string interpolation of an HTML snippet.
 function interpolateHtml(html, values) {
-    if (html.length === 1 && !values[0]) return html[0];
+    if (html.length === 1 && (values[0] === undefined || values[0] === '')) {
+        return html[0];
+    }
     const parts = [];
     for (const [i, s] of html.entries()) {
         parts.push(s);
         const v = values[i];
-        if (v) parts.push(escape(v.toString()));
+        if (v !== undefined && v !== '') parts.push(escape(v.toString()));
     }
     return parts.join('');
 }

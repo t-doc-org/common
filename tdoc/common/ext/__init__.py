@@ -160,6 +160,7 @@ def setup(app):
     app.connect('config-inited', on_config_inited)
     app.connect('builder-inited', update_intersphinx, priority=499.9)
     app.connect('builder-inited', set_base_html_context)
+    app.connect('builder-inited', configure_templates)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
@@ -256,6 +257,8 @@ def set_base_html_context(app):
     tdoc = tdoc_config(app)
     app.config.html_context['tdoc'] = util.to_json(tdoc).replace('<', '\\x3c')
 
+
+def configure_templates(app):
     # Expand badge URLs.
     opts = app.builder.theme_options
     repo_url = opts.get('repository_url', '')

@@ -10,7 +10,7 @@ import {
 // Handle auto-reload on source change.
 if (tdoc.local) {
     let build;
-    api.events.sub({add: [new api.Watch({name: 'build'}, async data => {
+    api.events.sub({add: [new api.Watch({name: 'build'}, data => {
         if (!data) return;
         if (!build) {
             build = data;
@@ -19,6 +19,32 @@ if (tdoc.local) {
             location.reload();
         }
     })]});
+}
+
+// Show repositories with remote changes.
+if (tdoc.local) {
+    domLoaded.then(() => {
+        const search = qs(document,
+                      '.sidebar-primary-item:has(> .search-button-field)');
+        const body = qs(search.parentNode.insertBefore(elmt`\
+<div class="sidebar-primary-item">\
+<table class="tdoc-repo-incoming"\
+ title="These repositories have new remote changes. Please pull and update\
+ / merge them as soon as possible.">\
+<thead><tr><th colspan="2">Remote changes:</th></tr></thead><tbody></tbody>\
+</table></div>`, search), 'tbody');
+        api.events.sub({add: [new api.Watch({name: 'repo_incoming'}, data => {
+            const repos = Object.keys(data);
+            repos.sort();
+            const rows = [];
+            for (const repo of repos) {
+                const count = data[repo];
+                if (count === 0) continue;
+                rows.push(elmt`<tr><td>${repo}</td><td>${count}</td></tr>`);
+            }
+            body.replaceChildren(...rows);
+        })]});
+    });
 }
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
@@ -83,7 +109,7 @@ if (toggleSolutionsBtn) {
 
 tdoc.toggleSolutions = () => {
     const show = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ? 'show'
-                 : 'hide'
+                                                                    : 'hide'
     if (htmlData.tdocSolutions === 'dynamic') {
         if (htmlData.tdocSolutionsCtrl !== undefined) api.solutions(show);
     } else {

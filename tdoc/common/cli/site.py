@@ -235,20 +235,33 @@ class Application(wsgi.Dispatcher):
         self.api = self.add_endpoint('_api', api_)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
+
         self.build_mtime = None
-        self.build_obs = api.ValueObservable('build', self.build_mtime)
-        self.api.events.add_observable(self.build_obs)
+        self.build = api.ValueObservable('build', self.build_mtime)
+        self.api.events.add_observable(self.build)
         self.builder = threading.Thread(target=self.watch_and_build,
                                         name='builder')
         self.builder.start()
+
+        self.repo_incoming = api.ValueObservable('repo_incoming', {})
+        self.api.events.add_observable(self.repo_incoming)
+        self.repo_incoming_checker = threading.Thread(
+            target=self.check_repo_incoming, name='repo_incoming')
+        self.repo_incoming_checker.start()
 
     def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
         with self.lock:
             self.stop = True
-            self.lock.notify()
+            self.lock.notify_all()
         self.builder.join()
+
+    def sleep(self, duration):
+        with self.lock:
+            if duration >= 0:
+                self.lock.wait_for(lambda: self.stop, timeout=duration)
+            if self.stop: return True
 
     def watch_and_build(self):
         self.remove_all()
@@ -260,9 +273,7 @@ class Application(wsgi.Dispatcher):
         # TODO: Use monotonic clock for delays
         # TODO: Avoid looping at 10Hz
         while True:
-            with self.lock:
-                if prev != 0: self.lock.wait_for(lambda: self.stop, timeout=0.1)
-                if self.stop: break
+            if self.sleep(0.1 if prev != 0 else 0): break
             now = time.time_ns()
             if (idle > 0 and (lw := self.api.events.last_watcher) is not None
                     and now > lw + idle):
@@ -286,13 +297,13 @@ class Application(wsgi.Dispatcher):
                 self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
             prev_mtime = mtime
-            if self.build(build_next, mtime):
+            if self.build_site(build_next, mtime):
                 build = self.build_dir(mtime)
                 os.rename(build_next, build)
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
-                self.build_obs.set(str(mtime))
+                self.build.set(str(mtime))
                 self.print_serving()
                 if build_mtime is not None:
                     self.remove(self.build_dir(build_mtime))
@@ -337,7 +348,7 @@ class Application(wsgi.Dispatcher):
     def build_dir(self, mtime):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
-    def build(self, build, mtime):
+    def build_site(self, build, mtime):
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
@@ -446,6 +457,48 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}{o.NORM}>
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
+
+    def check_repo_incoming(self):
+        while True:
+            data = {}
+            for repo in self.list_repos():
+                if (url := self.hg_path(repo, 'default')) is None: continue
+                if not url.startswith(('https://', 'file://')): continue
+                proc = self.hg(f'--repository={repo}', 'incoming',
+                               '--template=@tdoc-incoming\n', success=None,
+                               timeout=10)
+                if proc.returncode not in (0, 1): continue
+                data[url.rsplit('/', 1)[-1]] = \
+                    proc.stdout.count('@tdoc-incoming\n')
+            self.repo_incoming.set(data)
+            if self.sleep(15 * 60): break
+
+    def list_repos(self):
+        if (p := self.find_repo(self.opts.source)) is not None: yield p
+        for src, *_ in self.list_imports():
+            if (p := self.find_repo(src)) is not None: yield p
+
+    def find_repo(self, path):
+        if (path / '.hg').is_dir(): return path
+        for p in path.parents:
+            if (p / '.hg').is_dir(): return p
+
+    def hg(self, *args, **kwargs):
+        return util.run('hg', *args, capture_output=True, text=True, **kwargs)
+
+    hg_paths_re = re.compile(r'^paths\.([^=]+)=(.*)$')
+
+    def hg_path(self, repo, name):
+        paths = {}
+        proc = self.hg(f'--repository={repo}', 'config', 'paths', success=None)
+        if proc.returncode != 0: return
+        for line in proc.stdout.splitlines():
+            if (m := self.hg_paths_re.fullmatch(line)) is None: continue
+            paths[m[1]] = m[2]
+        while True:
+            if (p := paths.get(name)) is None: return
+            if (n := p.removeprefix('path://')) == p: return p
+            name = n
 
     def handle_request(self, handler, wr):
         wr.env['wsgi.multithread'] = True

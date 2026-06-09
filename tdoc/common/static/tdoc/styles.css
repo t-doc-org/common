@@ -1295,18 +1295,53 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-local])
     display: none;
 }
 
+/* Incoming changesets in repositories */
+.sidebar-primary-item:has(.tdoc-repo-incoming):not(#¶) {
+    border: 2px solid var(--pst-color-danger);
+    padding: 0.3rem 0.5rem;
+}
+.sidebar-primary-item:has(.tdoc-repo-incoming tbody:empty) {
+    display: none;
+}
+.tdoc-repo-incoming {
+    width: 100%;
+    color: var(--pst-color-text-muted);
+    line-height: 1.3;
+}
+.tdoc-repo-incoming :is(th, td) {
+    padding: 0;
+    /*border: 1px solid black;*/
+}
+.tdoc-repo-incoming thead th {
+    padding-bottom: 0.3rem;
+}
+.tdoc-repo-incoming tbody td:first-child {
+    padding-left: 1rem;
+    font-family: var(--pst-font-family-monospace);
+}
+.tdoc-repo-incoming tbody td:last-child {
+    padding-left: 0.8rem;
+    text-align: right;
+}
+
 /* Remove some unnecessary whitespace in the primary sidebar. */
+.bd-sidebar-primary
+        :is(.sidebar-primary-items__start, .sidebar-primary-items__end) {
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+}
+.bd-sidebar-primary
+        :is(.sidebar-primary-items__start, .sidebar-primary-items__end)
+        .sidebar-primary-item {
+    padding-top: 0;
+    padding-bottom: 0;
+}
 .bd-sidebar-primary .sidebar-primary-items__end {
     margin-bottom: 0;
 }
-.bd-sidebar-primary .sidebar-primary-items__end
-        .sidebar-primary-item:last-child {
-    padding-bottom: 0;
-}
-
-/* Hide the Read-the-Docs switcher in the sidebar added by pydata-sphinx-theme
-   if it's empty, as it causes the scrollbar to always appear. */
-.bd-sidebar-primary div#rtd-footer-container:empty {
+.bd-sidebar-primary .sidebar-primary-item:empty,
+.bd-sidebar-primary .sidebar-primary-item:has(#ethical-ad-placement) {
     display: none;
 }
 
