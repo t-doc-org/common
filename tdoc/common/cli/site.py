@@ -465,8 +465,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                 if (url := self.hg_path(repo, 'default')) is None: continue
                 if not url.startswith(('https://', 'file://')): continue
                 proc = self.hg(f'--repository={repo}', 'incoming',
-                               '--template=@tdoc-incoming\n', success=None,
-                               timeout=30)
+                               '--template=@tdoc-incoming\n', success=None)
                 if proc.returncode not in (0, 1): continue
                 data[url.rsplit('/', 1)[-1]] = \
                     proc.stdout.count('@tdoc-incoming\n')
