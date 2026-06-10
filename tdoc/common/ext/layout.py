@@ -216,6 +216,9 @@ def set_html_context(app, page, template, context, doctree):
     if v := md.get('page-break-force'):
         if not isinstance(v, (list, tuple)): v = [v]
         attrs['data-tdoc-page-break-force'] = ' '.join(f'h{h}' for h in v)
-    if v := md.get('page-break-avoid'):
+    v = md.get('page-break-avoid-inside')
+    if v is None: v = md.get('page-break-avoid')  # TODO(0.79): Remove
+    if v:
         if not isinstance(v, (list, tuple)): v = [v]
-        attrs['data-tdoc-page-break-avoid'] = ' '.join(f'h{h}' for h in v)
+        attrs['data-tdoc-page-break-avoid-inside'] = \
+            ' '.join(f'h{h}' for h in v)

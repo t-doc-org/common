@@ -59,16 +59,23 @@
     .bd-main .bd-content {
         margin-left: 0;
     }
-    .bd-main .bd-content .bd-article-container {
-        /* TODO: Maybe enable this */
-        /*max-width: 175mm;*/
+    .bd-page-width, .bd-main .bd-content .bd-article-container {
+        /* TODO: Not limiting the page width would allow all zoom levels to work
+           correctly, but it casues rendering issues with chart.js charts: their
+           text becomes extremely small, and redering with
+           printDevicePixelRatio > 1 becomes very slow. */
+        /*max-width: none;*/
     }
-    .bd-main .bd-content #jb-print-docs-body h1 {
+    .bd-main .bd-content .bd-article-container {
+        display: block;  /* Allow margin collapsing out of children */
+    }
+    .bd-main .bd-content .bd-article-container #jb-print-docs-body h1 {
         margin-top: 0;
         font-size: var(--pst-font-size-h1);
     }
     .bd-main .bd-content .bd-article-container .bd-article {
-        padding-top: 1.5rem;
+        margin-top: 1.5rem;
+        padding-top: 0;
         padding-left: 0;
         padding-right: 0;
     }
@@ -78,21 +85,26 @@
     section.page-break > :is(h2, h3, h4, h5, h6):first-child {
         margin-top: 0;
     }
-    html[data-tdoc-page-break-force~=h2] section:has(> h2:first-child),
-    html[data-tdoc-page-break-force~=h3] section:has(> h3:first-child),
-    html[data-tdoc-page-break-force~=h4] section:has(> h4:first-child),
-    html[data-tdoc-page-break-force~=h5] section:has(> h5:first-child),
-    html[data-tdoc-page-break-force~=h6] section:has(> h6:first-child) {
-        break-after: page;
+    html[data-tdoc-page-break-force~=h2]
+            section:has(> h2:first-child):not(:first-of-type, .no-force-break),
+    html[data-tdoc-page-break-force~=h3]
+            section:has(> h3:first-child):not(:first-of-type, .no-force-break),
+    html[data-tdoc-page-break-force~=h4]
+            section:has(> h4:first-child):not(:first-of-type, .no-force-break),
+    html[data-tdoc-page-break-force~=h5]
+            section:has(> h5:first-child):not(:first-of-type, .no-force-break),
+    html[data-tdoc-page-break-force~=h6]
+            section:has(> h6:first-child):not(:first-of-type, .no-force-break) {
+        break-before: page;
         & > :is(h2, h3, h4, h5, h6):first-child {
             margin-top: 0;
         }
     }
-    html[data-tdoc-page-break-avoid~=h2] section:has(> h2:first-child),
-    html[data-tdoc-page-break-avoid~=h3] section:has(> h3:first-child),
-    html[data-tdoc-page-break-avoid~=h4] section:has(> h4:first-child),
-    html[data-tdoc-page-break-avoid~=h5] section:has(> h5:first-child),
-    html[data-tdoc-page-break-avoid~=h6] section:has(> h6:first-child) {
+    html[data-tdoc-page-break-avoid-inside~=h2] section:has(> h2:first-child),
+    html[data-tdoc-page-break-avoid-inside~=h3] section:has(> h3:first-child),
+    html[data-tdoc-page-break-avoid-inside~=h4] section:has(> h4:first-child),
+    html[data-tdoc-page-break-avoid-inside~=h5] section:has(> h5:first-child),
+    html[data-tdoc-page-break-avoid-inside~=h6] section:has(> h6:first-child) {
         break-inside: avoid-page;
     }
     a, a:visited {

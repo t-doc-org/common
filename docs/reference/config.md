@@ -52,10 +52,10 @@ t-doc uses the following document metadata fields for per-page configuration.
 
 - `mermaid:`: A map of config properties for {rst:dir}`mermaid` diagrams.
 
-- `page-break-avoid:`: A level or list of levels of sections in which page breaks
-  should be avoided.
+- `page-break-avoid-inside:`: A level or list of levels of sections inside which
+  page breaks should be avoided.
 
-- `page-break-force:`: A level or list of levels of sections after which a page
+- `page-break-force:`: A level or list of levels of sections before which a page
   break should be forced.
 
 - `points:`: Defines how [point](layout.md#points) values are formatted.
