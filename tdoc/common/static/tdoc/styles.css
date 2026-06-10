@@ -11,6 +11,11 @@ section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
 .line-height-normal:not(#¶) .highlight pre {
     line-height: normal;
 }
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}
 
 /* Revert font attributes to pre pydata-sphinx-theme 0.16.0. */
 html {
@@ -92,12 +97,10 @@ blockquote div > p:has(+ p.attribution) {
 .column-break {
     break-before: column;
 }
-/* TODO(0.79): Remove .allow-break */
-.allow-break:not(#¶), .allow-break-inside:not(#¶) {
+.allow-break-inside:not(#¶) {
     break-inside: auto;
 }
-/* TODO(0.79): Remove .avoid-break */
-.avoid-break:not(#¶), .avoid-break-inside:not(#¶) {
+.avoid-break-inside:not(#¶) {
     break-inside: avoid;
 }
 .columns-2 {

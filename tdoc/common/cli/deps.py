@@ -8,7 +8,8 @@ import webbrowser
 
 from .. import cli, deps, util
 
-# TODO: GitHub actions
+# TODO: check: Suggest only versions satisfying the cooldown
+# TODO: Add support for GitHub actions
 
 
 def add_commands(parser):

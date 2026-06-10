@@ -72,7 +72,7 @@ class Connection(sqlite3.Connection):
     @property
     def local(self):
         local = self.meta('local', None)
-        # TODO(0.79): Remove fallback to 'dev''
+        # TODO(0.79): Remove fallback to 'dev'
         if local is None: local = self.meta('dev', False)
         return local
 
