@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-78)=
+## 0.78 *(2026-06-10)*
+
+- Added reporting of available remote changes when serving locally.
+- Added a mechanism to inhibit forced page breaks due to `page-break-force`.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.77...0.78)
+
 (release-0-77)=
 ## 0.77 *(2026-06-07)*
 
