@@ -1300,6 +1300,7 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-local])
 /* Incoming changesets in repositories */
 .sidebar-primary-item:has(.tdoc-repo-incoming):not(#¶) {
     border: 2px solid var(--pst-color-danger);
+    border-radius: 0.25rem;
     padding: 0.3rem 0.5rem;
 }
 .sidebar-primary-item:has(.tdoc-repo-incoming tbody:empty) {
