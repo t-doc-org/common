@@ -25,12 +25,12 @@ In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields),
 t-doc uses the following document metadata fields for per-page configuration.
 
-- `chartjs:`: A map of config defaults for {rst:dir}`chartjs` charts.
+- `chartjs`: A map of config defaults for {rst:dir}`chartjs` charts.
 
-- `date:`: The date to use in headers and footers when printing. Defaults to the
+- `date`: The date to use in headers and footers when printing. Defaults to the
   current date.
 
-- `exec:`: A map of per-language configuration for client-side
+- `exec`: A map of per-language configuration for client-side
   [code execution](exec.md).
 
   ```{code-block} yaml
@@ -39,28 +39,28 @@ t-doc uses the following document metadata fields for per-page configuration.
       packages: [sqlite3]
   ```
 
-- `hide:`: A set of [elements to hide](layout.md#hide-elements) on the page.
+- `hide`: A set of [elements to hide](layout.md#hide-elements) on the page.
 
-- `jsxgraph:`: A map of config defaults for {rst:dir}`jsxgraph` graphs.
+- `jsxgraph`: A map of config defaults for {rst:dir}`jsxgraph` graphs.
 
-- `mathjax:`: A map of
+- `mathjax`: A map of
   [MathJax configuration](https://docs.mathjax.org/en/stable/web/configuration.html)
   overrides.
 
-  - `output:`: The default output processor (`chtml`, `svg`). The default is
+  - `output`: The default output processor (`chtml`, `svg`). The default is
     `svg`.
 
-- `mermaid:`: A map of config properties for {rst:dir}`mermaid` diagrams.
+- `mermaid`: A map of config properties for {rst:dir}`mermaid` diagrams.
 
-- `page-break-avoid-inside:`: A level or list of levels of sections inside which
+- `page-break-avoid-inside`: A level or list of levels of sections inside which
   page breaks should be avoided.
 
-- `page-break-force:`: A level or list of levels of sections before which a page
+- `page-break-force`: A level or list of levels of sections before which a page
   break should be forced.
 
-- `points:`: Defines how [point](layout.md#points) values are formatted.
+- `points`: Defines how [point](layout.md#points) values are formatted.
 
-- `print-styles:`: A CSS stylesheet URL to use when printing. Relative URLs are
+- `print-styles`: A CSS stylesheet URL to use when printing. Relative URLs are
   resolved relative to the `_static` directory. The following print stylesheets
   are provided:
 
@@ -77,7 +77,7 @@ t-doc uses the following document metadata fields for per-page configuration.
     - Footer, left: The site author.
     - Footer, center: The page number and the total number of pages.
 
-- `scripts:`: A list of scripts to reference from the page header through
+- `scripts`: A list of scripts to reference from the page header through
   `<script>`{l=html} elements. The list items can be either strings (the URL of
   the script) or maps. For maps, the `src` key specifies the URL of the script,
   and other keys are added to the `<script>`{l=html} element. Relative URLs are
@@ -91,9 +91,9 @@ t-doc uses the following document metadata fields for per-page configuration.
     - https://code.jquery.com/jquery-3.7.1.min.js
   ```
 
-- `solutions:`: Controls how [solutions](elements.md#solution) are displayed.
+- `solutions`: Controls how [solutions](elements.md#solution) are displayed.
 
-- `styles:`: A list of CSS stylesheets to reference from the page header through
+- `styles`: A list of CSS stylesheets to reference from the page header through
   `<link>`{l=html} elements. The list items can be either strings (the URL of
   the stylesheet) or maps. For maps, the `src` key specifies the URL of the
   stylesheet, and other keys are added to the `<link>`{l=html} element. Relative
@@ -107,10 +107,10 @@ t-doc uses the following document metadata fields for per-page configuration.
     - https://example.com/styles.css
   ```
 
-- `subject:`: The subject covered by the document. This may be used by print
+- `subject`: The subject covered by the document. This may be used by print
   stylesheets in headers or footers.
 
-- `versions:`: A map overriding the versions of JavaScript dependencies on a
+- `versions`: A map overriding the versions of JavaScript dependencies on a
   page. The keys are dependency identifiers and the values can be either version
   numbers or full URLs. See
   [`deps.py`](https://github.com/t-doc-org/common/blob/main/tdoc/common/deps.py)

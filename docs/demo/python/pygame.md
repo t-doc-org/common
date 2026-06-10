@@ -16,7 +16,7 @@ versions:
 
 [`pygame-ce`](https://github.com/pygame-community/pygame-ce) can be used in
 [`{exec} python`](../../reference/exec.md#python) blocks by listing it in the
-[`exec:python:packages:`](../../reference/exec.md#python) {rst:dir}`metadata`.
+[`exec.python.packages`](../../reference/exec.md#python) {rst:dir}`metadata`.
 
 ```
 exec:
@@ -30,7 +30,7 @@ Code using Pygame must run in the `main` environment.
 
 ````{warning}
 `pygame-ce` is broken in recent Pyodide versions (>=0.28). Specify an earlier
-version (e.g. 0.27.7) via the `versions:pyodide:` {rst:dir}`metadata`.
+version (e.g. 0.27.7) via the `versions.pyodide` {rst:dir}`metadata`.
 
 ```
 versions:
@@ -137,8 +137,8 @@ finally:
 ## Using resource files
 
 The example below demonstrates loading resources from files specified in the
-[`exec:python:files:`](../../reference/exec.md#python) {rst:dir}`metadata`.
-Press {kbd}`Esc` to terminate the program.
+[`exec.python.files`](../../reference/exec.md#python) {rst:dir}`metadata`. Press
+{kbd}`Esc` to terminate the program.
 
 ```{exec} python main
 import pygame

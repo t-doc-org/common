@@ -258,7 +258,7 @@ only when really necessary, e.g. for
 [code using Pygame](../demo/python/pygame.md). All other interpreters run in
 their own web worker, and don't block user interactions.
 
-Pyodide can be configured via the `exec:python:` {rst:dir}`metadata`. This
+Pyodide can be configured via the `exec.python` {rst:dir}`metadata`. This
 enables the following functionality:
 
 - **[Load packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages):**

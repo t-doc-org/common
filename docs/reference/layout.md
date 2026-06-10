@@ -156,11 +156,11 @@ Explain how...
 
 The points values are formatted using
 [format strings](https://docs.python.org/3/library/string.html#formatstrings)
-specified in {rst:dir}`metadata`.
+specified in the `points` {rst:dir}`metadata`.
 
-- `points:format:`: A format string to format a {py:class}`float` value. The
-  default is `"{0:.3g}"`.
-- `points:text:` A single or a pair of format strings to format the text that is
+- `format`: A format string to format a {py:class}`float` value. The default is
+  `"{0:.3g}"`.
+- `text` A single or a pair of format strings to format the text that is
   substituted for the {rst:role}`points` roles. When a pair is provided, the
   first element is used when the points value is `1` (singular), and the second
   is used for all other values (plural). The default is
@@ -220,8 +220,8 @@ A space-separated list of CSS classes to add to the rendered block sections.
 
 ## Hide elements
 
-The `hide:` {rst:dir}`metadata` allows hiding elements on a page. The value is
-a list of keywords. The following keywords are defined:
+The `hide` {rst:dir}`metadata` allows hiding elements on a page. The value is a
+list of keywords. The following keywords are defined:
 
 - `navbar`: The navigation bar at the top of the page. Note that the navigation
   bar is not hidden if there are {rst:dir}`solution` directives on the page,
@@ -242,7 +242,7 @@ hide: [primary-sidebar, prev-next, footer]
 ```
 ````
 
-Additional keywords can be defined via a custom CSS stylesheet. For example, the
+Additional keywords can be defined in a custom CSS stylesheet. For example, the
 following CSS defines the keyword `search` to hide the search field in the
 primary sidebar.
 

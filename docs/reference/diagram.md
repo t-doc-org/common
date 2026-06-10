@@ -18,7 +18,7 @@ overriding more general ones.
 - A
   [frontmatter](https://mermaid.js.org/intro/syntax-reference.html#frontmatter-for-diagram-code)
   block in the directive content sets properties for a single diagram.
-- The `mermaid:` {rst:dir}`metadata` sets the default properties for the page.
+- The `mermaid` {rst:dir}`metadata` sets the default properties for the page.
 - The `mermaid` key in the {confval}`metadata` option in `conf.py` (a `dict`)
   sets the default properties for the site.
 

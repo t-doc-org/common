@@ -71,7 +71,7 @@ options: {
 ```
 ````
 
-Defaults can be set via the `chartjs:` {rst:dir}`metadata`, and are merged into
+Defaults can be set via the `chartjs` {rst:dir}`metadata`, and are merged into
 [`Chart.defaults`](https://www.chartjs.org/docs/latest/configuration/#global-configuration).
 
 {.rubric}

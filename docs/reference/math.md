@@ -46,7 +46,7 @@ is set automatically from the `boundingBox`. Otherwise, the aspect ratio
 defaults to `1 / 1`, and can be overridden with the
 {rst:dir}`:style: <jsxgraph:style>` option.
 
-Defaults can be set via the `jsxgraph:` {rst:dir}`metadata`, and are merged into
+Defaults can be set via the `jsxgraph` {rst:dir}`metadata`, and are merged into
 [`JXG.Options`](https://jsxgraph.uni-bayreuth.de/docs/symbols/src/src_options.js.html).
 
 {.rubric}

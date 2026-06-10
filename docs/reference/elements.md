@@ -15,7 +15,7 @@ This directive adds an admonition of type `solution`. The title defaults to
 clicking on the title bar. Holding {kbd}`Ctrl` while clicking toggles all
 admonitions on the page.
 
-The `solutions:` key in the document {rst:dir}`metadata` controls how solutions
+The `solutions` key in the document {rst:dir}`metadata` controls how solutions
 are displayed.
 
 - `dynamic` (default): Solutions are hidden by default, but can be made visible
