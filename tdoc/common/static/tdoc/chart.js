@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, domLoaded, elmt, instantiateDynTemplate, isPlainObject, isObject,
-    mergeAttrs, on, onSet, qs, qsa, resolveDyn,
+    asyncGet, domLoaded, elmt, htmle, instantiateDynTemplate, isPlainObject,
+    isObject, mergeAttrs, on, onSet, qs, qsa, resolveDyn,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
@@ -159,9 +159,10 @@ export async function chart(el, config) {
 // Template container.
 export const templates = onSet({}, (obj, name, fn) => {
     if (obj[name] !== undefined) {
-        throw new Error(`{chartjs} Duplicate template: ${name}`);
+        throw htmle`\
+<code>{chartjs}</code> Duplicate template definition: <code>${name}</code>`;
     }
-    instantiateDynTemplate('chartjs', name, fn);
+    instantiateDynTemplate('chartjs', name, fn);  // Background
 });
 
 templates.chart = chart;
@@ -306,7 +307,8 @@ annotations.avgDev = ({f, from = 'median', dist = false, label},
     const m = from === 'median' ? ds.median :
               from === 'mean' ? ds.mean : undefined;
     if (m === undefined) {
-        throw new Error(`{chartjs} avgDev: unsupported 'from': ${from}`);
+        throw htmle`\
+<code>{chartjs} avgDev</code>: Unsupported <code>from</code> argument: ${from}`;
     }
     const ad = ds.avgDev(m);
     return map(f, f => {
@@ -361,8 +363,9 @@ templates.histogram = async (el, {
         bins = Bins.custom({bins: distribution.map(it => it[0])});
         distribution = Distribution.of(distribution);
     } else {
-        throw new Error(
-            "{chartjs} histogram: Either sample or distribution is required");
+        throw htmle`\
+<code>{chartjs} histogram</code>: Either <code>sample</code> or \
+<code>distribution</code> is required.`;
     }
     if (normalize) distribution.normalize();
     const data = distribution.map(
@@ -425,9 +428,9 @@ templates['cumulative-distribution-function'] = async (el, {
         ds = distribution = Distribution.of(distribution);
         cdf = distribution.cumulativeDistributionFunction(normalize);
     } else {
-        throw new Error(`\
-{chartjs} cumulative-distribution-function: Either sample or distribution is\
- required`);
+        throw htmle`\
+<code>{chartjs} cumulative-distribution-function</code>: Either \
+<code>sample</code> or <code>distribution</code> is required.`;
     }
     const data = [{x: -Number.MAX_VALUE, y: 0}];
     for (let [x, y] of cdf) {
@@ -467,4 +470,3 @@ templates['cumulative-distribution-function'] = async (el, {
         },
     }, {options}]);
 };
-

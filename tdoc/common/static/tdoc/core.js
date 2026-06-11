@@ -100,16 +100,27 @@ function interpolateHtml(html, values) {
     for (const [i, s] of html.entries()) {
         parts.push(s);
         const v = values[i];
-        if (v !== undefined && v !== '') parts.push(escape(v.toString()));
+        if (v === undefined || v === '') {
+            continue;
+        } else if (v === null) {
+            parts.push('null');
+        } else if (v instanceof Element) {
+            parts.push(v.outerHTML);
+        } else if (v instanceof DocumentFragment) {
+            const el = document.createElement('template');
+            el.content.append(v);
+            parts.push(el.innerHTML);
+        } else {
+            parts.push(escape(v.toString()));
+        }
     }
     return parts.join('');
 }
 
 // Create an DocumentFragment node.
 export function html(tmpl, ...values) {
-    if (typeof tmpl !== 'string') tmpl = interpolateHtml(tmpl, values);
     const el = document.createElement('template');
-    el.innerHTML = tmpl;
+    el.innerHTML = interpolateHtml(tmpl, values);
     return el.content;
 }
 
@@ -117,6 +128,27 @@ export function html(tmpl, ...values) {
 export function elmt(tmpl, ...values) {
     return html(tmpl, ...values).firstElementChild;
 }
+
+// An Error with an HTML-formatted message.
+export class HtmlError extends Error {
+    constructor(html, options) {
+        super(html.textContent, options);
+        this.html = html;
+    }
+
+    as(kind) {
+        this.kind = kind;
+        return this;
+    }
+}
+
+// Create an HtmlError containing, well, HTML.
+export function htmle(tmpl, ...values) {
+    return new HtmlError(html(tmpl, ...values));
+}
+
+// Display alerts for unhandled exceptions in promises.
+addEventListener('unhandledrejection', e => { showAlert(e.reason); });
 
 // Query a single matching element from a node.
 export function qs(node, selector) {
@@ -161,7 +193,12 @@ export function asyncGet(obj) {
 export function onSet(obj, set) {
     return new Proxy(obj, {
         set(obj, prop, value, recv) {
-            set(obj, prop, value);
+            try {
+                set(obj, prop, value);
+            } catch (e) {
+                showAlert(e);
+                throw e;
+            }
             obj[prop] = value;
             return true;
         },
@@ -181,11 +218,26 @@ export async function resolveDyn(type, el) {
     const node = qs(document, `\
 div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
 [data-name="${CSS.escape(el)}"]`);
-    if (!node) throw new Error(`{${type}} not found: ${el}`);
+    if (!node) {
+        throw htmle`\
+<code>{${type}}</code> Directive not found: <code>${el}</code>`;
+    }
     return node;
 }
 
-// Return all dyn elements of a specific type that instantiate the given
+// Update the message on dyn elements that haven't been rendered after some
+// time, to hint that rendering has likely failed.
+domLoaded.then(async () => {
+    await sleep(10000);
+    const sel = '.tdoc-dyn:not(.rendered, [data-processed]):empty';
+    for (const msg of qsa(document, sel)) {
+        msg.replaceChildren(html`\
+<strong>Rendering seems to have failed.</strong> Please check the JavaScript \
+console for errors.`)
+    }
+});
+
+// Render all dyn elements of a specific type that instantiate the given
 // template.
 export async function instantiateDynTemplate(type, name, fn) {
     await domLoaded;
@@ -194,7 +246,11 @@ div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
 [data-template="${CSS.escape(name)}"]`);
     for (const el of els) {
         const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
-        fn(el, args);
+        try {
+            fn(el, args);  // Background
+        } catch (e) {
+            showAlert(e);
+        }
     }
 }
 
@@ -266,6 +322,10 @@ export function addTooltip(el, opts) {
 
 // Show an alert at the top of the article.
 export function showAlert(message, kind = 'success') {
+    if (message instanceof Error) {
+        [message, kind] = [message.html ?? message.toString(),
+                           message.kind ?? 'danger'];
+    }
     const el = qs(document, '.bd-header-article');
     el.appendChild(elmt`\
 <div class="alert alert-${kind} alert-dismissible" role="alert">\

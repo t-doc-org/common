@@ -518,8 +518,6 @@ def visit_dyn(self, node):
     if (v := node.get('attrs')) is not None: attrs |= v
     self.body.append(self.starttag(node, 'div', '', classes=['tdoc-dyn'],
                                    **attrs))
-    if not node.children:
-        self.body.append('<div class="spinner">Rendering...</div>')
 
 
 def depart_dyn(self, node):

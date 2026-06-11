@@ -1079,21 +1079,18 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     margin-right: 0;
     text-align: right;
 }
-.tdoc-dyn > div.spinner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
+.tdoc-dyn:not(.rendered, [data-processed]) {
+    padding: 0.5rem;
+    text-align: left;
     color: var(--pst-color-text-base);
-    background-color: var(--pst-color-background);
 }
-.tdoc-dyn:is(.rendered, [data-processed]) > div.spinner {
-    display: none;
+.tdoc-dyn:not(.rendered, [data-processed]):empty::after {
+    content: "Rendering...";
 }
 html[data-tdoc-local] .tdoc-dyn:not(.rendered, [data-processed]) {
     /* Override border attributes set on the element. */
     border: 1px solid var(--pst-color-danger) !important;
+    border-radius: 0.25rem;
 }
 
 /* JSXGraph boards */
@@ -1144,7 +1141,6 @@ html[data-theme=dark] .tdoc-dyn[data-type=jsxgraph]
     width: 100% !important;
     height: auto !important;
 }
-
 html[data-theme=dark] .tdoc-dyn[data-type=chartjs] > canvas {
     filter: invert(1) hue-rotate(180deg);
 }

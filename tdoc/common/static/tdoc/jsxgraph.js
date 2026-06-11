@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, domLoaded, gcd, instantiateDynTemplate, mathJaxReady, mergeAttrs,
-    onSet, qs, qsa, resolveDyn,
+    asyncGet, domLoaded, gcd, htmle, instantiateDynTemplate, mathJaxReady,
+    mergeAttrs, onSet, qs, qsa, resolveDyn,
 } from './core.js';
 import {Distribution, Sample} from './math.js';
 
@@ -180,13 +180,15 @@ export async function initBoard(el, attrs, fn) {
 // Template container.
 export const templates = onSet({}, (obj, name, fn) => {
     if (obj[name] !== undefined) {
-        throw new Error(`{jsxgraph} Duplicate template: ${name}`);
+        throw htmle`\
+<code>{jsxgraph}</code> Duplicate template definition: <code>${name}</code>`;
     }
-    instantiateDynTemplate('jsxgraph', name, fn);
+    instantiateDynTemplate('jsxgraph', name, fn);  // Background
 });
 
-templates.grid = (el, {width = 35, height = 10, grid = {}, board = {}}) => {
-    return initBoard(el, [
+templates.grid = async (el, {width = 35, height = 10, grid = {},
+                             board = {}}) => {
+    return await initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
             grid: {majorStep: 1, minorElements: 0},
@@ -195,10 +197,10 @@ templates.grid = (el, {width = 35, height = 10, grid = {}, board = {}}) => {
     ]);
 };
 
-templates.axes = (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY, major,
-                       minorX, minorY, minor, labelsX, labelsY, labels,
-                       grid, board}) => {
-    return initBoard(el, [
+templates.axes = async (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY,
+                             major, minorX, minorY, minor, labelsX, labelsY,
+                             labels, grid, board}) => {
+    return await initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
             defaultAxes: {
@@ -238,9 +240,9 @@ templates['cumulative-distribution-function'] = async (el, {
         ds = distribution = Distribution.of(distribution);
         cdf = distribution.cumulativeDistributionFunction(normalize);
     } else {
-        throw new Error(`\
-{jsxgraph} cumulative-distribution-function: Either sample or distribution is\
- required`);
+        throw htmle`\
+<code>{jsxgraph} cumulative-distribution-function</code>: Either \
+<code>sample</code> or <code>distribution</code> is required.`;
     }
 
     min ??= ds.min - 0.05 * ds.range;
@@ -256,7 +258,7 @@ templates['cumulative-distribution-function'] = async (el, {
         return cdf[cdf.length - 1][1];
     }
 
-    return initBoard(el, [
+    return await initBoard(el, [
         defaults,
         {
             boundingBox: bounds, keepAspectRatio: false, axis: true,
