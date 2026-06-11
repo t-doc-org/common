@@ -113,7 +113,7 @@ export async function extractSets(...args) {
 }
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet({});
+export const attrs = asyncGet('chartjs.attrs', {});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -168,7 +168,7 @@ export const templates = onSet({}, (obj, name, fn) => {
 templates.chart = chart;
 
 // Annotation container.
-export const annotations = asyncGet({})
+export const annotations = asyncGet('chartjs.annotations', {})
 
 const annNameRe = /^([^_]*)(?:_.*)?$/;
 
@@ -364,7 +364,7 @@ templates.histogram = async (el, {
         distribution = Distribution.of(distribution);
     } else {
         throw htmle`\
-<code>{chartjs} histogram</code>: Either <code>sample</code> or \
+<code>{chartjs} template:histogram</code>: Either <code>sample</code> or \
 <code>distribution</code> is required.`;
     }
     if (normalize) distribution.normalize();
@@ -429,7 +429,7 @@ templates['cumulative-distribution-function'] = async (el, {
         cdf = distribution.cumulativeDistributionFunction(normalize);
     } else {
         throw htmle`\
-<code>{chartjs} cumulative-distribution-function</code>: Either \
+<code>{chartjs} template:cumulative-distribution-function</code>: Either \
 <code>sample</code> or <code>distribution</code> is required.`;
     }
     const data = [{x: -Number.MAX_VALUE, y: 0}];

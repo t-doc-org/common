@@ -107,7 +107,7 @@ JXG.merge(JXG.Options, {
 JXG.merge(JXG.Options, tdoc.dyn?.jsxgraph ?? {});
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet({});
+export const attrs = asyncGet('jsxgraph.attrs', {});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -241,7 +241,7 @@ templates['cumulative-distribution-function'] = async (el, {
         cdf = distribution.cumulativeDistributionFunction(normalize);
     } else {
         throw htmle`\
-<code>{jsxgraph} cumulative-distribution-function</code>: Either \
+<code>{jsxgraph} template:cumulative-distribution-function</code>: Either \
 <code>sample</code> or <code>distribution</code> is required.`;
     }
 

@@ -163,18 +163,31 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
+// Pending accesses to asyncGet attributes.
+const pendingAsyncGet = {};
+
 // Return a proxy that makes all attribute accesses asynchronous, where the
 // attribute must first be set before accesses complete.
-export function asyncGet(obj) {
+export function asyncGet(name, obj) {
     const {promise, resolve} = Promise.withResolvers();
     return new Proxy(obj, {
         promise, resolve,
 
         async get(obj, prop, recv) {
-            for (;;) {
-                const v = obj[prop];
-                if (v !== undefined) return v;
-                await this.promise;
+            let pag, added = false;
+            try {
+                for (;;) {
+                    const v = obj[prop];
+                    if (v !== undefined) return v;
+                    if (pag === undefined) pag = pendingAsyncGet[name] = {};
+                    if (!added) {
+                        pag[prop] = (pag[prop] ?? 0) + 1;
+                        added = true;
+                    }
+                    await this.promise;
+                }
+            } finally {
+                if (added) --pag[prop];
             }
         },
 
@@ -226,14 +239,59 @@ div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
 }
 
 // Update the message on dyn elements that haven't been rendered after some
-// time, to hint that rendering has likely failed.
+// time, to hint that rendering has likely failed and report potential issues.
 domLoaded.then(async () => {
     await sleep(10000);
-    const sel = '.tdoc-dyn:not(.rendered, [data-processed]):empty';
-    for (const msg of qsa(document, sel)) {
-        msg.replaceChildren(html`\
-<strong>Rendering seems to have failed.</strong> Please check the JavaScript \
-console for errors.`)
+    const els = qsa(document,
+                    '.tdoc-dyn:not(.rendered, [data-processed]):empty');
+    if (els.length === 0) return;
+
+    // Find pending attribute accesses.
+    const pending = {};
+    for (const [c, counts] of Object.entries(pendingAsyncGet)) {
+        const parts = c.split('.');
+        const type = parts[0], cont = parts.slice(1).join('.');
+        let p = pending[type];
+        if (p === undefined) p = pending[type] = {};
+        for (const [a, count] of Object.entries(counts)) {
+            if (count > 0) {
+                let as = p[cont];
+                if (as === undefined) as = p[cont] = [];
+                as.push(a);
+            }
+        }
+    }
+    for (const [t, conts] of Object.entries(pending)) {
+        const cl = [];
+        for (const [c, as] of Object.entries(conts)) {
+            as.sort();
+            cl.push([c, as]);
+        }
+        cl.sort((a, b) => {
+            const a0 = a[0], b0 = b[0];
+            return a0 < b0 ? -1 : a0 > b0 ? 1 : 0;
+        });
+        pending[t] = cl;
+    }
+
+    // Report potential issues.
+    for (const el of els) {
+        const msg = html`\
+<strong>Rendering seems to have failed.</strong>
+<ul><li>Check the JavaScript console for errors.</li></ul>`;
+        const ul = qs(msg, 'ul');
+        if (el.dataset.template !== undefined) {
+            ul.appendChild(html`\
+<li>Check the name of the template: <code>${el.dataset.template}</code></li>`);
+        }
+        for (const [c, attrs] of pending[el.dataset.type] ?? []) {
+            const li = ul.appendChild(elmt`\
+<li>Check that the following <code>${c}</code> attributes are set: </li>`);
+            for (const [i, a] of attrs.entries()) {
+                li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
+            }
+        }
+        el.replaceChildren(msg);
     }
 });
 
