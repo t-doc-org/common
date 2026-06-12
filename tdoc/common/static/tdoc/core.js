@@ -131,6 +131,11 @@ export function elmt(tmpl, ...values) {
 
 // An Error with an HTML-formatted message.
 export class HtmlError extends Error {
+    static of(e) {
+        if (e instanceof HtmlError) return e;
+        return htmle`<strong>${e.name}:</strong> ${e.message}`;
+    }
+
     constructor(html, options) {
         super(html.textContent, options);
         this.html = html;
@@ -286,7 +291,7 @@ domLoaded.then(async () => {
         }
         for (const [c, attrs] of pending[el.dataset.type] ?? []) {
             const li = ul.appendChild(elmt`\
-<li>Check that the following <code>${c}</code> attributes are set: </li>`);
+<li>Check the names of <code>${c}</code> attributes: </li>`);
             for (const [i, a] of attrs.entries()) {
                 li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
             }
@@ -381,8 +386,8 @@ export function addTooltip(el, opts) {
 // Show an alert at the top of the article.
 export function showAlert(message, kind = 'success') {
     if (message instanceof Error) {
-        [message, kind] = [message.html ?? message.toString(),
-                           message.kind ?? 'danger'];
+        const e = HtmlError.of(message);
+        [message, kind] = [e.html, e.kind ?? 'danger'];
     }
     const el = qs(document, '.bd-header-article');
     el.appendChild(elmt`\
