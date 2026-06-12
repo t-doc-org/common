@@ -26,6 +26,8 @@ export function sum(values) {
 // A statistical sample.
 export class Sample {
     constructor(values) {
+        values = values.flatMap(v => !Array.isArray(v) ? v :
+                                new Array(v[1]).fill(v[0]));
         values.sort((a, b) => a - b);
         this.values = values;
         this._cache = {};
@@ -81,8 +83,17 @@ export class Sample {
     }
 
     get modes() {
-        // TODO: Implement
-        throw new Error("Sample.modes not implemented");
+        const df = this.densityFunction({}), len = df.length;
+        let cm = 0;
+        for (const [v, c] of df) {
+            if (c > cm) cm = c;
+        }
+        if (cm === 0) return [];
+        const res = [];
+        for (const [v, c] of df) {
+            if (c === cm) res.push(v);
+        }
+        return res;
     }
 
     // Compute a distribution from the sample, using the given bins.
@@ -92,25 +103,31 @@ export class Sample {
         return dist;
     }
 
-    // Compute the cumulative distribution function. Returns a strictly
-    // increasing array of [value, cumulative_frequency] pairs.
-    cumulativeDistributionFunction(normalize = true) {
-        const cdf = [];
+    // Compute the density or cumulative distribution function. Returns an array
+    // of [value, frequency] pairs.
+    densityFunction({normalize = false, cumulative = false}) {
+        const df = [];
         for (const v of this.values) {
-            const last = cdf[cdf.length - 1];
+            const last = df[df.length - 1];
             if (last === undefined) {
-                cdf.push([v, 1]);
+                df.push([v, 1]);
             } else if (v === last[0]) {
                 ++last[1];
             } else {
-                cdf.push([v, last[1] + 1]);
+                df.push([v, cumulative ? last[1] + 1 : 1]);
             }
         }
         if (normalize) {
             const len = this.values.length;
-            for (let i = 0; i < cdf.length; ++i) cdf[i][1] /= len;
+            for (let i = 0; i < df.length; ++i) df[i][1] /= len;
         }
-        return cdf;
+        return df;
+    }
+
+    // Compute the cumulative distribution function. Returns a strictly
+    // increasing array of [value, cumulative_frequency] pairs.
+    cumulativeDistributionFunction(normalize = true) {
+        return this.densityFunction({cumulative: true, normalize});
     }
 }
 

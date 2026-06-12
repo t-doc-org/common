@@ -120,6 +120,11 @@ as well.
 
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
+options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
+  scales: {y: {title: {display: true, text: "Occurrences"}}},
+},
 annotations: [{
   min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
 }, {
@@ -144,18 +149,10 @@ annotations: [{
     label: {position: 'end', rotation: -90, backgroundColor: '#ff9f40cc'},
   },
 }, {
-  hLine: {y: 25, label: "half-capacity"},
-  vLine: {x: 22, label: "closing time", options: {label: {rotation: -90}}},
+  hLine: {y: 25, label: "horizontal"},
+  vLine: {x: 22, label: "vertical", options: {label: {rotation: -90}}},
   options: {borderColor: '#4bc0c0', label: {backgroundColor: '#4bc0c0cc'}},
 }],
-options: {
-  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
-  backgroundColor: '#36a2eb33',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors"}},
-  },
-},
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
@@ -174,6 +171,11 @@ A histogram of a distribution, with annotations computed from the distribution
 as well.
 
 ```{chartjs} template:histogram
+options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
+  scales: {y: {title: {display: true, text: "Occurrences"}}},
+},
 annotations: [{
   min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
 }, {
@@ -198,17 +200,58 @@ annotations: [{
     label: {position: 'end', rotation: -90, backgroundColor: '#ff9f40cc'},
   },
 }],
-options: {
-  borderWidth: 0.5, borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
-  backgroundColor: '#36a2eb33',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors"}},
-  },
-},
 distribution: [
   [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
   [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24],
+],
+```
+
+### Template: `density-function`
+
+A discrete density function computed from a sample, with annotations computed
+from the sample as well.
+
+```{chartjs} template:density-function
+min: 0, max: 24, step: 2,
+options: {
+  backgroundColor: '#36a2eb',
+  scales: {y: {title: {display: true, text: "Occurrences"}}},
+},
+annotations: [{
+  min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
+}, {
+  quantile: {p: [0.01, 0.99]},
+  options: {label: {rotation: -90}},
+}, {
+  median: {}, avgDev: {f: [-1, 1]},
+  options: {
+    borderColor: '#9966ff',
+    label: {position: '25%', backgroundColor: '#9966ffcc'},
+  },
+}, {
+  mean: {}, stdDev: {f: [-2, -1, 1, 2]},
+  options: {
+    borderColor: '#ff6384',
+    label: {position: '40%', backgroundColor: '#ff6384cc'},
+  },
+}, {
+  mode: {},
+  options: {
+    borderColor: '#ff9f40',
+    label: {position: '70%', rotation: -90, backgroundColor: '#ff9f40cc'},
+  },
+}],
+sample: [
+  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
+  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+  13, 11, 8, 11, 14, 10, 10, 10, 9, 11, 14, 11, 7, 12, 8, 9, 15, 9, 10, 11,
+  6, 16, 10, 8, 13, 9, 10, 12, 10, 10, 10, 12, 9, 13, 17, 12, 9, 14, 10, 13,
+  15, 10, 12, 10, 14, 10, 7, 13, 10, 8, 6, 8, 9, 8, 11, 17, 8, 9, 9, 14,
+  6, 8, 8, 9, 9, 10, 5, 11, 9, 10, 12, 8, 8, 8, 11, 3, 6, 20, 5, 14,
+  15, 6, 9, 13, 11, 8, 14, 8, 14, 14, 8, 8, 16, 7, 8, 10, 12, 12, 10, 13,
+  9, 11, 12, 7, 7, 11, 12, 9, 8, 14, 6, 12, 9, 9, 15, 7, 12, 11, 11, 13,
+  6, 10, 8, 15, 8, 12, 5, 18, 6, 10, 6, 6, 11, 8, 11, 5, 12, 5, 11, 6,
+  10, 11, 11, 7, 17, 9, 7, 14, 14, 9, 5, 7, 13, 12, 8, 12, 11, 15, 9, 12,
 ],
 ```
 
@@ -220,10 +263,7 @@ A normalized cumulative distribution function computed from a sample.
 min: 0, max: 24, step: 2,
 options: {
   borderColor: '#36a2eb',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors (normalized)"}},
-  },
+  scales: {y: {title: {display: true, text: "Cumulative frequency"}}},
 },
 annotations: [{
   min: {}, percentile: {p: 5}, quartile: {k: 1}, median: {},
@@ -256,10 +296,7 @@ A non-normalized cumulative distribution function computed from a distribution.
 min: 0, max: 24, step: 2, normalize: false,
 options: {
   borderColor: '#36a2eb',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors"}},
-  },
+  scales: {y: {title: {display: true, text: "Cumulative occurrences"}}},
 },
 annotations: [{
   min: {}, percentile: {p: 5}, quartile: {k: 1}, median: {},

@@ -222,8 +222,13 @@ annotations.vLine = ({x, label}) => {
                 {value: x, endValue: x, label: {content: label ?? `${x}`}}];
     });
 };
+
+function sampleOrDist(sample, distribution, dist = false) {
+    return dist ? distribution ?? sample : sample ?? distribution;
+}
+
 annotations.count = ({f = 1, dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const count = ds.count;
     return map(f, f => {
         const v = f * count;
@@ -234,25 +239,25 @@ annotations.count = ({f = 1, dist = false, label}, {sample, distribution}) => {
     });
 };
 annotations.min = ({dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.min;
     return [[attrs.vLine,
              {value: v, endValue: v, label: {content: label ?? "min"}}]];
 };
 annotations.max = ({dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.max;
     return [[attrs.vLine,
              {value: v, endValue: v, label: {content: label ?? "max"}}]];
 };
 annotations.median = ({dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.median;
     return [[attrs.vLine,
              {value: v, endValue: v, label: {content: label ?? "median"}}]];
 };
 annotations.quartile = ({k, dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     return map(k, k => {
         const v = ds.quartile(k);
         return [attrs.vLine,
@@ -260,7 +265,7 @@ annotations.quartile = ({k, dist = false, label}, {sample, distribution}) => {
     });
 };
 annotations.percentile = ({p, dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     return map(p, p => {
         const v = ds.percentile(p);
         return [attrs.vLine,
@@ -268,7 +273,7 @@ annotations.percentile = ({p, dist = false, label}, {sample, distribution}) => {
     });
 };
 annotations.quantile = ({p, dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     return map(p, p => {
         const v = ds.quantile(p);
         return [attrs.vLine, {
@@ -277,14 +282,14 @@ annotations.quantile = ({p, dist = false, label}, {sample, distribution}) => {
     });
 };
 annotations.mean = ({dist = false, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.mean;
     return [[attrs.vLine,
              {value: v, endValue: v, label: {content: label ?? "mean"}}]];
 };
 annotations.stdDev = ({f, population = false, dist = false, label},
                       {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     let m = ds.mean, s = ds.stdDev;
     if (population) {
         const c = ds.count;
@@ -303,7 +308,7 @@ annotations.stdDev = ({f, population = false, dist = false, label},
 };
 annotations.avgDev = ({f, from = 'median', dist = false, label},
                       {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
+    const ds = sampleOrDist(sample, distribution, dist);
     const m = from === 'median' ? ds.median :
               from === 'mean' ? ds.mean : undefined;
     if (m === undefined) {
@@ -323,8 +328,8 @@ annotations.avgDev = ({f, from = 'median', dist = false, label},
     });
 };
 annotations.mode = ({k, dist = true, label}, {sample, distribution}) => {
-    const ds = sample && !dist ? sample : distribution;
-    let modes = ds.modes;
+    const ds = sampleOrDist(sample, distribution, dist);
+    const modes = ds.modes;
     const ms = k !== undefined ? map(k, k => modes[k - 1]) : modes;
     const res = [];
     for (const m of ms) {
@@ -415,6 +420,47 @@ templates.histogram = async (el, {
     }, {options}]);
 };
 
+templates['density-function'] = async (el, {
+    sample, min, max, step, width = 5, normalize = false, options = {},
+    annotations = [],
+}) => {
+    if (sample === undefined) {
+        throw htmle`\
+<code>{chartjs} template:density-function</code>: <code>sample</code> \
+is required.`;
+    }
+    sample = new Sample(sample);
+    const data = sample.densityFunction({normalize})
+                       .map(([v, c]) => ({x: v, y: c}));
+
+    const anns = await renderAnnotations(annotations, {sample});
+    return await chart(el, [{
+        type: 'bar',
+        data: {datasets: [{data}]},
+        options: {
+            barThickness: width,
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: min ?? sample.min - 0.05 * sample.range,
+                    max: max ?? sample.max + 0.05 * sample.range,
+                    ticks: {stepSize: step, includeBounds: false},
+                    offset: false,
+                    grid: {offset: false},
+                },
+                y: {
+                    beginAtZero: true, grace: '10%',
+                    ticks: {stepSize: normalize ? undefined : 1},
+                },
+            },
+            plugins: {
+                legend: {display: false},
+                annotation: {annotations: anns},
+            },
+        },
+    }, {options}]);
+};
+
 templates['cumulative-distribution-function'] = async (el, {
     sample, distribution, min, max, step, normalize = true, options = {},
     annotations = [],
@@ -425,6 +471,7 @@ templates['cumulative-distribution-function'] = async (el, {
         distribution = undefined;
         cdf = sample.cumulativeDistributionFunction(normalize);
     } else if (distribution !== undefined) {
+        // TODO: Make this linear between bar edges instead of staircase
         ds = distribution = Distribution.of(distribution);
         cdf = distribution.cumulativeDistributionFunction(normalize);
     } else {
