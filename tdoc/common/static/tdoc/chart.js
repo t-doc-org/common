@@ -430,7 +430,7 @@ templates['density-function'] = async (el, {
 is required.`;
     }
     sample = new Sample(sample);
-    const data = sample.densityFunction({normalize})
+    const data = sample.densityFunction(normalize)
                        .map(([v, c]) => ({x: v, y: c}));
 
     const anns = await renderAnnotations(annotations, {sample});

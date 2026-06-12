@@ -124,7 +124,8 @@ options: {
 This template renders the [histogram](https://en.wikipedia.org/wiki/Histogram)
 of a sample or a distribution.
 
-- `sample`: The statistical sample for which to plot the histogram.
+- `sample`: The statistical sample for which to plot the histogram, an array of
+  values or `[value, count]` pairs.
 - `distribution`: The distribution for which to plot the histogram, an array of
   `[x, count]` pairs where `x` is the lower bound of the bin, and the last
   element must have a zero (or `undefined`) count.
@@ -150,14 +151,41 @@ of a sample or a distribution.
 uniform: {min: 0, max: 24, width: 2},
 options: {
   borderWidth: 0.5, borderColor: '#36a2eb', backgroundColor: '#36a2eb33',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors"}},
-  }
+  scales: {y: {title: {display: true, text: "Occurrences"}}}
 },
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
+],
+```
+````
+
+#### `density-function`
+
+This template renders the
+[density function](https://en.wikipedia.org/wiki/Probability_mass_function)
+ of a sample.
+
+- `sample`: The statistical sample for which to plot the density function, an
+  array of values or `[value, count]` pairs.
+- `min`: The minimum value to represent on the horizontal axis.
+- `max`: The maximum value to represent on the horizontal axis.
+- `step`: The smallest tick interval to represent on the horizontal axis.
+- `width` (default: `5`): The width of the bars in pixels.
+- `normalize` (default: `false`): When true, represent frequencies instead of
+  counts.
+- `options`: Options to merge into the `options` field of the chart.
+
+````{code-block}
+```{chartjs} template:density-function
+min: 0, max: 24, step: 2,
+options: {
+  backgroundColor: '#36a2eb',
+  scales: {y: {title: {display: true, text: "Occurrences"}}},
+},
+sample: [
+  [6, 2], [7, 4], [8, 4], [9, 8], [10, 8], [11, 4], [12, 3], [13, 3], [15, 2],
+  [16, 1], [17, 1],
 ],
 ```
 ````
@@ -168,7 +196,8 @@ This template renders the
 [cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
 of a sample or a distribution.
 
-- `sample`: The statistical sample for which to plot the CDF.
+- `sample`: The statistical sample for which to plot the CDF, an array of
+  values or `[value, count]` pairs.
 - `distribution`: The distribution for which to plot the CDF, an array of
   `[x, count]` pairs where `x` is the lower bound of the bin, and the last
   element must have a zero (or `undefined`) count.
@@ -184,10 +213,7 @@ of a sample or a distribution.
 min: 0, max: 24, step: 2,
 options: {
   borderColor: '#36a2eb',
-  scales: {
-    x: {title: {display: true, text: "Hours"}},
-    y: {title: {display: true, text: "Visitors (normalized)"}},
-  },
+  scales: {y: {title: {display: true, text: "Cumulative frequency"}}},
 },
 distribution: [
   [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],

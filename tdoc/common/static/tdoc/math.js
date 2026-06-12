@@ -27,7 +27,8 @@ export function sum(values) {
 export class Sample {
     constructor(values) {
         values = values.flatMap(v => !Array.isArray(v) ? v :
-                                new Array(v[1]).fill(v[0]));
+                                     v[1] > 0 ? new Array(v[1]).fill(v[0]) :
+                                     []);
         values.sort((a, b) => a - b);
         this.values = values;
         this._cache = {};
@@ -83,7 +84,7 @@ export class Sample {
     }
 
     get modes() {
-        const df = this.densityFunction({}), len = df.length;
+        const df = this.densityFunction(), len = df.length;
         let cm = 0;
         for (const [v, c] of df) {
             if (c > cm) cm = c;
@@ -105,7 +106,7 @@ export class Sample {
 
     // Compute the density or cumulative distribution function. Returns an array
     // of [value, frequency] pairs.
-    densityFunction({normalize = false, cumulative = false}) {
+    densityFunction(normalize = false, cumulative = false) {
         const df = [];
         for (const v of this.values) {
             const last = df[df.length - 1];
@@ -127,7 +128,7 @@ export class Sample {
     // Compute the cumulative distribution function. Returns a strictly
     // increasing array of [value, cumulative_frequency] pairs.
     cumulativeDistributionFunction(normalize = true) {
-        return this.densityFunction({cumulative: true, normalize});
+        return this.densityFunction(normalize, true);
     }
 }
 
