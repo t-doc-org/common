@@ -1391,11 +1391,27 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-local])
     row-gap: 0.5rem;
     align-items: stretch;
 }
-.bd-header-article:has(.alert) {
+.bd-header-article:has(.tdoc-alerts:not(:empty)) {
     padding-bottom: 0.5rem;
 }
-.bd-header-article > .alert {
+.tdoc-alerts {
+    display: flex;
+    flex-direction: column;
+    max-height: 40vh;
+    overflow-y: auto;
+    row-gap: 0.5rem;
+    align-items: stretch;
+}
+.tdoc-alerts:empty {
+    display: none;
+}
+.tdoc-alerts > .alert {
     --bs-alert-margin-bottom: 0;
+}
+.tdoc-alerts .alert-dismissible .btn-close {
+    top: 0.2rem;
+    right: 0.2rem;
+    padding: 1.1rem 1rem;
 }
 
 /* Prevent the wrapper background set by pygments from being visible if the

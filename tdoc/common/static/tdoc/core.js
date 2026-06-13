@@ -389,7 +389,11 @@ export function showAlert(message, kind = 'success') {
         const e = HtmlError.of(message);
         [message, kind] = [e.html, e.kind ?? 'danger'];
     }
-    const el = qs(document, '.bd-header-article');
+    let el = qs(document, '.tdoc-alerts');
+    if (!el) {
+        el = qs(document, '.bd-header-article').appendChild(elmt`\
+<div class="tdoc-alerts"></div>`);
+    }
     el.appendChild(elmt`\
 <div class="alert alert-${kind} alert-dismissible" role="alert">\
 <div>${message}</div>\
