@@ -465,23 +465,22 @@ templates['cumulative-distribution-function'] = async (el, {
     sample, distribution, min, max, step, normalize = true, options = {},
     annotations = [],
 }) => {
-    let ds, cdf;
+    let ds, data = [{x: -Number.MAX_VALUE, y: 0}];
     if (sample !== undefined) {
         ds = sample = new Sample(sample);
         distribution = undefined;
-        cdf = sample.cumulativeDistributionFunction(normalize);
+        const cdf = sample.cumulativeDistributionFunction(normalize);
+        for (let [x, y] of cdf) {
+            data.push({x, y: data[data.length - 1].y}, {}, {x, y});
+        }
     } else if (distribution !== undefined) {
-        // TODO: Make this linear between bar edges instead of staircase
         ds = distribution = Distribution.of(distribution);
-        cdf = distribution.cumulativeDistributionFunction(normalize);
+        const cdf = distribution.cumulativeDistributionFunction(normalize);
+        for (let [x, y] of cdf) data.push({x, y});
     } else {
         throw htmle`\
 <code>{chartjs} template:cumulative-distribution-function</code>: Either \
 <code>sample</code> or <code>distribution</code> is required.`;
-    }
-    const data = [{x: -Number.MAX_VALUE, y: 0}];
-    for (let [x, y] of cdf) {
-        data.push({x, y: data[data.length - 1].y}, {}, {x, y});
     }
     data.push({x: Number.MAX_VALUE, y: data[data.length - 1].y});
 
@@ -498,14 +497,14 @@ templates['cumulative-distribution-function'] = async (el, {
                     ticks: {stepSize: step, includeBounds: false},
                 },
                 y: {
-                    max: 1.1 * cdf[cdf.length - 1][1],
+                    max: 1.1 * data[data.length - 1].y,
                     beginAtZero: true,
                     ticks: {includeBounds: false},
                 },
             },
             pointRadius: 3, pointBorderWidth: 1,
             pointBackgroundColor: ctx => {
-                return ctx.index % 3 === 0 ?
+                return distribution !== undefined || ctx.index % 3 === 0 ?
                        ctx.chart.options.pointBorderColor
                        ?? ctx.chart.options.borderColor
                        ?? Chart.defaults.borderColor : '#fff';

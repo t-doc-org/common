@@ -231,14 +231,31 @@ templates['cumulative-distribution-function'] = async (el, {
     sample, distribution, min, max, step, normalize = true, yAnchor = 0.08,
     defaults = {}, options = {},
 }) => {
-    let ds, cdf;
+    let ds, cdf, f;
     if (sample !== undefined) {
         ds = sample = new Sample(sample);
         distribution = undefined;
         cdf = sample.cumulativeDistributionFunction(normalize);
+        f = (x) => {
+            if (x < cdf[0][0]) return 0;
+            for (let i = 1; i < cdf.length; ++i) {
+                if (x < cdf[i][0]) return cdf[i - 1][1];
+            }
+            return cdf[cdf.length - 1][1];
+        };
     } else if (distribution !== undefined) {
         ds = distribution = Distribution.of(distribution);
         cdf = distribution.cumulativeDistributionFunction(normalize);
+        f = (x) => {
+            if (x < cdf[0][0]) return 0;
+            for (let i = 1; i < cdf.length; ++i) {
+                if (x < cdf[i][0]) {
+                    const [x1, y1] = cdf[i - 1], [x2, y2] = cdf[i];
+                    return y1 + ((x - x1) / (x2 - x1)) * (y2 - y1);
+                }
+            }
+            return cdf[cdf.length - 1][1];
+        };
     } else {
         throw htmle`\
 <code>{jsxgraph} template:cumulative-distribution-function</code>: Either \
@@ -249,14 +266,6 @@ templates['cumulative-distribution-function'] = async (el, {
     max ??= ds.max + 0.05 * ds.range;
     const last = cdf[cdf.length - 1][1];
     const bounds = [min - yAnchor * (max - min), 1.1 * last, max, -0.15 * last];
-
-    function f(x) {
-        if (x < cdf[0][0]) return 0;
-        for (let i = 1; i < cdf.length; ++i) {
-            if (x < cdf[i][0]) return cdf[i - 1][1];
-        }
-        return cdf[cdf.length - 1][1];
-    }
 
     return await initBoard(el, [
         defaults,
@@ -289,13 +298,14 @@ templates['cumulative-distribution-function'] = async (el, {
         },
         options,
     ], board => {
-        board.create('functiongraph',
-                     [f, min - 0.5 * (max - min), max + 0.5 * (max - min)]);
+        board.create('functiongraph', [f]);
         for (let i = 0; i < cdf.length; ++i) {
-            const v = cdf[i][0];
-            board.create('point', [v, i === 0 ? 0 : cdf[i - 1][1]],
-                         {fillColor: JXG.palette.white});
-            board.create('point', [v, cdf[i][1]]);
+            const [x, y] = cdf[i];
+            if (sample !== undefined) {
+                board.create('point', [x, i === 0 ? 0 : cdf[i - 1][1]],
+                             {fillColor: JXG.palette.white});
+            }
+            board.create('point', [x, y]);
         }
         board.on('boundingbox', () => {
             const box = board.getBoundingBox(), nbox = [...box];

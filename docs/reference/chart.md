@@ -149,14 +149,14 @@ of a sample or a distribution.
 ````{code-block}
 ```{chartjs} template:histogram
 uniform: {min: 0, max: 24, width: 2},
-options: {
-  borderWidth: 0.5, borderColor: '#36a2eb', backgroundColor: '#36a2eb33',
-  scales: {y: {title: {display: true, text: "Occurrences"}}}
-},
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
   9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
 ],
+options: {
+  borderWidth: 0.5, borderColor: '#36a2eb', backgroundColor: '#36a2eb33',
+  scales: {y: {title: {display: true, text: "Occurrences"}}}
+},
 ```
 ````
 
@@ -179,14 +179,14 @@ This template renders the
 ````{code-block}
 ```{chartjs} template:density-function
 min: 0, max: 24, step: 2,
-options: {
-  backgroundColor: '#36a2eb',
-  scales: {y: {title: {display: true, text: "Occurrences"}}},
-},
 sample: [
   [6, 2], [7, 4], [8, 4], [9, 8], [10, 8], [11, 4], [12, 3], [13, 3], [15, 2],
   [16, 1], [17, 1],
 ],
+options: {
+  backgroundColor: '#36a2eb',
+  scales: {y: {title: {display: true, text: "Occurrences"}}},
+},
 ```
 ````
 
@@ -211,14 +211,14 @@ of a sample or a distribution.
 ````{code-block}
 ```{chartjs} template:cumulative-distribution-function
 min: 0, max: 24, step: 2,
+sample: [
+  [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1], [14, 6], [16, 9], [18, 8],
+  [20, 5],
+],
 options: {
   borderColor: '#36a2eb',
   scales: {y: {title: {display: true, text: "Cumulative frequency"}}},
 },
-distribution: [
-  [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
-  [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24],
-],
 ```
 ````
 

@@ -396,14 +396,16 @@ export class Distribution {
     // Compute the cumulative distribution function. Returns a strictly
     // increasing array of [value, cumulative_frequency] pairs.
     cumulativeDistributionFunction(normalize = true) {
-        const cdf = [];
         const bins = this.bins, counts = this.counts, len = counts.length;
         let count = 0, e = 0;
+        const cdf = [];
         for (let i = 0; i < len; ++i) {
             const c = counts[i];
             if (c === 0) continue;
             [count, e] = add(c, count, e);
-            cdf.push([bins.lo(i), count + e]);
+            const ce = count + e;
+            if (cdf.length === 0 && ce > 0) cdf.push([bins.lo(i), 0])
+            cdf.push([bins.hi(i), ce]);
         }
         if (normalize) {
             for (let i = 0; i < cdf.length; ++i) cdf[i][1] /= count;
