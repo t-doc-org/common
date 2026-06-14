@@ -1491,6 +1491,12 @@ mjx-container[display="true"]:not(#¶) {
     margin: 0;
 }
 
+/* Keep list markers at the top for math content. */
+:is(ol, ul) > li > div.math > mjx-container > svg {
+    vertical-align: top !important;
+    /* Override element style */
+}
+
 /* Avoid that form controls change size on focus. */
 .form-control:focus, .form-control:focus-visible {
     border: var(--bs-border-width) solid var(--bs-border-color);

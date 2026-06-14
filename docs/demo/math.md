@@ -17,16 +17,27 @@ $$
 &\textrm{with } D=b^2-4ac
 $$
 
-Solve the following system of equations:
+Solve the following systems of equations:
 
-$$
-\left\{
-\begin{aligned}
-x + 3y &= 8 \\
-2x - 5y &= -17
-\end{aligned}
-\right.
-$$
+{.columns-2 .lower-alpha-paren}
+1.  ```{math}
+    :class: align-left
+    \left\{
+    \begin{aligned}
+    x + 3y &= 8 \\
+    2x - 5y &= -17
+    \end{aligned}
+    \right.
+    ```
+2.  ```{math}
+    :class: align-left
+    \left\{
+    \begin{aligned}
+    7x - 2y &= 5 \\
+    3x + 4y &= 8
+    \end{aligned}
+    \right.
+    ```
 
 ## Flex tables
 
