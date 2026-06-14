@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-79)=
+## 0.79 *(2026-06-14)*
+
+- Added the `density-function` template for {rst:dir}`chartjs`.
+- Made the `cumulative-distribution-function` templates for {rst:dir}`chartjs`
+  and {rst:dir}`jsxgraph` piecewise linear when based on a distribution.
+- Improved error reporting for {rst:dir}`jsxgraph` and {rst:dir}`chartjs`
+  directives.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.78...0.79)
+
 (release-0-78)=
 ## 0.78 *(2026-06-10)*
 
