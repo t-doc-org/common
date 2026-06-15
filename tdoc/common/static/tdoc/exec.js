@@ -335,32 +335,31 @@ class SectionedOutput {
         if (this.output) this.output.remove();
     }
 
-    render(name, html) {
-        const new_el = typeof html === 'string' ? elmt(html) : html;
-        new_el.tdocName = name;
+    render(name, el) {
+        el.tdocName = name;
         if (!this.output?.parentNode) {
             this.output =
                 elmt`<div class="tdoc-exec-output tdoc-sectioned"></div>`;
             this.runner.appendOutputs(this.output);
         }
-        for (const el of this.output.children) {
-            if (el.tdocName > name) {
-                el.before(new_el);
-                return new_el;
+        for (const c of this.output.children) {
+            if (c.tdocName > name) {
+                c.before(el);
+                return el;
             }
-            if (el.tdocName === name) {
-                el.replaceWith(new_el);
-                return new_el;
+            if (c.tdocName === name) {
+                c.replaceWith(el);
+                return el;
             }
         }
-        this.output.appendChild(new_el);
-        return new_el;
+        this.output.appendChild(el);
+        return el;
     }
 
     consoleOut(name) { return new ConsoleOut(this, name); }
 
     input(name, prompt) {
-        const div = this.render(name, `<div class="tdoc-input"></div>`);
+        const div = this.render(name, elmt`<div class="tdoc-input"></div>`);
         if (prompt) {
             div.appendChild(elmt`<div class="prompt">${prompt}</div>`);
         }
@@ -452,7 +451,7 @@ class ConsoleOut {
         if (!this.out?.isConnected) {
             const div = this.out = this.output.render(
                 this.name,
-                `<div class="tdoc-console highlight"><pre></pre></div>`);
+                elmt`<div class="tdoc-console highlight"><pre></pre></div>`);
             on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => div.remove());

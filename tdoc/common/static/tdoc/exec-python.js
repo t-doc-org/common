@@ -297,13 +297,15 @@ class PythonRunner extends Runner {
     }
 
     onRender(html, name) {
-        const el = this.output.render(name, html);
+        const tmpl = document.createElement('template');
+        tmpl.innerHTML = html;
+        const el = this.output.render(name, tmpl.content.firstElementChild);
         return [el.scrollWidth, el.scrollHeight];
     }
 
     onSetupCanvas() {
         if (this.canvas) return;
-        this.canvas = this.output.render('', `<div class="canvas"></div>`);
+        this.canvas = this.output.render('', elmt`<div class="canvas"></div>`);
         this.interp.claimCanvas(this.canvas);
     }
 }
