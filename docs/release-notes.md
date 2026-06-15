@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-80)=
+## 0.80 *(2026-06-15)*
+
+- Fixed the rendering of {rst:dir}`exec` output.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.79...0.80)
+
 (release-0-79)=
 ## 0.79 *(2026-06-14)*
 
@@ -11,6 +17,7 @@
   and {rst:dir}`jsxgraph` piecewise linear when based on a distribution.
 - Improved error reporting for {rst:dir}`jsxgraph` and {rst:dir}`chartjs`
   directives.
+- **This release breaks the rendering of {rst:dir}`exec` output.**
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.78...0.79)
 
 (release-0-78)=
