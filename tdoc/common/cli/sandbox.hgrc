@@ -1,0 +1,6 @@
+# Copyright 2026 Remy Blank <remy@c-space.org>
+# SPDX-License-Identifier: MIT
+
+[trusted]
+users = nobody
+groups = nogroup

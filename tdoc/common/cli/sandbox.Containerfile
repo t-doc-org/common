@@ -6,8 +6,10 @@ RUN --mount=type=bind,source=/,dst=/mnt/ctx \
     set -o errexit; \
     useradd -K USERGROUPS_ENAB=yes --uid=1000 \
         --create-home --no-log-init user; \
-    cp /mnt/ctx/bashrc /root/.bashrc; \
-    cp /mnt/ctx/bashrc /home/user/.bashrc;
+    cp /mnt/ctx/sandbox.bashrc /root/.bashrc; \
+    cp /mnt/ctx/sandbox.bashrc /home/user/.bashrc; \
+    mkdir -p /etc/mercurial/hgrc.d; \
+    cp /mnt/ctx/sandbox.hgrc /etc/mercurial/hgrc.d/tdoc.rc;
 RUN \
     set -o errexit; \
     apt-get update; \

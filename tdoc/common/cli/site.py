@@ -156,7 +156,7 @@ def sphinx_build(opts, target, *, build, tags=(), **kwargs):
             and ((base := os.environ.get('TDOC_RUN_BASE')) is None
                  or not opts.source.is_relative_to(base)):
         raise Exception(
-            "Attempted building an untrusted site outside of a sandbox")
+            "Refusing to build an untrusted site outside of a sandbox")
 
     # Run sphinx.
     argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,

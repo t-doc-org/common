@@ -36,8 +36,8 @@ def add_commands(parser):
              "the number of CPUs, or 'max' to test all sites concurrently "
              "(default: %(default)s).")
     arg('--interactive', action='store_true', dest='interactive',
-        help="Enable testing sites interactively.")
-    arg('repo', metavar='REPO', nargs='+', help="The site repository to test.")
+        help="Enable interactive site testing.")
+    arg('repo', metavar='REPO', nargs='*', help="A site repository to test.")
     cli.add_common_options(p)
 
 
@@ -52,7 +52,19 @@ def cmd_site(opts):
     tests = opts.common / '_tmp' / 'tests'
     o = opts.stdout
 
+    cfg = opts.cfg.sub('test.site')
+    trusted = cfg.get('trusted', [])
+    sandboxed = 'TDOC_SANDBOX' in os.environ
+    if not opts.repo:
+        opts.repo = cfg.get('sandboxed', []) if sandboxed else trusted
     opts.repo = sorted(set(opts.repo))
+    if not opts.repo:
+        raise Exception("No site repositories specified")
+    elif not sandboxed and (ut := [r for r in opts.repo if r not in trusted]):
+        raise Exception(
+            "Refusing to test untrusted sites outside of a sandbox: "
+            f"{' '.join(ut)}")
+
     width = max((len(repo) for repo in opts.repo), default=0)
     def label(repo):
         return f"{o.CYAN}{repo:{width}}{o.NORM} {o.LBLACK}|{o.NORM} "

@@ -425,7 +425,7 @@ This table configures options related to repository access.
 
 This table configures options related to site repositories.
 
-- `trusted` (default: `false`): When `true`, site repositories are trusted.
+- `trusted` (default: `false`): When `true`, the site repository is trusted.
   Untrusted sites can only be built via their own `run.py` script; building
   via a local clone of the `common` repository
   ([development workflow](../development.md#run)) must be done in a sandbox.
@@ -437,6 +437,17 @@ This table configures the database that stores site and user data.
 - [Common database options](#common-database-options)
 - `poll_interval` (default: `1`): The interval in seconds at which to poll the
   database for cross-process notifications.
+
+### `[test.site]`
+
+This table configures options related to testing site repositories.
+
+- `sandboxed` (default: `[]`): The default list of repositories for the
+  `tdoc test site` command, when it is run inside a sandbox.
+- `trusted` (default: `[]`): A list of site repositories that are trusted, and
+  can be tested outside of a sandbox. This is also used as the default list of
+  repositories for the `tdoc test site` command, when it is run outside of a
+  sandbox.
 
 ### Common database options
 
