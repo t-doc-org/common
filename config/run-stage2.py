@@ -217,6 +217,21 @@ def thread(fn):
     return t
 
 
+if sys.platform == 'win32':
+    def replace_file(path, target):
+        tries = 10
+        while True:
+            try:
+                return path.replace(target)
+            except PermissionError as e:
+                if tries <= 1: raise
+                time.sleep(0.1)
+                tries -= 1
+else:
+    def replace_file(path, target):
+        return path.replace(target)
+
+
 @contextlib.contextmanager
 def write_atomic(path, *args, **kwargs):
     with tempfile.NamedTemporaryFile(*args, dir=path.parent,
@@ -224,7 +239,7 @@ def write_atomic(path, *args, **kwargs):
                                      delete_on_close=False, **kwargs) as f:
         yield f
         f.close()
-        pathlib.Path(f.name).replace(path)
+        replace_file(pathlib.Path(f.name), path)
 
 
 class Env:

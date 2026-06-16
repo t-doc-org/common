@@ -91,13 +91,8 @@ class Stage2:
 
     def write(self, data):
         self.venv.mkdir(exist_ok=True)
-        path = self.venv / self.run_stage2
-        with tempfile.NamedTemporaryFile('wb', dir=path.parent,
-                                         prefix=path.name + '.',
-                                         delete_on_close=False) as f:
+        with write_atomic(self.venv / self.run_stage2, 'wb') as f:
             f.write(data)
-            f.close()
-            pathlib.Path(f.name).replace(path)
 
     def update(self, cached):
         try:
@@ -106,6 +101,31 @@ class Stage2:
             self.write(data)
         except Exception:
             if '--debug' in self.argv: raise
+
+
+if sys.platform == 'win32':
+    def replace_file(path, target):
+        tries = 10
+        while True:
+            try:
+                return path.replace(target)
+            except PermissionError as e:
+                if tries <= 1: raise
+                time.sleep(0.1)
+                tries -= 1
+else:
+    def replace_file(path, target):
+        return path.replace(target)
+
+
+@contextlib.contextmanager
+def write_atomic(path, *args, **kwargs):
+    with tempfile.NamedTemporaryFile(*args, dir=path.parent,
+                                     prefix=path.name + '.',
+                                     delete_on_close=False, **kwargs) as f:
+        yield f
+        f.close()
+        replace_file(pathlib.Path(f.name), path)
 
 
 # Trusted CA bundle from the certifi package.

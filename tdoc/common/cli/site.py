@@ -520,12 +520,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             _log.debug("Caching: %(url)s", url=url)
             with util.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(
-                    dir=path.parent, prefix=path.name + '.',
-                    delete_on_close=False) as f:
-                f.write(data)
-                f.close()
-                pathlib.Path(f.name).replace(path)
+            with util.write_atomic(path, 'wb') as f: f.write(data)
         except Exception as e:
             _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 

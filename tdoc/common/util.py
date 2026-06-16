@@ -16,6 +16,7 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
+import time
 import tomllib
 from urllib import request
 
@@ -91,6 +92,31 @@ def read_stable(path):
 def read_toml(path):
     with path.open('rb') as f:
         return tomllib.load(f)
+
+
+if sys.platform == 'win32':
+    def replace_file(path, target):
+        tries = 10
+        while True:
+            try:
+                return path.replace(target)
+            except PermissionError as e:
+                if tries <= 1: raise
+                time.sleep(0.1)
+                tries -= 1
+else:
+    def replace_file(path, target):
+        return path.replace(target)
+
+
+@contextlib.contextmanager
+def write_atomic(path, *args, **kwargs):
+    with tempfile.NamedTemporaryFile(*args, dir=path.parent,
+                                     prefix=path.name + '.',
+                                     delete_on_close=False, **kwargs) as f:
+        yield f
+        f.close()
+        replace_file(pathlib.Path(f.name), path)
 
 
 try:
