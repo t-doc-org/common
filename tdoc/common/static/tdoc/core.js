@@ -168,6 +168,55 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
+// Query all matching elements from a node, then yield them asynchronously as
+// they are marked as ready.
+export async function* ready(node, selector, isReady) {
+    if (isReady === undefined) {
+        isReady = v => v !== undefined;
+    }
+    await domLoaded;
+    const els = qsa(node, selector);
+    let promises, resolves;
+    for (const el of els) {
+        if (isReady(el.dataset.tdocReady)) {
+            yield el;
+            continue;
+        }
+        if (promises === undefined) {
+            promises = new Map();
+            resolves = new Map();
+        }
+        const {promise, resolve} = Promise.withResolvers();
+        promises.set(el, promise);
+        resolves.set(el, resolve);
+    }
+    if (promises === undefined) return;
+    const obs = new MutationObserver(recs => {
+        for (const rec of recs) {
+            const el = rec.target;
+            if (!isReady(el.dataset.tdocReady)) continue;
+            const resolve = resolves.get(el);
+            if (resolve !== undefined) resolve(el);
+        }
+    });
+    try {
+        const attributeFilter = ['data-tdoc-ready'];
+        for (const el of promises.keys()) obs.observe(el, {attributeFilter});
+        while (promises.length > 0) {
+            const el = await Promise.race(promises.values());
+            promises.delete(el);
+            yield el;
+        }
+    } finally {
+        obs.disconnect();
+    }
+}
+
+// Mark a node as ready.
+export function markReady(node, value = '') {
+    node.dataset.tdocReady = value;
+}
+
 // Pending accesses to asyncGet attributes.
 const pendingAsyncGet = {};
 

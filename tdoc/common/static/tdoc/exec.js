@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    domLoaded, elmt, on, qs, qsa, RateLimited, rootUrl, Stored, text,
+    domLoaded, elmt, markReady, on, qs, qsa, RateLimited, rootUrl, Stored, text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
@@ -65,23 +65,26 @@ const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
 export class Runner {
     static next_run_id = 0;
 
-    // Apply an {exec} block handler class.
+    // Apply an {exec} block runner class.
     static async apply(cls) {
         cls.ready = cls.init(tdoc.exec?.[cls.name] ?? {});
         await domLoaded;
         for (const node of qsa(document,
-                               `div.tdoc-exec-runner-${cls.name}`)) {
+                               `div[data-tdoc-exec-runner=${cls.name}]`)) {
             fixLineNos(node);
-            const handler = new cls(node);
-            node.tdocExec = handler;
-            if (handler.editable) handler.addEditor();
+            const runner = new cls(node);
+            node.tdocRunner = runner;
+            if (runner.editable) runner.addEditor();
             const controls = elmt`<div class="tdoc-exec-controls"></div>`;
-            handler.addControls(controls);
+            runner.addControls(controls);
             if (controls.children.length > 0) node.appendChild(controls);
-            cls.ready.then(() => { handler.onReady(); });
+            cls.ready.then(() => {
+                runner.onReady();
+                markReady(node);
+            });
 
             // Execute immediately if requested.
-            if (handler.when === 'load') handler.doRun();  // Don't await
+            if (runner.when === 'load') runner.doRun();  // Background
         }
     }
 
@@ -477,7 +480,7 @@ class ConsoleOut {
 // Ensure that the text of editors is stored before navigating away.
 on(window).beforeunload(() => {
     for (const node of qsa(document, 'div.tdoc-exec[data-tdoc-editor]')) {
-        const storer = node.tdocExec.editorStorer;
+        const storer = node.tdocRunner.editorStorer;
         if (storer) storer.flush();
     }
 });
@@ -490,5 +493,5 @@ on(window).storage(e => {
     const node = qs(document,
                     `div.tdoc-exec[data-tdoc-editor="${CSS.escape(name)}"]`);
     if (!node) return;
-    node.tdocExec.setEditorText(e.newValue, [storeUpdate.of(true)]);
+    node.tdocRunner.setEditorText(e.newValue, [storeUpdate.of(true)]);
 });

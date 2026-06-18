@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, domLoaded, gcd, htmle, instantiateDynTemplate, mathJaxReady,
-    mergeAttrs, onSet, qs, qsa, resolveDyn,
+    asyncGet, domLoaded, gcd, htmle, instantiateDynTemplate, markReady,
+    mathJaxReady, mergeAttrs, onSet, qs, qsa, resolveDyn,
 } from './core.js';
 import {Distribution, Sample} from './math.js';
 
@@ -174,6 +174,7 @@ export async function initBoard(el, attrs, fn) {
     JXG.merge(board.options, attrs.defaults ?? {});
     if (fn) fn(board);
     el.classList.add('rendered');
+    markReady(el);
     return board;
 }
 

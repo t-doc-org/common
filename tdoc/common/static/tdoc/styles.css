@@ -1079,15 +1079,15 @@ div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
     margin-right: 0;
     text-align: right;
 }
-.tdoc-dyn:not(.rendered, [data-processed]) {
+.tdoc-dyn:not(.rendered) {
     padding: 0.5rem;
     text-align: left;
     color: var(--pst-color-text-base);
 }
-.tdoc-dyn:not(.rendered, [data-processed]):empty::after {
+.tdoc-dyn:not(.rendered):empty::after {
     content: "Rendering...";
 }
-html[data-tdoc-local] .tdoc-dyn:not(.rendered, [data-processed]) {
+html[data-tdoc-local] .tdoc-dyn:not(.rendered) {
     /* Override border attributes set on the element. */
     border: 1px solid var(--pst-color-danger) !important;
     border-radius: 0.25rem;

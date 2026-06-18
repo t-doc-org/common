@@ -85,7 +85,7 @@ class Exec(code.CodeBlock):
         node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
-        node['classes'] += ['tdoc-exec', f'tdoc-exec-runner-{runner}']
+        node['classes'].append('tdoc-exec')
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
@@ -214,6 +214,7 @@ def visit_exec(self, node):
             after=' '.join(after) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
+            exec_runner=node['runner'],
             output_style=node.get('output-style'),
             reset=node.get('reset'),
             then=' '.join(then) or None,

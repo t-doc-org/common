@@ -3,7 +3,7 @@
 
 import {
     asyncGet, domLoaded, elmt, htmle, instantiateDynTemplate, isPlainObject,
-    isObject, mergeAttrs, on, onSet, qs, qsa, resolveDyn,
+    isObject, markReady, mergeAttrs, on, onSet, qs, qsa, resolveDyn,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
@@ -153,6 +153,7 @@ export async function chart(el, config) {
                         config);
     if (ar !== undefined) c.canvas.style.aspectRatio = ar;  // Prevents jitter
     el.classList.add('rendered');
+    markReady(el);
     return c;
 }
 

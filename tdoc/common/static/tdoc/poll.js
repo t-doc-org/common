@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {clientId, domLoaded, htmlData, on, qs, qsa} from './core.js';
+import {clientId, domLoaded, htmlData, markReady, on, qs, qsa} from './core.js';
 
 class Poll {
     constructor(node) {
@@ -137,7 +137,10 @@ class Poll {
 
 const polls = [];
 domLoaded.then(() => {
-    for (const el of qsa(document, '.tdoc-poll')) polls.push(new Poll(el));
+    for (const el of qsa(document, '.tdoc-poll')) {
+        polls.push(new Poll(el));
+        markReady(el);
+    }
     if (polls.length === 0) return;
     const watch = new api.Watch(
         {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},

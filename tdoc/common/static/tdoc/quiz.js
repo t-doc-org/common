@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    dec, domLoaded, elmt, enable, fromBase64, on, qs, qsa,
+    dec, domLoaded, elmt, enable, fromBase64, markReady, on, qs, qsa,
 } from './core.js';
 
 class QuizBase {
@@ -91,6 +91,7 @@ class Quiz extends QuizBase {
     constructor(quiz) {
         super(quiz);
         this.setupFields(quiz);
+        markReady(quiz);
     }
 
     async check(field) {
@@ -133,6 +134,7 @@ class TableGenQuiz extends QuizBase {
     setGenerator(fn) {
         this.generate = fn;
         this.addEntry();
+        markReady(this.quiz);
     }
 
     addEntry(focus) {

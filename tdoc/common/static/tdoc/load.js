@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    addTooltip, domLoaded, elmt, htmlData, on, page, qs, qsa, resolveDyn,
-    rgb2hex, StoredJson,
+    addTooltip, domLoaded, elmt, htmlData, markReady, on, page, qs, qsa,
+    resolveDyn, rgb2hex, StoredJson,
 } from './core.js';
 
 // Handle auto-reload on source change.
@@ -260,7 +260,16 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         ]);
         mermaid.registerLayoutLoaders(elk);
         mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
-        mermaid.run({nodes: await resolveDyn('mermaid')});
+        const nodes = await resolveDyn('mermaid');
+        mermaid.run({
+            nodes,
+            suppressErrors: true,
+            postRenderCallback: id => {
+                const el = document.getElementById(id).parentNode;
+                el.classList.add('rendered');
+                markReady(el);
+            },
+        });
     })();
 }
 
