@@ -501,8 +501,8 @@ class ConsoleOut {
 
 // Ensure that the text of editors is stored before navigating away.
 on(window).beforeunload(() => {
-    for (const node of qsa(document, 'div.tdoc-exec[data-tdoc-editor]')) {
-        const storer = node.tdocRunner.editorStorer;
+    for (const node of qsa(document, 'div.tdoc-exec[editor]')) {
+        const storer = node.runner.editorStorer;
         if (storer) storer.flush();
     }
 });
@@ -512,8 +512,7 @@ on(window).storage(e => {
     if (e.storageArea !== localStorage) return;
     if (!e.key.startsWith(editorPrefix)) return;
     const name = e.key.slice(editorPrefix.length);
-    const node = qs(document,
-                    `div.tdoc-exec[data-tdoc-editor="${CSS.escape(name)}"]`);
+    const node = qs(document, `div.tdoc-exec[editor="${CSS.escape(name)}"]`);
     if (!node) return;
-    node.tdocRunner.setEditorText(e.newValue, [storeUpdate.of(true)]);
+    node.runner.setEditorText(e.newValue, [storeUpdate.of(true)]);
 });
