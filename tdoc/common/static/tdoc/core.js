@@ -170,7 +170,7 @@ export function qsa(node, selector) {
 
 // Query all matching elements from a node, then yield them asynchronously as
 // they are marked as ready.
-export async function* ready(node, selector, isReady) {
+export async function* qsaReady(node, selector, isReady) {
     if (isReady === undefined) {
         isReady = v => v !== undefined;
     }

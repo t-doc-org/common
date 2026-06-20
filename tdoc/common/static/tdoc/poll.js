@@ -2,17 +2,23 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {clientId, domLoaded, htmlData, markReady, on, qs, qsa} from './core.js';
+import {clientId, htmlData, markReady, on, qs, qsa, qsaReady} from './core.js';
+
+class PollElement extends HTMLElement {
+    constructor() {
+        super();
+        this.poll = new Poll(this);
+    }
+
+    connectedCallback() { this.poll.init(); }
+}
 
 class Poll {
-    constructor(node) {
-        this.node = node;
-        const ds = node.dataset;
-        this.mode = ds.mode;
-        this.closeAfter = ds.closeAfter !== undefined ? +ds.closeAfter
-                                                      : undefined;
-        this.header = qs(node, '.tdoc-poll-header');
-        this.answers = [...qsa(node, '.tdoc-poll-answers > tbody > tr')];
+    constructor(node) { this.node = node; }
+
+    init() {
+        this.header = qs(this.node, '.tdoc-poll-header');
+        this.answers = [...qsa(this.node, '.tdoc-poll-answers > tbody > tr')];
         this.watch = new api.Watch({name: 'poll', id: this.id},
                                    data => this.onUpdate(data));
         this.open = false;
@@ -23,9 +29,19 @@ class Poll {
         on(qs(this.header, '.tdoc-results')).click(e => this.onResults(e));
         on(qs(this.header, '.tdoc-solutions')).click(e => this.onSolutions(e));
         on(qs(this.header, '.tdoc-clear')).click(e => this.onClear(e));
+        markReady(this.node);
     }
 
-    get id() { return this.node.dataset.id; }
+    attr(name, fn = v => v) {
+        const v = this.node.getAttribute(name);
+        return v !== null ? fn(v) : undefined;
+    }
+
+    // Attribute accessors.
+    get closeAfter() { return this.attr('close-after', v => +v); }
+    get mode() { return this.attr('mode'); }
+    get id() { return this.attr('pid'); }
+
     ids(all) { return all ? polls.map(p => p.id) : [this.id]; }
 
     get open() { return this._open; }
@@ -116,9 +132,9 @@ class Poll {
             const votes = data.answers?.[i] ?? 0;
             const percent = Math.round(100 * votes / data.votes);
             qs(tr, '.tdoc-poll-cnt').textContent = votes === 0 ? ''
-                                                   : `${votes}`;
+                                                               : `${votes}`;
             qs(tr, '.tdoc-poll-pct').textContent = votes === 0 ? ''
-                                                   : `${percent} %`;
+                                                               : `${percent} %`;
             if (votes !== 0) {
                 const value = Math.round(100 * votes / max);
                 tr.setAttribute('style', `--tdoc-value: ${value}%;`);
@@ -135,13 +151,10 @@ class Poll {
     }
 }
 
+customElements.define('tdoc-poll', PollElement);
 const polls = [];
-domLoaded.then(() => {
-    for (const el of qsa(document, '.tdoc-poll')) {
-        polls.push(new Poll(el));
-        markReady(el);
-    }
-    if (polls.length === 0) return;
+for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
+if (polls.length > 0) {
     const watch = new api.Watch(
         {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
         data => {
@@ -157,4 +170,4 @@ domLoaded.then(() => {
             delete htmlData.tdocPollControl;
         }
     });
-});
+}

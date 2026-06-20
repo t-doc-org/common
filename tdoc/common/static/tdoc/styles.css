@@ -741,7 +741,8 @@ p:has(.tdoc-quiz-field.right)::after {
 }
 
 /* Polls */
-.tdoc-poll {
+tdoc-poll {
+    display: block;
     margin: 1rem auto;
     border: 1px solid var(--pst-color-border);
     border-left: 0.3rem solid var(--pst-color-border);
@@ -752,81 +753,83 @@ p:has(.tdoc-quiz-field.right)::after {
     padding: 1rem;
     counter-reset: answerNum;
 }
-.tdoc-poll.open {
+tdoc-poll.open {
     border-left-color: var(--pst-color-warning);
 }
-.tdoc-poll-header > div {
+tdoc-poll .tdoc-poll-header > div {
     display: flex;
     white-space: nowrap;
     justify-content: space-between;
 }
-.tdoc-poll-header .stats {
+tdoc-poll .tdoc-poll-header .stats {
     display: flex;
     column-gap: 1.3rem;
 }
-.tdoc-poll-header :is(.voters, .votes) > :last-child {
+tdoc-poll .tdoc-poll-header :is(.voters, .votes) > :last-child {
     margin-left: 0.4rem;
 }
-.tdoc-poll[data-mode=single] .tdoc-poll-header .votes {
+tdoc-poll[data-mode=single] .tdoc-poll-header .votes {
     display: none;
 }
-.tdoc-poll.open .tdoc-poll-header .closed {
+tdoc-poll.open .tdoc-poll-header .closed {
     display: none;
 }
-.tdoc-poll-header .controls {
+tdoc-poll .tdoc-poll-header .controls {
     display: none;
     column-gap: 0.3rem;
 }
 @media not print {
-    html[data-tdoc-poll-control] .tdoc-poll-header .controls {
+    html[data-tdoc-poll-control] tdoc-poll .tdoc-poll-header .controls {
         display: flex;
     }
 }
-.tdoc-poll-answers:not(:has(.tdoc-poll-sel.s)) .tdoc-poll-header .controls
-        > .tdoc-solutions {
+tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-sel.s)) .tdoc-poll-header
+        .controls > .tdoc-solutions {
     display: none;
 }
-.tdoc-poll-header .controls > .tdoc-clear {
+tdoc-poll .tdoc-poll-header .controls > .tdoc-clear {
     margin-left: 0.5rem;
 }
-.tdoc-poll-num {
+tdoc-poll .tdoc-poll-num {
     counter-increment: answerNum;
 }
-.tdoc-poll.num-decimal .tdoc-poll-num::before {
+tdoc-poll.num-decimal .tdoc-poll-num::before {
     content: counter(answerNum, decimal);
 }
-.tdoc-poll.num-lower-alpha .tdoc-poll-num::before {
+tdoc-poll.num-lower-alpha .tdoc-poll-num::before {
     content: counter(answerNum, lower-alpha);
 }
-.tdoc-poll.num-upper-alpha .tdoc-poll-num::before {
+tdoc-poll.num-upper-alpha .tdoc-poll-num::before {
     content: counter(answerNum, upper-alpha);
 }
-.tdoc-poll.solutions .tdoc-poll-sel.s {
+tdoc-poll.solutions .tdoc-poll-sel.s {
     background-color: var(--pst-color-success-bg);
 }
-.tdoc-poll-sel > span {
+tdoc-poll .tdoc-poll-sel > span {
     visibility: hidden;
 }
-.tdoc-poll-answers {
+tdoc-poll .tdoc-poll-answers {
     margin-bottom: 0;
 }
-.tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
+tdoc-poll .tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
     visibility: visible;
 }
-.tdoc-poll-ans {
+tdoc-poll .tdoc-poll-ans {
     width: 100%;
 }
-tr[style*="--tdoc-value:"] > td.tdoc-poll-ans {
+tdoc-poll tr[style*="--tdoc-value:"] > td.tdoc-poll-ans {
     background: linear-gradient(to right,
         var(--pst-color-attention-bg) var(--tdoc-value),
         var(--bs-table-bg) var(--tdoc-value));
 }
-.tdoc-poll-cnt, .tdoc-poll-pct {
+tdoc-poll .tdoc-poll-cnt, tdoc-poll .tdoc-poll-pct {
     text-align: right;
     white-space: nowrap;
 }
-.tdoc-poll-answers:not(:has(.tdoc-poll-cnt:not(:empty))) .tdoc-poll-cnt,
-.tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty))) .tdoc-poll-pct {
+tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-cnt:not(:empty)))
+        .tdoc-poll-cnt,
+tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty)))
+        .tdoc-poll-pct {
     display: none;
 }
 

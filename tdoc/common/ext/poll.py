@@ -77,15 +77,15 @@ class answer(nodes.Part, nodes.Element): pass
 
 
 def visit_poll(self, node):
-    kwargs = {'data-id': node['id'], 'data-mode': node['mode']}
+    kwargs = {'pid': node['id'], 'mode': node['mode']}
     if (v := node.get('close-after')) is not None:
-        kwargs['data-close-after'] = v // datetime.timedelta(milliseconds=1)
+        kwargs['close-after'] = v // datetime.timedelta(milliseconds=1)
     self.body.append(self.starttag(
-        node, 'div', classes=['tdoc-poll', f'num-{node['number']}'], **kwargs))
+        node, 'tdoc-poll', classes=[f'num-{node['number']}'], **kwargs))
 
 
 def depart_poll(self, node):
-    self.body.append('</div>\n')
+    self.body.append('</tdoc-poll>\n')
 
 
 def visit_answers(self, node):

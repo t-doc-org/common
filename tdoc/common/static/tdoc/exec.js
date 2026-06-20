@@ -62,10 +62,12 @@ const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
                      : `tdoc:editor:${rootUrl.pathname}:`;
 
 class ExecElement extends HTMLDivElement {
-    connectedCallback() {
+    constructor() {
+        super();
         this.runner = new this.constructor.cls(this);
-        this.runner.setupContent();
     }
+
+    connectedCallback() { this.runner.init(); }
 }
 
 // A base class for {exec} block handlers.
@@ -97,11 +99,9 @@ export class Runner {
     // Initialize the runner.
     static async init(config) {}
 
-    constructor(node) {
-        this.node = node;
-    }
+    constructor(node) { this.node = node; }
 
-    setupContent() {
+    init() {
         fixLineNos(this.node);
         if (this.editable) this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
