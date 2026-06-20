@@ -266,6 +266,21 @@ export function onSet(obj, set) {
     });
 }
 
+class DynElement extends HTMLElement {
+    attr(name) {
+        const v = this.getAttribute(name);
+        return v !== null ? v : undefined;
+    }
+
+    // Attribute accessors.
+    get type() { return this.attr('type'); }
+    get name() { return this.attr('name'); }
+    get template() { return this.attr('template'); }
+    get args() { return this.attr('args'); }
+}
+
+customElements.define('tdoc-dyn', DynElement);
+
 // Resolve dyn elements of a specific type. If el is missing, all dyn elements
 // of that type are returned. If el is a string, the dyn element with that name
 // is returned, or an exception is thrown if it cannot be found. Otherwise, el
@@ -274,11 +289,10 @@ export async function resolveDyn(type, el) {
     if (el && typeof el !== 'string') return el;
     await domLoaded;
     if (!el) {
-        return qsa(document, `div.tdoc-dyn[data-type="${CSS.escape(type)}"]`);
+        return qsa(document, `tdoc-dyn[type="${CSS.escape(type)}"]`);
     }
     const node = qs(document, `\
-div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
-[data-name="${CSS.escape(el)}"]`);
+tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
     if (!node) {
         throw htmle`\
 <code>{${type}}</code> Directive not found: <code>${el}</code>`;
@@ -324,11 +338,11 @@ domLoaded.then(async () => {
 <strong>Rendering seems to have failed.</strong>
 <ul><li>Check the JavaScript console for errors.</li></ul>`;
         const ul = qs(msg, 'ul');
-        if (el.dataset.template !== undefined) {
+        if (el.template !== undefined) {
             ul.appendChild(html`\
-<li>Check the name of the template: <code>${el.dataset.template}</code></li>`);
+<li>Check the name of the template: <code>${el.template}</code></li>`);
         }
-        for (const [c, attrs] of pending[el.dataset.type] ?? []) {
+        for (const [c, attrs] of pending[el.type] ?? []) {
             const li = ul.appendChild(elmt`\
 <li>Check the names of <code>${c}</code> attributes: </li>`);
             for (const [i, a] of attrs.entries()) {
@@ -344,10 +358,9 @@ domLoaded.then(async () => {
 export async function instantiateDynTemplate(type, name, fn) {
     await domLoaded;
     const els = qsa(document, `\
-div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
-[data-template="${CSS.escape(name)}"]`);
+tdoc-dyn[type="${CSS.escape(type)}"][template="${CSS.escape(name)}"]`);
     for (const el of els) {
-        const args = el.dataset.args ? JSON.parse(el.dataset.args) : {};
+        const args = el.args ? JSON.parse(el.args) : {};
         try {
             fn(el, args);  // Background
         } catch (e) {

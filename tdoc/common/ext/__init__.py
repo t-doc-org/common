@@ -125,11 +125,6 @@ def format_attrs(translator, /, **kwargs):
                     for k, v in sorted(kwargs.items()) if v is not None)
 
 
-def format_data_attrs(translator, /, **kwargs):
-    return ' '.join(f'data-tdoc-{k.replace('_', '-')}="{translator.attval(v)}"'
-                    for k, v in sorted(kwargs.items()) if v is not None)
-
-
 def meta(env, docname, key, default=None):
     v = env.metadata[docname]
     for k in key.split('.'):
@@ -517,18 +512,17 @@ class dyn(nodes.General, nodes.Element):
 
 
 def visit_dyn(self, node):
-    attrs = {'data-type': node['type']}
-    if v := node.get('name'): attrs['data-name'] = v
+    attrs = {'type': node['type']}
+    if v := node.get('name'): attrs['name'] = v
     if v := node.get('style'): attrs['style'] = v
-    if v := node.get('template'): attrs['data-template'] = v
-    if v := node.get('args'): attrs['data-args'] = v
+    if v := node.get('template'): attrs['template'] = v
+    if v := node.get('args'): attrs['args'] = v
     if (v := node.get('attrs')) is not None: attrs |= v
-    self.body.append(self.starttag(node, 'div', '', classes=['tdoc-dyn'],
-                                   **attrs))
+    self.body.append(self.starttag(node, 'tdoc-dyn', '', **attrs))
 
 
 def depart_dyn(self, node):
-    self.body.append('</div>\n')
+    self.body.append('</tdoc-dyn>\n')
 
 
 def add_dyn_config(app, page, config, doctree):
