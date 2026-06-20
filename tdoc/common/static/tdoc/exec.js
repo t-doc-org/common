@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    domLoaded, elmt, markReady, on, qs, qsa, RateLimited, rootUrl, Stored, text,
+    elmt, markReady, on, qs, qsa, RateLimited, rootUrl, Stored, text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
@@ -18,7 +18,7 @@ function* walkNodes(node, seen) {
     if (!seen) seen = new Set();
     if (seen.has(node)) return;
     seen.add(node);
-    const after = node.dataset.tdocAfter;
+    const after = node.runner.after;
     for (const id of after ? after.split(/\s+/) : []) {
         const n = nodeById(id);
         if (!n) {
@@ -29,7 +29,7 @@ function* walkNodes(node, seen) {
     }
     yield node;
     if (!isRoot) return;
-    const then_ = node.dataset.tdocThen;
+    const then_ = node.runner.then;
     for (const id of then_ ? then_.split(/\s+/) : []) {
         const n = nodeById(id);
         if (!n) {
@@ -61,32 +61,28 @@ const storeUpdate = cmstate.Annotation.define();
 const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
                      : `tdoc:editor:${rootUrl.pathname}:`;
 
+class ExecElement extends HTMLDivElement {
+    connectedCallback() {
+        this.runner = new this.constructor.cls(this);
+        this.runner.setupContent();
+    }
+}
+
 // A base class for {exec} block handlers.
 export class Runner {
     static next_run_id = 0;
 
-    // Apply an {exec} block runner class.
-    static async apply(cls) {
+    // Register a runner class.
+    static register(cls) {
         cls.ready = cls.init(tdoc.exec?.[cls.name] ?? {});
-        await domLoaded;
-        for (const node of qsa(document,
-                               `div[data-tdoc-exec-runner=${cls.name}]`)) {
-            fixLineNos(node);
-            const runner = new cls(node);
-            node.tdocRunner = runner;
-            if (runner.editable) runner.addEditor();
-            const controls = elmt`<div class="tdoc-exec-controls"></div>`;
-            runner.addControls(controls);
-            if (controls.children.length > 0) node.appendChild(controls);
-            cls.ready.then(() => {
-                runner.onReady();
-                markReady(node);
-            });
-
-            // Execute immediately if requested.
-            if (runner.when === 'load') runner.doRun();  // Background
-        }
+        customElements.define(
+            `tdoc-exec-${cls.name}`,
+            class extends ExecElement { static cls = cls; },
+            {extends: 'div'});
     }
+
+    // TODO(0.82): Remove backward-compatibility alias
+    static apply(cls) { this.register(cls); }
 
     // Return the text content of the <pre> tag of a node.
     static preText(node) { return qs(node, 'pre').textContent; }
@@ -103,20 +99,46 @@ export class Runner {
 
     constructor(node) {
         this.node = node;
-        this.when = node.dataset.tdocWhen;
     }
 
-    // The interpreter environment to use.
-    get env() { return this.node.dataset.tdocEnv; }
+    setupContent() {
+        fixLineNos(this.node);
+        if (this.editable) this.addEditor();
+        const controls = elmt`<div class="tdoc-exec-controls"></div>`;
+        this.addControls(controls);
+        if (controls.children.length > 0) this.node.appendChild(controls);
+        this.ready = this.constructor.ready.then(() => {
+            this.onReady();
+            markReady(this.node);
+
+            // Execute immediately if requested.
+            if (this.when === 'load') this.doRun();  // Background
+        });
+    }
+
+    attr(name) {
+        const v = this.node.getAttribute(name);
+        return v !== null ? v : undefined;
+    }
+
+    // Attribute accessors.
+    get after() { return this.attr('after'); }
+    get consoleStyle() { return this.attr('console-style'); }
+    get editor() { return this.attr('editor'); }
+    get env() { return this.attr('env'); }
+    get outputStyle() { return this.attr('output-style'); }
+    get reset() { return this.attr('reset'); }
+    get then() { return this.attr('then'); }
+    get when() { return this.attr('when'); }
 
     // The configuration for the runner.
     get config() { return tdoc.exec?.[this.constructor.name] ?? {}; }
 
     // True iff the {exec} block has an editor.
-    get editable() { return this.node.dataset.tdocEditor !== undefined; }
+    get editable() { return this.editor !== undefined; }
 
     // The ID of the editor.
-    get editorId() { return this.node.dataset.tdocEditor || undefined; }
+    get editorId() { return this.editor || undefined; }
 
     // Add an editor to the {exec} block.
     addEditor() {
@@ -153,7 +175,7 @@ export class Runner {
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
 
-        const reset = this.node.dataset.tdocReset;
+        const reset = this.reset;
         if (reset === 'show' || (reset === undefined && (preText !== ''))) {
             this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
@@ -246,7 +268,7 @@ export class Runner {
 
     // Run the code in the {exec} block.
     async doRun() {
-        await this.constructor.ready;
+        await this.ready;
         while (this.running) await this.doStop();
         const {promise, resolve} = Promise.withResolvers();
         this.running = promise;
@@ -324,7 +346,7 @@ export class Runner {
     }
 
     setOutputStyle(el) {
-        const style = this.node.dataset.tdocOutputStyle;
+        const style = this.outputStyle;
         if (style) el.setAttribute('style', style);
     }
 
@@ -458,7 +480,7 @@ class ConsoleOut {
             on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                 .click(() => div.remove());
-            const style = this.output.runner.node.dataset.tdocConsoleStyle;
+            const style = this.output.runner.consoleStyle;
             if (style) qs(div, 'pre').setAttribute('style', style);
         }
         const out = qs(this.out, 'pre');

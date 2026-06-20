@@ -211,4 +211,4 @@ class MicroPythonRunner extends Runner {
     }
 }
 
-Runner.apply(MicroPythonRunner);  // Background
+Runner.register(MicroPythonRunner);

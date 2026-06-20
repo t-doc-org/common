@@ -105,4 +105,4 @@ class HtmlRunner extends Runner {
     }
 }
 
-Runner.apply(HtmlRunner);  // Background
+Runner.register(HtmlRunner);

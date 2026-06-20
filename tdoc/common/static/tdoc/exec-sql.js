@@ -152,4 +152,4 @@ class SqlRunner extends Runner {
     }
 }
 
-Runner.apply(SqlRunner);  // Background
+Runner.register(SqlRunner);

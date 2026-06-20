@@ -78,6 +78,15 @@ info = {
             'https://github.com/chartjs/chartjs-plugin-deferred/releases',
         ],
     },
+    'custom-elements': {
+        'name': '@ungap/custom-elements',
+        'version': '1.3.0',
+        'tag': 'latest',
+        'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
+        'release_urls': [
+            'https://github.com/ungap/custom-elements/tags',
+        ],
+    },
     'drauu': {
         'name': '@drauu/core',
         'version': '1.0.0',

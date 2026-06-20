@@ -10,8 +10,8 @@ from docutils.parsers.rst import directives
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, format_attrs, format_data_attrs, merge_dict, meta, \
-    names_option, report_exceptions, UniqueChecker
+from . import __version__, format_attrs, merge_dict, meta, names_option, \
+              report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -210,15 +210,15 @@ def visit_exec(self, node):
         after = [nameids[n] for n in node.get('after', ())]
         then = [nameids[n] for n in node.get('then', ())]
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
-        attrs = format_data_attrs(self,
+        attrs = format_attrs(self,
             after=' '.join(after) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
-            exec_runner=node['runner'],
+            env=node['env'] if node['when'] != 'never' else None,
+            IS=f'tdoc-exec-{node['runner']}',
             output_style=node.get('output-style'),
             reset=node.get('reset'),
             then=' '.join(then) or None,
-            env=node['env'] if node['when'] != 'never' else None,
             when=node['when'])
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)

@@ -310,4 +310,4 @@ class PythonRunner extends Runner {
     }
 }
 
-Runner.apply(PythonRunner);  // Background
+Runner.register(PythonRunner);

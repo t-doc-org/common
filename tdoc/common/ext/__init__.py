@@ -307,12 +307,17 @@ def pydata_sphinx_theme_layout(contents, env):
                      r'\1{{ html_attrs | default({}) | xmlattr }}\2')
 
 
+def pop_dep_url(tdoc, name):
+    v = tdoc['versions'].pop(name)
+    if v.startswith('/'): v = f'..{v}'
+    return v
+
+
 def add_js(app, page, template, context, doctree):
+    tdoc = tdoc_config(app, page, doctree, context)
+
     # Temporarily override mathjax_path and mathjax3_config, then restore them
     # after mathjax.install_mathjax() has run.
-    tdoc = tdoc_config(app, page, doctree, context)
-    version = tdoc['versions'].pop('mathjax')
-    if version.startswith('/'): version = f'..{version}'
     cfg = meta(app.env, page, 'mathjax', {})
     if (out := cfg.get('output', 'svg')) not in ('chtml', 'svg'):
         _log.warning("Invalid mathjax:output: metadata value (allowed: chtml, "
@@ -320,12 +325,13 @@ def add_js(app, page, template, context, doctree):
         out = 'svg'
     context['tdoc_mathjax_save'] = (app.config.mathjax_path,
                                     app.config.mathjax3_config)
+    mj_url = pop_dep_url(tdoc, 'mathjax')
     mj_cfg = app.config.mathjax3_config = merge_dict(
         copy.deepcopy(app.config.mathjax3_config), cfg)
-    if re.search(r'[/@]3[./]', version) is not None:
-        app.config.mathjax_path = f'{version}/es5/tex-{out}-full.js'
+    if re.search(r'[/@]3[./]', mj_url) is not None:
+        app.config.mathjax_path = f'{mj_url}/es5/tex-{out}-full.js'
     else:
-        app.config.mathjax_path = f'{version}/tex-{out}.js'
+        app.config.mathjax_path = f'{mj_url}/tex-{out}.js'
         exts = mj_cfg.pop('tdoc_tex_extensions', [])
         mj_cfg.setdefault('loader', {}).setdefault('load', []) \
             .extend(f'[tex]/{e}' for e in exts)
@@ -333,9 +339,10 @@ def add_js(app, page, template, context, doctree):
             .setdefault('[+]', []).extend(exts)
 
     # Set up early and on-load JavaScript.
+    app.add_js_file(f'{pop_dep_url(tdoc, 'custom-elements')}/es.js', priority=0)
     tdoc = util.to_json(tdoc).replace('<', '\\x3c')
-    app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
-    app.add_js_file('tdoc/early.js', priority=1)
+    app.add_js_file(None, priority=1, body=f'const tdoc = {tdoc};')
+    app.add_js_file('tdoc/early.js', priority=2)
     app.add_js_file('tdoc/load.js', type='module')
 
 
