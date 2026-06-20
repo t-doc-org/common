@@ -153,8 +153,9 @@ class Poll {
 
 customElements.define('tdoc-poll', PollElement);
 const polls = [];
-for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
-if (polls.length > 0) {
+(async () => {
+    for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
+    if (polls.length === 0) return;
     const watch = new api.Watch(
         {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
         data => {
@@ -170,4 +171,4 @@ if (polls.length > 0) {
             delete htmlData.tdocPollControl;
         }
     });
-}
+})();  // Background
