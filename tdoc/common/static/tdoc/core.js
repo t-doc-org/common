@@ -223,34 +223,28 @@ const pendingAsyncGet = {};
 // Return a proxy that makes all attribute accesses asynchronous, where the
 // attribute must first be set before accesses complete.
 export function asyncGet(name, obj) {
-    const {promise, resolve} = Promise.withResolvers();
+    const resolves = {};
     return new Proxy(obj, {
-        promise, resolve,
-
-        async get(obj, prop, recv) {
-            let pag, added = false;
-            try {
-                for (;;) {
-                    const v = obj[prop];
-                    if (v !== undefined) return v;
-                    if (pag === undefined) pag = pendingAsyncGet[name] = {};
-                    if (!added) {
-                        pag[prop] = (pag[prop] ?? 0) + 1;
-                        added = true;
-                    }
-                    await this.promise;
-                }
-            } finally {
-                if (added) --pag[prop];
-            }
+        get(obj, prop, recv) {
+            const v = obj[prop];
+            if (v !== undefined) return v;
+            const {promise, resolve} = Promise.withResolvers();
+            obj[prop] = promise;
+            resolves[prop] = resolve;
+            const fqn = `${name}.${prop}`;
+            pendingAsyncGet[fqn] = true;
+            promise.then(() => { delete pendingAsyncGet[fqn]; });
+            return promise;
         },
 
         set(obj, prop, value, recv) {
-            obj[prop] = value;
-            const r = this.resolve;
-            ({promise: this.promise, resolve: this.resolve} =
-                Promise.withResolvers());
-            r();
+            const resolve = resolves[prop];
+            if (resolve !== undefined) {
+                delete resolves[prop];
+                resolve(value);
+            } else {
+                obj[prop] = value;
+            }
             return true;
         },
     });
@@ -296,24 +290,20 @@ div.tdoc-dyn[data-type="${CSS.escape(type)}"]\
 // time, to hint that rendering has likely failed and report potential issues.
 domLoaded.then(async () => {
     await sleep(10000);
-    const els = qsa(document,
-                    '.tdoc-dyn:not(.rendered, [data-processed]):empty');
+    const els = qsa(document, '.tdoc-dyn:not(.rendered):empty');
     if (els.length === 0) return;
 
     // Find pending attribute accesses.
     const pending = {};
-    for (const [c, counts] of Object.entries(pendingAsyncGet)) {
-        const parts = c.split('.');
-        const type = parts[0], cont = parts.slice(1).join('.');
+    for (const n of Object.keys(pendingAsyncGet)) {
+        const parts = n.split('.');
+        const type = parts[0], cont = parts.slice(1, -1).join('.');
+        const attr = parts[parts.length - 1];
         let p = pending[type];
         if (p === undefined) p = pending[type] = {};
-        for (const [a, count] of Object.entries(counts)) {
-            if (count > 0) {
-                let as = p[cont];
-                if (as === undefined) as = p[cont] = [];
-                as.push(a);
-            }
-        }
+        let as = p[cont];
+        if (as === undefined) as = p[cont] = [];
+        as.push(attr);
     }
     for (const [t, conts] of Object.entries(pending)) {
         const cl = [];
