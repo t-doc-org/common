@@ -183,7 +183,7 @@ options: {
 annotations: [{
   min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
 }, {
-  quantile: {p: [0.01, 99]},
+  quantile: {p: [0.01, 0.99]},
   options: {label: {position: '30%', rotation: -90}},
 }, {
   median: {}, avgDev: {f: [-1, 1]},
