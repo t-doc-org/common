@@ -12,12 +12,12 @@ and the {rst:role}`quiz-ph`, {rst:role}`quiz-input`, {rst:role}`quiz-select` and
 <script type="module">
 const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
 
-quiz.check('sum', args => {
+quiz.checks.sum = args => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
     const solution = +tds[0].textContent + (+tds[1].textContent)
     args.ok = args.answer === solution.toString();
     args.hint = `The answer is probably ${solution}.`;
-});
+};
 </script>
 
 Static quizzes can be laid out in various formats, for example as tables.
@@ -94,7 +94,7 @@ function sumProduct(max) {
     };
 }
 
-quiz.generator('sumProduct', sumProduct(12));
+quiz.generators.sumProduct = sumProduct(12);
 </script>
 
 Table-based quizzes can be generated dynamically, for drill exercises.

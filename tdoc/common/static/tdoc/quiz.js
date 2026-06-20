@@ -2,20 +2,26 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    dec, domLoaded, elmt, enable, fromBase64, markReady, on, qs, qsa,
+    asyncGet, dec, elmt, enable, fromBase64, markReady, on, qs, qsa,
 } from './core.js';
 
 class QuizBase {
-    constructor(quiz) {
-        this.quiz = quiz;
-        this.hint = qs(quiz, '.tdoc-quiz-hint');
+    constructor(node) { this.node = node; }
+
+    init() {
+        this.hint = qs(this.node, '.tdoc-quiz-hint');
+    }
+
+    attr(name) {
+        const v = this.node.getAttribute(name);
+        return v !== null ? v : undefined;
     }
 
     showHint(field, text, invalid = false) {
         this.hintField = field;
         this.hint.textContent = text;
         this.hint.style.left = this.hint.style.right = '';
-        const cr = qs(this.quiz, '.content').getBoundingClientRect();
+        const cr = qs(this.node, '.content').getBoundingClientRect();
         const fr = field.getBoundingClientRect();
         const hr = this.hint.getBoundingClientRect();
         this.hint.style.top = `calc(${fr.top - cr.top - hr.height}px - 0.5rem)`;
@@ -87,11 +93,11 @@ class QuizBase {
     onSuccess() {}
 }
 
-class Quiz extends QuizBase {
-    constructor(quiz) {
-        super(quiz);
-        this.setupFields(quiz);
-        markReady(quiz);
+class StaticQuiz extends QuizBase {
+    init() {
+        super.init();
+        this.setupFields(this.node);
+        markReady(this.node);
     }
 
     async check(field) {
@@ -101,10 +107,10 @@ class Quiz extends QuizBase {
     }
 }
 
-class TableGenQuiz extends QuizBase {
-    constructor(quiz) {
-        super(quiz);
-        this.table = qs(quiz, 'table');
+class TableQuiz extends QuizBase {
+    init() {
+        super.init();
+        this.table = qs(this.node, 'table');
         this.entries = [];
 
         // Extract the rows starting at the first placeholder or field. Also,
@@ -114,7 +120,7 @@ class TableGenQuiz extends QuizBase {
         this.preCnt = this.tmplCnt = 0;
         for (const tr of qsa(tbody, 'tr')) {
             if (this.tbody !== undefined
-                    || qs(tr, '.tdoc-quiz-ph, .tdoc-quiz-field')) {
+                    || qs(tr, 'tdoc-quiz-ph, .tdoc-quiz-field')) {
                 if (!this.tbody) {
                     this.tbody = elmt`<tbody class="tdoc-quiz-entry"></tbody>`;
                 }
@@ -129,13 +135,15 @@ class TableGenQuiz extends QuizBase {
         qs(this.tbody, 'tr:last-child > td:last-child')
             .appendChild(elmt`<<button class="tdoc-check fa-check"></button>`)
         if (this.preCnt === 0) tbody.remove();
+        generators[this.generator].then(fn => {
+            this.generate = fn;
+            this.addEntry();
+            markReady(this.node);
+        });
     }
 
-    setGenerator(fn) {
-        this.generate = fn;
-        this.addEntry();
-        markReady(this.quiz);
-    }
+    // Attribute accessors.
+    get generator() { return this.attr('generator'); }
 
     addEntry(focus) {
         // Compute if row highlighting needs to be inverted.
@@ -162,8 +170,8 @@ class TableGenQuiz extends QuizBase {
         // Set up the <tbody> for the new entry.
         const tbody = this.tbody.cloneNode(true);
         if (inv) tbody.classList.add('inv');
-        for (const ph of qsa(tbody, '.tdoc-quiz-ph')) {
-            entry[ph.dataset.text](ph);
+        for (const ph of qsa(tbody, 'tdoc-quiz-ph')) {
+            entry[ph.getAttribute('text')](ph);
         }
         this.table.appendChild(tbody);
         this.setupFields(tbody);
@@ -180,12 +188,11 @@ class TableGenQuiz extends QuizBase {
     onSuccess() { this.addEntry(true); }
 }
 
+export const generators = asyncGet('quiz.generators', {});
+
+// TODO(0.82): Remove
 export async function generator(name, fn) {
-    await setupDone;
-    for (const quiz of qsa(document,
-                           `.tdoc-quiz[data-gen="${CSS.escape(name)}"]`)) {
-        quiz.tdocQuiz.setGenerator(fn);
-    }
+    generators[name] = fn;
 }
 
 function prevField(fields, field) {
@@ -204,7 +211,7 @@ function nextField(fields, field) {
     }
 }
 
-const checks = {
+export const checks = {
     default(args) { checks.trim(args); },
     split(args, param = ',') { args.solution = args.solution.split(param); },
     trim(args) { args.applyAS(v => v.trim()); },
@@ -228,6 +235,7 @@ const checks = {
     },
 };
 
+// TODO(0.82): Remove
 export function check(name, fn) {
     checks[name] = fn;
 }
@@ -291,11 +299,16 @@ async function checkArgs(field) {
     };
 }
 
-const types = {'static': Quiz, 'table': TableGenQuiz};
+const types = {'static': StaticQuiz, 'table': TableQuiz};
 
-// Set up quizzes.
-const setupDone = domLoaded.then(() => {
-    for (const quiz of qsa(document, '.tdoc-quiz')) {
-        quiz.tdocQuiz = new types[quiz.dataset.type](quiz);
+class QuizElement extends HTMLElement {
+    connectedCallback() {
+        // Attributes must not be inspected in the constructor, so we
+        // instantiate the class here.
+        this.quiz = new types[this.getAttribute('type')](this);
+        this.quiz.init();
     }
-});
+}
+
+customElements.define('tdoc-quiz', QuizElement);
+customElements.define('tdoc-quiz-ph', class extends HTMLElement {});

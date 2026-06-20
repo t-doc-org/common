@@ -58,9 +58,9 @@ class Quiz(docutils.SphinxDirective):
             pass
         elif typ == 'table':
             if gen is None:
-                raise Exception("{quizz} table: Missing generator argument")
+                raise Exception("{quiz} table: Missing generator argument")
         else:
-            raise Exception(f"{{quizz}}: Invalid type: {typ}")
+            raise Exception(f"{{quiz}}: Invalid type: {typ}")
 
         children = self.parse_content_to_nodes()
         if any(True for c in children for n in c.findall(quiz)):
@@ -70,13 +70,13 @@ class Quiz(docutils.SphinxDirective):
             raise Exception("{quiz}: Must contain at least one field")
         if typ == 'table':
             if not sum(1 for c in children if isinstance(c, nodes.table)):
-                raise Exception("{quizz} table: Must contain a single table")
+                raise Exception("{quiz} table: Must contain a single table")
             names = set()
             for c in children:
                 for n in c.findall(
                         lambda n: isinstance(n, field_types + (quiz_ph,))):
                     if (name := n['text']) in names:
-                        raise Exception("{{quizz}}: Duplicate placeholder or "
+                        raise Exception("{quiz}: Duplicate placeholder or "
                                         f" field name: {name}")
                     names.add(name)
 
@@ -109,24 +109,23 @@ class quiz(nodes.Body, nodes.Element): pass
 
 
 def visit_quiz(self, node):
-    attrs = {'data-type': node['type']}
-    if v := node.get('gen'): attrs['data-gen'] = v
+    attrs = {'type': node['type']}
+    if v := node.get('gen'): attrs['generator'] = v
     if v := node.get('style'): attrs['style'] = v
-    self.body.append(self.starttag(
-        node, 'div', suffix='', classes=['tdoc-quiz'], **attrs))
+    self.body.append(self.starttag(node, 'tdoc-quiz', suffix='', **attrs))
     self.body.append(
         '<div class="content"><span class="tdoc-quiz-hint"></span>\n')
 
 
 def depart_quiz(self, node):
     self.body.append('</div>')
-    if node.get('type') == 'static':
+    if node['type'] == 'static':
         self.body.append("""\
 <div class="controls">\
 <button class="tdoc-check fa-check" title="Check answers"></button>\
 </div>\
 """)
-    self.body.append('</div>\n')
+    self.body.append('</tdoc-quiz>\n')
 
 
 class QuizPh(Role):
@@ -141,10 +140,9 @@ class quiz_ph(nodes.Inline, nodes.Element): pass
 
 
 def visit_quiz_ph(self, node):
-    self.body.append(self.starttag(
-        node, 'span', suffix='', classes=['tdoc-quiz-ph'],
-        **{'data-text': node['text']}))
-    self.body.append('</span>')
+    self.body.append(self.starttag(node, 'tdoc-quiz-ph', suffix='',
+                                   text=node['text']))
+    self.body.append('</tdoc-quiz-ph>')
     raise nodes.SkipNode()
 
 

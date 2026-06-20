@@ -4,14 +4,7 @@
 import * as api from './api.js';
 import {clientId, htmlData, markReady, on, qs, qsa, qsaReady} from './core.js';
 
-class PollElement extends HTMLElement {
-    constructor() {
-        super();
-        this.poll = new Poll(this);
-    }
-
-    connectedCallback() { this.poll.init(); }
-}
+const polls = [];
 
 class Poll {
     constructor(node) { this.node = node; }
@@ -151,8 +144,17 @@ class Poll {
     }
 }
 
+class PollElement extends HTMLElement {
+    constructor() {
+        super();
+        this.poll = new Poll(this);
+    }
+
+    connectedCallback() { this.poll.init(); }
+}
+
 customElements.define('tdoc-poll', PollElement);
-const polls = [];
+
 (async () => {
     for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
     if (polls.length === 0) return;

@@ -673,27 +673,27 @@ html[data-tdoc-draw] svg#tdoc-drawing {
 }
 
 /* Quizzes */
-div.tdoc-quiz {
+tdoc-quiz {
     display: flex;
     width: 100%;
     flex-direction: row;
     column-gap: 0.3rem;
 }
-div.tdoc-quiz > .content {
+tdoc-quiz > .content {
     position: relative;
     flex-basis: 100%;
 }
-div.tdoc-quiz > .controls {
+tdoc-quiz > .controls {
     display: flex;
     flex-direction: column;
     row-gap: 0.3rem;
 }
-div.tdoc-quiz button.tdoc-check:disabled {
+tdoc-quiz button.tdoc-check:disabled {
     color: var(--pst-color-success);
     border: none;
     background-color: var(--pst-color-success-bg);
 }
-.tdoc-quiz-hint {
+tdoc-quiz .tdoc-quiz-hint {
     display: inline-block;
     position: absolute;
     padding: 0.25rem 0.5rem;
@@ -707,36 +707,36 @@ div.tdoc-quiz button.tdoc-check:disabled {
     opacity: 0;
     transition: 0.3s visibility, 0.3s opacity;
 }
-.tdoc-quiz-hint.show {
+tdoc-quiz .tdoc-quiz-hint.show {
     visibility: visible;
     opacity: unset;
 }
-.tdoc-quiz-hint.invalid {
+tdoc-quiz .tdoc-quiz-hint.invalid {
     border-left: 0.2rem solid var(--pst-color-warning);
     background-color: var(--pst-color-warning-bg);
 }
-.tdoc-quiz-field.right {
+tdoc-quiz .tdoc-quiz-field.right {
     float: right;
     clear: right;
     margin-left: 1rem;
 }
-.tdoc-quiz-field.right + .tdoc-quiz-field.right {
+tdoc-quiz .tdoc-quiz-field.right + .tdoc-quiz-field.right {
     margin-top: 0.25rem;
 }
-p:has(.tdoc-quiz-field.right)::after {
+tdoc-quiz p:has(.tdoc-quiz-field.right)::after {
     content: ".";
     visibility: hidden;
     display: block;
     height: 0;
     clear: both;
 }
-.tdoc-quiz-field.bad {
+tdoc-quiz .tdoc-quiz-field.bad {
     background-color: var(--pst-color-danger-bg);
 }
-.tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {
+tdoc-quiz .tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {
     vertical-align: middle;
 }
-.tdoc-quiz-entry > tr > td:last-child {
+tdoc-quiz .tdoc-quiz-entry > tr > td:last-child {
     width: 0;
 }
 
