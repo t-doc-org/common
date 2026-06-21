@@ -5,7 +5,7 @@
 
 ## Chart.js
 
-`````{rst:directive} .. chartjs:: [template:]name
+`````{rst:directive} .. chartjs:: renderer
 This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 
 - Chart.js: [documentation](https://www.chartjs.org/docs/latest/),
@@ -21,39 +21,12 @@ This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
   - [chartjs-plugin-datalabels](https://chartjs-plugin-datalabels.netlify.app/)
   - [chartjs-plugin-deferred](https://chartjs-plugin-deferred.netlify.app/)
 
-The charts are rendered in JavaScript, by importing the {js:mod}`chart`
-module and calling {js:func}`~chart.chart` (or one of the other renderers) for
-each {rst:dir}`chartjs` directive, referencing them by name.
-
-````{code-block} html
-```{chartjs} v-bar
-```
-
-<script type="module">
-const [{chart}] = await tdoc.imports('tdoc/chart.js');
-
-const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
-                '#ffcd56', '#c9cbcf'];
-chart('v-bar', {
-  type: 'bar',
-  data: {
-    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-    datasets: [{data: [65, 59, 80, 81, 56, 55, 40]}],
-  },
-  options: {
-    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
-    backgroundColor: colors.map(c => `${c}33`),
-    scales: {y: {beginAtZero: true}},
-  },
-});
-</script>
-````
-
-Alternatively, templates can be instantiated by prefixing the template name with
-`template:` and passing arguments in the directive content.
+[Pre-defined renderers](#renderers) can be used by specifying their name as a
+directive argument, and providing arguments in the directive content as a
+[JSON5](https://spec.json5.org/) object (without enclosing `{}`).
 
 ````{code-block}
-```{chartjs} template:chart
+```{chartjs} chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
@@ -71,6 +44,36 @@ options: {
 ```
 ````
 
+Custom renderers can be defined in JavaScript, by importing the {js:mod}`chart`
+module, adding rendering functions to {js:data}`~chart.render`, and calling {js:func}`~chart.chart` (or one of the other renderers) in the rendering
+function.
+
+````{code-block} html
+```{chartjs} vBar
+```
+
+<script type="module">
+const [{chart, render}] = await tdoc.imports('tdoc/chart.js');
+
+const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
+                '#ffcd56', '#c9cbcf'];
+render.vBar = el => {
+  return chart(el, {
+    type: 'bar',
+    data: {
+      labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+      datasets: [{data: [65, 59, 80, 81, 56, 55, 40]}],
+    },
+    options: {
+      borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+      backgroundColor: colors.map(c => `${c}33`),
+      scales: {y: {beginAtZero: true}},
+    },
+  });
+};
+</script>
+````
+
 Defaults can be set via the `chartjs` {rst:dir}`metadata`, and are merged into
 [`Chart.defaults`](https://www.chartjs.org/docs/latest/configuration/#global-configuration).
 
@@ -85,23 +88,18 @@ CSS styles to apply to the chart container.
 ```
 `````
 
-### Templates
+### Renderers
 
-Templates are instantiated by specifying the template name prefixed by
-`template:` as the directive argument. The template arguments are provided in
-the directive content as a [JSON5](https://spec.json5.org/) object (without
-enclosing `{}`).
-
-The predefined templates are described below. Custom templates can be created in
-JavaScript via {js:data}`~chart.templates`.
+This section describes the pre-defined renderers. Custom renderers can be
+added in JavaScript via {js:data}`~chart.render`.
 
 #### `chart`
 
-This template renders a chart from a static JSON config. The directive content
+This renderer displays a chart from a static JSON config. The directive content
 is passed directly to {js:func}`~chart.chart`.
 
 ````{code-block}
-```{chartjs} template:chart
+```{chartjs} chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
@@ -121,7 +119,7 @@ options: {
 
 #### `histogram`
 
-This template renders the [histogram](https://en.wikipedia.org/wiki/Histogram)
+This renderer displays the [histogram](https://en.wikipedia.org/wiki/Histogram)
 of a sample or a distribution.
 
 - `sample`: The statistical sample for which to plot the histogram, an array of
@@ -147,7 +145,7 @@ of a sample or a distribution.
 - `options`: Options to merge into the `options` field of the chart.
 
 ````{code-block}
-```{chartjs} template:histogram
+```{chartjs} histogram
 uniform: {min: 0, max: 24, width: 2},
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
@@ -160,9 +158,9 @@ options: {
 ```
 ````
 
-#### `density-function`
+#### `densityFunction`
 
-This template renders the
+This renderer displays the
 [density function](https://en.wikipedia.org/wiki/Probability_mass_function)
  of a sample.
 
@@ -177,7 +175,7 @@ This template renders the
 - `options`: Options to merge into the `options` field of the chart.
 
 ````{code-block}
-```{chartjs} template:density-function
+```{chartjs} densityFunction
 min: 0, max: 24, step: 2,
 sample: [
   [6, 2], [7, 4], [8, 4], [9, 8], [10, 8], [11, 4], [12, 3], [13, 3], [15, 2],
@@ -190,9 +188,9 @@ options: {
 ```
 ````
 
-#### `cumulative-distribution-function`
+#### `cumulativeDistributionFunction`
 
-This template renders the
+This renderer displays the
 [cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
 of a sample or a distribution.
 
@@ -209,7 +207,7 @@ of a sample or a distribution.
 - `options`: Options to merge into the `options` field of the chart.
 
 ````{code-block}
-```{chartjs} template:cumulative-distribution-function
+```{chartjs} cumulativeDistributionFunction
 min: 0, max: 24, step: 2,
 sample: [
   [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1], [14, 6], [16, 9], [18, 8],
@@ -230,41 +228,34 @@ This module
 provides functionality related to {rst:dir}`chartjs` directives.
 `````
 
-```{js:data} attrs
-An object containing named attribute sets. Custom sets can be defined by
-assigning to object attributes.
-```
-
 ```{js:function} chart(el, config)
 Render the content of a {rst:dir}`chartjs` directive.
 
-:arg !string|HTMLElement el: The name of the {rst:dir}`chartjs` directive to
-render, or the wrapper DOM element that should contain the chart.
+:arg !HTMLElement el: The wrapper DOM element that will contain the chart.
 :arg !Object|Array config: The chart configuration, passed to the `Chart`
 constructor. If an `Array` of configs is provided, they are merged.
 :returns: A `Promise` that resolves to the created `Chart` instance.
 ```
 
-`````{js:data} templates
-An object containing named templates. In addition to the
-[pre-defined templates](#templates) described above, custom templates can be
-added by setting functions as object attributes. A template function is called
-for each {rst:dir}`chartjs` directive that specifies the template name. The
-function receives the wrapper DOM element as its first argument, and
-the content of the directive as a JSON object as its second argument.
+`````{js:data} render
+An object containing named rendering functions. In addition to the
+[pre-defined renderers](#renderers) described above, custom renderers can be
+added by setting functions as object attributes. Rendering functions receive the
+wrapper DOM element as their first argument, and the content of the directive as
+a JSON object as their second argument.
 
 ````{code-block} html
-```{chartjs} template:random-bars
+```{chartjs} randomBars
 count: 3, min: 10, max: 50,
 ```
-```{chartjs} template:random-bars
+```{chartjs} randomBars
 count: 5, min: 100, max: 500,
 ```
 
 <script type="module">
-const [core, {templates}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
+const [core, {chart, render}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
 
-templates['random-bars'] = (el, {count, min, max}) => {
+render.randomBars = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);
@@ -286,4 +277,9 @@ templates['random-bars'] = (el, {count, min, max}) => {
 };
 </script>
 ````
+
+```{js:data} attrs
+An object containing named attribute sets. Custom sets can be defined by
+assigning to object attributes.
+```
 `````

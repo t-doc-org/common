@@ -604,7 +604,7 @@ render.graph = el => {
   });
 };
 
-render.randomBars_ = (el, {count, min, max}) => {
+render.randomBars = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);

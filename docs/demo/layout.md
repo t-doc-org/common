@@ -238,7 +238,7 @@ x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
 
 # Chart.js
 
-```{chartjs} template:chart
+```{chartjs} chart
 :class: align-left
 :style: width: 50%; aspect-ratio: 4;
 type: 'bar',
@@ -251,7 +251,7 @@ options: {
 },
 ```
 
-```{chartjs} template:chart
+```{chartjs} chart
 :class: align-center
 :style: width: 50%; aspect-ratio: 4;
 type: 'bar',
@@ -264,7 +264,7 @@ options: {
 },
 ```
 
-```{chartjs} template:chart
+```{chartjs} chart
 :class: align-right
 :style: width: 50%; aspect-ratio: 4;
 type: 'bar',
@@ -279,17 +279,17 @@ options: {
 
 # JSXGraph
 
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 :class: align-left
 :style: width: 50%;
 width: 35, height: 2,
 ```
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 :class: align-center
 :style: width: 50%;
 width: 35, height: 2,
 ```
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 :class: align-right
 :style: width: 50%;
 width: 35, height: 2,

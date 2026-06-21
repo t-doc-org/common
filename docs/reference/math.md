@@ -5,7 +5,7 @@
 
 ## JSXGraph
 
-`````{rst:directive} .. jsxgraph:: [template:]name
+`````{rst:directive} .. jsxgraph:: renderer
 This directive creates a graph based on
 [JSXGraph](https://jsxgraph.uni-bayreuth.de/wp/).
 
@@ -13,8 +13,7 @@ This directive creates a graph based on
 - [JSXGraph examples](https://jsxgraph.uni-bayreuth.de/wiki/index.php/Category:Examples)
 
 The graphs are constructed in JavaScript, by importing the {js:mod}`jsxgraph`
-module and calling {js:func}`~jsxgraph.initBoard` for each {rst:dir}`jsxgraph`
-directive, referencing it by name.
+module, adding a rendering function to {js:data}`~jsxgraph.render`, and calling {js:func}`~jsxgraph.initBoard` in the rendering function.
 
 ````{code-block} html
 ```{jsxgraph} sin
@@ -22,21 +21,25 @@ directive, referencing it by name.
 ```
 
 <script type="module">
-const [{initBoard}] = await tdoc.imports('tdoc/jsxgraph.js');
-initBoard('sin', {
-    boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
-    axis: true, grid: true,
-}, board => {
-    board.create('functiongraph', [x => Math.sin(x)]);
-});
+const [{initBoard, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+
+render.sin = el => {
+  return initBoard(el, {
+      boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
+      axis: true, grid: true,
+  }, board => {
+      board.create('functiongraph', [x => Math.sin(x)]);
+  });
+};
 </script>
 ````
 
-Alternatively, templates can be instantiated by prefixing the template name with
-`template:`.
+Alternatively, [pre-defined renderers](#renderers) can be used by specifying
+their name as a directive argument, and providing arguments in the directive
+content as a [JSON5](https://spec.json5.org/) object (without enclosing `{}`).
 
 ````{code-block}
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 width: 17.5, height: 5, grid: {minorElements: 9},
 ```
 ````
@@ -60,19 +63,14 @@ CSS styles to apply to the graph container.
 ```
 `````
 
-### Templates
+### Renderers
 
-Templates are instantiated by specifying the template name prefixed by
-`template:` as the directive argument. The template arguments are provided in
-the directive content as a [JSON5](https://spec.json5.org/) object (without
-enclosing `{}`).
-
-The predefined templates are described below. Custom templates can be created in
-JavaScript via {js:data}`~jsxgraph.templates`.
+This section describes the pre-defined renderers. Custom renderers can be
+added in JavaScript via {js:data}`~jsxgraph.render`.
 
 #### `grid`
 
-This template renders a grid.
+This renderer displays a grid.
 
 - `width` (default: 35): The width of the grid.
 - `height` (default: 10): The height of the grid.
@@ -84,14 +82,14 @@ This template renders a grid.
   attribute overrides.
 
 ````{code-block}
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 width: 17.5, height: 5, grid: {minorElements: 9},
 ```
 ````
 
 #### `axes`
 
-This template renders a set of axes and an optional grid.
+This renderer displays a set of axes and an optional grid.
 
 - `boundingBox` (default: `[-11, 11, 11, -11]`): The bounding box of the graph.
 - `majorX`, `majorY`, `major`: The distance between major ticks on the X axis,
@@ -111,20 +109,21 @@ This template renders a set of axes and an optional grid.
   attribute overrides.
 
 ````{code-block}
-```{jsxgraph} template:axes
+```{jsxgraph} axes
 boundingBox: [-2, 5, 25, -5],
 majorX: 5, minorX: 4, majorY: 2, minorY: 1,
 grid: {majorStep: 1},
 ```
 ````
 
-#### `cumulative-distribution-function`
+#### `cumulativeDistributionFunction`
 
-This template renders the
+This renderer displays the
 [cumulative distribution function](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
 of a sample or a distribution.
 
-- `sample`: The statistical sample for which to plot the CDF.
+- `sample`: The statistical sample for which to plot the CDF, an array of
+  values or `[value, count]` pairs.
 - `distribution`: The distribution for which to plot the CDF, an array of
   `[x, count]` pairs where `x` is the lower bound of the bin, and the last
   element must have a zero (or `undefined`) count.
@@ -143,18 +142,18 @@ of a sample or a distribution.
   attribute overrides.
 
 ````{code-block}
-```{jsxgraph} template:cumulative-distribution-function
+```{jsxgraph} cumulativeDistributionFunction
 :style: aspect-ratio: 2 / 1;
 min: 0, max: 24, step: 2,
+sample: [
+  [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1], [14, 6], [16, 9], [18, 8],
+  [20, 5],
+],
 options: {
   defaults: {
     point: {strokeColor: '#0072B2', fillColor: '#0072B2'},
   },
 },
-sample: [
-  10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
-  9, 7, 10, 12, 9, 10, 12, 15, 10, 8, 9, 11, 12, 9, 6, 17, 8, 13, 11, 16,
-],
 ```
 ````
 
@@ -170,6 +169,58 @@ provides functionality related to {rst:dir}`jsxgraph` directives.
 The [`JXG`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.html) namespace of
 the JSXGraph library.
 ```
+
+```{js:function} initBoard(el, attrs[, fn])
+Render the content of a {rst:dir}`jsxgraph` directive.
+
+In addition to board attributes, `attrs` can specify per object type defaults
+for the graph in the `defaults` key, similar to how global defaults are
+specified in
+[JXG.Options](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Options.html).
+
+:arg !HTMLElement el: The wrapper DOM element that will contain the graph.
+:arg !Object|Array attrs: The board attributes, passed to
+`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are
+merged.
+:arg !function fn: An optional function that is called with the
+[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) as an
+argument.
+:returns: A `Promise` that resolves to the
+[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html).
+```
+
+`````{js:data} render
+An object containing named rendering functions. In addition to the
+[pre-defined renderers](#renderers) described above, custom renderers can be
+added by setting functions as object attributes. Rendering functions receive the
+wrapper DOM element as their first argument, and the content of the directive as
+a JSON object as their second argument.
+
+````{code-block} html
+```{jsxgraph} regularPolygon
+sides: 4,
+```
+```{jsxgraph} regularPolygon
+sides: 5,
+```
+
+<script type="module">
+const [{initBoard, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+
+render.regularPolygon = (el, {sides}) => {
+  return initBoard(el, {
+    boundingBox: [-1.3, 1.3, 1.3, -1.3],
+  }, board => {
+    const s1 = 1 / sides;
+    board.create('regularpolygon', [
+      [Math.cos(Math.PI * (-0.5 - s1)), Math.sin(Math.PI * (-0.5 - s1))],
+      [Math.cos(Math.PI * (-0.5 + s1)), Math.sin(Math.PI * (-0.5 + s1))],
+      sides,
+    ]);
+  });
+};
+</script>
+````
 
 ```{js:data} attrs
 An object containing named attribute sets. Custom sets can be defined by
@@ -187,58 +238,4 @@ arguments, only the listed values are drawn.
 :arg !number|Array ys: The labels to draw on the Y axis.
 :returns: An attribute object.
 ```
-
-```{js:function} initBoard(el, attrs[, fn])
-Render the content of a {rst:dir}`jsxgraph` directive.
-
-In addition to board attributes, `attrs` can specify per object type defaults
-for the graph in the `defaults` key, similar to how global defaults are
-specified in
-[JXG.Options](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Options.html).
-
-:arg !string|HTMLElement el: The name of the {rst:dir}`jsxgraph` directive to
-construct, or the wrapper DOM element that should contain the graph.
-:arg !Object|Array attrs: The board attributes, passed to
-`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are
-merged.
-:arg !function fn: An optional function that is called with the
-[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) as an
-argument.
-:returns: A `Promise` that resolves to the
-[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html).
-```
-
-`````{js:data} templates
-An object containing named templates. In addition to the
-[pre-defined templates](#templates) described above, custom templates can be
-added by setting functions as object attributes. A template function is called
-for each {rst:dir}`jsxgraph` directive that specifies the template name. The
-function receives the wrapper DOM element as its first argument, and
-the content of the directive as a JSON object as its second argument.
-
-````{code-block} html
-```{jsxgraph} template:regular-polygon
-sides: 4,
-```
-```{jsxgraph} template:regular-polygon
-sides: 5,
-```
-
-<script type="module">
-const [{initBoard, templates}] = await tdoc.imports('tdoc/jsxgraph.js');
-
-templates['regular-polygon'] = (el, {sides}) => {
-  return initBoard(el, {
-    boundingBox: [-1.3, 1.3, 1.3, -1.3],
-  }, board => {
-    const s1 = 1 / sides;
-    board.create('regularpolygon', [
-      [Math.cos(Math.PI * (-0.5 - s1)), Math.sin(Math.PI * (-0.5 - s1))],
-      [Math.cos(Math.PI * (-0.5 + s1)), Math.sin(Math.PI * (-0.5 + s1))],
-      sides,
-    ]);
-  });
-};
-</script>
-````
 `````
