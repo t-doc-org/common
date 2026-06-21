@@ -490,7 +490,8 @@ class Dyn(docutils.SphinxDirective):
 
     def json_content(self):
         v = ''.join(f'{line}\n' for line in self.content)
-        return util.to_json(pyjson5.decode(f'{{{v}}}'))
+        data = pyjson5.decode(f'{{{v}}}')
+        return util.to_json(data) if data else None
 
     def populate(self, node): pass
 

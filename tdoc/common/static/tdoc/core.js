@@ -904,7 +904,8 @@ class DynElement extends HTMLElement {
         try {
             // TODO: Add a rendering timeout, display alert, but remove error
             // message in block if rendering terminates anyway
-            await render(this, this.args ? JSON.parse(this.args) : {});
+            const args = this.args;
+            await render(this, args !== undefined ? JSON.parse(args) : {});
             this.classList.add('rendered');
             markReady(this);
         } catch (e) {

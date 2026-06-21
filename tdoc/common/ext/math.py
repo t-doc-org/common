@@ -24,7 +24,7 @@ class JsxGraph(Dyn):
 
     def populate(self, node):
         node['classes'].append('jxgbox')
-        node['args'] = self.json_content()
+        if v := self.json_content(): node['args'] = v
 
 
 def add_css_js(app, page, template, context, doctree):
