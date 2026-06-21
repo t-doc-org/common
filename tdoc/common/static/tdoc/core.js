@@ -133,7 +133,10 @@ export function elmt(tmpl, ...values) {
 export class HtmlError extends Error {
     static of(e) {
         if (e instanceof HtmlError) return e;
-        return htmle`<strong>${e.name}:</strong> ${e.message}`;
+        if (e instanceof Error) {
+            return htmle`<strong>${e.name}:</strong> ${e.message}`;
+        }
+        return htmle`<strong>Error:</strong> ${e}`;
     }
 
     constructor(html, options) {
@@ -217,156 +220,95 @@ export function markReady(node, value = '') {
     node.dataset.tdocReady = value;
 }
 
+// A mutex for asynchronous code.
+export class Mutex {
+    async acquire() {
+        while (this.p !== undefined) await this.p;
+        ({promise: this.p, resolve: this.r} = Promise.withResolvers());
+    }
+
+    release() {
+        const resolve = this.r;
+        delete this.p, this.r;
+        resolve();
+    }
+
+    async locked(fn) {
+        await this.acquire();
+        try {
+            return await fn();
+        } finally {
+            this.release();
+        }
+    }
+}
+
 // Pending accesses to asyncGet attributes.
 const pendingAsyncGet = {};
 
 // Return a proxy that makes all attribute accesses asynchronous, where the
 // attribute must first be set before accesses complete.
-export function asyncGet(name, obj) {
+export function asyncGet(obj, {name, callables = false, alert = true} = {}) {
+    // TODO: Take type, container as separate arguments
+    const [type, cont] = splitContainerName(name);
     const resolves = {};
     return new Proxy(obj, {
         get(obj, prop, recv) {
+            if (prop === 'then') return;  // Make the proxy non-thenable
             const v = obj[prop];
             if (v !== undefined) return v;
             const {promise, resolve} = Promise.withResolvers();
-            obj[prop] = promise;
+            const value = callables ? asyncCall(promise) : promise;
+            obj[prop] = value;
             resolves[prop] = resolve;
-            const fqn = `${name}.${prop}`;
-            pendingAsyncGet[fqn] = true;
-            promise.then(() => { delete pendingAsyncGet[fqn]; });
-            return promise;
-        },
-
-        set(obj, prop, value, recv) {
-            const resolve = resolves[prop];
-            if (resolve !== undefined) {
-                delete resolves[prop];
-                resolve(value);
-            } else {
-                obj[prop] = value;
+            if (name !== undefined) {
+                const fqn = `${name}.${prop}`;
+                pendingAsyncGet[fqn] = true;
+                promise.then(() => { delete pendingAsyncGet[fqn]; });
             }
-            return true;
+            return value;
         },
-    });
-}
 
-// Return a proxy that calls a function whenever an attribute is set.
-export function onSet(obj, set) {
-    return new Proxy(obj, {
         set(obj, prop, value, recv) {
             try {
-                set(obj, prop, value);
+                if (prop === 'then') {
+                    throw htmle`Invalid property name: <code>${prop}</code>`;
+                }
+                const resolve = resolves[prop];
+                if (resolve !== undefined) {
+                    delete resolves[prop];
+                    resolve(value);
+                } else if (obj[prop] !== undefined) {
+                    throw type === undefined ?
+                        htmle`Duplicate definition: <code>${prop}</code>` :
+                        htmle`\
+<code>{${type}}</code> Duplicate <code>${cont}</code> definition: \
+<code>${prop}</code>`;
+                } else {
+                    obj[prop] = value;
+                }
             } catch (e) {
+                if (!alert) throw e;
+                console.error(e);
                 showAlert(e);
-                throw e;
             }
-            obj[prop] = value;
             return true;
         },
     });
 }
 
-class DynElement extends HTMLElement {
-    attr(name) {
-        const v = this.getAttribute(name);
-        return v !== null ? v : undefined;
-    }
-
-    // Attribute accessors.
-    get type() { return this.attr('type'); }
-    get name() { return this.attr('name'); }
-    get template() { return this.attr('template'); }
-    get args() { return this.attr('args'); }
+// Return a function that awaits the given promise, then calls the function to
+// which it resolves.
+function asyncCall(pfn) {
+    return function(...args) {
+        return pfn.then(fn => fn.apply(this, args));
+    };
 }
 
-customElements.define('tdoc-dyn', DynElement);
-
-// Resolve dyn elements of a specific type. If el is missing, all dyn elements
-// of that type are returned. If el is a string, the dyn element with that name
-// is returned, or an exception is thrown if it cannot be found. Otherwise, el
-// is returned unchanged.
-export async function resolveDyn(type, el) {
-    if (el && typeof el !== 'string') return el;
-    await domLoaded;
-    if (!el) {
-        return qsa(document, `tdoc-dyn[type="${CSS.escape(type)}"]`);
-    }
-    const node = qs(document, `\
-tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
-    if (!node) {
-        throw htmle`\
-<code>{${type}}</code> Directive not found: <code>${el}</code>`;
-    }
-    return node;
-}
-
-// Update the message on dyn elements that haven't been rendered after some
-// time, to hint that rendering has likely failed and report potential issues.
-domLoaded.then(async () => {
-    await sleep(10000);
-    const els = qsa(document, '.tdoc-dyn:not(.rendered):empty');
-    if (els.length === 0) return;
-
-    // Find pending attribute accesses.
-    const pending = {};
-    for (const n of Object.keys(pendingAsyncGet)) {
-        const parts = n.split('.');
-        const type = parts[0], cont = parts.slice(1, -1).join('.');
-        const attr = parts[parts.length - 1];
-        let p = pending[type];
-        if (p === undefined) p = pending[type] = {};
-        let as = p[cont];
-        if (as === undefined) as = p[cont] = [];
-        as.push(attr);
-    }
-    for (const [t, conts] of Object.entries(pending)) {
-        const cl = [];
-        for (const [c, as] of Object.entries(conts)) {
-            as.sort();
-            cl.push([c, as]);
-        }
-        cl.sort((a, b) => {
-            const a0 = a[0], b0 = b[0];
-            return a0 < b0 ? -1 : a0 > b0 ? 1 : 0;
-        });
-        pending[t] = cl;
-    }
-
-    // Report potential issues.
-    for (const el of els) {
-        const msg = html`\
-<strong>Rendering seems to have failed.</strong>
-<ul><li>Check the JavaScript console for errors.</li></ul>`;
-        const ul = qs(msg, 'ul');
-        if (el.template !== undefined) {
-            ul.appendChild(html`\
-<li>Check the name of the template: <code>${el.template}</code></li>`);
-        }
-        for (const [c, attrs] of pending[el.type] ?? []) {
-            const li = ul.appendChild(elmt`\
-<li>Check the names of <code>${c}</code> attributes: </li>`);
-            for (const [i, a] of attrs.entries()) {
-                li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
-            }
-        }
-        el.replaceChildren(msg);
-    }
-});
-
-// Render all dyn elements of a specific type that instantiate the given
-// template.
-export async function instantiateDynTemplate(type, name, fn) {
-    await domLoaded;
-    const els = qsa(document, `\
-tdoc-dyn[type="${CSS.escape(type)}"][template="${CSS.escape(name)}"]`);
-    for (const el of els) {
-        const args = el.args ? JSON.parse(el.args) : {};
-        try {
-            fn(el, args);  // Background
-        } catch (e) {
-            showAlert(e);
-        }
-    }
+function splitContainerName(name) {
+    if (name === undefined) return [];
+    const parts = name.split('.');
+    return [parts[0], parts.slice(1).join('.')];
 }
 
 // Merge attribute sets, with later sets overriding earlier ones.
@@ -484,6 +426,7 @@ export async function toModalMessage(modal, fn) {
 
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
+// TODO: Typeset automatically using a web component
 export function inlineMath(value) {
     const [start, end] = MathJax.tex?.inlineMath ?? ['\\(', '\\)'];
     return elmt`\
@@ -492,6 +435,7 @@ export function inlineMath(value) {
 
 // Return a <div> containing display math. The element must be typeset after
 // being added to the DOM.
+// TODO: Typeset automatically using a web component
 export function displayMath(value) {
     // The formatting of the content corresponds to what spinx.ext.mathjax does.
     const parts = [];
@@ -948,3 +892,104 @@ export class RateLimited {
         if (fn) fn();
     }
 }
+
+// The renderers for dyn elements.
+export const dynRender = asyncGet({}, {name: 'dyn.render'});
+
+class DynElement extends HTMLElement {
+    async connectedCallback() {
+        let render = await dynRender[this.type];
+        const name = this.name;
+        if (name !== undefined) render = render[name];
+        try {
+            // TODO: Add a rendering timeout, display alert, but remove error
+            // message in block if rendering terminates anyway
+            await render(this, this.args ? JSON.parse(this.args) : {});
+            this.classList.add('rendered');
+            markReady(this);
+        } catch (e) {
+            console.error(e);
+            showAlert(e);
+        }
+    }
+
+    attr(name) {
+        const v = this.getAttribute(name);
+        return v !== null ? v : undefined;
+    }
+
+    // Attribute accessors.
+    get type() { return this.attr('type'); }
+    get name() { return this.attr('name'); }
+    get args() { return this.attr('args'); }
+}
+
+customElements.define('tdoc-dyn', DynElement);
+
+// Resolve dyn elements of a specific type. If el is missing, all dyn elements
+// of that type are returned. If el is a string, the dyn element with that name
+// is returned, or an exception is thrown if it cannot be found. Otherwise, el
+// is returned unchanged.
+export async function resolveDyn(type, el) {
+    if (el && typeof el !== 'string') return el;
+    await domLoaded;
+    if (!el) {
+        return qsa(document, `tdoc-dyn[type="${CSS.escape(type)}"]`);
+    }
+    const node = qs(document, `\
+tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
+    if (!node) {
+        throw htmle`\
+<code>{${type}}</code> Directive not found: <code>${el}</code>`;
+    }
+    return node;
+}
+
+// Update the message on dyn elements that haven't been rendered after some
+// time, to hint that rendering has likely failed and report potential issues.
+domLoaded.then(async () => {
+    await sleep(15000);
+    const els = qsa(document, 'tdoc-dyn:not(.rendered):empty');
+    if (els.length === 0) return;
+
+    // Find pending attribute accesses.
+    const pending = {};
+    for (const n of Object.keys(pendingAsyncGet)) {
+        const parts = n.split('.');
+        const type = parts[0], cont = parts.slice(1, -1).join('.');
+        const attr = parts[parts.length - 1];
+        let p = pending[type];
+        if (p === undefined) p = pending[type] = {};
+        let as = p[cont];
+        if (as === undefined) as = p[cont] = [];
+        as.push(attr);
+    }
+    for (const [t, conts] of Object.entries(pending)) {
+        const cl = [];
+        for (const [c, as] of Object.entries(conts)) {
+            as.sort();
+            cl.push([c, as]);
+        }
+        cl.sort((a, b) => {
+            const a0 = a[0], b0 = b[0];
+            return a0 < b0 ? -1 : a0 > b0 ? 1 : 0;
+        });
+        pending[t] = cl;
+    }
+
+    // Report potential issues.
+    for (const el of els) {
+        const msg = html`\
+<strong>Rendering seems to have failed.</strong>
+<ul><li>Check the JavaScript console for errors.</li></ul>`;
+        const ul = qs(msg, 'ul');
+        for (const [c, attrs] of pending[el.type] ?? []) {
+            const li = ul.appendChild(elmt`\
+<li>Check that the following <code>${c}</code> attributes are set: </li>`);
+            for (const [i, a] of attrs.entries()) {
+                li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
+            }
+        }
+        el.replaceChildren(msg);
+    }
+});

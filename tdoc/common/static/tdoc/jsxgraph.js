@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, gcd, htmle, instantiateDynTemplate, markReady, mathJaxReady,
-    mergeAttrs, onSet, qs, qsa, resolveDyn,
+    asyncGet, dynRender, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa,
+    resolveDyn,
 } from './core.js';
 import {Distribution, Sample} from './math.js';
 
@@ -106,8 +106,12 @@ JXG.merge(JXG.Options, {
 });
 JXG.merge(JXG.Options, tdoc.dyn?.jsxgraph ?? {});
 
+// The renderer container.
+export const render = asyncGet({}, {name: 'jsxgraph.render', callables: true});
+dynRender.jsxgraph = render;
+
 // A set of pre-defined attributes.
-export const attrs = asyncGet('jsxgraph.attrs', {});
+export const attrs = asyncGet({}, {name: 'jsxgraph.attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -160,6 +164,7 @@ function includesClose(values, v, epsilon = 1e-6) {
 // board.
 export async function initBoard(el, attrs, fn) {
     attrs = await merge(attrs);
+    // TODO(0.82): Remove resolveDyn() call
     el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {
@@ -173,22 +178,15 @@ export async function initBoard(el, attrs, fn) {
     const board = JXG.JSXGraph.initBoard(el, attrs);
     JXG.merge(board.options, attrs.defaults ?? {});
     if (fn) fn(board);
+    // TODO(0.82): Remove adding .rendered
     el.classList.add('rendered');
-    markReady(el);
     return board;
 }
 
-// Template container.
-export const templates = onSet({}, (obj, name, fn) => {
-    if (obj[name] !== undefined) {
-        throw htmle`\
-<code>{jsxgraph}</code> Duplicate template definition: <code>${name}</code>`;
-    }
-    instantiateDynTemplate('jsxgraph', name, fn);  // Background
-});
-
-templates.grid = async (el, {width = 35, height = 10, grid = {},
-                             board = {}}) => {
+// TODO(0.82): Remove template: alias
+render.grid = render['template:grid'] = async (el, {
+    width = 35, height = 10, grid = {}, board = {},
+}) => {
     return await initBoard(el, [
         {
             boundingBox: [0, 0, width, -height],
@@ -198,9 +196,11 @@ templates.grid = async (el, {width = 35, height = 10, grid = {},
     ]);
 };
 
-templates.axes = async (el, {boundingBox = [-11, 11, 11, -11], majorX, majorY,
-                             major, minorX, minorY, minor, labelsX, labelsY,
-                             labels, grid, board}) => {
+// TODO(0.82): Remove template: alias
+render.axes = render['template:axes'] = async (el, {
+    boundingBox = [-11, 11, 11, -11], majorX, majorY, major, minorX, minorY,
+    minor, labelsX, labelsY, labels, grid, board,
+}) => {
     return await initBoard(el, [
         {
             boundingBox, axis: true, grid: true,
@@ -228,7 +228,9 @@ function noNegLabels(tick, zero, value) {
            generateLabelText.call(this, tick, zero, value) : '';
 }
 
-templates['cumulative-distribution-function'] = async (el, {
+// TODO(0.82): Remove template: alias
+render.cumulativeDistributionFunction =
+render['template:cumulative-distribution-function'] = async (el, {
     sample, distribution, min, max, step, normalize = true, yAnchor = 0.08,
     defaults = {}, options = {},
 }) => {

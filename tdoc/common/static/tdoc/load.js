@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    addTooltip, domLoaded, elmt, htmlData, markReady, on, page, qs, qsa,
-    resolveDyn, rgb2hex, StoredJson,
+    addTooltip, domLoaded, dynRender, elmt, htmlData, htmle, HtmlError, Mutex,
+    on, page, qs, qsa, rgb2hex, StoredJson,
 } from './core.js';
 
 // Handle auto-reload on source change.
@@ -260,16 +260,16 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         ]);
         mermaid.registerLayoutLoaders(elk);
         mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
-        const nodes = await resolveDyn('mermaid');
-        mermaid.run({
-            nodes,
-            suppressErrors: true,
-            postRenderCallback: id => {
-                const el = document.getElementById(id).parentNode;
-                el.classList.add('rendered');
-                markReady(el);
-            },
-        });
+        const mu = new Mutex();  // Mermaid rendering is non-reentrant
+        dynRender.mermaid = async el => {
+            try {
+                await mu.locked(() => mermaid.run({nodes: [el]}));
+            } catch (e) {
+                el.replaceChildren(HtmlError.of('str' in e ? e.str : e).html);
+                throw htmle`\
+<code>{mermaid}</code>: A diagram failed to render.`;
+            }
+        };
     })();
 }
 

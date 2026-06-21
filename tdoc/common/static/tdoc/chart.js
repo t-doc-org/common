@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, elmt, htmle, instantiateDynTemplate, isPlainObject, isObject,
-    markReady, mergeAttrs, on, onSet, qs, qsa, resolveDyn,
+    asyncGet, dynRender, elmt, htmle, isPlainObject, isObject, mergeAttrs, on,
+    qs, qsa, resolveDyn,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
@@ -113,7 +113,7 @@ export async function extractSets(...args) {
 }
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet('chartjs.attrs', {});
+export const attrs = asyncGet({}, {name: 'chartjs.attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -139,9 +139,14 @@ function getAspectRatio(el) {
     }
 }
 
+// The renderer container.
+export const render = asyncGet({}, {name: 'chartjs.render', callables: true});
+dynRender.chartjs = render;
+
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
+    // TODO(0.82): Remove resolveDyn() call
     el = await resolveDyn('chartjs', el);
     const ar = getAspectRatio(el);
     config = await merge(disabledPlugins, config, {
@@ -152,24 +157,17 @@ export async function chart(el, config) {
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
     if (ar !== undefined) c.canvas.style.aspectRatio = ar;  // Prevents jitter
+    // TODO(0.82): Remove adding .rendered
     el.classList.add('rendered');
-    markReady(el);
     return c;
 }
 
-// Template container.
-export const templates = onSet({}, (obj, name, fn) => {
-    if (obj[name] !== undefined) {
-        throw htmle`\
-<code>{chartjs}</code> Duplicate template definition: <code>${name}</code>`;
-    }
-    instantiateDynTemplate('chartjs', name, fn);  // Background
-});
+// TODO(0.82): Remove template: alias
+render.chart = render['template:chart'] = chart;
 
-templates.chart = chart;
-
-// Annotation container.
-export const annotations = asyncGet('chartjs.annotations', {})
+// A container for annotation handlers.
+export const annotations = asyncGet({}, {name: 'chartjs.annotations',
+                                         callables: true});
 
 const annNameRe = /^([^_]*)(?:_.*)?$/;
 
@@ -186,8 +184,8 @@ async function renderAnnotations(anns, data) {
         const options = as.options;
         for (const [k, args] of Object.entries(as)) {
             if (k === 'options') continue;
-            const fn = await annotations[k.match(annNameRe)[1]];
-            for (const a of fn(args, data)) {
+            const fn = annotations[k.match(annNameRe)[1]];
+            for (const a of await fn(args, data)) {
                 res[`tdoc$ann$${id++}`] = await merge(a, as.options,
                                                       args.options);
             }
@@ -355,7 +353,8 @@ const barWidth = {
     },
 };
 
-templates.histogram = async (el, {
+// TODO(0.82): Remove template: alias
+render.histogram = render['template:histogram'] = async (el, {
     sample, uniform, custom, distribution, normalize = false, options = {},
     annotations = [],
 }) => {
@@ -421,7 +420,8 @@ templates.histogram = async (el, {
     }, {options}]);
 };
 
-templates['density-function'] = async (el, {
+// TODO(0.82): Remove template: alias
+render.densityFunction = render['template:density-function'] = async (el, {
     sample, min, max, step, width = 5, normalize = false, options = {},
     annotations = [],
 }) => {
@@ -462,7 +462,9 @@ is required.`;
     }, {options}]);
 };
 
-templates['cumulative-distribution-function'] = async (el, {
+// TODO(0.82): Remove template: alias
+render.cumulativeDistributionFunction =
+render['template:cumulative-distribution-function'] = async (el, {
     sample, distribution, min, max, step, normalize = true, options = {},
     annotations = [],
 }) => {

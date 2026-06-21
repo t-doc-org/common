@@ -167,10 +167,6 @@ def setup(app):
 
     app.add_node(dyn, html=(visit_dyn, depart_dyn))
     app.connect('tdoc-html-page-config', add_dyn_config)
-    app.add_env_collector(UniqueChecker('dyn-name',
-        lambda doctree: ((n, (n['type'], name)) for n in doctree.findall(dyn)
-                         if (name := n.get('name')) and not n.get('template')),
-        lambda v: f"{{{v[0]}}}: Duplicate name: {v[1]}"))
 
     return {
         'version': __version__,
@@ -480,27 +476,21 @@ class Dyn(docutils.SphinxDirective):
         'class': directives.class_option,
         'style': directives.unchanged,
     }
-    has_templates = False
 
     @report_exceptions
     def run(self):
         node = dyn(type=self.name)
         self.set_source_info(node)
         self.state.document.set_id(node)
-        name = self.arguments[0] if self.arguments else None
-        if name and name.startswith('template:'):
-            node['template'] = name[9:]
-            v = ''.join(f'{line}\n' for line in self.content)
-            node['args'] = util.to_json(pyjson5.decode(f'{{{v}}}'))
-        elif name is not None:
-            node['name'] = name
+        if self.arguments: node['name'] = self.arguments[0]
         node['classes'] += self.options.get('class', [])
         if v := self.options.get('style', '').strip(): node['style'] = v
         self.populate(node)
-        if not self.has_templates and 'template' in node:
-            raise Exception(
-                f"{{{self.name}}} Directive doesn't support templates")
         return [node]
+
+    def json_content(self):
+        v = ''.join(f'{line}\n' for line in self.content)
+        return util.to_json(pyjson5.decode(f'{{{v}}}'))
 
     def populate(self, node): pass
 
@@ -515,7 +505,6 @@ def visit_dyn(self, node):
     attrs = {'type': node['type']}
     if v := node.get('name'): attrs['name'] = v
     if v := node.get('style'): attrs['style'] = v
-    if v := node.get('template'): attrs['template'] = v
     if v := node.get('args'): attrs['args'] = v
     if (v := node.get('attrs')) is not None: attrs |= v
     self.body.append(self.starttag(node, 'tdoc-dyn', '', **attrs))

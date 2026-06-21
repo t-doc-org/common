@@ -74,7 +74,7 @@ be panned and zoomed by holding {kbd}`Shift`.
 
 ### Sine and cosine
 
-```{jsxgraph} sincos
+```{jsxgraph} sinCos
 :style: aspect-ratio: 16 / 9;
 ```
 
@@ -90,41 +90,41 @@ Drag the points $P_1$, $P_2$ and $P_3$.
 
 Drag the point $P$ on the circle.
 
-```{jsxgraph} trig-circle
+```{jsxgraph} trigCircle
 ```
 
-### Template: `grid`
+### `grid`
 
 5mm grid (approximate) for writing
 
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 width: 35, height: 10,
 ```
 
 Millimeter grid (approximate) for precise drawing
 
-```{jsxgraph} template:grid
+```{jsxgraph} grid
 width: 17.5, height: 5, grid: {minorElements: 9},
 ```
 
-### Template: `axes`
+### `axes`
 
-```{jsxgraph} template:axes
+```{jsxgraph} axes
 boundingBox: [-2, 5, 25, -5],
 majorX: 5, minorX: 4, majorY: 2, minorY: 1, grid: {majorStep: 1},
 ```
 
-```{jsxgraph} template:axes
+```{jsxgraph} axes
 boundingBox: [-1, 8, 25, -1],
 labelsX: [1, 2, 4, 8, 16], majorY: 2, minorY: 1,
 grid: {majorStep: [10, 2], minorElements: [9, 1]},
 ```
 
-### Template: `cumulative-distribution-function`
+### `cumulativeDistributionFunction`
 
 A normalized cumulative distribution function computed from a sample.
 
-```{jsxgraph} template:cumulative-distribution-function
+```{jsxgraph} cumulativeDistributionFunction
 :style: aspect-ratio: 2 / 1;
 min: 0, max: 24, step: 2,
 sample: [
@@ -148,7 +148,7 @@ options: {
 
 A non-normalized cumulative distribution function computed from a distribution.
 
-```{jsxgraph} template:cumulative-distribution-function
+```{jsxgraph} cumulativeDistributionFunction
 :style: aspect-ratio: 2 / 1;
 min: 0, max: 24, step: 2, normalize: false,
 distribution: [
@@ -162,216 +162,222 @@ options: {
 },
 ```
 
-### Custom template
+### Renderer with arguments
 
 ````{list-grid}
 :style: grid-template-columns: 1fr 1fr;
-- ```{jsxgraph} template:regular-polygon
+- ```{jsxgraph} regularPolygon
   sides: 3,
   ```
-- ```{jsxgraph} template:regular-polygon
+- ```{jsxgraph} regularPolygon
   sides: 4,
   ```
-- ```{jsxgraph} template:regular-polygon
+- ```{jsxgraph} regularPolygon
   sides: 5,
   ```
-- ```{jsxgraph} template:regular-polygon
+- ```{jsxgraph} regularPolygon
   sides: 6,
   ```
 ````
 
 <script type="module">
-const [{initBoard, JXG, templates}] = await tdoc.imports('tdoc/jsxgraph.js');
+const [{initBoard, JXG, render}] = await tdoc.imports('tdoc/jsxgraph.js');
 
-initBoard('sincos', {
-  boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
-  zoom: {factorY: 1},
-  defaultAxes: {
-    x: {
-      ticks: {
-        scale: Math.PI, scaleSymbol: '\\pi',
-        majorHeight: -1, minorTicks: 3, minorHeight: 10,
-        strokeOpacity: 0.25,
-        label: {toFraction: true, useMathJax: true},
+render.sinCos = el => {
+  return initBoard(el, {
+    boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
+    zoom: {factorY: 1},
+    defaultAxes: {
+      x: {
+        ticks: {
+          scale: Math.PI, scaleSymbol: '\\pi',
+          majorHeight: -1, minorTicks: 3, minorHeight: 10,
+          strokeOpacity: 0.25,
+          label: {toFraction: true, useMathJax: true},
+        },
+      },
+      y: {
+        ticks: {
+          majorHeight: -1, minorHeight: 10, strokeOpacity: 0.25,
+        },
       },
     },
-    y: {
-      ticks: {
-        majorHeight: -1, minorHeight: 10, strokeOpacity: 0.25,
+    defaults: {
+      functiongraph: {
+        withLabel: true,
+        label: {
+          distance: 1.5,
+          offset: [0, 0],
+          anchorX: 'middle',
+          anchorY: 'middle',
+        },
       },
     },
-  },
-  defaults: {
-    functiongraph: {
-      withLabel: true,
-      label: {
-        distance: 1.5,
-        offset: [0, 0],
-        anchorX: 'middle',
-        anchorY: 'middle',
-      },
-    },
-  },
-}, board => {
-  board.create('functiongraph',
-    [x => Math.sin(x)],
-    {name: `\\(sin(x)\\)`, strokeColor: JXG.palette.blue,
-     label: {position: '0.6fr left', strokeColor: JXG.palette.blue}});
-  board.create('functiongraph',
-    [x => Math.cos(x)],
-    {name: `\\(cos(x)\\)`, strokeColor: JXG.palette.red,
-     label: {position: '0.69fr right', strokeColor: JXG.palette.red}});
-});
-
-initBoard('centroid', {
-  boundingBox: [-3.2, 3.2, 3.2, -3.2],
-  defaults: {
-    point: {strokeWidth: 0},
-    line: {strokeWidth: 1.5},
-  },
-}, board => {
-  const is = [0, 1, 2];
-  const p = is.map(i => board.create('point',
-    [3 * Math.cos(i * 2 * Math.PI / 3) + 0.5 * (i - 1),
-     3 * Math.sin(i * 2 * Math.PI / 3)],
-    {name: `\\(P_${i + 1}\\)`}));
-  is.map(i => board.create('segment',
-    [p[i], p[(i + 1) % 3]], {strokeColor: JXG.palette.black}));
-  const m = is.map(i => board.create('midpoint',
-    [p[(i + 1) % 3], p[(i + 2) % 3]], {name: `\\(M_${i + 1}\\)`}));
-  const med = is.map(i => board.create('segment',
-    [p[i], m[i]], {strokeColor: JXG.palette.blue}));
-  board.create('intersection', [med[0], med[1]], {name: '\\(C\\)'});
-});
-
-initBoard('trig-circle', {
-  boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
-  pan: {enabled: false}, zoom: {enabled: false},
-  defaultAxes: {
-    x: {
-      name: '\\(x, \\alpha\\)',
-      ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
-    },
-    y: {
-      name: '\\(y, \\alpha\\)',
-      ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
-    },
-  },
-  defaults: {
-    point: {strokeWidth: 0},
-    line: {strokeWidth: 1},
-  },
-}, board => {
-  // Place the circle.
-  const origin = board.create('point', [0, 0], {
-    fixed: true, visible: false, withLabel: false,
+  }, board => {
+    board.create('functiongraph',
+      [x => Math.sin(x)],
+      {name: `\\(sin(x)\\)`, strokeColor: JXG.palette.blue,
+       label: {position: '0.6fr left', strokeColor: JXG.palette.blue}});
+    board.create('functiongraph',
+      [x => Math.cos(x)],
+      {name: `\\(cos(x)\\)`, strokeColor: JXG.palette.red,
+       label: {position: '0.69fr right', strokeColor: JXG.palette.red}});
   });
-  const c = board.create('circle', [origin, 1], {
-    strokeColor: JXG.palette.black,
-  });
+};
 
-  // Place the glider point and everything related to the angle.
-  const alphaColor = JXG.palette.green;
-  const attractors = [];
-  for (let i = 0; i < 4; ++i) {
-    for (const a of [0, Math.PI / 6, Math.PI / 4, Math.PI / 3]) {
-      const b = i * Math.PI / 2 + a;
-      attractors.push(board.create('point', [Math.cos(b), Math.sin(b)], {
-        fixed: true, visible: false, withLabel: false,
-      }));
+render.centroid = el => {
+  return initBoard(el, {
+    boundingBox: [-3.2, 3.2, 3.2, -3.2],
+    defaults: {
+      point: {strokeWidth: 0},
+      line: {strokeWidth: 1.5},
+    },
+  }, board => {
+    const is = [0, 1, 2];
+    const p = is.map(i => board.create('point',
+      [3 * Math.cos(i * 2 * Math.PI / 3) + 0.5 * (i - 1),
+       3 * Math.sin(i * 2 * Math.PI / 3)],
+      {name: `\\(P_${i + 1}\\)`}));
+    is.map(i => board.create('segment',
+      [p[i], p[(i + 1) % 3]], {strokeColor: JXG.palette.black}));
+    const m = is.map(i => board.create('midpoint',
+      [p[(i + 1) % 3], p[(i + 2) % 3]], {name: `\\(M_${i + 1}\\)`}));
+    const med = is.map(i => board.create('segment',
+      [p[i], m[i]], {strokeColor: JXG.palette.blue}));
+    board.create('intersection', [med[0], med[1]], {name: '\\(C\\)'});
+  });
+};
+
+render.trigCircle = el => {
+  return initBoard(el, {
+    boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
+    pan: {enabled: false}, zoom: {enabled: false},
+    defaultAxes: {
+      x: {
+        name: '\\(x, \\alpha\\)',
+        ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
+      },
+      y: {
+        name: '\\(y, \\alpha\\)',
+        ticks: {insertTicks: false, ticksDistance: 1, minorTicks: 0},
+      },
+    },
+    defaults: {
+      point: {strokeWidth: 0},
+      line: {strokeWidth: 1},
+    },
+  }, board => {
+    // Place the circle.
+    const origin = board.create('point', [0, 0], {
+      fixed: true, visible: false, withLabel: false,
+    });
+    const c = board.create('circle', [origin, 1], {
+      strokeColor: JXG.palette.black,
+    });
+
+    // Place the glider point and everything related to the angle.
+    const alphaColor = JXG.palette.green;
+    const attractors = [];
+    for (let i = 0; i < 4; ++i) {
+      for (const a of [0, Math.PI / 6, Math.PI / 4, Math.PI / 3]) {
+        const b = i * Math.PI / 2 + a;
+        attractors.push(board.create('point', [Math.cos(b), Math.sin(b)], {
+          fixed: true, visible: false, withLabel: false,
+        }));
+      }
     }
-  }
-  const p = board.create('glider', [0.85, -0.5, c], {
-    name: '\\(P\\)', label: {strokeColor: alphaColor},
-    fillColor: alphaColor, attractors, attractorDistance: 0.1,
-  });
-  const alpha = () => {
-    const a = Math.atan2(p.Y(), p.X());
-    return a >= 0 ? a : a + 2 * Math.PI;
-  };
-  const ax1 = board.create('point', [1, 0], {
-    fixed: true, visible: false, withLabel: false,
-  });
-  board.create('angle', [ax1, origin, p], {
-    name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
-    radius: 0.2, orthoType: 'none',
-    strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
-  });
-  board.create('segment', [[0, 0], p], {strokeColor: alphaColor});
-  board.create('text',
-    [2, 6, () => `\
-\\(\\alpha=${alpha().toFixed(2)}\\;rad\
-=${(alpha() * 180 / Math.PI).toFixed(1)}\\degree\\)`],
-    {strokeColor: alphaColor, fixed: true});
+    const p = board.create('glider', [0.85, -0.5, c], {
+      name: '\\(P\\)', label: {strokeColor: alphaColor},
+      fillColor: alphaColor, attractors, attractorDistance: 0.1,
+    });
+    const alpha = () => {
+      const a = Math.atan2(p.Y(), p.X());
+      return a >= 0 ? a : a + 2 * Math.PI;
+    };
+    const ax1 = board.create('point', [1, 0], {
+      fixed: true, visible: false, withLabel: false,
+    });
+    board.create('angle', [ax1, origin, p], {
+      name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
+      radius: 0.2, orthoType: 'none',
+      strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
+    });
+    board.create('segment', [[0, 0], p], {strokeColor: alphaColor});
+    board.create('text',
+      [2, 6, () => `\
+  \\(\\alpha=${alpha().toFixed(2)}\\;rad\
+  =${(alpha() * 180 / Math.PI).toFixed(1)}\\degree\\)`],
+      {strokeColor: alphaColor, fixed: true});
 
-  // Project the glider point onto the axes.
-  const px = [() => p.X(), 0];
-  const py = [0, () => p.Y()];
-  board.create('segment', [p, px], {dash: 2, strokeColor: JXG.palette.black});
-  board.create('segment', [p, py], {dash: 2, strokeColor: JXG.palette.black});
+    // Project the glider point onto the axes.
+    const px = [() => p.X(), 0];
+    const py = [0, () => p.Y()];
+    board.create('segment', [p, px], {dash: 2, strokeColor: JXG.palette.black});
+    board.create('segment', [p, py], {dash: 2, strokeColor: JXG.palette.black});
 
-  // Place the elements related to the sine.
-  const sinColor = JXG.palette.blue;
-  board.create('arrow', [[0, 0], py], {
-    name: '\\(sin(\\alpha)\\)', withLabel: true,
-    label: {
-      position: '0.5fr left', anchorX: 'right', anchorY: 'middle',
-      distance: 0, offset: [-7, 0], strokeColor: sinColor,
-    },
-    strokeWidth: 2, strokeColor: sinColor,
-  });
-  board.create('curve', [a => a, a => Math.sin(a), 0, 2 * Math.PI], {
-    strokeColor: sinColor,
-  });
-  const psin = board.create('point', [alpha, () => p.Y()], {
-    withLabel: false, fillColor: sinColor,
-  });
-  board.create('segment', [p, psin], {
-    dash: 2, strokeColor: JXG.palette.black,
-  });
-  const ax = board.create('point', [alpha, 0], {
-    name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
-  });
-  board.create('segment', [psin, ax], {
-    dash: 2, strokeColor: JXG.palette.black,
-  });
-  board.create('text',
-    [2, 5.7, () => `\\(sin(\\alpha)=${Math.sin(alpha()).toFixed(3)}\\)`], {
-    strokeColor: sinColor, fixed: true,
-  });
+    // Place the elements related to the sine.
+    const sinColor = JXG.palette.blue;
+    board.create('arrow', [[0, 0], py], {
+      name: '\\(sin(\\alpha)\\)', withLabel: true,
+      label: {
+        position: '0.5fr left', anchorX: 'right', anchorY: 'middle',
+        distance: 0, offset: [-7, 0], strokeColor: sinColor,
+      },
+      strokeWidth: 2, strokeColor: sinColor,
+    });
+    board.create('curve', [a => a, a => Math.sin(a), 0, 2 * Math.PI], {
+      strokeColor: sinColor,
+    });
+    const psin = board.create('point', [alpha, () => p.Y()], {
+      withLabel: false, fillColor: sinColor,
+    });
+    board.create('segment', [p, psin], {
+      dash: 2, strokeColor: JXG.palette.black,
+    });
+    const ax = board.create('point', [alpha, 0], {
+      name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
+    });
+    board.create('segment', [psin, ax], {
+      dash: 2, strokeColor: JXG.palette.black,
+    });
+    board.create('text',
+      [2, 5.7, () => `\\(sin(\\alpha)=${Math.sin(alpha()).toFixed(3)}\\)`], {
+      strokeColor: sinColor, fixed: true,
+    });
 
-  // Place the elments related to the cosine.
-  const cosColor = JXG.palette.red;
-  board.create('arrow', [[0, 0], px], {
-    name: '\\(cos(\\alpha)\\)', withLabel: true,
-    label: {
-      position: '0.5fr right', anchorX: 'middle', anchorY: 'top',
-      distance: 0, offset: [0, -7], strokeColor: cosColor,
-    },
-    strokeWidth: 2, strokeColor: cosColor,
+    // Place the elments related to the cosine.
+    const cosColor = JXG.palette.red;
+    board.create('arrow', [[0, 0], px], {
+      name: '\\(cos(\\alpha)\\)', withLabel: true,
+      label: {
+        position: '0.5fr right', anchorX: 'middle', anchorY: 'top',
+        distance: 0, offset: [0, -7], strokeColor: cosColor,
+      },
+      strokeWidth: 2, strokeColor: cosColor,
+    });
+    board.create('curve', [a => Math.cos(a), a => a, 0, 2 * Math.PI], {
+      strokeColor: cosColor,
+    });
+    const pcos = board.create('point', [() => p.X(), alpha], {
+      withLabel: false, fillColor: cosColor,
+    });
+    board.create('segment', [p, pcos], {
+      dash: 2, strokeColor: JXG.palette.black,
+    });
+    const ay = board.create('point', [0, alpha], {
+      name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
+    });
+    board.create('segment', [ay, pcos], {
+      dash: 2, strokeColor: JXG.palette.black,
+    });
+    board.create('text',
+      [2, 5.4, () => `\\(cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
+      strokeColor: cosColor, fixed: true,
+    });
   });
-  board.create('curve', [a => Math.cos(a), a => a, 0, 2 * Math.PI], {
-    strokeColor: cosColor,
-  });
-  const pcos = board.create('point', [() => p.X(), alpha], {
-    withLabel: false, fillColor: cosColor,
-  });
-  board.create('segment', [p, pcos], {
-    dash: 2, strokeColor: JXG.palette.black,
-  });
-  const ay = board.create('point', [0, alpha], {
-    name: '\\(\\alpha\\)', size: 0, label: {strokeColor: alphaColor},
-  });
-  board.create('segment', [ay, pcos], {
-    dash: 2, strokeColor: JXG.palette.black,
-  });
-  board.create('text',
-    [2, 5.4, () => `\\(cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
-    strokeColor: cosColor, fixed: true,
-  });
-});
+};
 
-templates['regular-polygon'] = (el, {sides}) => {
+render.regularPolygon = (el, {sides}) => {
   return initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {

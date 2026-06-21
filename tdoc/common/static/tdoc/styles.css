@@ -1155,7 +1155,7 @@ html[data-theme=dark] tdoc-dyn[type=chartjs] > canvas {
 
 /* Mermaid diagrams */
 tdoc-dyn[type=mermaid]:not([data-processed]) {
-    display: none;
+    color: #0000;
 }
 html[data-theme=dark] tdoc-dyn[type=mermaid] > svg {
     filter: invert(1) hue-rotate(180deg);

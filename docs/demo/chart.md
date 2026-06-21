@@ -16,10 +16,10 @@ directives.
 
 ([Documentation](https://www.chartjs.org/docs/latest/charts/bar.html))
 
-```{chartjs} v-bar
+```{chartjs} vBar
 ```
 
-```{chartjs} h-bar
+```{chartjs} hBar
 ```
 
 ### Line chart
@@ -62,10 +62,10 @@ directives.
 
 ([Documentation](https://www.sgratzl.com/chartjs-chart-error-bars/))
 
-```{chartjs} bar-error-bars
+```{chartjs} barErrorBars
 ```
 
-```{chartjs} line-error-bars
+```{chartjs} lineErrorBars
 ```
 
 ### Venn diagrams
@@ -89,9 +89,9 @@ directives.
 ```{chartjs} graph
 ```
 
-### Template: `chart`
+### `chart`
 
-```{chartjs} template:chart
+```{chartjs} chart
 type: 'bar',
 data: {
   labels: ['Monday', 'Tuesday', 'Wednesday'],
@@ -113,12 +113,12 @@ options: {
 },
 ```
 
-### Template: `histogram`
+### `histogram`
 
 A histogram computed from a sample, with annotations computed from the sample
 as well.
 
-```{chartjs} template:histogram
+```{chartjs} histogram
 uniform: {min: 0, max: 24, width: 2},
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
@@ -170,7 +170,7 @@ annotations: [{
 A histogram of a distribution, with annotations computed from the distribution
 as well.
 
-```{chartjs} template:histogram
+```{chartjs} histogram
 distribution: [
   [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
   [14, 6], [16, 9], [18, 8], [20, 5], [22, 0], [24],
@@ -206,12 +206,12 @@ annotations: [{
 }],
 ```
 
-### Template: `density-function`
+### `densityFunction`
 
 A discrete density function computed from a sample, with annotations computed
 from the sample as well.
 
-```{chartjs} template:density-function
+```{chartjs} densityFunction
 min: 0, max: 24, step: 2,
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
@@ -255,11 +255,11 @@ annotations: [{
 }],
 ```
 
-### Template: `cumulative-distribution-function`
+### `cumulativeDistributionFunction`
 
 A normalized cumulative distribution function computed from a sample.
 
-```{chartjs} template:cumulative-distribution-function
+```{chartjs} cumulativeDistributionFunction
 min: 0, max: 24, step: 2,
 sample: [
   10, 9, 11, 10, 9, 8, 6, 9, 10, 10, 7, 10, 9, 13, 15, 11, 8, 13, 7, 7,
@@ -292,7 +292,7 @@ annotations: [{
 
 A non-normalized cumulative distribution function computed from a distribution.
 
-```{chartjs} template:cumulative-distribution-function
+```{chartjs} cumulativeDistributionFunction
 min: 0, max: 24, step: 2, normalize: false,
 distribution: [
   [0, 0], [2, 1], [4, 3], [6, 7], [8, 8], [10, 2], [12, 1],
@@ -315,30 +315,30 @@ annotations: [{
 }],
 ```
 
-### Custom template
+### Renderer with arguments
 
 ````{list-grid}
 :style: grid-template-columns: 1fr 1fr;
-- ```{chartjs} template:random-bars
+- ```{chartjs} randomBars
   :style: width: 90%;
   count: 3, min: 10, max: 50,
   ```
-- ```{chartjs} template:random-bars
+- ```{chartjs} randomBars
   :style: width: 90%;
   count: 5, min: 100, max: 500,
   ```
-- ```{chartjs} template:random-bars
+- ```{chartjs} randomBars
   :style: width: 90%;
   count: 2, min: 1, max: 10,
   ```
-- ```{chartjs} template:random-bars
+- ```{chartjs} randomBars
   :style: width: 90%;
   count: 20, min: 10, max: 50,
   ```
 ````
 
 <script type="module">
-const [core, {chart, templates}] =
+const [core, {chart, render}] =
   await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
@@ -363,96 +363,106 @@ function xyrData(count, min, max, maxR) {
   return values;
 }
 
-chart('v-bar', {
-  type: 'bar',
-  data: {
-    labels: months.slice(0, 7),
-    datasets: [{data: data(7, 50, 100)}],
-  },
-  options: {
-    borderWidth: 1, borderColor: colors[0], hoverBorderColor: colors[0],
-    backgroundColor: bgColors[0],
-    scales: {y: {beginAtZero: true}},
-  },
-});
+render.vBar = el => {
+  return chart(el, {
+    type: 'bar',
+    data: {
+      labels: months.slice(0, 7),
+      datasets: [{data: data(7, 50, 100)}],
+    },
+    options: {
+      borderWidth: 1, borderColor: colors[0], hoverBorderColor: colors[0],
+      backgroundColor: bgColors[0],
+      scales: {y: {beginAtZero: true}},
+    },
+  });
+};
+render.hBar = el => {
+  return chart(el, {
+    type: 'bar',
+    data: {
+      labels: months.slice(0, 7),
+      datasets: [{axis: 'y', data: [65, 59, 80, 81, 56, 55, 40]}],
+    },
+    options: {
+      indexAxis: 'y',
+      borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+      backgroundColor: bgColors,
+    },
+  });
+};
 
-chart('h-bar', {
-  type: 'bar',
-  data: {
-    labels: months.slice(0, 7),
-    datasets: [{axis: 'y', data: [65, 59, 80, 81, 56, 55, 40]}],
-  },
-  options: {
-    indexAxis: 'y',
-    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
-    backgroundColor: bgColors,
-  },
-});
+render.line = el => {
+  return chart(el, {
+    type: 'line',
+    data: {
+      labels: months.slice(0, 7),
+      datasets: [{
+        data: data(7, 0, 100),
+        borderColor: colors[0], backgroundColor: colors[0],
+      }, {
+        data: data(7, 50, 100),
+        borderColor: colors[1], backgroundColor: colors[1],
+      }],
+    },
+    options: {
+      borderWidth: 2,
+      scales: {y: {beginAtZero: true}},
+    },
+  });
+};
 
-chart('line', {
-  type: 'line',
-  data: {
-    labels: months.slice(0, 7),
-    datasets: [{
-      data: data(7, 0, 100),
-      borderColor: colors[0], backgroundColor: colors[0],
-    }, {
-      data: data(7, 50, 100),
-      borderColor: colors[1], backgroundColor: colors[1],
-    }],
-  },
-  options: {
-    borderWidth: 2,
-    scales: {y: {beginAtZero: true}},
-  },
-});
-
-chart('bubble', {
-  type: 'bubble',
-  data: {
-    datasets: [{data: xyrData(50, 0, 50, 15)}],
-  },
-  options: {
-    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
-    backgroundColor: bgColors,
-  },
-});
+render.bubble = el => {
+  return chart(el, {
+    type: 'bubble',
+    data: {
+      datasets: [{data: xyrData(50, 0, 50, 15)}],
+    },
+    options: {
+      borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+      backgroundColor: bgColors,
+    },
+  });
+};
 
 const pieIdx = cs => [1, 0, 5].map(i => cs[i]);
-chart('pie', {
-  type: 'pie',
-  data: {
-    labels: ["Red", "Blue", "Yellow"],
-    datasets: [{data: [300, 50, 100]}],
-  },
-  options: {
-    layout: {padding: 20},
-    borderWidth: 1, borderColor: pieIdx(colors),
-    backgroundColor: pieIdx(bgColors),
-    hoverOffset: 50, hoverBorderWidth: 1,
-    hoverBorderColor: pieIdx(colors),
-    plugins: {legend: {display: true, position: 'right'}},
-  },
-});
-
-chart('doughnut', {
-  type: 'doughnut',
-  data: {
-    labels: ["Red", "Blue", "Yellow"],
-    datasets: [
-      {label: "Outer", data: [300, 50, 100]},
-      {label: "Inner", data: [36, 13, 28]},
-    ],
-  },
-  options: {
-    layout: {padding: 20},
-    borderAlign: 'inner',
-    backgroundColor: pieIdx(colors),
-    hoverBorderWidth: 2, hoverBorderColor: pieIdx(colors),
-    hoverBackgroundColor: pieIdx(colors),
-    plugins: {legend: {display: true, position: 'right'}},
-  },
-});
+render.pie = el => {
+  return chart(el, {
+    type: 'pie',
+    data: {
+      labels: ["Red", "Blue", "Yellow"],
+      datasets: [{data: [300, 50, 100]}],
+    },
+    options: {
+      layout: {padding: 20},
+      borderWidth: 1, borderColor: pieIdx(colors),
+      backgroundColor: pieIdx(bgColors),
+      hoverOffset: 50, hoverBorderWidth: 1,
+      hoverBorderColor: pieIdx(colors),
+      plugins: {legend: {display: true, position: 'right'}},
+    },
+  });
+};
+render.doughnut = el => {
+  return chart(el, {
+    type: 'doughnut',
+    data: {
+      labels: ["Red", "Blue", "Yellow"],
+      datasets: [
+        {label: "Outer", data: [300, 50, 100]},
+        {label: "Inner", data: [36, 13, 28]},
+      ],
+    },
+    options: {
+      layout: {padding: 20},
+      borderAlign: 'inner',
+      backgroundColor: pieIdx(colors),
+      hoverBorderWidth: 2, hoverBorderColor: pieIdx(colors),
+      hoverBackgroundColor: pieIdx(colors),
+      plugins: {legend: {display: true, position: 'right'}},
+    },
+  });
+};
 
 const boxViolin = {
   data: {
@@ -470,8 +480,12 @@ const boxViolin = {
     }],
   },
 };
-chart('boxplot', {'type': 'boxplot', ...boxViolin});
-chart('violin', {'type': 'violin', ...boxViolin});
+render.boxplot = el => {
+  return chart(el, {'type': 'boxplot', ...boxViolin});
+};
+render.violin = el => {
+  return chart(el, {'type': 'violin', ...boxViolin});
+};
 
 const errorBar = {
   data: {
@@ -483,40 +497,46 @@ const errorBar = {
     ]}],
   },
 };
-chart('bar-error-bars', {
-  type: 'barWithErrorBars', ...errorBar,
-  options: {
-    borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
-    backgroundColor: bgColors,
-  },
-});
-chart('line-error-bars', {
-  type: 'lineWithErrorBars', ...errorBar,
-  options: {borderColor: colors[0], backgroundColor: colors[0]},
-});
-
-chart('venn', {
-  type: 'venn',
-  data: {
-    labels: ['A', 'B', 'A ∩ B'],
-    datasets: [{
-      data: [
-        {sets: ['A'], value: 'A'},
-        {sets: ['B'], value: 'B'},
-        {sets: ['A', 'B'], value: 'A ∩ B'},
-      ],
-    }],
-  },
-  options: {
-    borderWidth: 1, borderColor: colors,
-    backgroundColor: bgColors,
-    scales: {
-      x: {ticks: {font: {size: 16}}},   // Labels within the sets
-      y: {ticks: {display: false}},     // Labels next to the sets
+render.barErrorBars = el => {
+  return chart(el, {
+    type: 'barWithErrorBars', ...errorBar,
+    options: {
+      borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
+      backgroundColor: bgColors,
     },
-    plugins: {tooltip: false},
-  },
-});
+  });
+};
+render.lineErrorBars = el => {
+  return chart(el, {
+    type: 'lineWithErrorBars', ...errorBar,
+    options: {borderColor: colors[0], backgroundColor: colors[0]},
+  });
+};
+
+render.venn = el => {
+  return chart(el, {
+    type: 'venn',
+    data: {
+      labels: ['A', 'B', 'A ∩ B'],
+      datasets: [{
+        data: [
+          {sets: ['A'], value: 'A'},
+          {sets: ['B'], value: 'B'},
+          {sets: ['A', 'B'], value: 'A ∩ B'},
+        ],
+      }],
+    },
+    options: {
+      borderWidth: 1, borderColor: colors,
+      backgroundColor: bgColors,
+      scales: {
+        x: {ticks: {font: {size: 16}}},   // Labels within the sets
+        y: {ticks: {display: false}},     // Labels next to the sets
+      },
+      plugins: {tooltip: false},
+    },
+  });
+};
 
 const treeData = [
   {name: "1"},
@@ -543,44 +563,48 @@ const treeData = [
   {name: "13", parent: 0},
   {name: "131", parent: 21},
 ];
-chart('tree', {
-  type: 'tree',
-  data: {
-    labels: treeData.map(d => d.name),
-    datasets: [{
-      data: treeData,
-      edgeLineBorderWidth: ctx => treeData[ctx.parsed.target].width ?? 3,
-    }],
-  },
-  options: {
-    tree: {mode: 'tree'},
-    borderColor: colors[6] + '99',
-    pointRadius: 5,
-    pointBorderColor: colors[0], pointBackgroundColor: colors[0],
-  },
-});
+render.tree = el => {
+  return chart(el, {
+    type: 'tree',
+    data: {
+      labels: treeData.map(d => d.name),
+      datasets: [{
+        data: treeData,
+        edgeLineBorderWidth: ctx => treeData[ctx.parsed.target].width ?? 3,
+      }],
+    },
+    options: {
+      tree: {mode: 'tree'},
+      borderColor: colors[6] + '99',
+      pointRadius: 5,
+      pointBorderColor: colors[0], pointBackgroundColor: colors[0],
+    },
+  });
+};
 
 const graphData = await core.fetchJson('/_static/miserables.json',
                                        {method: 'GET'});
-chart('graph', {
-  type: 'forceDirectedGraph',
-  data: {
-    labels: graphData.nodes.map(d => d.id),
-    datasets: [{
-      data: graphData.nodes,
-      edges: graphData.links,
-    }],
-  },
-  options: {
-    tree: {mode: 'tree'},
-    borderColor: colors[6] + '99',
-    pointRadius: 5,
-    pointBorderColor: colors[0], pointBackgroundColor: colors[0],
-    plugins: {deferred: false},  // Rendering fails when deferred
-  },
-});
+render.graph = el => {
+  return chart(el, {
+    type: 'forceDirectedGraph',
+    data: {
+      labels: graphData.nodes.map(d => d.id),
+      datasets: [{
+        data: graphData.nodes,
+        edges: graphData.links,
+      }],
+    },
+    options: {
+      tree: {mode: 'tree'},
+      borderColor: colors[6] + '99',
+      pointRadius: 5,
+      pointBorderColor: colors[0], pointBackgroundColor: colors[0],
+      plugins: {deferred: false},  // Rendering fails when deferred
+    },
+  });
+};
 
-templates['random-bars'] = (el, {count, min, max}) => {
+render.randomBars_ = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);

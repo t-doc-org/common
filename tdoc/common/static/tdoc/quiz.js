@@ -188,7 +188,7 @@ class TableQuiz extends QuizBase {
     onSuccess() { this.addEntry(true); }
 }
 
-export const generators = asyncGet('quiz.generators', {});
+export const generators = asyncGet({}, {name: 'quiz.generators'});
 
 // TODO(0.82): Remove
 export async function generator(name, fn) {
