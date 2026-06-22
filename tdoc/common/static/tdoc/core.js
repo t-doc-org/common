@@ -898,14 +898,15 @@ export const dynRender = asyncGet({}, {name: 'dyn.render'});
 
 class DynElement extends HTMLElement {
     async connectedCallback() {
-        let render = await dynRender[this.type];
-        const name = this.name;
-        if (name !== undefined) render = render[name];
         try {
+            let render = await dynRender[this.type];
+            const name = this.name;
+            if (name !== undefined) render = render[name];
             // TODO: Add a rendering timeout, display alert, but remove error
             // message in block if rendering terminates anyway
             const args = this.args;
-            await render(this, args !== undefined ? JSON.parse(args) : {});
+            this.controller = await render(this, args !== undefined ?
+                                           JSON.parse(args) : {});
             this.classList.add('rendered');
             markReady(this);
         } catch (e) {
