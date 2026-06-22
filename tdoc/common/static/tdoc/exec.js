@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    elmt, markReady, on, qs, qsa, RateLimited, rootUrl, Stored, text,
+    asyncGet, elmt, markReady, on, qs, qsa, RateLimited, rootUrl, showAlert,
+    Stored, text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
@@ -44,7 +45,7 @@ function* walkNodes(node, seen) {
 function nodeById(id) {
     const node = document.getElementById(id);
     if (!node) return;
-    if (node.classList.contains('tdoc-exec')) return node;
+    if (node instanceof ExecElement) return node;
     return node.parentNode;  // Secondary name as a nested <span>
 }
 
@@ -58,17 +59,31 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
+// TODO: Remove workaround for non-root deployments
 const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
                      : `tdoc:editor:${rootUrl.pathname}:`;
 
-class ExecElement extends HTMLDivElement {
-    constructor() {
-        super();
-        this.runner = new this.constructor.cls(this);
-    }
+const runners = asyncGet({}, {name: 'exec.runners'});
 
-    connectedCallback() { this.runner.init(); }
+class ExecElement extends HTMLElement {
+    async connectedCallback() {
+        try {
+            const cls = await runners[this.getAttribute('runner')];
+            this.runner = new cls(this);
+            this.runner.ready = this.runner.init();
+            await this.runner.ready;
+            markReady(this);
+
+            // Execute immediately if requested.
+            if (this.runner.when === 'load') this.runner.doRun();  // Background
+        } catch (e) {
+            console.error(e);
+            showAlert(e);
+        }
+    }
 }
+
+customElements.define('tdoc-exec', ExecElement);
 
 // A base class for {exec} block handlers.
 export class Runner {
@@ -76,11 +91,8 @@ export class Runner {
 
     // Register a runner class.
     static register(cls) {
-        cls.ready = cls.init(tdoc.exec?.[cls.name] ?? {});
-        customElements.define(
-            `tdoc-exec-${cls.name}`,
-            class extends ExecElement { static cls = cls; },
-            {extends: 'div'});
+        cls.ready = cls.init(tdoc.exec?.[cls.name] ?? {});  // Background
+        runners[cls.name] = cls;
     }
 
     // TODO(0.82): Remove backward-compatibility alias
@@ -101,19 +113,14 @@ export class Runner {
 
     constructor(node) { this.node = node; }
 
-    init() {
+    async init() {
         fixLineNos(this.node);
         if (this.editable) this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
         this.addControls(controls);
         if (controls.children.length > 0) this.node.appendChild(controls);
-        this.ready = this.constructor.ready.then(() => {
-            this.onReady();
-            markReady(this.node);
-
-            // Execute immediately if requested.
-            if (this.when === 'load') this.doRun();  // Background
-        });
+        await this.constructor.ready;
+        this.onReady();
     }
 
     attr(name) {
@@ -501,7 +508,7 @@ class ConsoleOut {
 
 // Ensure that the text of editors is stored before navigating away.
 on(window).beforeunload(() => {
-    for (const node of qsa(document, 'div.tdoc-exec[editor]')) {
+    for (const node of qsa(document, 'tdoc-exec[editor]')) {
         const storer = node.runner.editorStorer;
         if (storer) storer.flush();
     }
@@ -512,7 +519,7 @@ on(window).storage(e => {
     if (e.storageArea !== localStorage) return;
     if (!e.key.startsWith(editorPrefix)) return;
     const name = e.key.slice(editorPrefix.length);
-    const node = qs(document, `div.tdoc-exec[editor="${CSS.escape(name)}"]`);
+    const node = qs(document, `tdoc-exec[editor="${CSS.escape(name)}"]`);
     if (!node) return;
     node.runner.setEditorText(e.newValue, [storeUpdate.of(true)]);
 });

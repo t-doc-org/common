@@ -330,10 +330,9 @@ def add_js(app, page, template, context, doctree):
             .setdefault('[+]', []).extend(exts)
 
     # Set up early and on-load JavaScript.
-    app.add_js_file(f'{pop_dep_url(tdoc, 'custom-elements')}/es.js', priority=0)
     tdoc = util.to_json(tdoc).replace('<', '\\x3c')
-    app.add_js_file(None, priority=1, body=f'const tdoc = {tdoc};')
-    app.add_js_file('tdoc/early.js', priority=2)
+    app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
+    app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
 
 

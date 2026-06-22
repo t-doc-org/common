@@ -85,7 +85,6 @@ class Exec(code.CodeBlock):
         node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
-        node['classes'].append('tdoc-exec')
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
@@ -200,6 +199,7 @@ def add_modules(f, mpath):
 
 div_attrs_re = re.compile(r'(?s)^(<div[^>]*)(>.*)$')
 pre_attrs_re = re.compile(r'(?s)^(.*<pre[^>]*)(>.*)$')
+tag_re = re.compile(r'(?s)^<div (.*)</div>$')
 
 
 def visit_exec(self, node):
@@ -215,15 +215,17 @@ def visit_exec(self, node):
             console_style=node.get('console-style'),
             editor=node.get('editor'),
             env=node['env'] if node['when'] != 'never' else None,
-            IS=f'tdoc-exec-{node['runner']}',
             output_style=node.get('output-style'),
             reset=node.get('reset'),
+            runner=node['runner'],
             then=' '.join(then) or None,
             when=node['when'])
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)
         if attrs := format_attrs(self, style=node.get('style')):
             self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], count=1)
+        self.body[-1] = tag_re.sub(
+            lambda m: f'<tdoc-exec {m.group(1)}</tdoc-exec>', self.body[-1])
         raise
 
 

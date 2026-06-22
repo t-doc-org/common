@@ -860,6 +860,60 @@ tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty)))
     word-break: break-word;
 }
 
+/* Exec blocks */
+tdoc-exec {
+    margin: 1rem 0;
+    border-radius: 0.25rem;
+    display: flex;
+    flex-direction: row;
+    column-gap: 0.3rem;
+    clear: none;  /* From sphinx-book-theme.css */
+    break-inside: avoid;  /* From pydata-sphinx-theme.css */
+}
+tdoc-exec div.highlight {
+    flex-basis: 100%;
+    overflow: auto;
+}
+tdoc-exec > div.tdoc-exec-controls {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.3rem;
+}
+div.literal-block-wrapper > tdoc-exec pre {
+    border-right: 1px solid var(--pst-color-border);
+}
+div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
+    margin-top: 0.3rem;
+    margin-bottom: 0.3rem;
+    margin-right: 0.3rem;
+}
+tdoc-exec[editor] div.highlight :is(pre, button.copybtn) {
+    display: none;
+}
+tdoc-exec[editor] div.cm-editor {
+    height: 100%;
+    max-height: 80vh;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+div.literal-block-wrapper > tdoc-exec[editor] div.cm-editor {
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: 0;
+}
+div.cm-editor.cm-focused {
+    outline: none;
+}
+div.cm-editor div.cm-scroller {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.875em;
+}
+html[data-theme=dark] div.cm-editor {
+    background-color: var(--pst-color-surface);
+}
+
 /* Exec outputs */
 div.tdoc-exec-output {
     position: relative;
@@ -998,58 +1052,6 @@ div.tdoc-exec-output.tdoc-fullscreen > .tdoc-navbar .tdoc-maximize {
 div.tdoc-exec-output.tdoc-fullscreen > iframe {
     height: 100% !important;  /* Override element style */
     aspect-ratio: auto;
-}
-
-/* Editor */
-div.tdoc-exec[editor] div.highlight :is(pre, button.copybtn) {
-    display: none;
-}
-div.tdoc-exec[editor] div.cm-editor {
-    height: 100%;
-    max-height: 80vh;
-    border: 1px solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    overflow: hidden;
-}
-div.literal-block-wrapper > div.tdoc-exec[editor] div.cm-editor {
-    border-top: none;
-    border-bottom: none;
-    border-left: none;
-    border-radius: 0;
-}
-div.cm-editor.cm-focused {
-    outline: none;
-}
-div.cm-editor div.cm-scroller {
-    font-family: var(--pst-font-family-monospace);
-    font-size: 0.875em;
-}
-html[data-theme=dark] div.cm-editor {
-    background-color: var(--pst-color-surface);
-}
-
-/* Execution controls */
-div.tdoc-exec:is([class^=highlight-], [class*=" highlight-"]) {
-    flex-direction: row;
-    column-gap: 0.3rem;
-}
-div.tdoc-exec div.highlight {
-    flex-basis: 100%;
-    overflow: auto;
-}
-div.tdoc-exec > div.tdoc-exec-controls {
-    display: flex;
-    flex-direction: column;
-    row-gap: 0.3rem;
-}
-div.literal-block-wrapper
-        > div.tdoc-exec:is([class^=highlight-], [class*=" highlight-"]) pre {
-    border-right: 1px solid var(--pst-color-border);
-}
-div.literal-block-wrapper > div.tdoc-exec > div.tdoc-exec-controls {
-    margin-top: 0.3rem;
-    margin-bottom: 0.3rem;
-    margin-right: 0.3rem;
 }
 
 /* SQL execution results */
