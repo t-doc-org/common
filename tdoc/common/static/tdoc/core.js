@@ -8,9 +8,6 @@ export const dec = new TextDecoder();
 // The dataset of the <html> tag.
 export const htmlData = document.documentElement.dataset;
 
-// The URL of the root of the site.
-export const rootUrl = new URL('../..', import.meta.url);
-
 // Information about the page.
 export const page = {
     origin: tdoc.local ? '' : location.origin,

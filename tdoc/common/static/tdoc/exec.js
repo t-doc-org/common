@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, elmt, markReady, on, qs, qsa, RateLimited, rootUrl, showAlert,
-    Stored, text,
+    asyncGet, elmt, markReady, on, qs, qsa, RateLimited, showAlert, Stored,
+    text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
@@ -59,9 +59,7 @@ function fixLineNos(node) {
 }
 
 const storeUpdate = cmstate.Annotation.define();
-// TODO: Remove workaround for non-root deployments
-const editorPrefix = rootUrl.pathname === '/' ? 'tdoc:editor:'
-                     : `tdoc:editor:${rootUrl.pathname}:`;
+const editorPrefix = 'tdoc:editor:';
 
 const runners = asyncGet({}, {name: 'exec.runners'});
 
