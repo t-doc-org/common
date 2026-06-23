@@ -241,27 +241,39 @@ export class Mutex {
 }
 
 // Pending accesses to asyncGet attributes.
-const pendingAsyncGet = {};
+const pendingAsyncGet = new Set();
+
+function pendingAsyncGetFor(ns) {
+    const pending = {};
+    for (const [n, c, a] of pendingAsyncGet.keys()) {
+        if (n !== ns) continue;
+        let as = pending[c];
+        if (as === undefined) as = pending[c] = [];
+        as.push(a);
+    }
+    return pending;
+}
 
 // Return a proxy that makes all attribute accesses asynchronous, where the
 // attribute must first be set before accesses complete.
-export function asyncGet(obj, {name, callables = false, alert = true} = {}) {
-    // TODO: Take type, container as separate arguments
-    const [type, cont] = splitContainerName(name);
+export function asyncGet(obj, {
+    ns, container, callables = false, alert = true,
+} = {}) {
     const resolves = {};
     return new Proxy(obj, {
         get(obj, prop, recv) {
             if (prop === 'then') return;  // Make the proxy non-thenable
             const v = obj[prop];
             if (v !== undefined) return v;
+            if (typeof prop === 'symbol') return;
             const {promise, resolve} = Promise.withResolvers();
             const value = callables ? asyncCall(promise) : promise;
             obj[prop] = value;
             resolves[prop] = resolve;
-            if (name !== undefined) {
-                const fqn = `${name}.${prop}`;
-                pendingAsyncGet[fqn] = true;
-                promise.then(() => { delete pendingAsyncGet[fqn]; });
+            if (ns !== undefined) {
+                const fqn = [ns, container, prop];
+                pendingAsyncGet.add(fqn);
+                promise.then(() => { pendingAsyncGet.delete(fqn); });
             }
             return value;
         },
@@ -276,10 +288,10 @@ export function asyncGet(obj, {name, callables = false, alert = true} = {}) {
                     delete resolves[prop];
                     resolve(value);
                 } else if (obj[prop] !== undefined) {
-                    throw type === undefined ?
+                    throw ns === undefined ?
                         htmle`Duplicate definition: <code>${prop}</code>` :
                         htmle`\
-<code>{${type}}</code> Duplicate <code>${cont}</code> definition: \
+<code>{${ns}}</code> Duplicate <code>${container}</code> definition: \
 <code>${prop}</code>`;
                 } else {
                     obj[prop] = value;
@@ -890,21 +902,27 @@ export class RateLimited {
     }
 }
 
-// The renderers for dyn elements.
-export const dynRender = asyncGet({}, {name: 'dyn.render'});
+export const dyn = {
+    // The renderers for dyn elements.
+    render: asyncGet({}, {ns: 'dyn', container: 'render'}),
+
+    // A symbol to set on renderers to specify a rendering timeout.
+    timeout: Symbol('dyn.timeout'),
+};
 
 class DynElement extends HTMLElement {
     async connectedCallback() {
         try {
-            let render = await dynRender[this.type];
+            let render = await dyn.render[this.type];
+            const ms = render[dyn.timeout];
+            if (ms !== undefined) this.#handleTimeout(ms);  // Background
             const name = this.name;
             if (name !== undefined) render = render[name];
-            // TODO: Add a rendering timeout, display alert, but remove error
-            // message in block if rendering terminates anyway
             const args = this.args;
             this.controller = await render(this, args !== undefined ?
                                            JSON.parse(args) : {});
             this.classList.add('rendered');
+            qs(this, '& > .error')?.remove?.();
             markReady(this);
         } catch (e) {
             console.error(e);
@@ -921,6 +939,31 @@ class DynElement extends HTMLElement {
     get type() { return this.attr('type'); }
     get name() { return this.attr('name'); }
     get args() { return this.attr('args'); }
+
+    async #handleTimeout(ms) {
+        await sleep(ms);
+        if (this.classList.contains('rendered')) return;
+
+        // Report potential issues, e.g. due to blocking on asyncGet attributes.
+        const msg = html`\
+<div class="error">\
+<strong><code>{${this.type}}</code> Rendering seems to have failed.</strong>\
+<ul><li>Check the JavaScript console for errors.</li></ul></div>`;
+        const ul = qs(msg, 'ul');
+        const pending = pendingAsyncGetFor(this.type);
+        const cs = [...Object.keys(pending)];
+        cs.sort();
+        for (const c of cs) {
+            const li = ul.appendChild(elmt`\
+<li>Check the names of the following <code>${c}</code> attributes: </li>`);
+            const as = pending[c];
+            as.sort();
+            for (const [i, a] of as.entries()) {
+                li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
+            }
+        }
+        this.replaceChildren(msg);
+    }
 }
 
 customElements.define('tdoc-dyn', DynElement);
@@ -932,9 +975,6 @@ customElements.define('tdoc-dyn', DynElement);
 export async function resolveDyn(type, el) {
     if (el && typeof el !== 'string') return el;
     await domLoaded;
-    if (!el) {
-        return qsa(document, `tdoc-dyn[type="${CSS.escape(type)}"]`);
-    }
     const node = qs(document, `\
 tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
     if (!node) {
@@ -943,52 +983,3 @@ tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
     }
     return node;
 }
-
-// Update the message on dyn elements that haven't been rendered after some
-// time, to hint that rendering has likely failed and report potential issues.
-domLoaded.then(async () => {
-    await sleep(15000);
-    const els = qsa(document, 'tdoc-dyn:not(.rendered):empty');
-    if (els.length === 0) return;
-
-    // Find pending attribute accesses.
-    const pending = {};
-    for (const n of Object.keys(pendingAsyncGet)) {
-        const parts = n.split('.');
-        const type = parts[0], cont = parts.slice(1, -1).join('.');
-        const attr = parts[parts.length - 1];
-        let p = pending[type];
-        if (p === undefined) p = pending[type] = {};
-        let as = p[cont];
-        if (as === undefined) as = p[cont] = [];
-        as.push(attr);
-    }
-    for (const [t, conts] of Object.entries(pending)) {
-        const cl = [];
-        for (const [c, as] of Object.entries(conts)) {
-            as.sort();
-            cl.push([c, as]);
-        }
-        cl.sort((a, b) => {
-            const a0 = a[0], b0 = b[0];
-            return a0 < b0 ? -1 : a0 > b0 ? 1 : 0;
-        });
-        pending[t] = cl;
-    }
-
-    // Report potential issues.
-    for (const el of els) {
-        const msg = html`\
-<strong>Rendering seems to have failed.</strong>
-<ul><li>Check the JavaScript console for errors.</li></ul>`;
-        const ul = qs(msg, 'ul');
-        for (const [c, attrs] of pending[el.type] ?? []) {
-            const li = ul.appendChild(elmt`\
-<li>Check that the following <code>${c}</code> attributes are set: </li>`);
-            for (const [i, a] of attrs.entries()) {
-                li.appendChild(html`${i > 0 ? ", " : ""}<code>${a}</code>`)
-            }
-        }
-        el.replaceChildren(msg);
-    }
-});

@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    addTooltip, domLoaded, dynRender, elmt, htmlData, htmle, HtmlError, Mutex,
-    on, page, qs, qsa, rgb2hex, StoredJson,
+    addTooltip, domLoaded, dyn, elmt, htmlData, htmle, HtmlError, Mutex, on,
+    page, qs, qsa, rgb2hex, StoredJson,
 } from './core.js';
 
 // Handle auto-reload on source change.
@@ -261,7 +261,7 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         mermaid.registerLayoutLoaders(elk);
         mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
         const mu = new Mutex();  // Mermaid rendering is non-reentrant
-        dynRender.mermaid = async el => {
+        dyn.render.mermaid = async el => {
             try {
                 await mu.locked(() => mermaid.run({nodes: [el]}));
             } catch (e) {

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dynRender, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa,
-    resolveDyn,
+    asyncGet, dyn, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa, resolveDyn,
 } from './core.js';
 import {Distribution, Sample} from './math.js';
 
@@ -107,11 +106,12 @@ JXG.merge(JXG.Options, {
 JXG.merge(JXG.Options, tdoc.dyn?.jsxgraph ?? {});
 
 // The renderer container.
-export const render = asyncGet({}, {name: 'jsxgraph.render', callables: true});
-dynRender.jsxgraph = render;
+export const render = dyn.render.jsxgraph = asyncGet(
+    {[dyn.timeout]: 15000},
+    {ns: 'jsxgraph', container: 'render', callables: true});
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet({}, {name: 'jsxgraph.attrs'});
+export const attrs = asyncGet({}, {ns: 'jsxgraph', container: 'attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {

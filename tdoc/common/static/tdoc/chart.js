@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dynRender, elmt, htmle, isPlainObject, isObject, mergeAttrs, on,
-    qs, qsa, resolveDyn,
+    asyncGet, dyn, elmt, htmle, isPlainObject, isObject, mergeAttrs, on, qs,
+    qsa, resolveDyn,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
@@ -113,7 +113,7 @@ export async function extractSets(...args) {
 }
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet({}, {name: 'chartjs.attrs'});
+export const attrs = asyncGet({}, {ns: 'chartjs', container: 'attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -140,8 +140,9 @@ function getAspectRatio(el) {
 }
 
 // The renderer container.
-export const render = asyncGet({}, {name: 'chartjs.render', callables: true});
-dynRender.chartjs = render;
+export const render = dyn.render.chartjs = asyncGet(
+    {[dyn.timeout]: 15000},
+    {ns: 'chartjs', container: 'render', callables: true});
 
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
@@ -166,8 +167,9 @@ export async function chart(el, config) {
 render.chart = render['template:chart'] = chart;
 
 // A container for annotation handlers.
-export const annotations = asyncGet({}, {name: 'chartjs.annotations',
-                                         callables: true});
+export const annotations = asyncGet({}, {
+    ns: 'chartjs', container: 'annotations', callables: true,
+});
 
 const annNameRe = /^([^_]*)(?:_.*)?$/;
 
