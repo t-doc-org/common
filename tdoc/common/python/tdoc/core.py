@@ -195,21 +195,11 @@ async def run(run_id, blocks):
             code = compile(code, name or '<unnamed>', 'exec',
                            flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
             if (coro := eval(code, e)) is not None: await coro
-    except BaseException as e:
-        te = traceback.TracebackException.from_exception(e, compact=True)
-        # Filter this function out of the stack trace
-        for i, fs in enumerate(te.stack):
-            if (fs.filename == __file__ and run_start <= fs.lineno < run_end
-                    and fs.name == 'run'):
-                del te.stack[i]
-                break
-        te.print()
+    except BaseException:
+        sys.excepthook(*sys.exc_info())
     finally:
         # TODO: Allow registering and running cleanup handlers
         del tasks[run_id]
-
-
-run_start, run_end = linenos(run)
 
 
 @export
@@ -217,3 +207,18 @@ def stop(run_id):
     """Stop a running block of client code."""
     if (task := tasks.get(run_id)) is not None:
         task.cancel()
+
+
+def _print_exception(exc, /, value, tb):
+    te = traceback.TracebackException(exc, value, tb, compact=True)
+    # Filter the run() function out of the stack trace
+    for i, fs in enumerate(te.stack):
+        if (fs.filename == __file__ and run_start <= fs.lineno < run_end
+                and fs.name == run.__name__):
+            del te.stack[i]
+            break
+    te.print()
+
+
+run_start, run_end = linenos(run)
+sys.excepthook = _print_exception
