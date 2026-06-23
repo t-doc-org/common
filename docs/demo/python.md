@@ -13,7 +13,7 @@ exec:
   python:
     files:
       database.sql:
-    packages: [sqlite3]
+    packages: [micropip, sqlite3]
 ```
 
 The [`{exec} python`](../reference/exec.md#python) directive allows executing
@@ -225,9 +225,7 @@ print(f"The factorial of {n} is {fact}")
 
 ## Exceptions
 
-Exceptions that propagate out of the
-[`{exec} python`](../reference/exec.md#python) block are displayed as a
-traceback on {py:obj}`sys.stderr`.
+Uncaught exceptions are displayed as a traceback on {py:obj}`sys.stderr`.
 
 ```{exec} python
 :after: python-setup
@@ -241,6 +239,51 @@ def inner():
   raise Exception("Something is broken")
 
 outer()
+```
+
+### Friendly
+
+The following code block installs the
+[`friendly`](https://friendly-traceback.github.io/docs/) package to
+improve the tracebacks of uncaught exceptions. It can be added used by other
+blocks on a page via an `:after:` dependency.
+
+```{exec} python
+:name: friendly
+:editor: none
+:when: never
+if once('friendly'):  # Install only once per interpreter
+  # Install friendly and markdown-it-py from PyPI. The latter is required by
+  # rich, which is used by friendly, but it isn't part of rich's dependencies.
+  import micropip
+  await micropip.install(['friendly', 'markdown-it-py'])
+  # BUG(friendly-0.7.21): Importing friendly triggers a DeprecationWarning. It
+  # also enables all warnings, so it's not possible to ignore the warning using
+  # the standard warnings module. The next version should have a fix, but in the
+  # meantime, add a filter to friendly_traceback.
+  import friendly_traceback
+  friendly_traceback.add_ignored_warnings(
+    lambda m, w, *_: w is DeprecationWarning)
+  # Activate friendly in French.
+  import friendly
+  friendly.install(lang='fr')
+  # Exclude the tdoc.core module from tracebacks. This should normally use
+  # friendly.exclude_file_from_traceback(), but the latter checks if the file
+  # exists, and the check fails because the file is in a .zip archive.
+  from tdoc import core
+  from friendly_traceback.path_info import EXCLUDED_FILE_PATH
+  EXCLUDED_FILE_PATH.add(core.__file__)
+```
+
+The following block uses the block above and raises an exception. It runs in a
+separate interpreter to avoid polluting the other blocks on this page; if all
+blocks on a page should use `friendly`, this isn't necessary.
+
+```{exec} python interp-friendly
+:after: friendly
+:console-style: max-height: unset;
+print("Importing foo...")
+import foo
 ```
 
 ## Concurrency
@@ -302,6 +345,28 @@ if not exists:
   db.executescript(pathlib.Path('database.sql').read_text())
 for k, v in db.execute('select * from kv;'):
   print(f"key: {k}, value: {v}")
+```
+
+Packages can also be installed directly from [PyPI](https://pypi.org/) using
+[`micropip`](https://micropip.pyodide.org/) (which must itself be added to the
+`exec.python.packages` {rst:dir}`metadata`). For example, the following code
+installs the [`snowballstemmer`](https://pypi.org/project/snowballstemmer/)
+package. Note how the installation is only performed once per interpreter, using
+{py:func}`~tdoc.core.once`.
+
+```{exec} python
+if once('snowballstemmer'):  # Install only once per interpreter
+  import micropip
+  await micropip.install(['snowballstemmer'])
+
+import snowballstemmer
+stemmer = snowballstemmer.stemmer('english')
+for word in ['running', 'runs', 'ran',
+             'caring', 'cared', 'careful',
+             'university', 'universities',
+             'fairly', 'unfairly',
+             'singing', 'singer', 'song']:
+  print(f"{word:12} => {stemmer.stemWord(word)}")
 ```
 
 ## Filesystem
