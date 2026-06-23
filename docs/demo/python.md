@@ -243,10 +243,11 @@ outer()
 
 ### Friendly
 
-The following code block installs the
+The following code block shows how to install the
 [`friendly`](https://friendly-traceback.github.io/docs/) package to
-improve the tracebacks of uncaught exceptions. It can be added used by other
-blocks on a page via an `:after:` dependency.
+improve the tracebacks of uncaught exceptions. It can be added to a page (hidden
+with `:class: hidden`) and used by other blocks on the page via an `:after:`
+dependency.
 
 ```{exec} python
 :name: friendly
