@@ -98,6 +98,22 @@ a more portable alternative, use {py:func}`asyncio.sleep`.
 :arg int | float delay: The delay in seconds.
 ```
 
+````{py:function} once(key)
+Return `True` when called the first time with a given key, then `False` on
+subsequent calls with the same key. The calls are tracked across
+[`{exec} python`](exec.md#python) blocks and runs. This can be useful e.g. to
+install a package only once.
+:arg str key: A unique key for which to keep track of invocations.
+
+```{exec} python
+:when: load
+if once('install'):
+  print("Installing...")
+else:
+  print("Already installed")
+```
+````
+
 ````{py:function} redirect(stdout=None, stderr=None)
 Return a context manager that temporarily replaces {py:data}`sys.stdout` and /
 or {py:data}`sys.stderr` with the given stream(s). This function must be used

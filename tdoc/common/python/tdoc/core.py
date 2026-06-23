@@ -184,6 +184,15 @@ def input(prompt=None):
     return run_sync(input_line(prompt))
 
 
+_once_keys = set()
+
+@public
+def once(key):
+    if key in _once_keys: return False
+    _once_keys.add(key)
+    return True
+
+
 @export
 async def run(run_id, blocks):
     """Run blocks of client code."""
