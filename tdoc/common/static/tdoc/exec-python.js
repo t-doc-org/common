@@ -222,7 +222,7 @@ class PythonRunner extends Runner {
             this.replaceOutputs();
             const blocks = [];
             for (const {code, node} of this.codeBlocks()) {
-                blocks.push([code, node.id]);
+                blocks.push([code, node.getAttribute('name') ?? node.id]);
             }
             await this.interp.run(run_id, blocks);
         } finally {

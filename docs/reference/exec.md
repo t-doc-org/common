@@ -120,7 +120,8 @@ select * from countries
 ```
 
 The option takes an optional editor ID. If provided, the content of the editor
-is saved in browser local storage, and restored on page reload.
+is saved in browser local storage, and restored on page reload. Using the value
+`none` as the editor ID disables the editor.
 
 ```{exec} sql
 :after: sql-countries

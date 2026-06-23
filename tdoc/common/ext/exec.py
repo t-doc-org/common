@@ -71,13 +71,14 @@ class Exec(code.CodeBlock):
                     initlist=text.splitlines(),
                     source=path))
             self.content[:0] = content
+        name = self.options.get('name')  # The 'name' option gets removed
         res = super().run()
         for node in res:
             for n in node.findall(nodes.literal_block):
-                self._update_node(node)
+                self._update_node(node, name)
         return res
 
-    def _update_node(self, node):
+    def _update_node(self, node, name):
         node = node.next_node(nodes.literal_block, include_self=True)
         runner = node['language']
         node['runner'] = runner
@@ -85,6 +86,7 @@ class Exec(code.CodeBlock):
         node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
+        if name is not None: node['name'] = name
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
@@ -92,7 +94,8 @@ class Exec(code.CodeBlock):
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
-        if (v := self.options.get('editor')) is not None: node['editor'] = v
+        if (v := self.options.get('editor')) not in (None, 'none'):
+            node['editor'] = v
 
 
 class exec(nodes.literal_block): pass
@@ -215,6 +218,7 @@ def visit_exec(self, node):
             console_style=node.get('console-style'),
             editor=node.get('editor'),
             env=node['env'] if node['when'] != 'never' else None,
+            name=node.get('name'),
             output_style=node.get('output-style'),
             reset=node.get('reset'),
             runner=node['runner'],
