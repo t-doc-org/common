@@ -336,7 +336,9 @@ export function newEditor(config) {
     return new cmview.EditorView(config);
 }
 
-// Find an editor in or below the given element.
+// Find an editor in or below the given element. Returns null if no editor is
+// found.
 export function findEditor(el) {
-    return cmview.EditorView.findFromDOM(el.querySelector('div.cm-editor'));
+    const dom = el.querySelector('div.cm-editor');
+    return dom ? cmview.EditorView.findFromDOM(dom) : null;
 }
