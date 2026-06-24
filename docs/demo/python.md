@@ -370,6 +370,16 @@ for word in ['running', 'runs', 'ran',
   print(f"{word:12} => {stemmer.stemWord(word)}")
 ```
 
+```{admonition} Note
+:class: caution
+Installing from PyPI **introduces a serving dependency on PyPI servers**. This
+can reduce the availability of the site. It's also not very nice to the
+operators of PyPI to drive traffic their way (though browser caching should
+alleviate the issue). For high-traffic pages, the `.whl` packages should be
+included in the site's `_static` and installed via the `exec.python.packages`
+{rst:dir}`metadata`.
+```
+
 ## Filesystem
 
 The block below lists all the files and directories on the virtual filesystem
