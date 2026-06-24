@@ -333,12 +333,10 @@ export function newEditor(config) {
         if (lang) config.extensions.push(lang());
         delete config.language;
     }
-    const editor = new cmview.EditorView(config);
-    editor.dom.tdocEditor = editor;
-    return editor;
+    return new cmview.EditorView(config);
 }
 
 // Find an editor in or below the given element.
 export function findEditor(el) {
-    return el.querySelector('div.cm-editor')?.tdocEditor;
+    return cmview.EditorView.findFromDOM(el.querySelector('div.cm-editor'));
 }
