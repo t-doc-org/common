@@ -168,55 +168,6 @@ export function qsa(node, selector) {
     return node.querySelectorAll(selector);
 }
 
-// Query all matching elements from a node, then yield them asynchronously as
-// they are marked as ready.
-export async function* qsaReady(node, selector, isReady) {
-    if (isReady === undefined) {
-        isReady = v => v !== undefined;
-    }
-    await domLoaded;
-    const els = qsa(node, selector);
-    let promises, resolves;
-    for (const el of els) {
-        if (isReady(el.dataset.tdocReady)) {
-            yield el;
-            continue;
-        }
-        if (promises === undefined) {
-            promises = new Map();
-            resolves = new Map();
-        }
-        const {promise, resolve} = Promise.withResolvers();
-        promises.set(el, promise);
-        resolves.set(el, resolve);
-    }
-    if (promises === undefined) return;
-    const obs = new MutationObserver(recs => {
-        for (const rec of recs) {
-            const el = rec.target;
-            if (!isReady(el.dataset.tdocReady)) continue;
-            const resolve = resolves.get(el);
-            if (resolve !== undefined) resolve(el);
-        }
-    });
-    try {
-        const attributeFilter = ['data-tdoc-ready'];
-        for (const el of promises.keys()) obs.observe(el, {attributeFilter});
-        while (promises.length > 0) {
-            const el = await Promise.race(promises.values());
-            promises.delete(el);
-            yield el;
-        }
-    } finally {
-        obs.disconnect();
-    }
-}
-
-// Mark a node as ready.
-export function markReady(node, value = '') {
-    node.dataset.tdocReady = value;
-}
-
 // A mutex for asynchronous code.
 export class Mutex {
     async acquire() {
@@ -902,6 +853,67 @@ export class RateLimited {
     }
 }
 
+export class TdocElement extends HTMLElement {
+    static #handlers = {};
+
+    static async extend(name, handler) {
+        await customElements.whenDefined(name);
+        let handlers = TdocElement.#handlers[name];
+        if (handlers === undefined) handlers = TdocElement.#handlers[name] = [];
+        handlers.push(handler);
+
+        // Call the handler on elements that are already ready.
+        const fn = handler.ready
+        if (fn !== undefined) {
+            const els = Array.prototype.filter.call(qsa(document, name),
+                                                    el => el.#ready);
+            for (const el of els) {
+                try {
+                    await fn(el);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+    }
+
+    constructor() {
+        super();
+        this.ready = new Promise(resolve => { this.#readyResolve = resolve; });
+    }
+
+    #ready = false;
+    #readyResolve;
+
+    async _ready() {
+        this.#ready = true;
+        for (const handler of TdocElement.#handlers[this.localName] ?? []) {
+            const fn = handler.ready;
+            if (fn !== undefined) {
+                try {
+                    await fn(this);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+        this.#readyResolve(this);
+    }
+}
+
+// Query matching <tdoc-*> elements from a node, then yield them asynchronously
+// as they become ready.
+export async function* qsaReady(node, selector) {
+    await domLoaded;
+    const promises = new Map();
+    for (const el of qsa(node, selector)) promises.set(el, el.ready);
+    while (promises.size > 0) {
+        const el = await Promise.race(promises.values());
+        promises.delete(el);
+        yield el;
+    }
+}
+
 export const dyn = {
     // The renderers for dyn elements.
     render: asyncGet({}, {ns: 'dyn', container: 'render'}),
@@ -910,7 +922,7 @@ export const dyn = {
     timeout: Symbol('dyn.timeout'),
 };
 
-class DynElement extends HTMLElement {
+class DynElement extends TdocElement {
     async connectedCallback() {
         try {
             let render = await dyn.render[this.type];
@@ -923,7 +935,7 @@ class DynElement extends HTMLElement {
                                            JSON.parse(args) : {});
             this.classList.add('rendered');
             qs(this, '& > .error')?.remove?.();
-            markReady(this);
+            await this._ready();
         } catch (e) {
             console.error(e);
             showAlert(e);

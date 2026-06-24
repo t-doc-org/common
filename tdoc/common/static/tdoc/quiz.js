@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dec, elmt, enable, fromBase64, markReady, on, qs, qsa,
+    asyncGet, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
 } from './core.js';
 
 class QuizBase {
     constructor(node) { this.node = node; }
 
-    init() {
+    async init() {
         this.hint = qs(this.node, '.tdoc-quiz-hint');
     }
 
@@ -94,10 +94,10 @@ class QuizBase {
 }
 
 class StaticQuiz extends QuizBase {
-    init() {
-        super.init();
+    async init() {
+        await super.init();
         this.setupFields(this.node);
-        markReady(this.node);
+        await this.node._ready();
     }
 
     async check(field) {
@@ -108,8 +108,8 @@ class StaticQuiz extends QuizBase {
 }
 
 class TableQuiz extends QuizBase {
-    init() {
-        super.init();
+    async init() {
+        await super.init();
         this.table = qs(this.node, 'table');
         this.entries = [];
 
@@ -135,10 +135,10 @@ class TableQuiz extends QuizBase {
         qs(this.tbody, 'tr:last-child > td:last-child')
             .appendChild(elmt`<<button class="tdoc-check fa-check"></button>`)
         if (this.preCnt === 0) tbody.remove();
-        generators[this.generator].then(fn => {
+        generators[this.generator].then(async fn => {
             this.generate = fn;
             this.addEntry();
-            markReady(this.node);
+            await this.node._ready();
         });
     }
 
@@ -301,12 +301,12 @@ async function checkArgs(field) {
 
 const types = {'static': StaticQuiz, 'table': TableQuiz};
 
-class QuizElement extends HTMLElement {
-    connectedCallback() {
+class QuizElement extends TdocElement {
+    async connectedCallback() {
         // Attributes must not be inspected in the constructor, so we
         // instantiate the class here.
         this.quiz = new types[this.getAttribute('type')](this);
-        this.quiz.init();
+        await this.quiz.init();
     }
 }
 

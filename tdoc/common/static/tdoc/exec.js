@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, elmt, markReady, on, qs, qsa, RateLimited, showAlert, Stored,
+    asyncGet, elmt, on, qs, qsa, RateLimited, showAlert, Stored, TdocElement,
     text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
@@ -63,14 +63,14 @@ const editorPrefix = 'tdoc:editor:';
 
 const runners = asyncGet({}, {name: 'exec.runners'});
 
-class ExecElement extends HTMLElement {
+class ExecElement extends TdocElement {
     async connectedCallback() {
         try {
             const cls = await runners[this.getAttribute('runner')];
             this.runner = new cls(this);
             this.runner.ready = this.runner.init();
             await this.runner.ready;
-            markReady(this);
+            await this._ready();
 
             // Execute immediately if requested.
             if (this.runner.when === 'load') this.runner.doRun();  // Background

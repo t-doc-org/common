@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {clientId, htmlData, markReady, on, qs, qsa, qsaReady} from './core.js';
+import {
+    clientId, htmlData, on, qs, qsa, qsaReady, TdocElement,
+} from './core.js';
 
 const polls = [];
 
@@ -22,7 +24,6 @@ class Poll {
         on(qs(this.header, '.tdoc-results')).click(e => this.onResults(e));
         on(qs(this.header, '.tdoc-solutions')).click(e => this.onSolutions(e));
         on(qs(this.header, '.tdoc-clear')).click(e => this.onClear(e));
-        markReady(this.node);
     }
 
     attr(name, fn = v => v) {
@@ -144,13 +145,16 @@ class Poll {
     }
 }
 
-class PollElement extends HTMLElement {
+class PollElement extends TdocElement {
     constructor() {
         super();
         this.poll = new Poll(this);
     }
 
-    connectedCallback() { this.poll.init(); }
+    async connectedCallback() {
+        this.poll.init();
+        await this._ready();
+    }
 }
 
 customElements.define('tdoc-poll', PollElement);
