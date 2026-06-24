@@ -886,8 +886,11 @@ export class TdocElement extends HTMLElement {
     #readyResolve;
 
     async _ready() {
+        const handlers = Array.from(
+            TdocElement.#handlers[this.localName] ?? []);
         this.#ready = true;
-        for (const handler of TdocElement.#handlers[this.localName] ?? []) {
+        this.#readyResolve(this);
+        for (const handler of handlers) {
             const fn = handler.ready;
             if (fn !== undefined) {
                 try {
@@ -897,16 +900,25 @@ export class TdocElement extends HTMLElement {
                 }
             }
         }
-        this.#readyResolve(this);
     }
+
+    async connectedCallback() { await this._ready(); }
 }
 
 // Query matching <tdoc-*> elements from a node, then yield them asynchronously
 // as they become ready.
 export async function* qsaReady(node, selector) {
-    await domLoaded;
     const promises = new Map();
-    for (const el of qsa(node, selector)) promises.set(el, el.ready);
+    await domLoaded;
+    for (const el of qsa(node, selector)) {
+        const name = el.localName;
+        if (name.startsWith('tdoc-')) {
+            await customElements.whenDefined(name);
+            promises.set(el, el.ready);
+        } else {
+            yield el;
+        }
+    }
     while (promises.size > 0) {
         const el = await Promise.race(promises.values());
         promises.delete(el);

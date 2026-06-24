@@ -311,4 +311,4 @@ class QuizElement extends TdocElement {
 }
 
 customElements.define('tdoc-quiz', QuizElement);
-customElements.define('tdoc-quiz-ph', class extends HTMLElement {});
+customElements.define('tdoc-quiz-ph', TdocElement);
