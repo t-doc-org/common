@@ -96,16 +96,6 @@ export class Runner {
     // TODO(0.82): Remove backward-compatibility alias
     static apply(cls) { this.register(cls); }
 
-    // Return the text content of the <pre> tag of a node.
-    static preText(node) { return qs(node, 'pre').textContent; }
-
-    // Return the text content of the editor associated with a node if an editor
-    // was added, or the content of the <pre> tag.
-    static text(node) {
-        const view = findEditor(node);
-        return view ? view.state.doc.toString() : this.preText(node);
-    }
-
     // Initialize the runner.
     static async init(config) {}
 
@@ -158,7 +148,7 @@ export class Runner {
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
-        const preText = Runner.preText(this.node).trimEnd();
+        const preText = this.preText.trimEnd();
         let doc = preText;
         const editorId = this.editorId;
         if (editorId) {
@@ -258,10 +248,20 @@ export class Runner {
     // Called just after run().
     postRun() {}
 
+    // Return the text content of the <pre> tag.
+    get preText() { return qs(this.node, 'pre').textContent; }
+
+    // Return the text content of the editor if an editor was added, or the
+    // content of the <pre> tag.
+    get text() {
+        const view = findEditor(this.node);
+        return view ? view.state.doc.toString() : this.preText;
+    }
+
     // Yield the code from the nodes in the :after: chain of the {exec} block.
     *codeBlocks() {
         for (const node of walkNodes(this.node)) {
-            yield {code: Runner.text(node), node};
+            yield {code: node.runner.text, node};
         }
     }
 
