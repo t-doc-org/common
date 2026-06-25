@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, elmt, focusIfVisible, on, text} from './core.js';
+import {dec, elmt, focusIfVisible, htmlFragment, on, text} from './core.js';
 import {Runner} from './exec.js';
 
 class Interpreter {
@@ -297,9 +297,8 @@ class PythonRunner extends Runner {
     }
 
     onRender(html, name) {
-        const tmpl = document.createElement('template');
-        tmpl.innerHTML = html;
-        const el = this.output.render(name, tmpl.content.firstElementChild);
+        const el = this.output.render(
+            name, htmlFragment(html).firstElementChild);
         return [el.scrollWidth, el.scrollHeight];
     }
 

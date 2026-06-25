@@ -88,6 +88,13 @@ export function text(value) {
     return document.createTextNode(value);
 }
 
+// Create an DocumentFragment with the given HTML content.
+export function htmlFragment(html) {
+    const el = document.createElement('template');
+    el.innerHTML = html;
+    return el.content;
+}
+
 // Perform string interpolation of an HTML snippet.
 function interpolateHtml(html, values) {
     if (html.length === 1 && (values[0] === undefined || values[0] === '')) {
@@ -116,9 +123,7 @@ function interpolateHtml(html, values) {
 
 // Create an DocumentFragment node.
 export function html(tmpl, ...values) {
-    const el = document.createElement('template');
-    el.innerHTML = interpolateHtml(tmpl, values);
-    return el.content;
+    return htmlFragment(interpolateHtml(tmpl, values));
 }
 
 // Create an Element node.
