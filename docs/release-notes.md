@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-81)=
+## 0.81 *(2026-06-25)*
+
+- Added extension points to allow augmenting t-doc functionality from site
+  repositories.
+- Added support for `sys.excepthook`.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.80...0.81)
+
 (release-0-80)=
 ## 0.80 *(2026-06-15)*
 
