@@ -68,8 +68,7 @@ export class ExecElement extends TdocElement {
         try {
             const cls = await runners[this.getAttribute('runner')];
             this.runner = new cls(this);
-            this.runner.ready = this.runner.init();
-            await this.runner.ready;
+            await this.runner.init();
             await this._ready();
 
             // Execute immediately if requested.
@@ -274,7 +273,7 @@ export class Runner {
 
     // Run the code in the {exec} block.
     async doRun() {
-        await this.ready;
+        await this.node.ready;
         while (this.running) await this.doStop();
         const {promise, resolve} = Promise.withResolvers();
         this.running = promise;
