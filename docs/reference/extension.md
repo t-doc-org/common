@@ -30,11 +30,11 @@ The following tables shows how roles and directives map to custom elements.
 |Role / directive|Element|Element class|
 |---|---|---|
 |{rst:dir}`chartjs`|`<tdoc-dyn type="chartjs">`{l=html}|{js:class}`~core.DynElement`|
-|{rst:dir}`exec`|`<tdoc-exec>`{l=html}|`ExecElement`|
+|{rst:dir}`exec`|`<tdoc-exec>`{l=html}|{js:class}`~exec.ExecElement`|
 |{rst:dir}`jsxgraph`|`<tdoc-dyn type="jsxgraph">`{l=html}|{js:class}`~core.DynElement`|
 |{rst:dir}`mermaid`|`<tdoc-dyn type="mermaid">`{l=html}|{js:class}`~core.DynElement`|
-|{rst:dir}`poll`|`<tdoc-poll>`{l=html}|`PollElement`|
-|{rst:dir}`quiz`|`<tdoc-quiz>`{l=html}|`QuizElement`|
+|{rst:dir}`poll`|`<tdoc-poll>`{l=html}|{js:class}`~poll.PollElement`|
+|{rst:dir}`quiz`|`<tdoc-quiz>`{l=html}|{js:class}`~quiz.QuizElement`|
 
 ### Lifecycle hooks
 

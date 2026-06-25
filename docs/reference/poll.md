@@ -3,6 +3,8 @@
 
 # Polls
 
+## Directive
+
 ````{rst:directive} .. poll:: id
 This directive adds a live audience poll. The poll identifier `id` is required
 and its value must be unique across the site. The content of the directive is
@@ -29,8 +31,11 @@ de-select a previously selected one, and re-selecting the selected answer
 un-selects it. Setting {rst:dir}`:mode: multi <poll:mode>` enables voters to
 select multiple answers.
 
+{rst:dir}`poll` directives generate `<tdoc-poll>`{l=html} elements.
+
 {.rubric}
 Options
+
 ```{rst:directive:option} mode: value
 :type: single | multi
 The poll mode: single answer (`single`, the default) or allow multiple answers
@@ -50,5 +55,30 @@ value is of the form `2h35m42s` or `never`. The default is 15 minutes.
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the outer container.
+```
+````
+
+## Libraries
+
+### `tdoc/poll.js`
+
+```{js:module} poll
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/poll.js))
+provides functionality to support {rst:dir}`poll` directives.
+```
+
+{.rubric}
+Classes
+
+````{js:class} PollElement
+The class implementing `<tdoc-poll>` custom elements. It extends
+{js:class}`~core.TdocElement`.
+
+{.rubric}
+Attributes
+
+```{js:attribute} poll
+An instance of `Poll` that controls the poll.
 ```
 ````

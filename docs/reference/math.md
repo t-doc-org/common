@@ -52,8 +52,14 @@ defaults to `1 / 1`, and can be overridden with the
 Defaults can be set via the `jsxgraph` {rst:dir}`metadata`, and are merged into
 [`JXG.Options`](https://jsxgraph.uni-bayreuth.de/docs/symbols/src/src_options.js.html).
 
+{rst:dir}`jsxgraph` directives generate `<tdoc-dyn type="jsxgraph">`{l=html}
+elements, and their {js:attr}`~core.DynElement.controller` property is the
+[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) instance
+returned by the renderer.
+
 {.rubric}
 Options
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the graph container.

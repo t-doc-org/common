@@ -145,7 +145,7 @@ class Poll {
     }
 }
 
-class PollElement extends TdocElement {
+export class PollElement extends TdocElement {
     constructor() {
         super();
         this.poll = new Poll(this);

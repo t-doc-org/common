@@ -939,7 +939,7 @@ export const dyn = {
     timeout: Symbol('dyn.timeout'),
 };
 
-class DynElement extends TdocElement {
+export class DynElement extends TdocElement {
     async connectedCallback() {
         try {
             let render = await dyn.render[this.type];

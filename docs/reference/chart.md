@@ -77,8 +77,14 @@ render.vBar = el => {
 Defaults can be set via the `chartjs` {rst:dir}`metadata`, and are merged into
 [`Chart.defaults`](https://www.chartjs.org/docs/latest/configuration/#global-configuration).
 
+{rst:dir}`chartjs` directives generate `<tdoc-dyn type="chartjs">`{l=html}
+elements, and their {js:attr}`~core.DynElement.controller` property is the
+[`Chart`](https://www.chartjs.org/docs/latest/api/classes/Chart.html) instance
+returned by the renderer.
+
 {.rubric}
 Options
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the chart container.

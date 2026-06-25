@@ -63,7 +63,7 @@ const editorPrefix = 'tdoc:editor:';
 
 const runners = asyncGet({}, {name: 'exec.runners'});
 
-class ExecElement extends TdocElement {
+export class ExecElement extends TdocElement {
     async connectedCallback() {
         try {
             const cls = await runners[this.getAttribute('runner')];
@@ -258,7 +258,8 @@ export class Runner {
         return view ? view.state.doc.toString() : this.preText;
     }
 
-    // Yield the code from the nodes in the :after: chain of the {exec} block.
+    // Yield the code from the nodes in the :after: and :then: chain of the
+    // {exec} block.
     *codeBlocks() {
         for (const node of walkNodes(this.node)) {
             yield {code: node.runner.text, node};

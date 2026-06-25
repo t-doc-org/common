@@ -3,6 +3,8 @@
 
 # Quizzes
 
+## Directive
+
 ````{rst:directive} .. quiz:: [type [arg ...]]
 This directive adds an interactive quiz. The quiz questions are laid out with
 markup, and user input fields are placed with {rst:role}`quiz-input` and
@@ -14,8 +16,11 @@ markup, and user input fields are placed with {rst:role}`quiz-input` and
 The <button class="tdoc fa-check"></button> button checks the provided answers.
 It turns green when all the answers are correct, and all the quiz is locked.
 
+{rst:dir}`quiz` directives generate `<tdoc-quiz>`{l=html} elements.
+
 {.rubric}
 Options
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the outer container.
@@ -292,23 +297,41 @@ with only whitespace between them.
 ````
 `````
 
-## `tdoc/quiz.js`
+## Libraries
 
-`````{js:module} quiz
+### `tdoc/quiz.js`
+
+```{js:module} quiz
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/quiz.js))
 provides functionality to support {rst:dir}`quiz` directives.
-`````
-
-```{js:function} check(name, fn)
-Define a [check function](#check).
-:arg !string name: The name of the check function.
-:arg !function fn: The [check function](#check).
 ```
 
-```{js:function} generator(name, fn)
-Define a [generator function](#generator), and render all {rst:dir}`quiz`
-directives that use this generator.
-:arg !string name: The name of the generator function.
-:arg !function fn: The [generator function](#generator).
+{.rubric}
+Module globals
+
+```{js:data} checks
+An object containing [check functions](#check). Custom check functions can be
+defined by assigning to object attributes.
 ```
+
+```{js:data} generators
+An object containing [generator functions](#generator). Custom generator
+functions can be defined by assigning to object attributes.
+```
+
+{.rubric}
+Classes
+
+````{js:class} QuizElement
+The class implementing `<tdoc-quiz>` custom elements. It extends
+{js:class}`~core.TdocElement`.
+
+{.rubric}
+Attributes
+
+```{js:attribute} quiz
+An instance of a `QuizBase` subclass depending on the type of quiz that
+implements the quiz logic for the element.
+```
+````

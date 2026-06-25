@@ -301,7 +301,7 @@ async function checkArgs(field) {
 
 const types = {'static': StaticQuiz, 'table': TableQuiz};
 
-class QuizElement extends TdocElement {
+export class QuizElement extends TdocElement {
     async connectedCallback() {
         // Attributes must not be inspected in the constructor, so we
         // instantiate the class here.
