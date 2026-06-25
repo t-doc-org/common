@@ -21,7 +21,7 @@ module, adding a rendering function to {js:data}`~jsxgraph.render`, and calling 
 ```
 
 <script type="module">
-const [{initBoard, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+const {initBoard, render} = await tdoc.import('tdoc/jsxgraph.js');
 
 render.sin = el => {
   return initBoard(el, {
@@ -159,11 +159,11 @@ options: {
 
 ### `tdoc/jsxgraph.js`
 
-`````{js:module} jsxgraph
+```{js:module} jsxgraph
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/jsxgraph.js))
 provides functionality related to {rst:dir}`jsxgraph` directives.
-`````
+```
 
 ```{js:data} JXG
 The [`JXG`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.html) namespace of
@@ -205,7 +205,7 @@ sides: 5,
 ```
 
 <script type="module">
-const [{initBoard, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+const {initBoard, render} = await tdoc.import('tdoc/jsxgraph.js');
 
 render.regularPolygon = (el, {sides}) => {
   return initBoard(el, {

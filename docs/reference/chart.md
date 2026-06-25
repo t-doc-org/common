@@ -53,7 +53,7 @@ function.
 ```
 
 <script type="module">
-const [{chart, render}] = await tdoc.imports('tdoc/chart.js');
+const {chart, render} = await tdoc.import('tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
                 '#ffcd56', '#c9cbcf'];
@@ -222,11 +222,11 @@ options: {
 
 ### `tdoc/chart.js`
 
-`````{js:module} chart
+```{js:module} chart
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/chart.js))
 provides functionality related to {rst:dir}`chartjs` directives.
-`````
+```
 
 ```{js:function} chart(el, config)
 Render the content of a {rst:dir}`chartjs` directive.
@@ -253,7 +253,7 @@ count: 5, min: 100, max: 500,
 ```
 
 <script type="module">
-const [core, {chart, render}] = await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
+const [core, {chart, render}] = await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
 render.randomBars = (el, {count, min, max}) => {
   const labels = [], data = [];

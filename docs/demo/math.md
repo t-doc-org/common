@@ -181,7 +181,7 @@ options: {
 ````
 
 <script type="module">
-const [{initBoard, JXG, render}] = await tdoc.imports('tdoc/jsxgraph.js');
+const {initBoard, JXG, render} = await tdoc.import('tdoc/jsxgraph.js');
 
 render.sinCos = el => {
   return initBoard(el, {

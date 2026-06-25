@@ -10,7 +10,7 @@ and the {rst:role}`quiz-ph`, {rst:role}`quiz-input`, {rst:role}`quiz-select` and
 ## Static
 
 <script type="module">
-const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
+const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 quiz.checks.sum = args => {
     const tds = core.qsa(args.field.closest('tr'), 'td');
@@ -70,7 +70,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 ## Table
 
 <script type="module">
-const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
+const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 function sumProduct(max) {
     return () => {

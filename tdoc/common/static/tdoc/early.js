@@ -26,7 +26,7 @@
     // module was already imported via a <script type="module"> tag with a
     // cache-busting src, and use that to avoid importing the module multiple
     // times.
-    tdoc.import = mod => {
+    function import_module(mod) {
         let url = new URL(mod, staticUrl).toString();
         const m = importMap[url];
         if (m !== undefined) {
@@ -42,11 +42,14 @@
             }
         }
         return import(url);
-    };
+    }
 
-    // Import multiple modules specified relative to the _static directory.
-    tdoc.imports = (...modules) => Promise.all(
-        modules.map(m => tdoc.import(m)));
+    // Import one or more modules specified relative to the _static directory.
+    // TODO(0.82): Remove the backward-compatibility alias `imports`
+    tdoc.import = tdoc.imports = (...modules) => {
+        if (modules.length === 1) return import_module(modules[0]);
+        return Promise.all(modules.map(m => import_module(m)))
+    }
 
     // Return a function that waits for a set of promises before invoking a
     // function. The current script is passed as the first argument.

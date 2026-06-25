@@ -186,7 +186,7 @@ object with the following attributes:
 
 ```{code-block} html
 <script type="module">
-const [core, quiz] = await tdoc.imports('tdoc/core.js', 'tdoc/quiz.js');
+const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 function sumProduct(max) {
     return () => {
@@ -264,7 +264,7 @@ The following example re-implements the built-in `split` check.
 
 ```{code-block} html
 <script type="module">
-const [quiz] = await tdoc.imports('tdoc/quiz.js');
+const quiz = await tdoc.import('tdoc/quiz.js');
 
 quiz.check('split', (args, param = ',') => {
     args.solution = args.solution.split(param);

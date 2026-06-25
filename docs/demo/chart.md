@@ -339,7 +339,7 @@ annotations: [{
 
 <script type="module">
 const [core, {chart, render}] =
-  await tdoc.imports('tdoc/core.js', 'tdoc/chart.js');
+  await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
                 '#ffcd56', '#c9cbcf'];
