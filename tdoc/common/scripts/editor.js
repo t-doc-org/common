@@ -271,8 +271,8 @@ function currentTheme() {
 document.addEventListener('themechange', e => {
     const curTheme = currentTheme();
     for (const div of document.querySelectorAll('div.cm-editor')) {
-        const editor = div.tdocEditor;
-        editor.dispatch({effects: theme.reconfigure(curTheme)});
+        cmview.EditorView.findFromDOM(div).dispatch(
+            {effects: theme.reconfigure(curTheme)});
     }
 });
 
