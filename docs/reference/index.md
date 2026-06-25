@@ -6,6 +6,7 @@
 ```{toctree}
 :maxdepth: 1
 config
+extension
 elements
 layout
 math

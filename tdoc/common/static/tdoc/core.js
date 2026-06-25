@@ -128,12 +128,12 @@ export function elmt(tmpl, ...values) {
 
 // An Error with an HTML-formatted message.
 export class HtmlError extends Error {
-    static of(e) {
-        if (e instanceof HtmlError) return e;
-        if (e instanceof Error) {
-            return htmle`<strong>${e.name}:</strong> ${e.message}`;
+    static of(err) {
+        if (err instanceof HtmlError) return err;
+        if (err instanceof Error) {
+            return htmle`<strong>${err.name}:</strong> ${err.message}`;
         }
-        return htmle`<strong>Error:</strong> ${e}`;
+        return htmle`<strong>Error:</strong> ${err}`;
     }
 
     constructor(html, options) {
@@ -155,17 +155,17 @@ export function htmle(tmpl, ...values) {
 // Display alerts for unhandled exceptions in promises.
 addEventListener('unhandledrejection', e => { showAlert(e.reason); });
 
-// Query a single matching element from a node.
-export function qs(node, selector) {
-    return node?.querySelector?.(selector);
+// Query a single matching element below an element.
+export function qs(el, selector) {
+    return el?.querySelector?.(selector);
 }
 
 const emptyNodeList = document.createElement('template').querySelectorAll('p');
 
-// Query all matching elements from a node.
-export function qsa(node, selector) {
-    if (node === undefined || node === null) return emptyNodeList;
-    return node.querySelectorAll(selector);
+// Query all matching elements below an element.
+export function qsa(el, selector) {
+    if (el === undefined || el === null) return emptyNodeList;
+    return el.querySelectorAll(selector);
 }
 
 // A mutex for asynchronous code.
@@ -857,6 +857,11 @@ export class TdocElement extends HTMLElement {
     static #handlers = {};
 
     static async extend(name, handler) {
+        if (!name.startsWith('tdoc-')) {
+            throw htmle`\
+<code>TdocElement.extend()</code> can only extend <code>&lt;tdoc-*&gt;</code> \
+elements.`
+        }
         await customElements.whenDefined(name);
         let handlers = TdocElement.#handlers[name];
         if (handlers === undefined) handlers = TdocElement.#handlers[name] = [];

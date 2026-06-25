@@ -228,14 +228,8 @@ This module
 provides functionality related to {rst:dir}`chartjs` directives.
 ```
 
-```{js:function} chart(el, config)
-Render the content of a {rst:dir}`chartjs` directive.
-
-:arg !HTMLElement el: The wrapper DOM element that will contain the chart.
-:arg !Object|Array config: The chart configuration, passed to the `Chart`
-constructor. If an `Array` of configs is provided, they are merged.
-:returns: A `Promise` that resolves to the created `Chart` instance.
-```
+{.rubric}
+Module globals
 
 `````{js:data} render
 An object containing named rendering functions. In addition to the
@@ -277,9 +271,21 @@ render.randomBars = (el, {count, min, max}) => {
 };
 </script>
 ````
+`````
 
 ```{js:data} attrs
 An object containing named attribute sets. Custom sets can be defined by
 assigning to object attributes.
 ```
-`````
+
+{.rubric}
+Functions
+
+```{js:function} chart(el, config)
+Render the content of a {rst:dir}`chartjs` directive.
+
+:arg !HTMLElement el: The wrapper DOM element that will contain the chart.
+:arg !Object|Array config: The chart configuration, passed to the `Chart`
+constructor. If an `Array` of configs is provided, they are merged.
+:returns: A `Promise` that resolves to the created `Chart` instance.
+```

@@ -165,28 +165,12 @@ This module
 provides functionality related to {rst:dir}`jsxgraph` directives.
 ```
 
+{.rubric}
+Module globals
+
 ```{js:data} JXG
 The [`JXG`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.html) namespace of
 the JSXGraph library.
-```
-
-```{js:function} initBoard(el, attrs[, fn])
-Render the content of a {rst:dir}`jsxgraph` directive.
-
-In addition to board attributes, `attrs` can specify per object type defaults
-for the graph in the `defaults` key, similar to how global defaults are
-specified in
-[JXG.Options](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Options.html).
-
-:arg !HTMLElement el: The wrapper DOM element that will contain the graph.
-:arg !Object|Array attrs: The board attributes, passed to
-`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are
-merged.
-:arg !function fn: An optional function that is called with the
-[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) as an
-argument.
-:returns: A `Promise` that resolves to the
-[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html).
 ```
 
 `````{js:data} render
@@ -221,12 +205,35 @@ render.regularPolygon = (el, {sides}) => {
 };
 </script>
 ````
+`````
 
 ```{js:data} attrs
 An object containing named attribute sets. Custom sets can be defined by
 assigning to object attributes. The following sets are pre-defined:
 
 - `nonInteractive`: Disable interactive features.
+```
+
+{.rubric}
+Functions
+
+```{js:function} initBoard(el, attrs[, fn])
+Render the content of a {rst:dir}`jsxgraph` directive.
+
+In addition to board attributes, `attrs` can specify per object type defaults
+for the graph in the `defaults` key, similar to how global defaults are
+specified in
+[JXG.Options](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Options.html).
+
+:arg !HTMLElement el: The wrapper DOM element that will contain the graph.
+:arg !Object|Array attrs: The board attributes, passed to
+`JSXGraph.initBoard()`. If an `Array` of attributes is provided, they are
+merged.
+:arg !function fn: An optional function that is called with the
+[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html) as an
+argument.
+:returns: A `Promise` that resolves to the
+[`Board`](https://jsxgraph.uni-bayreuth.de/docs/symbols/JXG.Board.html).
 ```
 
 ```{js:function} withAxesLabels(xs, ys)
@@ -238,4 +245,3 @@ arguments, only the listed values are drawn.
 :arg !number|Array ys: The labels to draw on the Y axis.
 :returns: An attribute object.
 ```
-`````
