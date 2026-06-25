@@ -76,7 +76,7 @@ The class implementing `<tdoc-poll>` custom elements. It extends
 {js:class}`~core.TdocElement`.
 
 {.rubric}
-Attributes
+Properties
 
 ```{js:attribute} poll
 An instance of `Poll` that controls the poll.

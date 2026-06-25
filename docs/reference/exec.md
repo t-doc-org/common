@@ -208,7 +208,7 @@ The class implementing `<tdoc-exec>` custom elements. It extends
 {js:class}`~core.TdocElement`.
 
 {.rubric}
-Attributes
+Properties
 
 ```{js:attribute} runner
 An instance of a subclass of {js:class}`Runner` that controls the execution of
@@ -220,7 +220,7 @@ code.
 The base class for runners that control code execution in specific languages.
 
 {.rubric}
-Attributes
+Properties
 
 ```{js:attribute} [static] name
 The name of the runner, as specified in the first argument of the

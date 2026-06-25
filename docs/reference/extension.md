@@ -245,6 +245,17 @@ is useful to generate rich error messages for display e.g. with
 {js:func}`showAlert`.
 
 {.rubric}
+Properties
+
+```{js:attribute} html
+The HTML element or fragment provided to the constructor.
+```
+
+```{js:attribute} kind
+The kind of alert to show for this error.
+```
+
+{.rubric}
 Methods
 
 ```{js:method} [static] of(err)
@@ -259,21 +270,17 @@ Specify the kind of alert to show for this error.
 
 :retunrs: The error itself.
 ```
-
-{.rubric}
-Attributes
-
-```{js:attribute} html
-The HTML element or fragment provided to the constructor.
-```
-
-```{js:attribute} kind
-The kind of alert to show for this error.
-```
 ````
 
 ````{js:class} TdocElement
 The base class for all custom `<tdoc-*>` elements.
+
+{.rubric}
+Properties
+
+```{js:attribute} ready
+A `Promise` that resolves to the element when it becomes ready.
+```
 
 {.rubric}
 Methods
@@ -289,13 +296,6 @@ The following methods can be defined on `handler`:
 
   - `ready(el)`: Called when an element becomes ready.
 ```
-
-{.rubric}
-Attributes
-
-```{js:attribute} ready
-A `Promise` that resolves to the element when it becomes ready.
-```
 ````
 
 ````{js:class} DynElement
@@ -303,7 +303,7 @@ The class implementing `<tdoc-dyn>` custom elements. It extends
 {js:class}`TdocElement`.
 
 {.rubric}
-Attributes
+Properties
 
 ```{js:attribute} type
 The type of the directive, contained in the `type` attribute.

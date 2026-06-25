@@ -328,7 +328,7 @@ The class implementing `<tdoc-quiz>` custom elements. It extends
 {js:class}`~core.TdocElement`.
 
 {.rubric}
-Attributes
+Properties
 
 ```{js:attribute} quiz
 An instance of a `QuizBase` subclass depending on the type of quiz that
