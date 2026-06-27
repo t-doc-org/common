@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dyn, elmt, htmle, isPlainObject, isObject, mergeAttrs, on, qs,
+    asyncProps, dyn, elmt, htmle, isPlainObject, isObject, mergeAttrs, on, qs,
     qsa,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
@@ -113,7 +113,7 @@ export async function extractSets(...args) {
 }
 
 // A set of pre-defined attributes.
-export const attrs = asyncGet({}, {ns: 'chartjs', container: 'attrs'});
+export const attrs = asyncProps({}, {ns: 'chartjs', container: 'attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
@@ -140,7 +140,7 @@ function getAspectRatio(el) {
 }
 
 // The renderer container.
-export const render = dyn.render.chartjs = asyncGet(
+export const render = dyn.render.chartjs = asyncProps(
     {[dyn.timeout]: 15000},
     {ns: 'chartjs', container: 'render', callables: true});
 
@@ -162,7 +162,7 @@ export async function chart(el, config) {
 render.chart = chart;
 
 // A container for annotation handlers.
-export const annotations = asyncGet({}, {
+export const annotations = asyncProps({}, {
     ns: 'chartjs', container: 'annotations', callables: true,
 });
 

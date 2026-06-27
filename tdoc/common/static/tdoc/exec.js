@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, elmt, on, qs, qsa, RateLimited, showAlert, Stored, TdocElement,
+    asyncProps, elmt, on, qs, qsa, RateLimited, showAlert, Stored, TdocElement,
     text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
@@ -61,7 +61,7 @@ function fixLineNos(node) {
 const storeUpdate = cmstate.Annotation.define();
 const editorPrefix = 'tdoc:editor:';
 
-const runners = asyncGet({}, {name: 'exec.runners'});
+const runners = asyncProps({}, {name: 'exec.runners'});
 
 export class ExecElement extends TdocElement {
     async connectedCallback() {

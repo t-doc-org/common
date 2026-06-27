@@ -196,10 +196,10 @@ export class Mutex {
     }
 }
 
-// Pending accesses to asyncGet attributes.
+// Pending accesses to asyncProps properties.
 const pendingAsyncGet = new Set();
 
-function pendingAsyncGetFor(ns) {
+function pendingAsyncPropsFor(ns) {
     const pending = {};
     for (const [n, c, a] of pendingAsyncGet.keys()) {
         if (n !== ns) continue;
@@ -210,9 +210,9 @@ function pendingAsyncGetFor(ns) {
     return pending;
 }
 
-// Return a proxy that makes all attribute accesses asynchronous, where the
-// attribute must first be set before accesses complete.
-export function asyncGet(obj, {
+// Return a proxy that makes all property accesses asynchronous, where the
+// property must first be set before accesses complete.
+export function asyncProps(obj, {
     ns, container, callables = false, alert = true,
 } = {}) {
     const resolves = {};
@@ -268,12 +268,6 @@ function asyncCall(pfn) {
     return function(...args) {
         return pfn.then(fn => fn.apply(this, args));
     };
-}
-
-function splitContainerName(name) {
-    if (name === undefined) return [];
-    const parts = name.split('.');
-    return [parts[0], parts.slice(1).join('.')];
 }
 
 // Merge attribute sets, with later sets overriding earlier ones.
@@ -938,7 +932,7 @@ export async function* qsaReady(node, selector) {
 
 export const dyn = {
     // The renderers for dyn elements.
-    render: asyncGet({}, {ns: 'dyn', container: 'render'}),
+    render: asyncProps({}, {ns: 'dyn', container: 'render'}),
 
     // A symbol to set on renderers to specify a rendering timeout.
     timeout: Symbol('dyn.timeout'),
@@ -978,13 +972,14 @@ export class DynElement extends TdocElement {
         await sleep(ms);
         if (this.classList.contains('rendered')) return;
 
-        // Report potential issues, e.g. due to blocking on asyncGet attributes.
+        // Report potential issues, e.g. due to blocking on asyncProps
+        // properties.
         const msg = html`\
 <div class="error">\
 <strong><code>{${this.type}}</code> Rendering seems to have failed.</strong>\
 <ul><li>Check the JavaScript console for errors.</li></ul></div>`;
         const ul = qs(msg, 'ul');
-        const pending = pendingAsyncGetFor(this.type);
+        const pending = pendingAsyncPropsFor(this.type);
         const cs = [...Object.keys(pending)];
         cs.sort();
         for (const c of cs) {

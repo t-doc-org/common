@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
+    asyncProps, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
 } from './core.js';
 
 class QuizBase {
@@ -189,7 +189,7 @@ class TableQuiz extends QuizBase {
     onSuccess() { this.addEntry(true); }
 }
 
-export const generators = asyncGet({}, {name: 'quiz.generators'});
+export const generators = asyncProps({}, {name: 'quiz.generators'});
 
 function prevField(fields, field) {
     let prev;
