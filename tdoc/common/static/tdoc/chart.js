@@ -3,7 +3,7 @@
 
 import {
     asyncGet, dyn, elmt, htmle, isPlainObject, isObject, mergeAttrs, on, qs,
-    qsa, resolveDyn,
+    qsa,
 } from './core.js';
 import {Bins, Distribution, Sample} from './math.js';
 
@@ -147,8 +147,6 @@ export const render = dyn.render.chartjs = asyncGet(
 // Initialize a chart for a {chartjs} directive, identified either by name or
 // by its wrapper element.
 export async function chart(el, config) {
-    // TODO(0.82): Remove resolveDyn() call
-    el = await resolveDyn('chartjs', el);
     const ar = getAspectRatio(el);
     config = await merge(disabledPlugins, config, {
         options: ar !== undefined ? {aspectRatio: ar, maintainAspectRatio: true}
@@ -158,13 +156,10 @@ export async function chart(el, config) {
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
     if (ar !== undefined) c.canvas.style.aspectRatio = ar;  // Prevents jitter
-    // TODO(0.82): Remove adding .rendered
-    el.classList.add('rendered');
     return c;
 }
 
-// TODO(0.82): Remove template: alias
-render.chart = render['template:chart'] = chart;
+render.chart = chart;
 
 // A container for annotation handlers.
 export const annotations = asyncGet({}, {
@@ -355,8 +350,7 @@ const barWidth = {
     },
 };
 
-// TODO(0.82): Remove template: alias
-render.histogram = render['template:histogram'] = async (el, {
+render.histogram = async (el, {
     sample, uniform, custom, distribution, normalize = false, options = {},
     annotations = [],
 }) => {
@@ -422,8 +416,7 @@ render.histogram = render['template:histogram'] = async (el, {
     }, {options}]);
 };
 
-// TODO(0.82): Remove template: alias
-render.densityFunction = render['template:density-function'] = async (el, {
+render.densityFunction = async (el, {
     sample, min, max, step, width = 5, normalize = false, options = {},
     annotations = [],
 }) => {
@@ -464,9 +457,7 @@ is required.`;
     }, {options}]);
 };
 
-// TODO(0.82): Remove template: alias
-render.cumulativeDistributionFunction =
-render['template:cumulative-distribution-function'] = async (el, {
+render.cumulativeDistributionFunction = async (el, {
     sample, distribution, min, max, step, normalize = true, options = {},
     annotations = [],
 }) => {

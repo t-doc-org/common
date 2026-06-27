@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncGet, dyn, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa, resolveDyn,
+    asyncGet, dyn, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa,
 } from './core.js';
 import {Distribution, Sample} from './math.js';
 
@@ -164,8 +164,6 @@ function includesClose(values, v, epsilon = 1e-6) {
 // board.
 export async function initBoard(el, attrs, fn) {
     attrs = await merge(attrs);
-    // TODO(0.82): Remove resolveDyn() call
-    el = await resolveDyn('jsxgraph', el);
     if (el.style.aspectRatio === ''
             && getComputedStyle(el).aspectRatio === '142857 / 142857') {
         const a = JXG.copyAttributes(attrs, JXG.Options, 'board');
@@ -178,13 +176,10 @@ export async function initBoard(el, attrs, fn) {
     const board = JXG.JSXGraph.initBoard(el, attrs);
     JXG.merge(board.options, attrs.defaults ?? {});
     if (fn) fn(board);
-    // TODO(0.82): Remove adding .rendered
-    el.classList.add('rendered');
     return board;
 }
 
-// TODO(0.82): Remove template: alias
-render.grid = render['template:grid'] = async (el, {
+render.grid = async (el, {
     width = 35, height = 10, grid = {}, board = {},
 }) => {
     return await initBoard(el, [
@@ -196,8 +191,7 @@ render.grid = render['template:grid'] = async (el, {
     ]);
 };
 
-// TODO(0.82): Remove template: alias
-render.axes = render['template:axes'] = async (el, {
+render.axes = async (el, {
     boundingBox = [-11, 11, 11, -11], majorX, majorY, major, minorX, minorY,
     minor, labelsX, labelsY, labels, grid, board,
 }) => {
@@ -228,9 +222,7 @@ function noNegLabels(tick, zero, value) {
            generateLabelText.call(this, tick, zero, value) : '';
 }
 
-// TODO(0.82): Remove template: alias
-render.cumulativeDistributionFunction =
-render['template:cumulative-distribution-function'] = async (el, {
+render.cumulativeDistributionFunction = async (el, {
     sample, distribution, min, max, step, normalize = true, yAnchor = 0.08,
     defaults = {}, options = {},
 }) => {

@@ -13,10 +13,10 @@ and the {rst:role}`quiz-ph`, {rst:role}`quiz-input`, {rst:role}`quiz-select` and
 const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 quiz.checks.sum = args => {
-    const tds = core.qsa(args.field.closest('tr'), 'td');
-    const solution = +tds[0].textContent + (+tds[1].textContent)
-    args.ok = args.answer === solution.toString();
-    args.hint = `The answer is probably ${solution}.`;
+  const tds = core.qsa(args.field.closest('tr'), 'td');
+  const solution = +tds[0].textContent + (+tds[1].textContent)
+  args.ok = args.answer === solution.toString();
+  args.hint = `The answer is probably ${solution}.`;
 };
 </script>
 
@@ -73,25 +73,21 @@ They can also be laid out as lists, usually with right-aligned fields.
 const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 function sumProduct(max) {
-    return () => {
-        const va = core.randomInt(1, max), vb = core.randomInt(1, max);
-        const div = Number.isInteger(vb / va) ? "divides" : "doesn't divide";
-        return {
-            va, vb,
-            equal(other) { return va === other.va && vb === other.vb; },
-            history: max ** 2 / 2,
+  return () => {
+    const va = core.randomInt(1, max), vb = core.randomInt(1, max);
+    const div = Number.isInteger(vb / va) ? "divides" : "doesn't divide";
+    return {
+      va, vb,
+      equal(other) { return this.va === other.va && this.vb === other.vb; },
+      history: max ** 2 / 2,
 
-            a(ph) { ph.textContent = `${va}`; },
-            b(ph) { ph.textContent = `${vb}`; },
-            sum(args) {
-                args.ok = args.answer.trim() === (va + vb).toString();
-            },
-            product(args) {
-                args.ok = args.answer.trim() === (va * vb).toString();
-            },
-            div(args) { args.ok = args.answer === div; }
-        };
+      a(ph) { ph.textContent = `${va}`; },
+      b(ph) { ph.textContent = `${vb}`; },
+      sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
+      product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
+      div(args) { args.ok = args.answer === div; }
     };
+  };
 }
 
 quiz.generators.sumProduct = sumProduct(12);

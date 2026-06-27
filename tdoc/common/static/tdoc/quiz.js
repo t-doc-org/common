@@ -147,7 +147,8 @@ class TableQuiz extends QuizBase {
 
     addEntry(focus) {
         // Compute if row highlighting needs to be inverted.
-        const inv = (this.preCnt + this.entries.length * this.tmplCnt) & 1 === 1;
+        const inv = (this.preCnt + this.entries.length * this.tmplCnt) & 1
+                    === 1;
 
         // Generate a new entry, and avoid duplicates if possible.
         let entry;
@@ -190,11 +191,6 @@ class TableQuiz extends QuizBase {
 
 export const generators = asyncGet({}, {name: 'quiz.generators'});
 
-// TODO(0.82): Remove
-export async function generator(name, fn) {
-    generators[name] = fn;
-}
-
 function prevField(fields, field) {
     let prev;
     for (const f of fields) {
@@ -234,11 +230,6 @@ export const checks = {
         }
     },
 };
-
-// TODO(0.82): Remove
-export function check(name, fn) {
-    checks[name] = fn;
-}
 
 function checkFns(spec) {
     if (!spec || !spec.trim()) return [];

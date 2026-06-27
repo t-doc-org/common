@@ -42,7 +42,7 @@ indicate where the input fields should be placed and what the answers should be.
 
 Table quizzes (`{quiz} table`) dynamically generate questions: when a question
 is answered correctly, a new question is generated below. The {rst:dir}`quiz` argument after the type is the name of a [generator function](#generator)
-registered with `quiz.generator()`.
+registered in {js:data}`quiz.generators`.
 
 The directive must contain a table consisting of one or more template rows
 containing {rst:role}`quiz-ph` placeholders for the variable parts of the
@@ -168,9 +168,10 @@ CSS styles to apply to the field, e.g. `width: 10rem;`.
 ## Generator function
 
 A generator function generates a new question for a dynamically generated quiz.
-It must be given a name with `quiz.generator()`, so that it can be referenced
-from {rst:dir}`quiz` directives. It takes no arguments and returns a question
-object with the following attributes:
+It must be given a name by assigning it to a property of
+{js:data}`quiz.generators`, so that it can be referenced from {rst:dir}`quiz`
+directives. It takes no arguments and returns a question object with the
+following attributes:
 
 - One function per {rst:role}`quiz-ph`, named after the text of the role. The
   function receives the empty
@@ -194,26 +195,22 @@ object with the following attributes:
 const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
 function sumProduct(max) {
-    return () => {
-        const va = core.randomInt(1, max), vb = core.randomInt(1, max);
-        return {
-            va, vb,
-            equal(other) { return va === other.va && vb === other.vb; },
-            history: max ** 2 / 2,
+  return () => {
+    const va = core.randomInt(1, max), vb = core.randomInt(1, max);
+    return {
+      va, vb,
+      equal(other) { return this.va === other.va && this.vb === other.vb; },
+      history: max ** 2 / 2,
 
-            a(ph) { ph.textContent = `${va}`; },
-            b(ph) { ph.textContent = `${vb}`; },
-            sum(args) {
-                args.ok = args.answer.trim() === (va + vb).toString();
-            },
-            product(args) {
-                args.ok = args.answer.trim() === (va * vb).toString();
-            },
-        };
+      a(ph) { ph.textContent = `${va}`; },
+      b(ph) { ph.textContent = `${vb}`; },
+      sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
+      product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
     };
+  };
 }
 
-quiz.generator('sumProduct', sumProduct(12));
+quiz.generators.sumProduct = sumProduct(12);
 </script>
 ```
 
@@ -239,9 +236,9 @@ check function. It can also set the following attributes:
   check.
 
 Check functions referenced by {rst:role}`quiz-input` and {rst:role}`quiz-select`
-roles must be given a name with `quiz.check()`. They take a second argument
-containing the optional parameter from the reference. The following built-in
-checks are pre-defined:
+roles must be given a name by assigning to properties of {js:data}`quiz.checks`.
+They take a second argument containing the optional parameter from the
+reference. The following built-in checks are pre-defined:
 
 - `default`: The default check. Equivalent to `trim`.
 - `split()`: Split the solution at instances of the parameter (`,` by default).
@@ -271,8 +268,8 @@ The following example re-implements the built-in `split` check.
 <script type="module">
 const quiz = await tdoc.import('tdoc/quiz.js');
 
-quiz.check('split', (args, param = ',') => {
-    args.solution = args.solution.split(param);
+quiz.checks.split = (args, param = ',') => {
+  args.solution = args.solution.split(param);
 });
 </script>
 ```

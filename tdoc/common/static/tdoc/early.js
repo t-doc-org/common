@@ -45,8 +45,7 @@
     }
 
     // Import one or more modules specified relative to the _static directory.
-    // TODO(0.82): Remove the backward-compatibility alias `imports`
-    tdoc.import = tdoc.imports = (...modules) => {
+    tdoc.import = (...modules) => {
         if (modules.length === 1) return import_module(modules[0]);
         return Promise.all(modules.map(m => import_module(m)))
     }

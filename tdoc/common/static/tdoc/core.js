@@ -1001,19 +1001,3 @@ export class DynElement extends TdocElement {
 }
 
 customElements.define('tdoc-dyn', DynElement);
-
-// Resolve dyn elements of a specific type. If el is missing, all dyn elements
-// of that type are returned. If el is a string, the dyn element with that name
-// is returned, or an exception is thrown if it cannot be found. Otherwise, el
-// is returned unchanged.
-export async function resolveDyn(type, el) {
-    if (el && typeof el !== 'string') return el;
-    await domLoaded;
-    const node = qs(document, `\
-tdoc-dyn[type="${CSS.escape(type)}"][name="${CSS.escape(el)}"]`);
-    if (!node) {
-        throw htmle`\
-<code>{${type}}</code> Directive not found: <code>${el}</code>`;
-    }
-    return node;
-}

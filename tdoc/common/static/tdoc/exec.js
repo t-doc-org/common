@@ -92,9 +92,6 @@ export class Runner {
         runners[cls.name] = cls;
     }
 
-    // TODO(0.82): Remove backward-compatibility alias
-    static apply(cls) { this.register(cls); }
-
     // Initialize the runner.
     static async init(config) {}
 
