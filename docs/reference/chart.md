@@ -102,7 +102,9 @@ added in JavaScript via {js:data}`~chart.render`.
 #### `chart`
 
 This renderer displays a chart from a static JSON config. The directive content
-is passed directly to {js:func}`~chart.chart`.
+is passed directly to {js:func}`~chart.chart`, after extracting
+[dynamic annotation specifications](#annotations) from the `annotations` key.
+The whole config is provided as data to annotation generators.
 
 ````{code-block}
 ```{chartjs} chart
@@ -120,6 +122,7 @@ options: {
   scales: {y: {beginAtZero: true}},
   plugins: {legend: {display: false}},
 },
+annotations: {hLine: {y: 5, label: ''}}
 ```
 ````
 
@@ -149,6 +152,8 @@ of a sample or a distribution.
 - `normalize` (default: `false`): When true, represent frequencies instead of
   counts.
 - `options`: Options to merge into the `options` field of the chart.
+- `annotations`: An object or array of objects containing
+  [dynamic annotation specifications](#annotations).
 
 ````{code-block}
 ```{chartjs} histogram
@@ -161,6 +166,7 @@ options: {
   borderWidth: 0.5, borderColor: '#36a2eb', backgroundColor: '#36a2eb33',
   scales: {y: {title: {display: true, text: "Occurrences"}}}
 },
+annotations: {median: {}},
 ```
 ````
 
@@ -179,6 +185,8 @@ This renderer displays the
 - `normalize` (default: `false`): When true, represent frequencies instead of
   counts.
 - `options`: Options to merge into the `options` field of the chart.
+- `annotations`: An object or array of objects containing
+  [dynamic annotation specifications](#annotations).
 
 ````{code-block}
 ```{chartjs} densityFunction
@@ -191,6 +199,7 @@ options: {
   backgroundColor: '#36a2eb',
   scales: {y: {title: {display: true, text: "Occurrences"}}},
 },
+annotations: {median: {}},
 ```
 ````
 
@@ -211,6 +220,8 @@ of a sample or a distribution.
 - `normalize` (default: `true`): When true, represent cumulative frequencies
   instead of counts.
 - `options`: Options to merge into the `options` field of the chart.
+- `annotations`: An object or array of objects containing
+  [dynamic annotation specifications](#annotations).
 
 ````{code-block}
 ```{chartjs} cumulativeDistributionFunction
@@ -223,7 +234,107 @@ options: {
   borderColor: '#36a2eb',
   scales: {y: {title: {display: true, text: "Cumulative frequency"}}},
 },
+annotations: {median: {}},
 ```
+````
+
+### Annotations
+
+Annotations are additional elements added to a graph by
+[chartjs-plugin-annotation](https://www.chartjs.org/chartjs-plugin-annotation/master/). While static annotations can be added directly via
+`options.plugins.annotation.annotations` and don't need special support,
+**dynamic annotations** are computed from chart data and are implemented via
+{js:data}`~chart.annotations`.
+
+An **annotation specification** is an object where each key specifies an
+annotation generator, and the value specifies the arguments to the generator, as
+an object. Moreover, the `options` key provides additional attributes to merge
+into the generated `options.plugins.annotation.annotations` entries. It can be
+set either in the specification or as an annotation argument.
+
+For example, the following annotation specification adds vertical lines for the
+median, minimum, maximum, 1st and 3rd quartile and 5th and 95th percentile of a
+sample or distribution provided by a renderer. The median is colored magenta,
+while the others are colored red.
+
+```{code-block} js
+{
+  median: {options: {borderColor: '#9966ff'}},
+  min: {}, max: {}, quartile: {k: [1, 3]}, percentile: {p: [5, 95]},
+  options: {borderColor: '#ff6384'},
+}
+```
+
+The following annotation generators are pre-defined:
+
+{.vsep-2}
+- **Generic annotations:**
+  - `hLine: {y, label}`: A horizontal line with the given text label. `y` can
+    be an array to add multiple lines.
+  - `vLine: {x, label}`: A vertical line with the given text label. `x` can
+    be an array to add multiple lines.
+
+- **Statistical annotations:** These annotations get either a sample or a
+  distribution from the renderer, as a `{sample, distribution}` object. If a
+  renderer provides both a sample and a distribution, the `dist` argument
+  specifies which should be used (`false` &rarr; sample, `true` &rarr;
+  distribution).
+  - `count: {f = 1, dist = false, label}`: A horizontal line at `f` times the
+    sample or distribution count. `f` can be an array to add multiple lines.
+  - `min: {dist = false, label}`: A vertical line at the minimum of the sample
+    or distribution.
+  - `max: {dist = false, label}`: A vertical line at the maximum of the sample
+    or distribution.
+  - `median: {dist = false, label}`: A vertical line at the median of the sample
+    or distribution.
+  - `quartile: {k, dist = false, label}`: A vertical line at the `k`th quartile
+    of the sample or distribution. `k` can be an array to add multiple
+    quartiles.
+  - `percentile: {p, dist = false, label}`: A vertical line at the `p`th
+    percentile of the sample or distribution. `p` can be an array to add
+    multiple percentiles.
+  - `quantile: {p, dist = false, label}`: A vertical line at the `p`th
+    quantile of the sample or distribution. `p` can be an array to add multiple
+    quantiles.
+  - `mean: {dist = false, label}`: A vertical line at the mean of the sample or
+    distribution.
+  - `stdDev: {f, population = false, dist = false, label}`: A vertical line at
+    `f` times the standard deviation from the mean. `f` can be an array to add
+    multiple lines. When `population` is true, use the population deviation
+    instead of the sample deviation.
+  - `avgDev: {f, from = 'median', dist = false, label}`: A vertical line at
+    `f` times the average deviation from the median (`from = 'median'`) or mean
+    (`from = 'mean'`). `f` can be an array to add multiple lines.
+  - `mode: {k, dist = true, label}`: A vertical line at the `k`th mode of the
+    sample or distribution. `k` can be an array to add multiple lines. If `k` is
+    missing, a line is added for each mode.
+
+**Custom dynamic annotations** can be defined by setting functions as attributes
+of {js:data}`~chart.annotations`. Annotation generator functions receive the
+arguments from the annotation specification as their first argument, and the
+data from the renderer as their second argument, and return an array of
+annotation values to be added to `options.plugins.annotation.annotations`.
+
+````{code-block} html
+```{chartjs} chart
+type: 'bar',
+data: {
+  labels: ['Monday', 'Tuesday', 'Wednesday'],
+  datasets: [{data: [7, 11, 3]}],
+},
+annotations: {valueLabels: {label: 'Value: '}}
+```
+
+<script type="module">
+const {annotations} = await tdoc.import('tdoc/chart.js');
+
+annotations.valueLabels = ({label}, config) => {
+  return config.data.datasets[0].data.map((v, i) => ({
+    type: 'label', content: `${label ?? ''}${v}`,
+    xValue: i, yValue: v, yAdjust: -15,
+  }));
+};
+</script>
 ````
 
 ### `tdoc/chart.js`
@@ -282,6 +393,11 @@ render.randomBars = (el, {count, min, max}) => {
 ```{js:data} attrs
 An object containing named attribute sets. Custom sets can be defined by
 assigning to object attributes.
+```
+
+```{js:data} annotations
+An object containing [annotation generators](#annotations). Custom annotations
+can be defined by assigning to object attributes.
 ```
 
 {.rubric}

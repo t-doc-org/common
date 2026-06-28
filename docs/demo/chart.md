@@ -111,6 +111,7 @@ options: {
   borderWidth: 1,
   scales: {y: {beginAtZero: true}},
 },
+annotations: {hLine: {y: 5, label: ''}}
 ```
 
 ### `histogram`
@@ -337,8 +338,24 @@ annotations: [{
   ```
 ````
 
+### Custom annotation
+
+```{chartjs} chart
+type: 'bar',
+data: {
+  labels: ['Monday', 'Tuesday', 'Wednesday'],
+  datasets: [{data: [7, 11, 3]}],
+},
+options: {
+  borderWidth: 1,
+  borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
+},
+annotations: {valueLabels: {label: 'Value: '}}
+```
+
 <script type="module">
-const [core, {chart, render}] =
+const [core, {annotations, chart, render}] =
   await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
@@ -481,7 +498,10 @@ const boxViolin = {
   },
 };
 render.boxplot = el => {
-  return chart(el, {'type': 'boxplot', ...boxViolin});
+  return chart(el, {
+    'type': 'boxplot', ...boxViolin,
+    options: {barPercentage: 0.3},
+  });
 };
 render.violin = el => {
   return chart(el, {'type': 'violin', ...boxViolin});
@@ -623,5 +643,12 @@ render.randomBars = (el, {count, min, max}) => {
       plugins: {legend: {display: false}},
     },
   })
+};
+
+annotations.valueLabels = ({label}, config) => {
+  return config.data.datasets[0].data.map((v, i) => ({
+    type: 'label', content: `${label ?? ''}${v}`,
+    xValue: i, yValue: v, yAdjust: -15,
+  }));
 };
 </script>
