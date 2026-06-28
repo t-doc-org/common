@@ -1053,9 +1053,11 @@ div.tdoc-exec-output.tdoc-fullscreen > iframe {
     height: 100% !important;  /* Override element style */
     aspect-ratio: auto;
 }
-
-/* SQL execution results */
-.table > tbody > tr:nth-child(odd).tdoc-no-results {
+div.tdoc-exec-output.tdoc-error {
+    margin-bottom: 1rem;
+    border: 1px solid var(--pst-color-danger);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
     background-image: linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 5%,
         var(--pst-color-table-row-zebra-high-bg) 5% 50%,
@@ -1063,10 +1065,7 @@ div.tdoc-exec-output.tdoc-fullscreen > iframe {
         var(--pst-color-table-row-zebra-high-bg) 55%);
     background-size: 28.28px 28.28px;
 }
-.tdoc-error {
-    margin-bottom: 1rem;
-    border: 1px solid var(--pst-color-danger);
-    padding: 0.5rem;
+div.tdoc-exec-output .table > tbody > tr:nth-child(odd).tdoc-no-results {
     background-image: linear-gradient(-45deg,
         var(--pst-color-table-row-zebra-low-bg) 5%,
         var(--pst-color-table-row-zebra-high-bg) 5% 50%,

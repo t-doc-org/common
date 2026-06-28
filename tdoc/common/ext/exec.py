@@ -209,12 +209,9 @@ def visit_exec(self, node):
     try:
         return self.visit_literal_block(node)
     except nodes.SkipNode:
-        nameids = node.document.nameids
-        after = [nameids[n] for n in node.get('after', ())]
-        then = [nameids[n] for n in node.get('then', ())]
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
         attrs = format_attrs(self,
-            after=' '.join(after) or None,
+            after=' '.join(node.get('after', ())) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
             env=node['env'] if node['when'] != 'never' else None,
@@ -222,7 +219,7 @@ def visit_exec(self, node):
             output_style=node.get('output-style'),
             reset=node.get('reset'),
             runner=node['runner'],
-            then=' '.join(then) or None,
+            then=' '.join(node.get('then', ())) or None,
             when=node['when'])
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)

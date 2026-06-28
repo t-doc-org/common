@@ -20,10 +20,10 @@ function* walkNodes(node, seen) {
     if (seen.has(node)) return;
     seen.add(node);
     const after = node.runner.after;
-    for (const id of after ? after.split(/\s+/) : []) {
-        const n = nodeById(id);
+    for (const name of after ? after.split(/\s+/) : []) {
+        const n = nodeByName(node.runner.constructor.name, name);
         if (!n) {
-            console.error(`:after: node not found: ${id}`);
+            console.error(`:after: node not found: ${name}`);
             continue;
         }
         yield* walkNodes(n, seen);
@@ -31,22 +31,20 @@ function* walkNodes(node, seen) {
     yield node;
     if (!isRoot) return;
     const then_ = node.runner.then;
-    for (const id of then_ ? then_.split(/\s+/) : []) {
-        const n = nodeById(id);
+    for (const name of then_ ? then_.split(/\s+/) : []) {
+        const n = nodeByName(node.runner.constructor.name, name);
         if (!n) {
-            console.error(`:then: node not found: ${id}`);
+            console.error(`:then: node not found: ${name}`);
             continue;
         }
         yield* walkNodes(n, seen);
     }
 }
 
-// Return the {exec} node with the given ID.
-function nodeById(id) {
-    const node = document.getElementById(id);
-    if (!node) return;
-    if (node instanceof ExecElement) return node;
-    return node.parentNode;  // Secondary name as a nested <span>
+// Return the {exec} node with the given runner and name.
+function nodeByName(runner, name) {
+    return qs(document, `\
+tdoc-exec[runner="${CSS.escape(runner)}"][name="${CSS.escape(name)}"]`)
 }
 
 // Move the content of .lineno nodes to the data-n attribute. It is added back
