@@ -90,6 +90,7 @@ mathjax3_config = {
     },
     'svg': {
         'mtextInheritFont': True,
+        'blacker': 0,
     },
     # From: https://docs.mathjax.org/en/stable/input/tex/extensions/index.html
     'tdoc_tex_extensions': [
