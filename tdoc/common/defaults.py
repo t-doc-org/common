@@ -76,7 +76,14 @@ html_theme = 't-doc'
 mathjax3_config = {
     'loader': {'load': ['input/mml']},
     'options': {
-        'menuOptions': {'settings': {'inTabOrder': False}},
+        'menuOptions': {
+            'settings': {
+                'inTabOrder': False,
+                'enrich': False,
+                'speech': False,
+                'braille': False,
+            },
+        },
     },
     'chtml': {
         'mtextInheritFont': True,
