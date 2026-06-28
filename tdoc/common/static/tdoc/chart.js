@@ -144,14 +144,18 @@ export const render = dyn.render.chartjs = asyncProps(
     {[dyn.timeout]: 15000},
     {ns: 'chartjs', container: 'render', callables: true});
 
-// Initialize a chart for a {chartjs} directive, identified either by name or
-// by its wrapper element.
+// Initialize a chart for a {chartjs} directive. Returns the Chart instance.
 export async function chart(el, config) {
     const ar = getAspectRatio(el);
     config = await merge(disabledPlugins, config, {
         options: ar !== undefined ? {aspectRatio: ar, maintainAspectRatio: true}
                                   : {maintainAspectRatio: false},
     });
+    const anns = await renderAnnotations(config.annotations ?? [], config);
+    delete config.annotations;
+    config = await merge({
+        options: {plugins: {annotation: {annotations: anns}}},
+    }, config);
     await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);

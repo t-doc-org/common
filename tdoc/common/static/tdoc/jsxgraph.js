@@ -159,9 +159,8 @@ function includesClose(values, v, epsilon = 1e-6) {
     return values.some(value => Math.abs(value - v) < epsilon);
 }
 
-// Initialize a board for a {jsxgraph} directive, identified either by name or
-// by its wrapper element. Calls fn(board) if fn is provided, and returns the
-// board.
+// Initialize a board for a {jsxgraph} directive in the given wrapper element.
+// Calls fn(board) if fn is provided, and returns the board.
 export async function initBoard(el, attrs, fn) {
     attrs = await merge(attrs);
     if (el.style.aspectRatio === ''
