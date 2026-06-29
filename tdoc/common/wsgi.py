@@ -39,7 +39,7 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
-def cors(origins=(), methods=(), headers=(), max_age=None):
+def cors(origins=(), methods=(), headers=(), max_age=None, credentials=False):
     if origins == '*':
         def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
     elif isinstance(origins, str):
@@ -59,19 +59,21 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
         achs.append(('Access-Control-Allow-Headers', ','.join(headers)))
     if max_age is not None:
         achs.append(('Access-Control-Max-Age', str(max_age)))
+    acac = [('Access-Control-Allow-Credentials', 'true')] if credentials else []
 
     def decorator(fn):
         @functools.wraps(fn)
         def handle(env, respond, wr=None):
-            def respond_with_allow_origin(status, headers, exc_info=None):
+            def respond_with_headers(status, headers, exc_info=None):
                 return respond(
-                    status, headers + allow_origin(env.get('HTTP_ORIGIN', '')),
+                    status,
+                    headers + allow_origin(env.get('HTTP_ORIGIN', '')) + acac,
                     exc_info)
             if (env['REQUEST_METHOD'] == 'OPTIONS' and
                     env.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD') is not None):
-                respond_with_allow_origin(http_status(HTTPStatus.OK), achs)
+                respond_with_headers(http_status(HTTPStatus.OK), achs)
                 return []
-            return fn(env, respond_with_allow_origin)
+            return fn(env, respond_with_headers)
         return handle
     return decorator
 

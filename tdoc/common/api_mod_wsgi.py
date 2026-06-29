@@ -49,4 +49,6 @@ def application(config_path, events_level=logs.NOTSET):
         origins=rf'https://(?:{wsgi.hostname_re}\.)?{re.escape(domain)}'
                 if (domain := cfg.get('cors.domain')) is not None else (),
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
-        headers=('Authorization', 'Cache-Control', 'Content-Type'))(app)
+        headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie'),
+        credentials=True,
+    )(app)

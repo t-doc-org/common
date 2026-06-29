@@ -143,6 +143,7 @@ class Auth extends EventTarget {
     async call(path, opts) {
         return await call(path, {
             ...opts,
+            credentials: 'include',
             headers: {
                 ...bearerAuthorization(opts?.token ?? await this.token()),
                 ...opts?.headers,
@@ -473,6 +474,7 @@ class EventsApi {
         try {
             const resp = await fetch(`${url}/events/watch`, {
                 method: 'POST', cache: 'no-store', referrer: '',
+                credentials: 'include',
                 headers: {
                     'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
