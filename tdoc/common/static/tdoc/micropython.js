@@ -127,7 +127,8 @@ export class MicroPython {
         if (!this.capturing) return;
         const cap = this.cap;
         delete this.cap;
-        delete this.pAvail, this.avail;
+        delete this.pAvail;
+        delete this.avail;
         if (cap.length > 0) this.onRead(cap.read(cap.length));
     }
 

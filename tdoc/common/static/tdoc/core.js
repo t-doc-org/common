@@ -182,7 +182,8 @@ export class Mutex {
 
     release() {
         const resolve = this.r;
-        delete this.p, this.r;
+        delete this.p;
+        delete this.r;
         resolve();
     }
 

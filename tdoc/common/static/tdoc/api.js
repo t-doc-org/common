@@ -134,7 +134,8 @@ class Auth extends EventTarget {
         }
         if (this.rReady) {
             this.rReady();
-            delete this.ready, this.rReady;
+            delete this.ready;
+            delete this.rReady;
         }
         this.dispatchEvent(new CustomEvent('change'));
     }
