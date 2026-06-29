@@ -158,7 +158,9 @@ export function htmle(tmpl, ...values) {
 }
 
 // Display alerts for unhandled exceptions in promises.
-addEventListener('unhandledrejection', e => { showAlert(e.reason); });
+addEventListener('unhandledrejection', async e => {
+    await showAlert(e.reason);
+});
 
 // Query a single matching element below an element.
 export function qs(el, selector) {
@@ -256,7 +258,7 @@ export function asyncProps(obj, {
             } catch (e) {
                 if (!alert) throw e;
                 console.error(e);
-                showAlert(e);
+                showAlert(e);  // Background
             }
             return true;
         },
@@ -338,11 +340,12 @@ export function addTooltip(el, opts) {
 }
 
 // Show an alert at the top of the article.
-export function showAlert(message, kind = 'success') {
+export async function showAlert(message, kind = 'success') {
     if (message instanceof Error) {
         const e = HtmlError.of(message);
         [message, kind] = [e.html, e.kind ?? 'danger'];
     }
+    await domLoaded;
     let el = qs(document, '.tdoc-alerts');
     if (!el) {
         el = qs(document, '.bd-header-article').appendChild(elmt`\
@@ -955,7 +958,7 @@ export class DynElement extends TdocElement {
             await this._ready();
         } catch (e) {
             console.error(e);
-            showAlert(e);
+            await showAlert(e);
         }
     }
 

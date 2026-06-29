@@ -65,14 +65,14 @@ class Auth extends EventTarget {
                         await this.showSettingsModal(
                             "The login has been added successfully.");
                     } else {
-                        this.showSuccessAlert(await this.name());
+                        await this.showSuccessAlert(await this.name());
                     }
                 } else {
                     if (hasToken) {
                         await this.showSettingsModal(
                             "The login could not be added.", 'danger');
                     } else {
-                        showAlert("Logging in has failed.", 'danger');
+                        await showAlert("Logging in has failed.", 'danger');
                     }
                 }
             })();  // Background
@@ -82,9 +82,9 @@ class Auth extends EventTarget {
 
     async onError(msg) {
         if (await this.token()) {
-            this.showSettingsModal(msg, 'danger');
+            await this.showSettingsModal(msg, 'danger');
         } else {
-            showAlert(msg, 'danger');
+            await showAlert(msg, 'danger');
         }
     }
 
@@ -184,7 +184,7 @@ class Auth extends EventTarget {
             if (!await this.setToken(resp.token)) {
                 throw new Error("Failed to set token");
             }
-            this.showSuccessAlert(await this.name());
+            await this.showSuccessAlert(await this.name());
             return;
         }
         if (resp.redirect) location.assign(resp.redirect);
@@ -194,11 +194,11 @@ class Auth extends EventTarget {
         const token = await this.token();
         await this.setToken(undefined);
         await this.call(`/auth/logout`, {token});
-        showAlert("You have logged out successfully.", 'warning');
+        await showAlert("You have logged out successfully.", 'warning');
     }
 
-    showSuccessAlert(user) {
-        showAlert(`You have logged in successfully as "${user}".`);
+    async showSuccessAlert(user) {
+        await showAlert(`You have logged in successfully as "${user}".`);
     }
 
     async showLoginModal() {

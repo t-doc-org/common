@@ -73,7 +73,7 @@ export class ExecElement extends TdocElement {
             if (this.runner.when === 'load') this.runner.doRun();  // Background
         } catch (e) {
             console.error(e);
-            showAlert(e);
+            await showAlert(e);
         }
     }
 }
