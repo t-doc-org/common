@@ -161,10 +161,18 @@ class Api(wsgi.Dispatcher):
             db.solutions.set_show(origin, page, show)
         return {}
 
-    @wsgi.json_endpoint('user', require_authn=True)
+    @wsgi.json_endpoint('user')
     def handle_user(self, wr, req):
         origin = wr.required_origin
-        with wr.read_db as db: return db.users.info(origin, wr.user)
+        if wr.user is None:
+            # TODO(0.83): Remove exception once token is unused in JS
+            raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
+                             headers=[wsgi.token_cookie_header(None)])
+            wr.set_token_cookie(None)
+            return {}
+        with wr.read_db as db: info = db.users.info(origin, wr.user)
+        if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
+        return info
 
 
 class EventsApi(wsgi.Dispatcher):
@@ -751,6 +759,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         if user is None: raise Exception("Not authorized")
         db.oidc.add_login(user, id_token)
         token, = db.tokens.create([user])
+        wr.set_token_cookie(token)
         return {'token': token, 'cnonce': state['cnonce']}
 
     def get_error(self, qs):
@@ -779,6 +788,7 @@ class OidcAuthApi(wsgi.Dispatcher):
     @wsgi.json_endpoint('logout', require_authn=True)
     def handle_logout(self, wr, req):
         token = wr.token
+        wr.set_token_cookie(None)
         with wr.write_db as db:
             # Remove the token if the user has at least one login.
             count = sum(1 for id_token, _ in db.oidc.logins(wr.user)

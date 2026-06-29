@@ -4,7 +4,7 @@
 import contextlib
 from email import utils
 import functools
-from http import HTTPMethod, HTTPStatus
+from http import cookies, HTTPMethod, HTTPStatus
 import json
 import re
 import secrets
@@ -27,8 +27,10 @@ def http_status(status):
 
 
 class Error(Exception):
-    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR, msg=None):
+    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR, msg=None,
+                 headers=()):
         super().__init__(status, msg)
+        self.headers = headers
 
     @property
     def status(self): return self.args[0]
@@ -74,6 +76,23 @@ def cors(origins=(), methods=(), headers=(), max_age=None):
     return decorator
 
 
+_token_cookie = '__Host-Http-tdoc-token'
+_token_cookie_attrs = {
+    'httponly': True,
+    'path': '/',
+    'samesite': 'Strict',
+    'secure': True,
+}
+
+def token_cookie_header(token):
+    c = cookies.SimpleCookie()
+    c[_token_cookie] = token or ''
+    m = c[_token_cookie]
+    m.update(_token_cookie_attrs)
+    m['max-age'] = 400 * 24 * 3600 if token else 0
+    return ('Set-Cookie', m.OutputString())
+
+
 class Request:
     __slots__ = ('env', 'respond')
 
@@ -99,10 +118,13 @@ class Request:
 
     @property
     def token(self):
-        if (auth := self.env.get('HTTP_AUTHORIZATION')) is None: return ''
-        parts = auth.split()
-        return parts[1] if len(parts) == 2 and parts[0].lower() == 'bearer' \
-               else ''
+        if (h := self.env.get('HTTP_COOKIE')) is not None:
+            c = cookies.SimpleCookie(h)
+            if (m := c.get(_token_cookie)) is not None: return m.value
+        if (auth := self.env.get('HTTP_AUTHORIZATION')) is not None:
+            parts = auth.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
+        return ''
 
     def uri(self, include_query=True):
         return wsgiutil.request_uri(self.env, include_query)
@@ -151,13 +173,22 @@ class Request:
         except Exception as e:
             raise Error(HTTPStatus.BAD_REQUEST)
 
-    def error(self, status, msg=None, exc_info=None):
+    def add_response_headers(self, *headers):
+        if (rh := self.response_headers) is None:
+            rh = self.response_headers = []
+        rh.extend(headers)
+
+    def set_token_cookie(self, token):
+        self.add_response_headers(token_cookie_header(token))
+
+    def error(self, status, msg=None, exc_info=None, headers=()):
         if msg is None: msg = status.description
         body = msg.encode('utf-8')
         self.respond(http_status(status), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', str(len(body))),
+            *headers,
         ], exc_info)
         return [body]
 
@@ -167,6 +198,7 @@ class Request:
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', '0'),
             ('Location', url),
+            *(self.response_headers or ()),
         ])
         return []
 
@@ -176,11 +208,13 @@ class Request:
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
+            *(self.response_headers or ()),
         ])
         return [body]
 
 
 Request.attr('local')
+Request.attr('response_headers')
 
 
 class Dispatcher:
@@ -234,7 +268,8 @@ class Dispatcher:
             finally:
                 self.post_request(wr)
         except Error as e:
-            yield from wr.error(e.status, e.message, exc_info=sys.exc_info())
+            yield from wr.error(e.status, e.message, exc_info=sys.exc_info(),
+                                headers=e.headers)
         except Exception as e:
             if uri is None: uri = wr.uri(include_query=log_query)
             _log.exception("Uncaught exception", event='req:exception',
@@ -268,7 +303,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
             if wr.method not in methods:
                 raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
             if require_authn and wr.user is None:
-                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+                raise Error(HTTPStatus.UNAUTHORIZED)
             return fn(self, wr)
         if name is not None: dfn._endpoint = name
         dfn._log_level = log_level
