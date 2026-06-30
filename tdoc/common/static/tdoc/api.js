@@ -29,7 +29,9 @@ export const [url, backendSuffix] = (() => {
 console.info(`[t-doc] API backend: ${url}`);
 
 export async function call(path, opts) {
-    return await fetchJson(`${url}${path}`, opts);
+    return await fetchJson(`${url}${path}`, {
+        ...opts, headers: {'X-Force-Cors': 'true', ...opts?.headers},
+    });
 }
 
 class Auth extends EventTarget {
@@ -490,6 +492,7 @@ class EventsApi {
                 headers: {
                     'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
+                    'X-Force-Cors': 'true',
                     ...bearerAuthorization(token),
                 },
                 body: JSON.stringify(req),
