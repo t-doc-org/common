@@ -110,6 +110,8 @@ class Request:
     remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       wsgiutil.FileWrapper))
+    sec_fetch_site = property(lambda self: self.env.get('HTTP_SEC_FETCH_SITE'))
+    force_cors = property(lambda self: self.env.get('HTTP_X_FORCE_CORS'))
 
     @property
     def required_origin(self):
@@ -295,8 +297,10 @@ class Dispatcher:
     def post_request(self, wr): pass
 
 
+# TODO(0.83): Default csrf to True
+
 def endpoint(name, methods=None, final=True, require_authn=False,
-             log_level=logs.INFO, log_query=True):
+             csrf=False, log_level=logs.INFO, log_query=True):
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
@@ -306,6 +310,9 @@ def endpoint(name, methods=None, final=True, require_authn=False,
                 raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
             if require_authn and wr.user is None:
                 raise Error(HTTPStatus.UNAUTHORIZED)
+            if csrf and (wr.force_cors is None or
+                         wr.sec_fetch_site not in ('same-origin', 'same-site')):
+                raise Error(HTTPStatus.FORBIDDEN)
             return fn(self, wr)
         if name is not None: dfn._endpoint = name
         dfn._log_level = log_level
@@ -315,9 +322,9 @@ def endpoint(name, methods=None, final=True, require_authn=False,
 
 
 def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
-                  log_level=logs.INFO, log_query=True):
+                  csrf=False, log_level=logs.INFO, log_query=True):
     def decorator(fn):
-        @endpoint(name, methods=methods, require_authn=require_authn,
+        @endpoint(name, methods=methods, require_authn=require_authn, csrf=csrf,
                   log_level=log_level, log_query=log_query)
         @functools.wraps(fn)
         def dfn(self, /, wr):

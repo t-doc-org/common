@@ -103,7 +103,7 @@ class Api(wsgi.Dispatcher):
     def post_request(self, wr):
         del wr.read_db
 
-    @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,))
+    @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def handle_health(self, wr, req):
         return {}
 
@@ -672,7 +672,8 @@ class OidcAuthApi(wsgi.Dispatcher):
         }))
         return {'redirect': parse.urlunparse(parts)}
 
-    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), log_query=False)
+    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
+                   log_query=False)
     def handle_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         if (state := qs.get('state')) is None:

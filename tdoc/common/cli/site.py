@@ -505,7 +505,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         return handler(wr.env, wr.respond, wr)
 
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
-                   final=False, log_level=logs.DEBUG)
+                   final=False, csrf=False, log_level=logs.DEBUG)
     def handle_cache(self, wr):
         yield from self.handle_file(wr, self.opts.cache,
                                     self.on_cache_not_found)
@@ -525,7 +525,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
     @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
-                   log_level=logs.DEBUG)
+                   csrf=False, log_level=logs.DEBUG)
     def handle_default(self, wr):
         with self.lock: base = self.directory
         yield from self.handle_file(wr, base)
@@ -578,7 +578,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             res = res / part
         return res / '' if trailing else res
 
-    @wsgi.endpoint(None, methods=(HTTPMethod.POST,))
+    @wsgi.endpoint(None, methods=(HTTPMethod.POST,), csrf=False)
     def handle_terminate(self, wr):
         rc = wr.json.get('rc', 0)
         yield from wr.respond_json({})
