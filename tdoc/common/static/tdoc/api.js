@@ -99,58 +99,6 @@ class Auth extends EventTarget {
         });
     }
 
-    async name() {
-        if (this.ready) await this.ready;
-        return this.data?.name;
-    }
-
-    async token() {
-        if (this.ready) await this.ready;
-        return this.data?.token;
-    }
-
-    async memberOf(group) {
-        if (this.ready) await this.ready;
-        const groups = this.data?.groups ?? [];
-        return groups.includes(group) || groups.includes('*');
-    }
-
-    async tags() {
-        if (this.ready) await this.ready;
-        return this.data?.tags ?? [];
-    }
-
-    async onChange(fn) {
-        await fn();
-        this.addEventListener('change', fn);
-    }
-
-    set(data) {
-        this.data = data;
-        if (data) {
-            htmlData.tdocUserTags = (data.tags ?? []).join(' ');
-        } else {
-            delete htmlData.tdocUserTags;
-        }
-        if (this.rReady) {
-            this.rReady();
-            delete this.ready;
-            delete this.rReady;
-        }
-        this.dispatchEvent(new CustomEvent('change'));
-    }
-
-    async call(path, opts) {
-        return await call(path, {
-            ...opts,
-            credentials: 'include',
-            headers: {
-                ...bearerAuthorization(opts?.token ?? await this.token()),
-                ...opts?.headers,
-            },
-        });
-    }
-
     async updateUser(token, force = true) {
         let data = this.data, res = true;
         if (force || data !== undefined) {
@@ -174,6 +122,58 @@ class Auth extends EventTarget {
     async unsetUser() {
         await this.stored.set(undefined);
         this.set(undefined);
+    }
+
+    set(data) {
+        this.data = data;
+        if (data) {
+            htmlData.tdocUserTags = (data.tags ?? []).join(' ');
+        } else {
+            delete htmlData.tdocUserTags;
+        }
+        if (this.rReady) {
+            this.rReady();
+            delete this.ready;
+            delete this.rReady;
+        }
+        this.dispatchEvent(new CustomEvent('change'));
+    }
+
+    async onChange(fn) {
+        await fn();
+        this.addEventListener('change', fn);
+    }
+
+    async name() {
+        if (this.ready) await this.ready;
+        return this.data?.name;
+    }
+
+    async token() {
+        if (this.ready) await this.ready;
+        return this.data?.token;
+    }
+
+    async memberOf(group) {
+        if (this.ready) await this.ready;
+        const groups = this.data?.groups ?? [];
+        return groups.includes(group) || groups.includes('*');
+    }
+
+    async tags() {
+        if (this.ready) await this.ready;
+        return this.data?.tags ?? [];
+    }
+
+    async call(path, opts) {
+        return await call(path, {
+            ...opts,
+            credentials: 'include',
+            headers: {
+                ...bearerAuthorization(opts?.token ?? await this.token()),
+                ...opts?.headers,
+            },
+        });
     }
 
     async info() {
