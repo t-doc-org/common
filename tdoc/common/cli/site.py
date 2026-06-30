@@ -556,6 +556,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
             raise wsgi.Error(HTTPStatus.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
         wr.respond(wsgi.http_status(HTTPStatus.OK), [
+            # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
             ('Content-Type', mime_type),

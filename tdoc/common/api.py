@@ -634,6 +634,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                     raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
                 if (token := db.tokens.find(uid)) is None:
                     token, = db.tokens.create([uid])
+            wr.set_token_cookie(token)
             return {'token': token}
 
         # Handle OIDC login.
@@ -760,7 +761,9 @@ class OidcAuthApi(wsgi.Dispatcher):
         db.oidc.add_login(user, id_token)
         token, = db.tokens.create([user])
         wr.set_token_cookie(token)
-        return {'token': token, 'cnonce': state['cnonce']}
+        # TODO(0.83): Remove token and cnonce
+        return {'auth': state['cnonce'], 'token': token,
+                'cnonce': state['cnonce']}
 
     def get_error(self, qs):
         if (err := qs.get('error')) is None: return
