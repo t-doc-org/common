@@ -40,35 +40,32 @@ class Auth extends EventTarget {
 
     constructor(stored) {
         super();
-        this.state = StoredJson.create('tdoc:api:state', undefined,
-                                       sessionStorage);
         this.stored = stored;
+        this.data = this.stored.get();
+        this.state = StoredJson.create('tdoc:api:state', {}, sessionStorage);
         ({promise: this.ready, resolve: this.rReady} = Promise.withResolvers());
-        const found = onHashParams(['token', 'cnonce'],
-                                   (...args) => this.onToken(...args));
-        if (!found) {
-            this.data = this.stored.get();
-            this.setToken(this.data?.token);  // Background
-        }
-        onHashParams(['auth_error'], (...args) => this.onError(...args));
+        const updated = onHashParams(['token', 'auth', 'auth_error', 'cnonce'],
+                                     (...args) => this.onParams(...args));
+        if (!updated) this.updateUser(undefined, false);  // Background
         domLoaded.then(() => this.onDomLoaded());
     }
 
-    onToken(token, cnonce) {
-        if (!token) return;
-        const hasToken = !!this.stored.get()?.token;
-        if (!hasToken || (cnonce && cnonce === this.state.get()?.cnonce)) {
-            this.state.set(undefined);
+    onParams(token, auth, error, cnonce_) {
+        // TODO(0.83): Remove cnonce_
+        auth ??= cnonce_;
+        const state = this.state.get(), cnonce = state?.cnonce;
+        this.state.update(v => { delete v.cnonce; });
+        if ((token && !this.stored.get()) || (auth && auth === cnonce)) {
             (async () => {
-                if (await this.setToken(token)) {
-                    if (hasToken) {
+                if (await this.updateUser(token)) {
+                    if (state?.modal === 'settings') {
                         await this.showSettingsModal(
                             "The login has been added successfully.");
                     } else {
                         await this.showSuccessAlert(await this.name());
                     }
                 } else {
-                    if (hasToken) {
+                    if (state?.modal === 'settings') {
                         await this.showSettingsModal(
                             "The login could not be added.", 'danger');
                     } else {
@@ -78,13 +75,14 @@ class Auth extends EventTarget {
             })();  // Background
             return true;
         }
-    }
-
-    async onError(msg) {
-        if (await this.token()) {
-            await this.showSettingsModal(msg, 'danger');
-        } else {
-            await showAlert(msg, 'danger');
+        if (error) {
+            (async () => {
+                if (state?.modal === 'settings') {
+                    await this.showSettingsModal(error, 'danger');
+                } else {
+                    await showAlert(error, 'danger');
+                }
+            })();  // Background
         }
     }
 
@@ -151,20 +149,29 @@ class Auth extends EventTarget {
         });
     }
 
-    async setToken(token) {
-        let data, res = true;
-        if (token) {
+    async updateUser(token, force = true) {
+        let data = this.data, res = true;
+        if (force || data !== undefined) {
             try {
-                data = await this.call(`/user`, {token});
-                data.token = token;
+                token ??= data?.token;
+                data = await call(`/user`, {
+                    credentials: 'include',
+                    headers: {...bearerAuthorization(token)},
+                });
+                if (token) data.token = token;
             } catch (e) {
-                if (e.cause?.status !== 401) data = this.data;  // !UNAUTHORIZED
+                if (e.cause?.status === 401) data = undefined;  // UNAUTHORIZED
                 res = false;
             }
         }
         await this.stored.set(data);
         this.set(data);
         return res;
+    }
+
+    async unsetUser() {
+        await this.stored.set(undefined);
+        this.set(undefined);
     }
 
     async info() {
@@ -176,24 +183,25 @@ class Auth extends EventTarget {
     }
 
     async login({issuer, user}) {
-        const cnonce = (await toBase64(random(32))).replace('=', '');
-        this.state.set({cnonce});
-        const resp = await this.call(`/auth/login`, {
-            req: {issuer, user, cnonce, href: location.href},
-        });
-        if (resp.token) {
-            if (!await this.setToken(resp.token)) {
-                throw new Error("Failed to set token");
+        const req = issuer ? {
+            issuer, cnonce: (await toBase64(random(32))).replace('=', ''),
+            href: location.href,
+        } : {user};
+        const resp = await this.call(`/auth/login`, {req});
+        if (resp.redirect) {
+            this.state.update(v => { v.cnonce = req.cnonce; });
+            location.assign(resp.redirect);
+        } else {
+            if (!await this.updateUser(resp.token)) {
+                throw new Error(`Failed to log in as user "${user}".`);
             }
             await this.showSuccessAlert(await this.name());
-            return;
         }
-        if (resp.redirect) location.assign(resp.redirect);
     }
 
     async logout() {
         const token = await this.token();
-        await this.setToken(undefined);
+        await this.unsetUser();
         await this.call(`/auth/logout`, {token});
         await showAlert("You have logged out successfully.", 'warning');
     }
@@ -335,6 +343,10 @@ The login ${login.name} has been removed successfully.`;
         }
 
         const modal = showModal(el);
+        this.state.update(v => { v.modal = 'settings'; });
+        on(el)['hidden.bs.modal'](() => {
+            this.state.update(v => { delete v.modal; });
+        });
         on(qs(repo, '.reset')).click(async e => {
             if (auth.prefix !== null && !confirm(`\
 Are you sure you want to reset the repository access password?
@@ -469,7 +481,7 @@ class EventsApi {
     }
 
     async stream(req, connected) {
-        this.token = await auth.token();
+        const token = await auth.token();
         this.abort = new AbortController();
         try {
             const resp = await fetch(`${url}/events/watch`, {
@@ -478,7 +490,7 @@ class EventsApi {
                 headers: {
                     'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
-                    ...bearerAuthorization(this.token),
+                    ...bearerAuthorization(token),
                 },
                 body: JSON.stringify(req),
                 signal: this.abort.signal,
@@ -537,10 +549,10 @@ class EventsApi {
         }
     }
 
-    restartOnTokenChange(token) {
-        if (this.abort && token !== this.token) this.abort.abort();
+    restartOnUserChange() {
+        if (this.abort) this.abort.abort();
     }
 }
 
 export const events = new EventsApi();
-auth.onChange(async () => events.restartOnTokenChange(await auth.token()));
+auth.onChange(() => events.restartOnUserChange());
