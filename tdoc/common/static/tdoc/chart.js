@@ -10,11 +10,21 @@ import {Bins, Distribution, Sample} from './math.js';
 // Allow disabling plugins by default by setting their options to false in page
 // metadata. This doesn't work in Chart.defaults, but it does in per-chart
 // options, so we mix it in there.
-const disabledPlugins = {options: {plugins: {}}};
+const disabledPlugins = {
+    options: {
+        plugins: {
+            deferred: false,  // Interferes with printing
+        },
+    },
+};
 for (const [k, v] of Object.entries(tdoc.dyn?.chartjs?.plugins ?? {})) {
-    if (v !== false) continue;
-    disabledPlugins.options.plugins[k] = v;
-    delete tdoc.dyn.chartjs.plugins[k];
+    if (v === false) {
+        disabledPlugins.options.plugins[k] = v;
+        delete tdoc.dyn.chartjs.plugins[k];
+    } else if (v !== undefined && v !== null) {
+        delete disabledPlugins.options.plugins[k];
+        if (v === true) delete tdoc.dyn.chartjs.plugins[k];
+    }
 }
 
 // Load Chart.js and plugins.

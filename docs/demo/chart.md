@@ -68,7 +68,7 @@ directives.
 ```{chartjs} lineErrorBars
 ```
 
-### Venn diagrams
+### Venn diagram
 
 ([Documentation](https://upset.js.org/chartjs-chart-venn/),
 [data structure](https://github.com/upsetjs/chartjs-chart-venn#venn-diagram))
