@@ -1078,7 +1078,11 @@ div.tdoc-exec-output .table > tbody > tr:nth-child(odd).tdoc-no-results {
 tdoc-dyn:not(.¶) {
     display: block;
     margin: 1rem auto;
+    border-radius: 0.25rem;
     text-align: center;
+}
+tdoc-dyn.frame {
+    border: 1px solid var(--pst-color-border);
 }
 tdoc-dyn.align-left {
     margin-left: 0;
@@ -1099,7 +1103,6 @@ tdoc-dyn:not(.rendered):empty::after {
 html[data-tdoc-local] tdoc-dyn:not(.rendered) {
     /* Override border attributes set on the element. */
     border: 1px solid var(--pst-color-danger) !important;
-    border-radius: 0.25rem;
 }
 
 /* JSXGraph boards */
@@ -1135,6 +1138,7 @@ html[data-theme=dark] tdoc-dyn[type=jsxgraph]
 tdoc-dyn[type=chartjs] {
     position: relative;
     aspect-ratio: 2;
+    overflow: hidden;
 }
 tdoc-dyn[type=chartjs] > canvas {
     /* BUG(chart.js): Responsive resizing doesn't work properly when the canvas
