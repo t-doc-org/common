@@ -443,9 +443,19 @@ render.line = el => {
         borderColor: colors[1], backgroundColor: colors[1],
       }],
     },
+    plugins: ['background'],
     options: {
       borderWidth: 2,
       scales: {y: {beginAtZero: true}},
+      plugins: {
+        background: {
+          gradient: {
+            type: 'radial',
+            from: [0.4, 0.7, 0.1], to: [0.5, 0.5, 0.9],
+            stops: [[0, '#fee'], [0.8, '#efe'], [1, '#fff']],
+          }
+        },
+      },
     },
   });
 };

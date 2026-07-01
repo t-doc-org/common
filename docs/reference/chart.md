@@ -347,7 +347,16 @@ attribute of the chart config.
 The following plugins are pre-defined:
 
 - `background`: Paint the chart background. The following options are supported:
-  - `color`: Fill the background with the given color.
+  - `color`: Fill the background with the given solid color.
+  - `gradient`: Fill the background with a gradient.
+    - `type`: The type of gradient; one of `linear`, `conic` or `radial`.
+    - `from`, `to`: The endpoints of the gradient. For `linear` gradients, the
+      endpoints are `[x, y]` tuples, where `x` is a fraction of the chart width
+      and `y` a fraction of the chart height. For `radial` gradients, the
+      endpoints are `[x, y, r]` tuples, where `r` is a fraction of the minimum
+      between the chart width and height.
+    - `stops`: The gradient stops, a list of `[offset, color]` tuples, where the
+      offset is between 0 and 1.
 
 **Custom plugins** can be registered by assigning them as attributes of
 {js:data}`~chart.plugins`. The plugin `id` is automatically set to the name of
@@ -387,7 +396,6 @@ plugins.backgroundGradient = {
         ctx.fillRect(0, 0, chart.width, chart.height);
         ctx.restore();
     },
-    defaults: {from: [0, 0], to: [1, 0]},
 };
 </script>
 ````

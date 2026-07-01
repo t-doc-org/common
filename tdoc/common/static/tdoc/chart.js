@@ -248,11 +248,35 @@ annotations.vLine = ({x, label}) => {
 
 plugins.background = {
     beforeDraw(chart, args, options) {
-        if (options.color === undefined) return;
         const {ctx} = chart;
+        let fill;
+        if (options.color !==  undefined) {
+            fill = options.color;
+        } else if (options.gradient !== undefined) {
+            const opts = options.gradient;
+            if (opts.type === 'linear') {
+                fill = ctx.createLinearGradient(
+                    opts.from[0] * chart.width, opts.from[1] * chart.height,
+                    opts.to[0] * chart.width, opts.to[1] * chart.height)
+            } else if (opts.type === 'conic') {
+                fill = ctx.createConicGradient(
+                    opts.angle, opts.x * chart.width, opts.y * chart.height);
+            } else if (opts.type === 'radial') {
+                const f = Math.min(chart.width, chart.height);
+                fill = ctx.createRadialGradient(
+                    opts.from[0] * chart.width, opts.from[1] * chart.height,
+                    opts.from[2] * f, opts.to[0] * chart.width,
+                    opts.to[1] * chart.height, opts.to[2] * f)
+            } else {
+                return;
+            }
+            for (const [p, c] of opts.stops) fill.addColorStop(p, c);
+        } else {
+            return;
+        }
         ctx.save();
         ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = options.color;
+        ctx.fillStyle = fill;
         ctx.fillRect(0, 0, chart.width, chart.height);
         ctx.restore();
     },
