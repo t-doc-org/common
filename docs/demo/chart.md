@@ -74,9 +74,24 @@ directives.
 [data structure](https://github.com/upsetjs/chartjs-chart-venn#venn-diagram))
 
 ```{chartjs} venn
-:class: frame
-:style: |
-: width: 70%; background-color: #f8f8f8;
+:style: width: 70%;
+data: {
+  labels: ['A', 'B'],
+  datasets: [{data: [{value: 'A'}, {value: 'B'}, {value: 'A ∩ B'}]}],
+},
+options: {
+  borderWidth: 1, borderColor: ['#36a2eb', '#ff6384', '#4bc0c0'],
+  backgroundColor: ['#36a2eb33', '#ff638433', '#4bc0c033'],
+  layout: {padding: 30},
+  scales: {
+    x: {ticks: {font: {size: 16}}},   // Labels within the sets
+    y: {ticks: {display: false}},     // Labels next to the sets
+  },
+  plugins: {
+    background: {color: '#f8f8f8'},
+    tooltip: false,
+  },
+},
 ```
 
 ### Graph chart
@@ -561,36 +576,6 @@ render.lineErrorBars = el => {
   return chart(el, {
     type: 'lineWithErrorBars', ...errorBar,
     options: {borderColor: colors[0], backgroundColor: colors[0]},
-  });
-};
-
-render.venn = el => {
-  return chart(el, {
-    type: 'venn',
-    data: {
-      labels: ['A', 'B', 'A ∩ B'],
-      datasets: [{
-        data: [
-          {sets: ['A'], value: 'A'},
-          {sets: ['B'], value: 'B'},
-          {sets: ['A', 'B'], value: 'A ∩ B'},
-        ],
-      }],
-    },
-    options: {
-      borderWidth: 1, borderColor: colors,
-      backgroundColor: bgColors,
-      layout: {padding: 30},
-      scales: {
-        x: {ticks: {font: {size: 16}}},   // Labels within the sets
-        y: {ticks: {display: false}},     // Labels next to the sets
-      },
-      plugins: {
-        background: {color: '#f8f8f8'},
-        tooltip: false,
-      },
-    },
-    plugins: ['background'],
   });
 };
 

@@ -188,6 +188,24 @@ export async function chart(el, config) {
 
 render.chart = chart;
 
+render.venn = async (el, config) => {
+    if (!el.classList.contains('no-border')) el.classList.add('frame');
+    config = await merge({
+        type: 'venn', plugins: ['background'],
+        options: {
+            plugins: {background: {color: '#fff'}},
+        },
+    }, config);
+    // const bg = config.options?.plugins?.background?.color;
+    // if (bg !== undefined) el.style.backgroundColor = bg;
+    for (const ds of config.data?.datasets ?? []) {
+        for (const [i, d] of (ds.data ?? []).entries()) {
+            if (d.value === undefined) d.value = '';
+        }
+    }
+    return await chart(el, config);
+};
+
 // A container for annotation handlers.
 export const annotations = asyncProps({}, {
     ns: 'chartjs', container: 'annotations', callables: true,
@@ -248,11 +266,15 @@ annotations.vLine = ({x, label}) => {
 
 plugins.background = {
     beforeDraw(chart, args, options) {
-        const {ctx} = chart;
+        const {ctx, canvas} = chart;
         let fill;
-        if (options.color !==  undefined) {
+        if (options.color) {
             fill = options.color;
-        } else if (options.gradient !== undefined) {
+            // BUG: When printing, the canvas doesn't adjust correctly to the
+            // containing element, leaving a gap. As a workaround, set the
+            // background of the latter to the same color.
+            canvas.parentNode.style.backgroundColor = options.color;
+        } else if (options.gradient) {
             const opts = options.gradient;
             if (opts.type === 'linear') {
                 fill = ctx.createLinearGradient(

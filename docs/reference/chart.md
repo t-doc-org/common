@@ -126,6 +126,17 @@ annotations: {hLine: {y: 5, label: ''}}
 ```
 ````
 
+#### `venn`
+
+This renderer works the same as [`chart`](#chart), but it sets some defaults to
+simplify the creation of Venn diagrams.
+
+- The chart type is set to `venn`.
+- The `background` [plugin](#plugins) is enabled and configured to set a solid
+  white background.
+- A border is set on the containing element, unless the `no-border` class is
+  present.
+
 #### `histogram`
 
 This renderer displays the [histogram](https://en.wikipedia.org/wiki/Histogram)
