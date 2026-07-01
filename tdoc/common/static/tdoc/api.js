@@ -36,6 +36,8 @@ export async function call(path, opts) {
 
 class Auth extends EventTarget {
     static async create() {
+        // TODO: Move user info to localStorage, as it's origin-dependent. Keep
+        // only the token and a "logged in" flag in domainStorage.
         return new this(
             await AsyncStoredJson.create(`tdoc:api${backendSuffix}:user`));
     }
@@ -43,6 +45,7 @@ class Auth extends EventTarget {
     constructor(stored) {
         super();
         this.stored = stored;
+        // TODO: Remove this.data, and use the Stored directly instead
         this.data = this.stored.get();
         this.state = StoredJson.create('tdoc:api:state', {}, sessionStorage);
         ({promise: this.ready, resolve: this.rReady} = Promise.withResolvers());

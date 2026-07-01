@@ -196,10 +196,10 @@ render.venn = async (el, config) => {
             plugins: {background: {color: '#fff'}},
         },
     }, config);
-    // const bg = config.options?.plugins?.background?.color;
-    // if (bg !== undefined) el.style.backgroundColor = bg;
     for (const ds of config.data?.datasets ?? []) {
         for (const [i, d] of (ds.data ?? []).entries()) {
+            // BUG(chartjs-chart-venn): If value is unset, the value is rendered
+            // as "undefined". Set it to the empty string instead.
             if (d.value === undefined) d.value = '';
         }
     }
