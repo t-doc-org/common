@@ -3,6 +3,20 @@
 
 # Release notes
 
+(release-0-82)=
+## 0.82 *(2026-07-01)*
+
+- Added dynamic annotation functionality to the `chart` {rst:dir}`chartjs`
+  renderer.
+- Added the `venn` {rst:dir}`chartjs` renderer.
+- Added a mechanism to register and use {rst:dir}`chartjs` plugins, and added
+  the `background` plugin.
+- Improved MathJax rendering performance by disabling accessibility options by
+  default (they can still be enabled by the user in the menu).
+- Changed the authentication to be cookie-based instead of storing the token
+  in local storage.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.81...0.82)
+
 (release-0-81)=
 ## 0.81 *(2026-06-25)*
 
