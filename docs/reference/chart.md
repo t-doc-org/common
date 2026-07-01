@@ -337,6 +337,61 @@ annotations.valueLabels = ({label}, config) => {
 </script>
 ````
 
+### Plugins
+
+Chart.js [plugins](https://www.chartjs.org/docs/latest/developers/plugins.html)
+are implemented in JavaScript and managed via {js:data}`~chart.plugins`. Plugins
+can be referenced by name by using strings as elements of the `plugins`
+attribute of the chart config.
+
+The following plugins are pre-defined:
+
+- `background`: Paint the chart background. The following options are supported:
+  - `color`: Fill the background with the given color.
+
+**Custom plugins** can be registered by assigning them as attributes of
+{js:data}`~chart.plugins`. The plugin `id` is automatically set to the name of
+the attribute, and that's also the name to use for the options of the plugin.
+
+````{code-block} html
+```{chartjs} chart
+type: 'bar',
+data: {
+  labels: ['Monday', 'Tuesday', 'Wednesday'],
+  datasets: [{data: [7, 11, 3]}],
+},
+plugins: ['backgroundGradient'],
+options: {
+  plugins: {
+    backgroundGradient: {
+      from: [0, 0], to: [0, 1], stops: [[0, '#fee'], [1, '#efe']],
+    },
+  },
+},
+```
+
+<script type="module">
+const {plugins} = await tdoc.import('tdoc/chart.js');
+
+plugins.backgroundGradient = {
+    beforeDraw(chart, args, options) {
+        if (options.stops === undefined) return;
+        const {ctx} = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        const grad = ctx.createLinearGradient(
+          options.from[0] * chart.width, options.from[1] * chart.height,
+          options.to[0] * chart.width, options.to[1] * chart.height);
+        for (const [p, c] of options.stops) grad.addColorStop(p, c);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+    },
+    defaults: {from: [0, 0], to: [1, 0]},
+};
+</script>
+````
+
 ### `tdoc/chart.js`
 
 ```{js:module} chart
@@ -398,6 +453,11 @@ assigning to object attributes.
 ```{js:data} annotations
 An object containing [annotation generators](#annotations). Custom annotations
 can be defined by assigning to object attributes.
+```
+
+```{js:data} plugins
+An object containing [plugins](#plugins). Custom plugins can be defined by
+assigning to object attributes.
 ```
 
 {.rubric}

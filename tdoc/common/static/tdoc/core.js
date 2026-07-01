@@ -216,7 +216,7 @@ function pendingAsyncPropsFor(ns) {
 // Return a proxy that makes all property accesses asynchronous, where the
 // property must first be set before accesses complete.
 export function asyncProps(obj, {
-    ns, container, callables = false, alert = true,
+    ns, container, callables = false, onSet = (p, v) => v, alert = true,
 } = {}) {
     const resolves = {};
     return new Proxy(obj, {
@@ -245,7 +245,7 @@ export function asyncProps(obj, {
                 const resolve = resolves[prop];
                 if (resolve !== undefined) {
                     delete resolves[prop];
-                    resolve(value);
+                    resolve(onSet(prop, value));
                 } else if (obj[prop] !== undefined) {
                     throw ns === undefined ?
                         htmle`Duplicate definition: <code>${prop}</code>` :
@@ -253,7 +253,7 @@ export function asyncProps(obj, {
 <code>{${ns}}</code> Duplicate <code>${container}</code> definition: \
 <code>${prop}</code>`;
                 } else {
-                    obj[prop] = value;
+                    obj[prop] = onSet(prop, value);
                 }
             } catch (e) {
                 if (!alert) throw e;

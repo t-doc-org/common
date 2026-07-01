@@ -28,7 +28,7 @@ for (const [k, v] of Object.entries(tdoc.dyn?.chartjs?.plugins ?? {})) {
 }
 
 // Load Chart.js and plugins.
-const plugins = {
+const extPlugins = {
     'chartjs-chart-boxplot': {path: 'index.umd.min.js'},
     'chartjs-chart-error-bars': {path: 'index.umd.min.js'},
     'chartjs-chart-graph': {path: 'index.umd.min.js'},
@@ -44,10 +44,10 @@ const plugins = {
 };
 const ready = (async () => {
     await import(`${tdoc.versions.chartjs}/chart.umd.min.js`);
-    const urls = [...Object.entries(plugins)].map(
+    const urls = [...Object.entries(extPlugins)].map(
         ([n, {path}]) => `${tdoc.versions[n]}/${path}`)
     await Promise.all(urls.map(u => import(u)));
-    for (const {register} of Object.values(plugins)) {
+    for (const {register} of Object.values(extPlugins)) {
         for (const n of register ?? []) Chart.register(globalThis[n]);
     }
 
@@ -130,6 +130,12 @@ function merge(...as) {
     return mergeAttrs(mergeTo, attrs, ...as);
 }
 
+// Plugins that can be referenced by name.
+export const plugins = asyncProps({}, {
+    ns: 'chartjs', container: 'plugins',
+    onSet: (p, v) => { v.id = p; return v; },
+});
+
 // Format a tick value on a scale.
 function formatTick(scale, value) {
     return Chart.Ticks.formatters.numeric.apply(scale, [value, 0, scale.ticks]);
@@ -166,6 +172,13 @@ export async function chart(el, config) {
     config = await merge({
         options: {plugins: {annotation: {annotations: anns}}},
     }, config);
+    for (const [i, p] of (config.plugins ?? []).entries()) {
+        if (typeof p === 'string') {
+            config.plugins[i] = await plugins[p];
+        } else {
+            config.plugins[i] = await p;
+        }
+    }
     await ready;
     const c = new Chart(el.appendChild(elmt`<canvas role="img"></canvas>`),
                         config);
@@ -210,28 +223,42 @@ function map(arr, fn) {
     return [fn(arr)];
 }
 
-attrs.line = {
+attrs.lineAnn = {
     type: 'line', drawTime: 'afterDatasetsDraw', z: 0,
     borderWidth: 1, borderDash: [6, 4],
     label: {
         display: true, position: 'start', drawTime: 'afterDatasetsDraw', z: 10,
     },
 };
-attrs.hLine = [attrs.line, {scaleID: 'y'}];
-attrs.vLine = [attrs.line, {scaleID: 'x'}];
+attrs.hLineAnn = [attrs.lineAnn, {scaleID: 'y'}];
+attrs.vLineAnn = [attrs.lineAnn, {scaleID: 'x'}];
 
 annotations.hLine = ({y, label}) => {
     return map(y, y => {
-        return [attrs.hLine,
+        return [attrs.hLineAnn,
                 {value: y, endValue: y, label: {content: label ?? `${y}`}}];
     });
 };
 annotations.vLine = ({x, label}) => {
     return map(x, x => {
-        return [attrs.vLine,
+        return [attrs.vLineAnn,
                 {value: x, endValue: x, label: {content: label ?? `${x}`}}];
     });
 };
+
+plugins.background = {
+    beforeDraw(chart, args, options) {
+        if (options.color === undefined) return;
+        const {ctx} = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = options.color;
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+    },
+};
+
+// Statistics.
 
 function sampleOrDist(sample, distribution, dist = false) {
     return dist ? distribution ?? sample : sample ?? distribution;
@@ -243,7 +270,7 @@ annotations.count = ({f = 1, dist = false, label}, {sample, distribution}) => {
     return map(f, f => {
         const v = f * count;
         const p = f === -1 ? '-' : f === 1 ? '' : `${f}*`;
-        return [attrs.hLine, {
+        return [attrs.hLineAnn, {
             value: v, endValue: v, label: {content: label ?? `${p}count`},
         }];
     });
@@ -251,26 +278,26 @@ annotations.count = ({f = 1, dist = false, label}, {sample, distribution}) => {
 annotations.min = ({dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.min;
-    return [[attrs.vLine,
+    return [[attrs.vLineAnn,
              {value: v, endValue: v, label: {content: label ?? "min"}}]];
 };
 annotations.max = ({dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.max;
-    return [[attrs.vLine,
+    return [[attrs.vLineAnn,
              {value: v, endValue: v, label: {content: label ?? "max"}}]];
 };
 annotations.median = ({dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.median;
-    return [[attrs.vLine,
+    return [[attrs.vLineAnn,
              {value: v, endValue: v, label: {content: label ?? "median"}}]];
 };
 annotations.quartile = ({k, dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     return map(k, k => {
         const v = ds.quartile(k);
-        return [attrs.vLine,
+        return [attrs.vLineAnn,
                 {value: v, endValue: v, label: {content: label ?? `Q${k}`}}];
     });
 };
@@ -278,7 +305,7 @@ annotations.percentile = ({p, dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     return map(p, p => {
         const v = ds.percentile(p);
-        return [attrs.vLine,
+        return [attrs.vLineAnn,
                 {value: v, endValue: v, label: {content: label ?? `P${p}`}}];
     });
 };
@@ -286,7 +313,7 @@ annotations.quantile = ({p, dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     return map(p, p => {
         const v = ds.quantile(p);
-        return [attrs.vLine, {
+        return [attrs.vLineAnn, {
             value: v, endValue: v, label: {content: label ?? `${p}-quantile`},
         }];
     });
@@ -294,7 +321,7 @@ annotations.quantile = ({p, dist = false, label}, {sample, distribution}) => {
 annotations.mean = ({dist = false, label}, {sample, distribution}) => {
     const ds = sampleOrDist(sample, distribution, dist);
     const v = ds.mean;
-    return [[attrs.vLine,
+    return [[attrs.vLineAnn,
              {value: v, endValue: v, label: {content: label ?? "mean"}}]];
 };
 annotations.stdDev = ({f, population = false, dist = false, label},
@@ -313,7 +340,7 @@ annotations.stdDev = ({f, population = false, dist = false, label},
             const af = Math.abs(f);
             content = `${sf}${af !== 1 ? af : ''}σ`;
         }
-        return [attrs.vLine, {value: v, endValue: v, label: {content}}];
+        return [attrs.vLineAnn, {value: v, endValue: v, label: {content}}];
     });
 };
 annotations.avgDev = ({f, from = 'median', dist = false, label},
@@ -334,7 +361,7 @@ annotations.avgDev = ({f, from = 'median', dist = false, label},
             const af = Math.abs(f);
             content = `${sf}${af !== 1 ? af : ''}AAD`;
         }
-        return [attrs.vLine, {value: v, endValue: v, label: {content}}];
+        return [attrs.vLineAnn, {value: v, endValue: v, label: {content}}];
     });
 };
 annotations.mode = ({k, dist = true, label}, {sample, distribution}) => {
@@ -344,7 +371,7 @@ annotations.mode = ({k, dist = true, label}, {sample, distribution}) => {
     const res = [];
     for (const m of ms) {
         if (m === undefined) continue;
-        res.push([attrs.vLine,
+        res.push([attrs.vLineAnn,
                   {value: m, endValue: m, label: {content: label ?? `mode`}}]);
     }
     return res;
@@ -352,7 +379,6 @@ annotations.mode = ({k, dist = true, label}, {sample, distribution}) => {
 
 // A plugin that sets the bar width from the "w" data attribute.
 const barWidth = {
-    id: 'bar-width',
     beforeDatasetDraw(chart, args, options) {
         const md = chart.getDatasetMeta(args.index);
         const s = md.xScale;

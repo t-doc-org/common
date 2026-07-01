@@ -74,9 +74,9 @@ directives.
 [data structure](https://github.com/upsetjs/chartjs-chart-venn#venn-diagram))
 
 ```{chartjs} venn
+:class: frame
 :style: |
-: width: 70%; border: 1px solid var(--pst-color-border);
-: border-radius: 0.25rem; padding: 2rem 0;
+: width: 70%; background-color: #f8f8f8;
 ```
 
 ### Graph chart
@@ -354,8 +354,29 @@ options: {
 annotations: {valueLabels: {label: 'Value: '}}
 ```
 
+### Custom plugin
+
+```{chartjs} chart
+type: 'bar',
+data: {
+  labels: ['Monday', 'Tuesday', 'Wednesday'],
+  datasets: [{data: [7, 11, 3]}],
+},
+plugins: ['backgroundGradient'],
+options: {
+  borderWidth: 1,
+  borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+  backgroundColor: '#36a2eb33',
+  plugins: {
+    backgroundGradient: {
+      from: [0, 0], to: [0, 1], stops: [[0, '#fee'], [1, '#efe']],
+    },
+  },
+},
+```
+
 <script type="module">
-const [core, {annotations, chart, render}] =
+const [core, {annotations, chart, plugins, render}] =
   await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
@@ -549,12 +570,17 @@ render.venn = el => {
     options: {
       borderWidth: 1, borderColor: colors,
       backgroundColor: bgColors,
+      layout: {padding: 30},
       scales: {
         x: {ticks: {font: {size: 16}}},   // Labels within the sets
         y: {ticks: {display: false}},     // Labels next to the sets
       },
-      plugins: {tooltip: false},
+      plugins: {
+        background: {color: '#f8f8f8'},
+        tooltip: false,
+      },
     },
+    plugins: ['background'],
   });
 };
 
@@ -650,5 +676,22 @@ annotations.valueLabels = ({label}, config) => {
     type: 'label', content: `${label ?? ''}${v}`,
     xValue: i, yValue: v, yAdjust: -15,
   }));
+};
+
+plugins.backgroundGradient = {
+    beforeDraw(chart, args, options) {
+        if (options.stops === undefined) return;
+        const {ctx} = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        const grad = ctx.createLinearGradient(
+          options.from[0] * chart.width, options.from[1] * chart.height,
+          options.to[0] * chart.width, options.to[1] * chart.height);
+        for (const [p, c] of options.stops) grad.addColorStop(p, c);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+    },
+    defaults: {from: [0, 0], to: [1, 0]},
 };
 </script>
