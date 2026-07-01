@@ -463,14 +463,14 @@ p.rubric {
     margin-bottom: 0;
 }
 .admonition.dropdown:not(.expand) .admonition-title ~ * {
-    display: block;
-    margin: 0;
-    border: none;
-    padding: 0;
-    height: 0;
-    visibility: hidden;
-    overflow: hidden;
-    opacity: 0;
+    display: block !important;
+    margin: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    height: 0 !important;
+    visibility: hidden !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
 }
 @media print {
     .admonition.dropdown:not(.expand) {
