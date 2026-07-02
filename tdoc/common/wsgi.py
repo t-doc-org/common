@@ -111,7 +111,7 @@ class Request:
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       wsgiutil.FileWrapper))
     sec_fetch_site = property(lambda self: self.env.get('HTTP_SEC_FETCH_SITE'))
-    force_cors = property(lambda self: self.env.get('HTTP_X_FORCE_CORS'))
+    csrf = property(lambda self: self.env.get('HTTP_X_CSRF'))
 
     @property
     def required_origin(self):
@@ -297,7 +297,7 @@ class Dispatcher:
     def post_request(self, wr): pass
 
 
-# TODO(0.83): Default csrf to True
+# TODO(0.84): Default csrf to True
 
 def endpoint(name, methods=None, final=True, require_authn=False,
              csrf=False, log_level=logs.INFO, log_query=True):
@@ -310,8 +310,8 @@ def endpoint(name, methods=None, final=True, require_authn=False,
                 raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
             if require_authn and wr.user is None:
                 raise Error(HTTPStatus.UNAUTHORIZED)
-            if csrf and (wr.force_cors is None or
-                         wr.sec_fetch_site not in ('same-origin', 'same-site')):
+            if csrf and (wr.sec_fetch_site not in ('same-origin', 'same-site')
+                         or wr.csrf is None):
                 raise Error(HTTPStatus.FORBIDDEN)
             return fn(self, wr)
         if name is not None: dfn._endpoint = name
