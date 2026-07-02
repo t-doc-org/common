@@ -835,14 +835,11 @@ export const AsyncStoredJson = JsonMixin(AsyncStored);
 export const clientId = (async () => {
     const stored = new AsyncStored('tdoc:domain:clientId');
     let id = await stored.get();
-    // TODO(0.84): Remove migration code
+    // TODO(0.84): Remove migration code, and remove old store
     if (id === undefined) {
         const old = new AsyncStored('tdoc:clientId');
         id = await old.get();
-        if (id !== undefined) {
-            await stored.set(id);
-            old.set(undefined);  // Background
-        }
+        if (id !== undefined) await stored.set(id);
     }
     if (id === undefined) {
         id = await toBase64(crypto.getRandomValues(new Uint8Array(33)));
