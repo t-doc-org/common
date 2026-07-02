@@ -165,11 +165,8 @@ class Api(wsgi.Dispatcher):
     def handle_user(self, wr, req):
         origin = wr.required_origin
         if wr.user is None:
-            # TODO(0.83): Remove exception once token is unused in JS
             raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
                              headers=[wsgi.token_cookie_header(None)])
-            wr.set_token_cookie(None)
-            return {}
         with wr.read_db as db: info = db.users.info(origin, wr.user)
         if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
         return info
@@ -635,7 +632,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 if (token := db.tokens.find(uid)) is None:
                     token, = db.tokens.create([uid])
             wr.set_token_cookie(token)
-            return {'token': token}
+            return {}
 
         # Handle OIDC login.
         issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
@@ -762,9 +759,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         db.oidc.add_login(user, id_token)
         token, = db.tokens.create([user])
         wr.set_token_cookie(token)
-        # TODO(0.83): Remove token and cnonce
-        return {'auth': state['cnonce'], 'token': token,
-                'cnonce': state['cnonce']}
+        return {'auth': state['cnonce']}
 
     def get_error(self, qs):
         if (err := qs.get('error')) is None: return
