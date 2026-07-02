@@ -53,7 +53,7 @@ class Auth extends EventTarget {
             await this.domain.set(domain);
         }
         const updated = await onHashParams(
-            ['token', 'auth', 'auth_error', 'cnonce'],
+            ['token', 'auth', 'auth_error'],
             (...args) => this.onParams(...args));
         if (!updated) {
             await this.updateUser(undefined, domain.loggedIn ?? false);
@@ -72,9 +72,7 @@ class Auth extends EventTarget {
         });
     }
 
-    async onParams(token, auth, error, cnonce_) {
-        // TODO(0.83): Remove cnonce_
-        auth ??= cnonce_;
+    async onParams(token, auth, error) {
         const state = this.state.get(), cnonce = state?.cnonce;
         this.state.update(v => { delete v.cnonce; });
         let res = false;
