@@ -688,29 +688,27 @@ export class FifoBuffer {
 // manages the data in localStorage at the domain level, with the data shared
 // across all sites.
 class DomainStorage {
-    static async create() {
-        if (!(tdoc.local || tdoc.domain_storage.origin)) return localStorage;
+    constructor() {
+        this.id = 0;
+        this.msgs = new Map();
+        this.ready = this.init();  // Background
+    }
+
+    async init() {
         const {port1, port2} = new MessageChannel();
+        on(port1).message(e => this.onMessage(e));
+        port1.start();
+        this.port = port1;
         const origin = tdoc.local ? location.origin
                                   : tdoc.domain_storage.origin;
-        // TODO: Perform setup in the background
         await domLoaded;
-        const iframe = document.body.appendChild(elmt`\
+        const iframe = elmt`\
 <iframe class="tdoc-domain-storage" src="${origin}/_static/tdoc/domain.html">\
-</iframe>\
-`);
+</iframe>`;
         on(iframe).load(() => {
             iframe.contentWindow.postMessage('init', origin, [port2]);
         });
-        return new this(port1);
-    }
-
-    constructor(port) {
-        this.port = port;
-        this.id = 0;
-        this.msgs = new Map();
-        on(port).message(e => this.onMessage(e));
-        port.start();
+        document.body.appendChild(iframe);
     }
 
     async getItem(key) { return (await this.transaction({get: key})).value; }
@@ -719,6 +717,7 @@ class DomainStorage {
 
     async transaction(msg) {
         msg.id = ++this.id;
+        await this.ready;
         const {promise, resolve, reject} = Promise.withResolvers();
         this.msgs.set(msg.id, {resolve, reject});
         this.port.postMessage(msg);
@@ -738,7 +737,8 @@ class DomainStorage {
     }
 }
 
-export const domainStorage = await DomainStorage.create();
+export const domainStorage = tdoc.local || tdoc.domain_storage.origin ?
+                             new DomainStorage() : localStorage;
 
 // A base class for stored values.
 class StoredBase {
@@ -784,7 +784,7 @@ export class Stored extends StoredBase {
 export class AsyncStored extends StoredBase {
     constructor(key, def, storage = domainStorage) {
         super(key, def, storage);
-        this._ready = this.init();
+        this._ready = this.init();  // Background
     }
 
     async init() {
@@ -888,7 +888,7 @@ export class TdocElement extends HTMLElement {
         if (!name.startsWith('tdoc-')) {
             throw htmle`\
 <code>TdocElement.extend()</code> can only extend <code>&lt;tdoc-*&gt;</code> \
-elements.`
+elements.`;
         }
         await customElements.whenDefined(name);
         let handlers = TdocElement.#handlers[name];

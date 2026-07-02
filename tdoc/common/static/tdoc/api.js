@@ -239,8 +239,7 @@ Log in</button>\
 <div class="flex-fill message"></div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
-</div></div></div>\
-`;
+</div></div></div>`;
         const loginForm = qs(el, 'form.login');
         loginForm.classList.toggle('hidden', !tdoc.local);
         const input = qs(loginForm, 'input#tdoc-login-user');
@@ -302,8 +301,7 @@ t-doc.password = <span class="pass user-select-all"></span>
 <div class="flex-fill text-${kind} message">${message ?? ""}</div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
-</div></div></div>\
-`;
+</div></div></div>`;
         const logins = qs(el, 'table.logins > tbody');
         if (info.logins.length === 0) {
             logins.appendChild(elmt`\
@@ -386,8 +384,7 @@ The password has been reset. Copy it now, as it won't be shown again.`;
 <div class="col-auto">\
 <button type="button" class="btn btn-outline-primary text-nowrap">\
 ${prefix} ${label}</button>\
-</div>\
-`);
+</div>`);
             on(btn).click(async () => {
                 await toModalMessage(modal, async () => {
                     await this.login({issuer});
