@@ -30,7 +30,7 @@ console.info(`[t-doc] API backend: ${url}`);
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, {
-        ...opts, headers: {'X-Force-Cors': 'true', ...opts?.headers},
+        ...opts, headers: {'X-Csrf': '0', ...opts?.headers},
     });
 }
 
@@ -495,7 +495,7 @@ class EventsApi {
                 headers: {
                     'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
-                    'X-Force-Cors': 'true',
+                    'X-Csrf': '0',
                     ...bearerAuthorization(token),
                 },
                 body: JSON.stringify(req),

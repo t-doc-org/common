@@ -50,6 +50,6 @@ def application(config_path, events_level=logs.NOTSET):
                 if (domain := cfg.get('cors.domain')) is not None else (),
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie',
-                 'X-Force-Cors'),
+                 'X-Csrf', 'X-Force-Cors'),
         credentials=True,
     )(app)
