@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncProps, dyn, gcd, htmle, mathJaxReady, mergeAttrs, qs, qsa,
+    asyncProps, dyn, htmle, mathJaxReady, mergeAttrs, qs, qsa,
 } from './core.js';
-import {Distribution, Sample} from './math.js';
+import {Distribution, gcd, Sample} from './math.js';
 
 export {gcd};
 
