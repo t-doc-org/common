@@ -39,6 +39,7 @@ class Auth extends EventTarget {
         super();
         this.user = new StoredJson(`tdoc:api${bes}:user-info`);
         this.domain = new AsyncStoredJson(`tdoc:domain:api${bes}:auth`, {});
+        this.oldDomain = new AsyncStoredJson(`tdoc:api${bes}:user`);
         this.state = new StoredJson('tdoc:api:state', {}, sessionStorage);
         this.ready = this.init();
     }
@@ -46,16 +47,17 @@ class Auth extends EventTarget {
     async init() {
         // TODO(0.84): Remove migration code, and unset stores containing tokens
         let domain = await this.domain.get();
-        const old = new AsyncStoredJson(`tdoc:api${bes}:user`);
-        if (domain.loggedIn === undefined && old?.name) {
+        if (domain.loggedIn === undefined
+                && await this.oldDomain.get() !== undefined) {
             domain = {loggedIn: true};
             await this.domain.set(domain);
         }
         const updated = await onHashParams(
             ['token', 'auth', 'auth_error', 'cnonce'],
             (...args) => this.onParams(...args));
-        if (!updated) await this.updateUser(undefined, domain.loggedIn);
-        old.set(undefined);  // Background
+        if (!updated) {
+            await this.updateUser(undefined, domain.loggedIn ?? false);
+        }
 
         // Update the username shown in the user menu.
         domLoaded.then(async () => {
@@ -126,12 +128,14 @@ class Auth extends EventTarget {
         }
         this.set(user);
         this.domain.update(v => { v.loggedIn = user !== undefined; });  // BG
+        this.oldDomain.set(user);  // Background
         return res;
     }
 
-    async unsetUser() {
+    unsetUser() {
         this.set(undefined);
         this.domain.update(v => { v.loggedIn = false; });  // Background
+        this.oldDomain.set(undefined);  // Background
     }
 
     set(user) {
@@ -208,7 +212,7 @@ class Auth extends EventTarget {
 
     async logout() {
         const token = await this.token();
-        await this.unsetUser();
+        this.unsetUser();
         await this.call(`/auth/logout`, {token});
         await showAlert("You have logged out successfully.", 'warning');
     }
