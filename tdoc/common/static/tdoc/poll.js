@@ -108,7 +108,7 @@ class Poll {
         if (!this.open) return;
         const answer = this.answers.indexOf(tr);
         if (answer < 0) return;
-        await api.poll({id: this.id, voter: clientId, answer,
+        await api.poll({id: this.id, voter: await clientId, answer,
                         vote: !tr.classList.contains('selected')});
     }
 
@@ -163,7 +163,7 @@ customElements.define('tdoc-poll', PollElement);
     for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
     if (polls.length === 0) return;
     const watch = new api.Watch(
-        {name: 'poll/votes', voter: clientId, ids: polls.map(p => p.id)},
+        {name: 'poll/votes', voter: await clientId, ids: polls.map(p => p.id)},
         data => {
             for (const poll of polls) {
                 poll.onVotesUpdate(data.votes[poll.id] ?? []);

@@ -9,13 +9,13 @@ import {
 } from './core.js';
 import {random} from './crypto.js';
 
-const backend = Stored.create('tdoc:api:backend', undefined, sessionStorage);
+const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
 onHashParams(['api'], api => {
     backend.set(api);
     location.reload();
 });
 
-export const [url, backendSuffix] = (() => {
+const [url, bes] = (() => {
     if (tdoc.local) return ['/_api', ''];
     if (tdoc.api_url) return [tdoc.api_url, ''];
     const loc = new URL(location);
@@ -35,34 +35,52 @@ export async function call(path, opts) {
 }
 
 class Auth extends EventTarget {
-    static async create() {
-        // TODO: Move user info to localStorage, as it's origin-dependent. Keep
-        // only the token and a "logged in" flag in domainStorage.
-        return new this(
-            await AsyncStoredJson.create(`tdoc:api${backendSuffix}:user`));
-    }
-
-    constructor(stored) {
+    constructor() {
         super();
-        this.stored = stored;
-        // TODO: Remove this.data, and use the Stored directly instead
-        this.data = this.stored.get();
-        this.state = StoredJson.create('tdoc:api:state', {}, sessionStorage);
-        ({promise: this.ready, resolve: this.rReady} = Promise.withResolvers());
-        const updated = onHashParams(['token', 'auth', 'auth_error', 'cnonce'],
-                                     (...args) => this.onParams(...args));
-        if (!updated) this.updateUser(undefined, false);  // Background
-        domLoaded.then(() => this.onDomLoaded());
+        this.user = new StoredJson(`tdoc:api${bes}:user-info`);
+        this.domain = new AsyncStoredJson(`tdoc:domain:api${bes}:auth`, {});
+        this.state = new StoredJson('tdoc:api:state', {}, sessionStorage);
+        this.ready = this.init();
     }
 
-    onParams(token, auth, error, cnonce_) {
+    async init() {
+        // TODO(0.84): Remove migration code, and unset stores containing tokens
+        let domain = await this.domain.get();
+        const old = new AsyncStoredJson(`tdoc:api${bes}:user`);
+        if (domain.loggedIn === undefined && old?.name) {
+            domain = {loggedIn: true};
+            await this.domain.set(domain);
+        }
+        const updated = await onHashParams(
+            ['token', 'auth', 'auth_error', 'cnonce'],
+            (...args) => this.onParams(...args));
+        if (!updated) await this.updateUser(undefined, domain.loggedIn);
+        old.set(undefined);  // Background
+
+        // Update the username shown in the user menu.
+        domLoaded.then(async () => {
+            await domLoaded;
+            const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
+            el.classList.add('disabled');
+            this.onChange(async () => {
+                const name = await this.name();
+                qs(el, '.btn__text-container').replaceChildren(
+                    name ?? "Not logged in");
+            });
+        });
+    }
+
+    async onParams(token, auth, error, cnonce_) {
         // TODO(0.83): Remove cnonce_
         auth ??= cnonce_;
         const state = this.state.get(), cnonce = state?.cnonce;
         this.state.update(v => { delete v.cnonce; });
-        if ((token && !this.stored.get()) || (auth && auth === cnonce)) {
+        let res = false;
+        if ((token && !this.user.get()) || (auth && auth === cnonce)) {
+            const updated = await this.updateUser(token);
+            res = true;
             (async () => {
-                if (await this.updateUser(token)) {
+                if (updated) {
                     if (state?.modal === 'settings') {
                         await this.showSettingsModal(
                             "The login has been added successfully.");
@@ -78,7 +96,6 @@ class Auth extends EventTarget {
                     }
                 }
             })();  // Background
-            return true;
         }
         if (error) {
             (async () => {
@@ -89,55 +106,40 @@ class Auth extends EventTarget {
                 }
             })();  // Background
         }
-    }
-
-    onDomLoaded() {
-        // Update the username shown in the user menu.
-        const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
-        el.classList.add('disabled');
-        this.onChange(async () => {
-            const name = await this.name();
-            qs(el, '.btn__text-container')
-                .replaceChildren(name !== undefined ? name : "Not logged in");
-        });
+        return res;
     }
 
     async updateUser(token, force = true) {
-        let data = this.data, res = true;
-        if (force || data !== undefined) {
+        let user = this.user.get(), res = true;
+        if (force || user !== undefined) {
             try {
-                token ??= data?.token;
-                data = await call(`/user`, {
+                token ??= user?.token;
+                user = await call(`/user`, {
                     credentials: 'include',
                     headers: {...bearerAuthorization(token)},
                 });
-                if (token) data.token = token;
+                if (token) user.token = token;
             } catch (e) {
-                if (e.cause?.status === 401) data = undefined;  // UNAUTHORIZED
+                if (e.cause?.status === 401) user = undefined;  // UNAUTHORIZED
                 res = false;
             }
         }
-        await this.stored.set(data);
-        this.set(data);
+        this.set(user);
+        this.domain.update(v => { v.loggedIn = user !== undefined; });  // BG
         return res;
     }
 
     async unsetUser() {
-        await this.stored.set(undefined);
         this.set(undefined);
+        this.domain.update(v => { v.loggedIn = false; });  // Background
     }
 
-    set(data) {
-        this.data = data;
-        if (data) {
-            htmlData.tdocUserTags = (data.tags ?? []).join(' ');
+    set(user) {
+        this.user.set(user);
+        if (user) {
+            htmlData.tdocUserTags = (user.tags ?? []).join(' ');
         } else {
             delete htmlData.tdocUserTags;
-        }
-        if (this.rReady) {
-            this.rReady();
-            delete this.ready;
-            delete this.rReady;
         }
         this.dispatchEvent(new CustomEvent('change'));
     }
@@ -148,24 +150,24 @@ class Auth extends EventTarget {
     }
 
     async name() {
-        if (this.ready) await this.ready;
-        return this.data?.name;
+        await this.ready;
+        return this.user.get()?.name;
     }
 
     async token() {
-        if (this.ready) await this.ready;
-        return this.data?.token;
+        await this.ready;
+        return this.user.get()?.token;
     }
 
     async memberOf(group) {
-        if (this.ready) await this.ready;
-        const groups = this.data?.groups ?? [];
+        await this.ready;
+        const groups = this.user.get()?.groups ?? [];
         return groups.includes(group) || groups.includes('*');
     }
 
     async tags() {
-        if (this.ready) await this.ready;
-        return this.data?.tags ?? [];
+        await this.ready;
+        return this.user.get()?.tags ?? [];
     }
 
     async call(path, opts) {
@@ -395,7 +397,7 @@ ${prefix} ${label}</button>\
     }
 }
 
-export const auth = await Auth.create();
+export const auth = new Auth();
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 

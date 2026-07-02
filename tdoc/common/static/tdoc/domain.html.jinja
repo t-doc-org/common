@@ -39,12 +39,12 @@
         try {
             if (data.get !== undefined) {
                 resp.value = localStorage.getItem(check(data.get));
-            } else if (data.set != undefined) {
+            } else if (data.set !== undefined) {
                 localStorage.setItem(check(data.set), data.value);
-            } else if (data.remove != undefined) {
+            } else if (data.remove !== undefined) {
                 localStorage.removeItem(check(data.remove));
             } else {
-                throw new Error("Permission denied");
+                throw new Error("Invalid domain storage request");
             }
         } catch (e) {
             resp.err = e;

@@ -120,7 +120,7 @@ tdoc.toggleSolutions = () => {
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
-const drawState = StoredJson.create('tdoc:drawState', {});
+const drawState = new StoredJson('tdoc:drawState', {});
 drawState.get().eraser = false;
 tdoc.draw = async () => {
     if (htmlData.tdocDraw !== undefined) {

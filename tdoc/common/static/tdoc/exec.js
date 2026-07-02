@@ -146,7 +146,7 @@ export class Runner {
         let doc = preText;
         const editorId = this.editorId;
         if (editorId) {
-            this.editorStore = Stored.create(editorPrefix + editorId, doc);
+            this.editorStore = new Stored(editorPrefix + editorId, doc);
             doc = this.editorStore.get();
             this.editorStorer = new RateLimited(5000);
             extensions.push(

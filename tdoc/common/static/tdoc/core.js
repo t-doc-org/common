@@ -693,6 +693,7 @@ class DomainStorage {
         const {port1, port2} = new MessageChannel();
         const origin = tdoc.local ? location.origin
                                   : tdoc.domain_storage.origin;
+        // TODO: Perform setup in the background
         await domLoaded;
         const iframe = document.body.appendChild(elmt`\
 <iframe class="tdoc-domain-storage" src="${origin}/_static/tdoc/domain.html">\
@@ -737,7 +738,7 @@ class DomainStorage {
     }
 }
 
-const domainStorage = await DomainStorage.create();
+export const domainStorage = await DomainStorage.create();
 
 // A base class for stored values.
 class StoredBase {
@@ -747,23 +748,21 @@ class StoredBase {
         this._storage = storage;
     }
 
-    get() { return this._value; }
-
     encode(v) { return v; }
     decode(v) { return v; }
 }
 
 // A value that is stored as a string in local or session storage.
 export class Stored extends StoredBase {
-    static create(key, def, storage = localStorage) {
-        const self = new this(key, def, storage);
-        const v = self._storage.getItem(self.key);
+    constructor(key, def, storage = localStorage) {
+        super(key, def, storage);
+        const v = this._storage.getItem(this.key);
         if (v !== null) {
-            try { self._value = self.decode(v); } catch (e) {}
+            try { this._value = this.decode(v); } catch (e) {}
         }
-        return self;
     }
 
+    get() { return this._value; }
     set(v) { this._value = v; this.store(); }
 
     update(fn) {
@@ -783,24 +782,38 @@ export class Stored extends StoredBase {
 
 // A value that is stored as a string in an async storage.
 export class AsyncStored extends StoredBase {
-    static async create(key, def, storage = domainStorage) {
-        const self = new this(key, def, storage);
-        const v = await self._storage.getItem(self.key);
-        if (v !== null) {
-            try { self._value = self.decode(v); } catch (e) {}
-        }
-        return self;
+    constructor(key, def, storage = domainStorage) {
+        super(key, def, storage);
+        this._ready = this.init();
     }
 
-    async set(v) { this._value = v; await this.store(); }
+    async init() {
+        const v = await this._storage.getItem(this.key);
+        if (v !== null) {
+            try { this._value = this.decode(v); } catch (e) {}
+        }
+    }
+
+    async get() {
+        await this._ready;
+        return this._value;
+    }
+
+    async set(v) {
+        await this._ready;
+        this._value = v;
+        await this.store();
+    }
 
     async update(fn) {
+        await this._ready;
         fn(this._value);
         await this.store();
         return this._value;
     }
 
     async store() {
+        await this._ready;
         if (this._value !== undefined && this._value !== null) {
             await this._storage.setItem(this.key, this.encode(this._value));
         } else {
@@ -819,12 +832,24 @@ export const StoredJson = JsonMixin(Stored);
 export const AsyncStoredJson = JsonMixin(AsyncStored);
 
 // Manage an immutable, globally-unique client ID in domain storage.
-const clientIdStore = await AsyncStored.create('tdoc:clientId');
-if (clientIdStore.get() === undefined) {
-    clientIdStore.set(await toBase64(
-        crypto.getRandomValues(new Uint8Array(33))));  // Background
-}
-export const clientId = clientIdStore.get();
+export const clientId = (async () => {
+    const stored = new AsyncStored('tdoc:domain:clientId');
+    let id = await stored.get();
+    // TODO(0.84): Remove migration code
+    if (id === undefined) {
+        const old = new AsyncStored('tdoc:clientId');
+        id = await old.get();
+        if (id !== undefined) {
+            await stored.set(id);
+            old.set(undefined);  // Background
+        }
+    }
+    if (id === undefined) {
+        id = await toBase64(crypto.getRandomValues(new Uint8Array(33)));
+        stored.set(id);  // Background
+    }
+    return id;
+})();
 
 // Return an exponential backoff delay.
 export function backoff(min, max, retries) {
