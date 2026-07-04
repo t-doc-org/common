@@ -95,7 +95,7 @@ info = {
     },
     'mathjax': {
         'name': 'mathjax',
-        'version': '4.1.2',
+        'version': '4.1.3',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
@@ -104,19 +104,19 @@ info = {
     },
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.15.0',
+        'version': '11.16.0',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '0.2.1',
+        'version': '0.2.2',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'polyscript': {
         'name': 'polyscript',
-        'version': '0.20.9',
+        'version': '0.20.13',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'release_urls': [
@@ -125,7 +125,7 @@ info = {
     },
     'pyodide': {
         'name': 'pyodide',
-        'version': '0.29.3',
+        'version': '0.29.4',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [
@@ -134,7 +134,7 @@ info = {
     },
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        'version': '3.51.2-build6',
+        'version': '3.53.0-build1',
         'tag': 'latest',
         'url': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
