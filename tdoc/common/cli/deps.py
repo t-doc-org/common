@@ -137,7 +137,24 @@ class Checker:
             pkg.report(self.opts.stdout, self.opts.open, self.opts.cooldown)
 
 
-gh_repo_re = re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)')
+forges = [
+    (re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)'),
+     lambda m: f'https://github.com/{m[1]}/releases',
+     lambda m, cur, want: None),
+    (re.compile(r'\bhttps://code\.haverbeke\.berlin/([^/]+/[^/.]+)'),
+     lambda m: f'https://code.haverbeke.berlin/{m[1]}/tags',
+     lambda m, cur, want:
+        f'https://code.haverbeke.berlin/{m[1]}/compare/{cur}..{want}'),
+]
+
+
+def forge_urls(repo_url, cur, want):
+    for pat, releases, diff in forges:
+        if (m := pat.search(repo_url)) is not None:
+            urls = [releases(m)]
+            if (u := diff(m, cur, want)) is not None: urls.append(u)
+            return urls
+    return []
 
 
 class Package:
@@ -180,9 +197,10 @@ class NpmPackage(Package):
     def add_releases_url(self):
         for pi in (self.info, self.info.versions.get(self.wanted, ''),
                    self.info.versions.get(self.current, '')):
-            if (m := gh_repo_re.search(pi.repository.url)) is None: continue
-            self.urls.append(f'https://github.com/{m[1]}/releases')
-            break
+            if (urls := forge_urls(pi.repository.url, self.current,
+                                   self.wanted)):
+                self.urls.extend(urls)
+                break
 
     def time(self, version):
         return util.parse_time(self.info.time[version])
@@ -210,8 +228,9 @@ class PythonPackage(Package):
         urls = list(self.info.info.get('project_urls', {}).values())
         if u := self.info.info.get('home_page'): urls.append(u)
         for url in urls:
-            if (m := gh_repo_re.search(url)) is None: continue
-            self.urls.append(f'https://github.com/{m[1]}/releases')
+            if (rurls := forge_urls(url, self.current, self.wanted)):
+                self.urls.extend(rurls)
+                return
             return
         if self._add_project_url('home'): return
 
