@@ -67,7 +67,7 @@ class Checker:
         for info in deps.info.values():
             if 'cdn' not in info: continue
             pkg = NpmPackage(info['name'], info['version'])
-            pkg.wanted_tag(info['tag'])
+            pkg.wanted_from_tag(info['tag'])
             pkg.add_urls(info.get('release_urls', ()))
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
@@ -197,7 +197,7 @@ class NpmPackage(Package):
     @property
     def info_url(self): return f'https://registry.npmjs.org/{self.name}'
 
-    def wanted_tag(self, tag):
+    def wanted_from_tag(self, tag):
         self.wanted = self.info['dist-tags'][tag]
 
     @property
