@@ -21,8 +21,6 @@ from . import database, logs, store, util, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
-# TODO(py-3.13): Remove ShutDown
-ShutDown = getattr(queue, 'ShutDown', queue.Empty)
 
 
 def arg(data, name, validate=None):
@@ -204,16 +202,13 @@ class EventsApi(wsgi.Dispatcher):
                 return obs
         raise Exception("Observable not found")
 
-    def watchers_must_stop(self):
-        with self.lock: return self._stop_watchers
-
     @property
     def last_watcher(self):
         with self.lock: return self._last_watcher
 
     @contextlib.contextmanager
     def watcher(self):
-        with Watcher(self.watchers_must_stop) as watcher:
+        with Watcher() as watcher:
             sid = secrets.token_urlsafe(8)
             with self.lock:
                 if self._stop_watchers:
@@ -269,22 +264,19 @@ class EventsApi(wsgi.Dispatcher):
 
 
 class Watcher:
-    def __init__(self, must_stop):
-        self.must_stop = must_stop
+    def __init__(self):
         self.queue = queue.Queue()
         self.lock = threading.Lock()
         self.watches = {}
 
     def stop(self):
-        # TODO(py-3.13): Remove must_stop and this conditional
-        if hasattr(self.queue, 'shutdown'):
-            self.queue.shutdown(True)
+        self.queue.shutdown(True)
 
     def send(self, wid, msg):
         self.queue.put((wid, msg))
 
     def __iter__(self):
-        while not self.must_stop():
+        while True:
             try:
                 wid, msg = self.queue.get(timeout=1)
                 yield b'{"wid":%d,"data":' % wid
@@ -292,7 +284,7 @@ class Watcher:
                 yield b'}\n'
             except queue.Empty:
                 yield b'\n'
-            except ShutDown:
+            except queue.ShutDown:
                 return
 
     def __enter__(self): return self
