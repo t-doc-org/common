@@ -352,9 +352,10 @@ def tdoc_config(app, page=None, doctree=None, context=None):
     if is_local := 'tdoc-local' in app.tags: tdoc['local'] = True
     versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
     for name, info in deps.info.items():
+        if 'cdn' not in info: continue
         if '://' not in (v := versions.setdefault(name, info['version'])):
             versions[name] = f'/_cache/{name}/{v}' if is_local \
-                             else info['url'](info['name'], v)
+                             else deps.cdn_url(name, v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return tdoc

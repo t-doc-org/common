@@ -515,8 +515,8 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         try:
             parts = path_info.split('/', 3)
             if parts[0] != '' or len(parts) < 4: return
-            if (d := deps.info.get(parts[1])) is None: return
-            url = f'{d['url'](d['name'], parts[2])}/{parts[3]}'
+            if (cdn_url := deps.cdn_url(parts[1], parts[2])) is None: return
+            url = f'{cdn_url}/{parts[3]}'
             _log.debug("Caching: %(url)s", url=url)
             with util.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)

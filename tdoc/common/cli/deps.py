@@ -39,7 +39,7 @@ def add_commands(parser):
 def cmd_check(opts):
     cli.require_common(opts)
     checker = Checker(opts)
-    checker.check_deps()
+    checker.check_cdn()
     checker.check_node()
     checker.check_python()
     checker.check_requirements()
@@ -62,25 +62,23 @@ class Checker:
         self.write(f"{o.BOLD}{s}{o.NORM}\n{o.BOLD}{'=' * len(s)}{o.NORM}\n")
         self.first_section = False
 
-    def check_deps(self):
+    def check_cdn(self):
         pkgs = []
         for info in deps.info.values():
+            if 'cdn' not in info: continue
             pkg = NpmPackage(info['name'], info['version'])
             pkg.wanted_tag(info['tag'])
-            if (urls := info.get('release_urls')) is not None:
-                pkg.urls.extend(urls)
-            else:
-                pkg.add_releases_url()
+            pkg.add_urls(info.get('release_urls', ()))
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
-        self.section("deps.py")
+        self.section("CDN")
         self.report_packages(pkgs)
 
     def check_node(self):
         pkgs = []
         for name, info in self.npm_outdated().items():
             pkg = NpmPackage(name, info.current, info.wanted)
-            pkg.add_releases_url()
+            pkg.add_urls()
             if pkg.outdated: pkgs.append(pkg)
         if not pkgs: return
         self.section("npm outdated")
@@ -100,7 +98,7 @@ class Checker:
         for line in out.splitlines():
             if (m := self.uv_update_re.fullmatch(line)) is None: continue
             pkg = PythonPackage(m[1], m[2], m[3])
-            pkg.add_releases_url()
+            pkg.add_urls()
             pkgs.append(pkg)
         if not pkgs: return
         self.section("pyproject.toml")
@@ -118,7 +116,7 @@ class Checker:
                 current, wanted = cur_reqs.get(pn), want_reqs.get(pn)
                 if current == wanted: continue
                 pkg = PythonPackage(pn, current, wanted)
-                pkg.add_releases_url()
+                pkg.add_urls()
                 pkgs.append(pkg)
             if not pkgs: return
             self.section(p.name)
@@ -137,30 +135,22 @@ class Checker:
             pkg.report(self.opts.stdout, self.opts.open, self.opts.cooldown)
 
 
-forges = [
-    (re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)'),
-     lambda m: f'https://github.com/{m[1]}/releases',
-     lambda m, cur, want: None),
-    (re.compile(r'\bhttps://code\.haverbeke\.berlin/([^/]+/[^/.]+)'),
-     lambda m: f'https://code.haverbeke.berlin/{m[1]}/tags',
-     lambda m, cur, want:
-        f'https://code.haverbeke.berlin/{m[1]}/compare/{cur}..{want}'),
-]
-
-
-def forge_urls(repo_url, cur, want):
-    for pat, releases, diff in forges:
-        if (m := pat.search(repo_url)) is not None:
-            urls = [releases(m)]
-            if (u := diff(m, cur, want)) is not None: urls.append(u)
-            return urls
-    return []
+forges = {
+    re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)'): {
+        'releases': lambda m: f'https://github.com/{m[1]}/releases',
+        'diff': lambda m, c, w: f'https://github.com/{m[1]}/compare/{c}..{w}',
+    },
+    re.compile(r'\bhttps://code\.haverbeke\.berlin/([^/]+/[^/.]+)'): {
+        'releases': lambda m: f'https://code.haverbeke.berlin/{m[1]}/tags',
+        'diff': lambda m, c, w:
+            f'https://code.haverbeke.berlin/{m[1]}/compare/{c}..{w}',
+    },
+}
 
 
 class Package:
     def __init__(self, name, current, wanted=None):
         self.name, self.current, self.wanted = name, current, wanted
-        self.urls = [self.versions_url]
 
     @property
     def outdated(self): return self.wanted != self.current
@@ -170,6 +160,22 @@ class Package:
         if (info := self._info_cache.get(self.name)) is not None: return info
         res = self._info_cache[self.name] = util.fetch_json(self.info_url)
         return res
+
+    def add_urls(self, urls=()):
+        self.urls = {self.versions_url: None} | {u: None for u in urls}
+        self.add_releases_url()
+        self.add_diff_url()
+
+    def forge_urls(self, urls):
+        fn = deps.info.get(self.name, {}).get('version_tag', lambda v: str(v))
+        cur, want = fn(self.current), fn(self.wanted)
+        for url in urls:
+            for pat, fns in forges.items():
+                if (m := pat.search(url)) is not None:
+                    return {
+                        'releases': fns['releases'](m),
+                        'diff': fns['diff'](m, cur, want),
+                    }
 
     def report(self, o, open, cooldown):
         o.write(f"{o.LCYAN}{self.name}{o.NORM}\n")
@@ -194,20 +200,28 @@ class NpmPackage(Package):
     def wanted_tag(self, tag):
         self.wanted = self.info['dist-tags'][tag]
 
-    def add_releases_url(self):
-        for pi in (self.info, self.info.versions.get(self.wanted, ''),
-                   self.info.versions.get(self.current, '')):
-            if (urls := forge_urls(pi.repository.url, self.current,
-                                   self.wanted)):
-                self.urls.extend(urls)
-                break
-
-    def time(self, version):
-        return util.parse_time(self.info.time[version])
-
     @property
     def versions_url(self):
         return f'https://www.npmjs.com/package/{self.name}?activeTab=versions'
+
+    def add_releases_url(self):
+        self._add_forge_url('releases')
+
+    def add_diff_url(self):
+        self._add_forge_url('diff')
+
+    def _add_forge_url(self, key):
+        for pi in (self.info, self.info.versions.get(self.wanted, ''),
+                   self.info.versions.get(self.current, '')):
+            if 'repository' not in pi: continue
+            if (furls := self.forge_urls([pi.repository.url])) is not None:
+                self.urls[furls[key]] = None
+                return
+        if (furls := self.forge_urls(self.urls)) is not None:
+            self.urls[furls[key]] = None
+
+    def time(self, version):
+        return util.parse_time(self.info.time[version])
 
 
 class PythonPackage(Package):
@@ -221,29 +235,33 @@ class PythonPackage(Package):
                     for p in self.info.releases[version]),
                    default="unknown")
 
+    @property
+    def versions_url(self):
+        return f'https://pypi.org/project/{self.name}/#history'
+
     def add_releases_url(self):
-        if self._add_project_url('release'): return
-        if self._add_project_url('change'): return
-        if self._add_project_url('news'): return
-        urls = list(self.info.info.get('project_urls', {}).values())
-        if u := self.info.info.get('home_page'): urls.append(u)
-        for url in urls:
-            if (rurls := forge_urls(url, self.current, self.wanted)):
-                self.urls.extend(rurls)
-                return
-            return
-        if self._add_project_url('home'): return
+        found = self._add_project_url('release') \
+                or self._add_project_url('change') \
+                or self._add_project_url('news')
+        if not (self._add_forge_url('releases') or found):
+            self._add_project_url('home')
+
+    def add_diff_url(self):
+        self._add_forge_url('diff')
 
     def _add_project_url(self, label):
         for ul, url in self.info.info.project_urls.items():
             if label in ul.lower():
-                self.urls.append(url)
+                self.urls[url] = None
                 return True
         return False
 
-    @property
-    def versions_url(self):
-        return f'https://pypi.org/project/{self.name}/#history'
+    def _add_forge_url(self, key):
+        urls = list(self.info.info.get('project_urls', {}).values())
+        if u := self.info.info.get('home_page'): urls.append(u)
+        if (furls := self.forge_urls(urls)) is not None:
+            self.urls[furls[key]] = None
+            return True
 
 
 def cmd_generate(opts):
