@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-83)=
+## 0.83 *(2026-07-05)*
+
+- Changed the documentation of roles and directives to use Markdown syntax.
+- Fixed an issue with local user info caching.
+- Updated all dependencies.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.82...0.83)
+
 (release-0-82)=
 ## 0.82 *(2026-07-01)*
 
