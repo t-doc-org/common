@@ -5,7 +5,7 @@
 
 ## Mermaid
 
-``````{rst:directive} .. mermaid::
+``````{rst:directive} {mermaid}
 This directive creates a diagram based on [Mermaid](https://mermaid.js.org/).
 The content of the directive is a diagram description in Mermaid's
 [diagram syntax](https://mermaid.js.org/intro/syntax-reference.html).

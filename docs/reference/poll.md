@@ -5,7 +5,7 @@
 
 ## Directive
 
-````{rst:directive} .. poll:: id
+````{rst:directive} {poll} id
 This directive adds a live audience poll. The poll identifier `id` is required
 and its value must be unique across the site. The content of the directive is
 composed of the question, followed by a bullet list, where each list item

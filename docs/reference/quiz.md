@@ -5,7 +5,7 @@
 
 ## Directive
 
-````{rst:directive} .. quiz:: [type [arg ...]]
+````{rst:directive} {quiz} [type [arg ...]]
 This directive adds an interactive quiz. The quiz questions are laid out with
 markup, and user input fields are placed with {rst:role}`quiz-input` and
 {rst:role}`quiz-select` roles. The following [quiz types](#types) are supported:

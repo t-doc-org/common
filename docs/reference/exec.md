@@ -32,7 +32,7 @@ insert into countries values
 
 ## Directive
 
-````{rst:directive} .. exec:: runner [env]
+````{rst:directive} {exec} runner [env]
 This directive is a {rst:dir}`code-block` that allows executing code in the
 browser. It supports most of the options of {rst:dir}`code-block`, and a few
 more described below.

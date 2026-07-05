@@ -9,7 +9,7 @@
 
 ## Solution
 
-````{rst:directive} .. solution:: [title]
+````{rst:directive} {solution} [title]
 This directive adds an admonition of type `solution`. The title defaults to
 "Solution", and the body is collapsed by default. The solution can be toggled by
 clicking on the title bar. Holding {kbd}`Ctrl` while clicking toggles all
@@ -49,7 +49,7 @@ removed.
 
 ## IFrame
 
-`````{rst:directive} .. iframe:: url
+`````{rst:directive} {iframe} url
 This directive adds an
 [`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
 element loading the given URL.
@@ -95,7 +95,7 @@ by assistive technologies.
 ```
 `````
 
-````{rst:directive} .. youtube:: id
+````{rst:directive} {youtube} id
 This directive adds an
 [`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
 element loading a YouTube video. The argument is the ID of the video, e.g.
@@ -104,7 +104,7 @@ element loading a YouTube video. The argument is the ID of the video, e.g.
 
 ## Table
 
-`````{rst:directive} .. flex-table::
+`````{rst:directive} {flex-table}
 This directive defines an HTML `<table>`{l=html} using a more flexible syntax
 than Markdown tables or other table directives. In particular, it allows
 assigning CSS classes to individual rows and cells, and allows cells to span

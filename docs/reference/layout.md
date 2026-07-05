@@ -169,7 +169,7 @@ specified in the `points` {rst:dir}`metadata`.
 
 ## Grid
 
-`````{rst:directive} .. list-grid::
+`````{rst:directive} {list-grid}
 This directive creates a
 [CSS grid layout](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout)
 ([guide](https://css-tricks.com/snippets/css/complete-guide-grid/)). The
@@ -194,7 +194,7 @@ CSS styles to apply to the grid container element.
 
 ## Block
 
-````{rst:directive} .. block:: type
+````{rst:directive} {block} type
 This directive is a container for arbitrary markdown. Its content isn't rendered
 in the location where it is defined, but is instead moved to the
 {rst:dir}`blocks` directive with the same type on the page.
@@ -203,7 +203,7 @@ The typical use case is defining the solutions to exercises next to their
 exercise in the source document, and rendering them in a separate section.
 ````
 
-````{rst:directive} .. blocks:: type
+````{rst:directive} {blocks} type
 This directive renders the content of all the {rst:dir}`block` directives of the
 given type on the page, in the order in which they appear in the source
 document. Each {rst:dir}`block` directive is rendered as a separate section,

@@ -13,8 +13,9 @@ import time
 from docutils import nodes
 from docutils.parsers.rst import directives
 import pyjson5
-from sphinx import config, errors, locale
+from sphinx import addnodes, config, errors, locale
 from sphinx.builders import html
+from sphinx.domains import rst
 from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
 from sphinx.util import display, docutils, fileutil, logging
@@ -148,6 +149,8 @@ def setup(app):
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
+    app.add_config_value('tdoc_source_type', 'md', 'env',
+                         config.ENUM('md', 'rst'))
 
     app.add_html_theme('t-doc', str(_base))
     app.add_message_catalog(_messages, str(_base / 'locale'))
@@ -156,6 +159,7 @@ def setup(app):
     app.connect('builder-inited', update_intersphinx, priority=499.9)
     app.connect('builder-inited', set_base_html_context)
     app.connect('builder-inited', configure_templates)
+    app.connect('doctree-read', fix_rst_signatures, priority=0)
     app.connect('html-page-context', set_html_context, priority=0)
     app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
@@ -279,6 +283,29 @@ def expand_badge(badge, repo_url):
         if not repo_url: return
         img = repo_url + img
     return {'href': href, 'img': img}
+
+
+_dir_sig_md_re = re.compile(r'\{(.+?)\}(.*)$')
+
+@patch.patch(rst, 'parse_directive')
+def _rst_parse_directive(orig, d):
+    # Add support for Markdown directive signatures.
+    if not (sd := d.strip()).startswith('{'): return orig(d)
+    if not (m := _dir_sig_md_re.match(sd)): return sd, ''
+    pd, pa = m.groups()
+    return pd.strip(), ' ' + pas if (pas := pa.strip()) else ''
+
+
+def fix_rst_signatures(app, doctree):
+    if app.config.tdoc_source_type != 'md': return
+    # Convert rst signatures to Markdown style.
+    for sig in doctree.findall(lambda n: isinstance(n, addnodes.desc_signature)
+                                         and n.parent.get('domain') == 'rst'):
+        if sig.parent.get('objtype') not in ('directive', 'role'): continue
+        name = f'{{{sig['fullname']}}}'
+        sig['_toc_name'] = name
+        if (n := sig.next_node(addnodes.desc_name)) is not None:
+            n.children = [nodes.Text(name)]
 
 
 def set_html_context(app, page, template, context, doctree):

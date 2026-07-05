@@ -5,7 +5,7 @@
 
 ## Chart.js
 
-`````{rst:directive} .. chartjs:: renderer
+`````{rst:directive} {chartjs} renderer
 This directive creates a chart based on [Chart.js](https://www.chartjs.org/).
 
 - Chart.js: [documentation](https://www.chartjs.org/docs/latest/),

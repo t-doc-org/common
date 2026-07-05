@@ -5,7 +5,7 @@
 
 ## JSXGraph
 
-`````{rst:directive} .. jsxgraph:: renderer
+`````{rst:directive} {jsxgraph} renderer
 This directive creates a graph based on
 [JSXGraph](https://jsxgraph.uni-bayreuth.de/wp/).
 

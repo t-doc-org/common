@@ -9,7 +9,7 @@
 
 ## Document metadata
 
-````{rst:directive} .. metadata:: [format]
+````{rst:directive} {metadata} [format]
 This directive sets document metadata at the page level. The content of the
 directive is parsed into a Python {py:class}`dict` and merged into the document
 metadata. The following `format` values are supported:
@@ -125,7 +125,7 @@ t-doc uses the following document metadata fields for per-page configuration.
 
 ## Default directive options
 
-`````{rst:directive} .. defaults:: directive
+`````{rst:directive} {defaults} directive
 This directive sets default options for a directive type for the current
 document, starting from the current location. All directives of the given type
 that follow the {rst:dir}`defaults` block take their default option values from
@@ -248,6 +248,14 @@ The strategy to use to work around the absence of `SharedArrayBuffer`.
   isolation headers.
 - `sabayon`: Install a service worker running
   [Sabayon](https://github.com/WebReflection/sabayon).
+```
+
+```{confval} tdoc_source_type
+:type: {py}`str`, one of `md`, `rst`
+:default: {py}`"md"`
+The style to use when documenting roles and directives.
+- `markdown`: Use Markdown style, i.e. `{role}` and `{directive}`.
+- `rst`: Use reStructuredText style, i.e. `:role:` and `.. directive::`.
 ```
 
 ## CLI and API configuration
