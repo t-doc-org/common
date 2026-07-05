@@ -508,15 +508,29 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
                    final=False, csrf=False, log_level=logs.DEBUG)
     def handle_cache(self, wr):
         yield from self.handle_file(wr, self.opts.cache,
+                                    self.fix_cache_path_info,
                                     self.on_cache_not_found)
+
+    def _split_cache_path(self, path_info):
+        parts = path_info.split('/', 2)
+        if parts[0] != '' or len(parts) < 3: return None, None, None
+        nv = parts[1].split('@', 1)
+        return parts, nv[0], nv[1] if len(nv) > 1 else None
+
+    def fix_cache_path_info(self, path_info):
+        parts, name, version = self._split_cache_path(path_info)
+        if parts is None or version is not None: return path_info
+        if (info := deps.info.get(parts[1])) is None: return path_info
+        parts[1] = f'{parts[1]}@{info['version']}'
+        return '/'.join(parts)
 
     def on_cache_not_found(self, path_info, path):
         url = ''
         try:
-            parts = path_info.split('/', 3)
-            if parts[0] != '' or len(parts) < 4: return
-            if (cdn_url := deps.cdn_url(parts[1], parts[2])) is None: return
-            url = f'{cdn_url}/{parts[3]}'
+            parts, name, version = self._split_cache_path(path_info)
+            if parts is None or version is None: return
+            if (cdn_url := deps.cdn_url(name, version)) is None: return
+            url = f'{cdn_url}/{parts[2]}'
             _log.debug("Caching: %(url)s", url=url)
             with util.urlopen(url) as f: data = f.read()
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -530,9 +544,10 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         with self.lock: base = self.directory
         yield from self.handle_file(wr, base)
 
-    def handle_file(self, wr, base, on_not_found=None):
+    def handle_file(self, wr, base, fix_path_info=None, on_not_found=None):
         method = wr.method
         path_info = wr.path
+        if fix_path_info is not None: path_info = fix_path_info(path_info)
         path = self.file_path(path_info, base)
         path.relative_to(base)  # Ensure we're below base
         if (st := try_stat(path)) is None:

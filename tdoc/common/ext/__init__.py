@@ -325,12 +325,6 @@ def pydata_sphinx_theme_layout(contents, env):
                      r'\1{{ html_attrs | default({}) | xmlattr }}\2')
 
 
-def pop_dep_url(tdoc, name):
-    v = tdoc['versions'].pop(name)
-    if v.startswith('/'): v = f'..{v}'
-    return v
-
-
 def add_js(app, page, template, context, doctree):
     tdoc = tdoc_config(app, page, doctree, context)
 
@@ -343,18 +337,22 @@ def add_js(app, page, template, context, doctree):
         out = 'svg'
     context['tdoc_mathjax_save'] = (app.config.mathjax_path,
                                     app.config.mathjax3_config)
-    mj_url = pop_dep_url(tdoc, 'mathjax')
+    mj_url = tdoc['versions'].pop('mathjax')
+    if mj_url.startswith('/'): mj_url = f'..{mj_url}'
     mj_cfg = app.config.mathjax3_config = merge_dict(
         copy.deepcopy(app.config.mathjax3_config), cfg)
-    if re.search(r'[/@]3[./]', mj_url) is not None:
+    # TODO(0.84): Remove support for MathJax 3
+    if re.search(r'mathjax@3[./]', mj_url) is not None:
         app.config.mathjax_path = f'{mj_url}/es5/tex-{out}-full.js'
     else:
         app.config.mathjax_path = f'{mj_url}/tex-{out}.js'
+        loader = mj_cfg.setdefault('loader', {})
         exts = mj_cfg.pop('tdoc_tex_extensions', [])
-        mj_cfg.setdefault('loader', {}).setdefault('load', []) \
-            .extend(f'[tex]/{e}' for e in exts)
+        loader.setdefault('load', []).extend(f'[tex]/{e}' for e in exts)
         mj_cfg.setdefault('tex', {}).setdefault('packages', {}) \
             .setdefault('[+]', []).extend(exts)
+        if 'tdoc-local' in app.tags:
+            loader.setdefault('paths', {}).setdefault('fonts', '/_cache')
 
     # Set up early and on-load JavaScript.
     tdoc = util.to_json(tdoc).replace('<', '\\x3c')
@@ -379,9 +377,9 @@ def tdoc_config(app, page=None, doctree=None, context=None):
     if is_local := 'tdoc-local' in app.tags: tdoc['local'] = True
     versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
     for name, info in deps.info.items():
-        if 'cdn' not in info: continue
+        if 'cdn' not in info or info.get('exclude_from_js', False): continue
         if '://' not in (v := versions.setdefault(name, info['version'])):
-            versions[name] = f'/_cache/{name}/{v}' if is_local \
+            versions[name] = f'/_cache/{name}@{v}' if is_local \
                              else deps.cdn_url(name, v)
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
