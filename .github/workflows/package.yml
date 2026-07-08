@@ -56,8 +56,9 @@ jobs:
 
   publish-to-github:
     name: Publish to GitHub
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs:
-      - publish-to-pypi
+      - build
     runs-on: ubuntu-latest
     permissions:
       contents: write
