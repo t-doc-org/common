@@ -38,11 +38,11 @@ jobs:
     needs:
       - build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     environment:
       name: pypi
       url: https://pypi.org/p/t-doc-common
-    permissions:
-      id-token: write
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v8
