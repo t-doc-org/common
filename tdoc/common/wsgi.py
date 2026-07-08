@@ -297,10 +297,8 @@ class Dispatcher:
     def post_request(self, wr): pass
 
 
-# TODO(0.84): Default csrf to True
-
 def endpoint(name, methods=None, final=True, require_authn=False,
-             csrf=False, log_level=logs.INFO, log_query=True):
+             csrf=True, log_level=logs.INFO, log_query=True):
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
@@ -322,7 +320,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
 
 
 def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
-                  csrf=False, log_level=logs.INFO, log_query=True):
+                  csrf=True, log_level=logs.INFO, log_query=True):
     def decorator(fn):
         @endpoint(name, methods=methods, require_authn=require_authn, csrf=csrf,
                   log_level=log_level, log_query=log_query)
