@@ -25,7 +25,7 @@ runs:
       run: |
         echo "TDOC_SANDBOX=github" >> "${GITHUB_ENV}"
     - name: Checkout t-doc/common repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: t-doc-org/common
         ref: main

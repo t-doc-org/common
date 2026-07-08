@@ -19,7 +19,7 @@ jobs:
           dev-pkgs: true
           ssh-key: ${{ secrets.DEPLOY_COMMON }}
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: repo
       - name: Build sdist and wheel
@@ -50,7 +50,7 @@ jobs:
           name: python-package
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
         with:
           print-hash: true
 
@@ -70,7 +70,7 @@ jobs:
           name: python-package
           path: dist/
       - name: Sign packages
-        uses: sigstore/gh-action-sigstore-python@a5caf349bc536fbef3668a10ed7f5cd309a4b53d  # v3.2.0
+        uses: sigstore/gh-action-sigstore-python@5b79a39c381910c090341a2c9b0bf022c8b387e1  # v3.4.0
         with:
           inputs: >-
             ./dist/*.tar.gz
