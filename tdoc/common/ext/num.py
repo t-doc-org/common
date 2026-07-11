@@ -157,11 +157,8 @@ def number_per_namespace(app, env):
     # the counter part.
     old = env.tdoc_old_num_fignumbers
     del env.tdoc_old_num_fignumbers
-    rewrite = []
-    for doc, fignums in env.toc_fignumbers.items():
-        if not fignums_equal(fignums.get('num'), old.get(doc)):
-            rewrite.append(doc)
-    return rewrite
+    return [doc for doc, fignums in env.toc_fignumbers.items()
+            if not fignums_equal(fignums.get('num'), old.get(doc))]
 
 
 def fignums_equal(lhs, rhs):

@@ -64,6 +64,11 @@ def set_base_metadata(app, doctree):
 
 
 def extract_metadata(app, env):
+    # The metadata computation (and therefore the change detection) isn't 100%
+    # accurate for incremental builds. Added and modified entries in parent
+    # pages are detected correctly, but removed entries may not. Full builds are
+    # always fine.
+    # TODO: Make incremental builds 100% accurate (similar to num.py)
     prev_metadata = copy.deepcopy(env.metadata)
 
     # Apply recursive metadata from parent pages.
