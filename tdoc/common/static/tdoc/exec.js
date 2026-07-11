@@ -165,7 +165,7 @@ export class Runner {
                               qs(this.node, 'pre').getAttribute('style'));
 
         const reset = this.reset;
-        if (reset === 'show' || (reset === undefined && (preText !== ''))) {
+        if (reset === 'show' || (reset === 'auto' && (preText !== ''))) {
             this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;

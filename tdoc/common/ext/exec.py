@@ -90,7 +90,7 @@ class Exec(code.CodeBlock):
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
-        if (v := self.options.get('reset')) and v != 'auto': node['reset'] = v
+        if (v := self.options.get('reset')) and v != 'hide': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
         node['when'] = self.options.get('when', 'click')
