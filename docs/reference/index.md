@@ -3,6 +3,11 @@
 
 # Reference
 
+```{metadata}
+:recursive:
+subject: "Reference"
+```
+
 ```{toctree}
 :maxdepth: 1
 config

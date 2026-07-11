@@ -5,6 +5,7 @@ import copy
 import yaml
 
 from docutils import nodes
+from docutils.parsers.rst import directives
 import pyjson5
 from sphinx.util import docutils, logging
 
@@ -14,10 +15,10 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_config_value('metadata', {}, 'html', dict)
-    app.add_node(metadata)
+    app.add_config_value('metadata', {}, 'env', dict)
+    app.add_node(metadata, html=(visit_metadata, None))
     app.add_directive('metadata', Metadata)
-    app.connect('doctree-read', extract_metadata)
+    app.connect('env-updated', extract_metadata)
     app.connect('html-page-context', add_head_elements)
     return {
         'version': __version__,
@@ -26,39 +27,60 @@ def setup(app):
     }
 
 
+class metadata(nodes.Element): pass
+
+def visit_metadata(self, node): raise nodes.SkipNode()
+
+
 parsers = {
     'json': lambda s: pyjson5.decode(f'{{{s}}}'),
     'yaml': yaml.safe_load,
 }
 
 
-class metadata(nodes.Element): pass
-
-
 class Metadata(docutils.SphinxDirective):
     optional_arguments = 1
     has_content = True
+    option_spec = {
+        'recursive': directives.flag,
+    }
 
     @report_exceptions
     def run(self):
         fmt = self.arguments[0] if self.arguments else 'yaml'
         if (parse := parsers.get(fmt)) is None:
             raise Exception(f"{{metadata}} Invalid format: {fmt}")
-        node = metadata(attrs=parse(''.join(f'{ln}\n' for ln in self.content)))
+        node = metadata(attrs=parse(''.join(f'{ln}\n' for ln in self.content)),
+                        recursive='recursive' in self.options)
         self.set_source_info(node)
         return [node]
 
 
-def extract_metadata(app, doctree):
-    md = merge_dict(app.env.metadata[app.env.docname], app.config.metadata)
-    nodes = list(doctree.findall(metadata))
-    for i, node in enumerate(nodes):
-        if i == 0:
-            if (attrs := node['attrs']) is not None: merge_dict(md, attrs)
-        else:
-            _log.warning("More than one {metadata} directive in the document",
-                         location=node)
-        node.parent.remove(node)
+def extract_metadata(app, env):
+    # Apply base metadata from config.
+    for docname in env.found_docs:
+        merge_dict(env.metadata[docname], app.config.metadata)
+
+    # Apply recursive metadata from parent pages.
+    def apply_recursive(docname, parent_attrs):
+        if parent_attrs: merge_dict(env.metadata[docname], parent_attrs)
+        if not (children := env.toctree_includes.get(docname)): return
+
+        attrs = copy.deepcopy(parent_attrs)
+        for node in env.get_doctree(docname).findall(
+                lambda n: isinstance(n, metadata) and n['recursive']):
+            if (v := node['attrs']) is not None: merge_dict(attrs, v)
+        for child in children: apply_recursive(child, attrs)
+
+    apply_recursive(app.config.root_doc, {})
+
+    # Apply the pages' own metadata.
+    for docname in env.found_docs:
+        md = env.metadata[docname]
+        for node in env.get_doctree(docname).findall(metadata):
+            if (v := node['attrs']) is not None: merge_dict(md, v)
+
+    # TODO: Return list of docnames of pages whose metadata changed
 
 
 def add_head_elements(app, page, template, context, doctree):

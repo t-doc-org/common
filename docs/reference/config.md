@@ -21,6 +21,16 @@ metadata. The following `format` values are supported:
 The {confval}`metadata` `conf.py` option defines site-wide default document
 metadata.
 
+{.rubric}
+Options
+```{rst:directive:option} recursive
+When set, the metadata applies to the page descendants (as per the TOC tree) in
+addition to the page itself.
+```
+````
+
+### Metadata fields
+
 In addition to Sphinx-specific
 [metadata fields](https://www.sphinx-doc.org/en/master/usage/restructuredtext/field-lists.html#special-metadata-fields),
 t-doc uses the following document metadata fields for per-page configuration.
@@ -121,7 +131,6 @@ t-doc uses the following document metadata fields for per-page configuration.
     polyscript: 0.17.30
     pyodide: https://cdn.jsdelivr.net/pyodide/v0.27.7/full
   ```
-````
 
 ## Default directive options
 

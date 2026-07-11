@@ -7,6 +7,10 @@
 :hidden:
 layout/hide
 ```
+```{metadata}
+points:
+  text: [" ({0} pt)", " ({0} pts)"]
+```
 
 ## Spacing
 

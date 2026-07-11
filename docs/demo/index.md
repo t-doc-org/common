@@ -3,6 +3,11 @@
 
 # Demo
 
+```{metadata}
+:recursive:
+subject: "Demo"
+```
+
 ```{toctree}
 :maxdepth: 1
 elements

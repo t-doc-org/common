@@ -5,8 +5,6 @@
 
 ```{metadata}
 solutions: hide
-points:
-  text: [" ({0} pt)", " ({0} pts)"]
 ```
 
 ## SVG
