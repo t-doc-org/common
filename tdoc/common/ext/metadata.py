@@ -18,6 +18,8 @@ def setup(app):
     app.add_config_value('metadata', {}, 'env', dict)
     app.add_node(metadata, html=(visit_metadata, None))
     app.add_directive('metadata', Metadata)
+    # Set the base metadata before MetadataCollector.
+    app.connect('doctree-read', set_base_metadata, priority=499)
     app.connect('env-updated', extract_metadata)
     app.connect('html-page-context', add_head_elements)
     return {
@@ -56,10 +58,13 @@ class Metadata(docutils.SphinxDirective):
         return [node]
 
 
-def extract_metadata(app, env):
+def set_base_metadata(app, doctree):
     # Apply base metadata from config.
-    for docname in env.found_docs:
-        merge_dict(env.metadata[docname], app.config.metadata)
+    merge_dict(app.env.metadata[app.env.docname], app.config.metadata)
+
+
+def extract_metadata(app, env):
+    prev_metadata = copy.deepcopy(env.metadata)
 
     # Apply recursive metadata from parent pages.
     def apply_recursive(docname, parent_attrs):
@@ -80,7 +85,9 @@ def extract_metadata(app, env):
         for node in env.get_doctree(docname).findall(metadata):
             if (v := node['attrs']) is not None: merge_dict(md, v)
 
-    # TODO: Return list of docnames of pages whose metadata changed
+    # Force a rebuild of pages whose metadata has changed.
+    return [docname for docname, md in env.metadata.items()
+            if md != prev_metadata.get(docname)]
 
 
 def add_head_elements(app, page, template, context, doctree):
