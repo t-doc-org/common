@@ -30,7 +30,7 @@ html {
 }
 
 /* Set the maximum width of sidebars instead of a fixed width. */
-div.sidebar, aside.sidebar {
+:is(div, aside).sidebar {
     max-width: 40%;
     width: inherit;
 }
@@ -56,6 +56,14 @@ hr {
 }
 .table > tbody > tr:hover:hover {
     background-color: var(--pst-color-table-row-hover-bg);
+}
+
+/* Give more specificity to table-related rules in basic.css. */
+:is(th, td):not(.¶) > :first-child {
+    margin-top: 0;
+}
+:is(th, td):not(.¶) > :last-child {
+    margin-bottom: 0;
 }
 
 /* Make quotation attributions a bit more compact. */
@@ -425,11 +433,13 @@ p.rubric {
    margins on all direct descendants, which breaks horizontal alignment classes.
    Use padding on the container instead, and remove the margins through
    patching. Also, set a bottom margin on the title. */
-.admonition, div.admonition {
+.admonition,
+div.admonition {
     padding-left: 2rem;
     padding-right: 2rem;
 }
-.admonition > .admonition-title, div.admonition > .admonition-title {
+.admonition > .admonition-title,
+div.admonition > .admonition-title {
     margin-left: -2rem;
     margin-right: -2rem;
     margin-bottom: 0.4em;
@@ -815,6 +825,12 @@ tdoc-poll .tdoc-poll-sel > span {
 tdoc-poll .tdoc-poll-answers {
     margin-bottom: 0;
 }
+tdoc-poll .tdoc-poll-answers.table > tbody > tr {
+    background-color: var(--pst-color-table-row-zebra-high-bg);
+}
+tdoc-poll .tdoc-poll-answers.table > tbody > tr > td {
+    border-bottom-color: var(--pst-color-table-inner-border);
+}
 tdoc-poll .tdoc-poll-answers > tbody > tr.selected > td.tdoc-poll-sel > span {
     visibility: visible;
 }
@@ -826,7 +842,7 @@ tdoc-poll tr[style*="--tdoc-value:"] > td.tdoc-poll-ans {
         var(--pst-color-attention-bg) var(--tdoc-value),
         var(--bs-table-bg) var(--tdoc-value));
 }
-tdoc-poll .tdoc-poll-cnt, tdoc-poll .tdoc-poll-pct {
+tdoc-poll :is(.tdoc-poll-cnt, .tdoc-poll-pct) {
     text-align: right;
     white-space: nowrap;
 }
@@ -1272,14 +1288,7 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
     border-width: initial;
     color: var(--bs-table-color);
 }
-.modal .table thead tr {
-    background-color: initial;
-    border-bottom-color: initial;
-    border-bottom-style: initial;
-    border-bottom-width: initial;
-}
-.modal .table td ~ td, .modal .table td ~ th,
-.modal .table th ~ td, .modal .table th ~ th {
+.modal .table :is(th, td) ~ :is(th, td) {
     border-left-color: initial;
     border-left-style: initial;
     border-left-width: initial;
@@ -1290,7 +1299,7 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
     border-bottom-style: initial;
     border-bottom-width: initial;
 }
-.modal .table tbody tr:nth-child(odd), .modal .table tbody tr:nth-child(even),
+.modal .table tbody tr,
 .modal .table tbody tr:hover {
     background-color: initial;
 }
@@ -1492,7 +1501,7 @@ div.math.align-right:not(#¶) > mjx-container {
 }
 
 /* Avoid that math blocks sometimes get cut off at the top. */
-div.math, span.math {
+:is(div, span).math {
     overflow: visible;
 }
 div.math mjx-container {
@@ -1509,8 +1518,7 @@ mjx-container[display="true"]:not(#¶) {
 
 /* Keep list markers at the top for math content. */
 :is(ol, ul) > li > div.math > mjx-container > svg {
-    vertical-align: top !important;
-    /* Override element style */
+    vertical-align: top !important;  /* Override element style */
 }
 
 /* Avoid that form controls change size on focus. */
@@ -1519,6 +1527,6 @@ mjx-container[display="true"]:not(#¶) {
 }
 
 /* Random cosmetic fixes */
-dd ul, dd table {
+dd :is(ul, table) {
     margin-bottom: 1rem;  /* Revert basic.css */
 }
