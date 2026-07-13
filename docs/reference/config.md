@@ -144,6 +144,9 @@ A document can contain multiple {rst:dir}`defaults` blocks for the same
 directive type. Each occurrence replaces the previous one, i.e. they don't
 combine.
 
+The {confval}`tdoc_directive_defaults` `conf.py` option defines site-wide
+directive option defaults.
+
 ````{code-block}
 ```{exec} python
 # Uses the directive's default options
@@ -222,10 +225,11 @@ The base URL of the t-doc API server. When empty, the URL is set automatically
 for `t-doc.org` and its subdomains.
 ```
 
-```{confval} tdoc_repos
-:type: {py}`str`
-:default: {py}`"https://rc.t-doc.org/"`
-The base URL of the site repositories.
+```{confval} tdoc_directive_defaults
+:type: {py}`dict`
+:default: {py}`{}`
+Site-wide defaults for directive options. Each entry maps a directive name to a
+{py:class}`dict` containing default option values for that directive.
 ```
 
 ```{confval} tdoc_domain_storage
@@ -257,6 +261,12 @@ The strategy to use to work around the absence of `SharedArrayBuffer`.
   isolation headers.
 - `sabayon`: Install a service worker running
   [Sabayon](https://github.com/WebReflection/sabayon).
+```
+
+```{confval} tdoc_repos
+:type: {py}`str`
+:default: {py}`"https://rc.t-doc.org/"`
+The base URL of the site repositories.
 ```
 
 ```{confval} tdoc_source_type
