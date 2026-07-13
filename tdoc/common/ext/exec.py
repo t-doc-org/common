@@ -10,7 +10,7 @@ from docutils.parsers.rst import directives
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, format_attrs, merge_dict, meta, names_option, \
+from . import __version__, format_attrs, merge_dict, meta, opt_names, \
               report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
@@ -41,14 +41,14 @@ class Exec(code.CodeBlock):
     required_arguments = 1
     optional_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
-        'after': names_option,
+        'after': opt_names,
         'console-style': directives.unchanged,
         'editor': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
         'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
         'style': directives.unchanged,
-        'then': names_option,
+        'then': opt_names,
         'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
     }
 

@@ -92,7 +92,13 @@ def merge_dict(dst, src, override=True):
     return dst
 
 
-def names_option(arg):
+def opt_bool(arg):
+    if arg is None or (v := arg.strip().lower()) in ('', 'true'): return True
+    if v == 'false': return False
+    raise ValueError("must be true, false or empty")
+
+
+def opt_names(arg):
     if arg is None: raise ValueError('no argument provided')
     return [nodes.fully_normalize_name(n) for n in arg.split()]
 

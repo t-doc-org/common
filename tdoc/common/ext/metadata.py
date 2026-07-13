@@ -5,11 +5,10 @@ import copy
 import yaml
 
 from docutils import nodes
-from docutils.parsers.rst import directives
 import pyjson5
 from sphinx.util import docutils, logging
 
-from . import __version__, merge_dict, report_exceptions
+from . import __version__, merge_dict, opt_bool, report_exceptions
 
 _log = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ class Metadata(docutils.SphinxDirective):
     optional_arguments = 1
     has_content = True
     option_spec = {
-        'recursive': directives.flag,
+        'recursive': opt_bool,
     }
 
     @report_exceptions
@@ -53,7 +52,7 @@ class Metadata(docutils.SphinxDirective):
         if (parse := parsers.get(fmt)) is None:
             raise Exception(f"{{metadata}} Invalid format: {fmt}")
         node = metadata(attrs=parse(''.join(f'{ln}\n' for ln in self.content)),
-                        recursive='recursive' in self.options)
+                        recursive=self.options.get('recursive', False))
         self.set_source_info(node)
         return [node]
 

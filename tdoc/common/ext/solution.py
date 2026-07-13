@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: MIT
 
 from docutils import languages, nodes
-from docutils.parsers.rst import directives
 from docutils.parsers.rst.directives import admonitions
 from sphinx import config
 from sphinx.util import logging
 
-from . import _, __version__, meta
+from . import _, __version__, meta, opt_bool
 
 _log = logging.getLogger(__name__)
 
@@ -31,8 +30,8 @@ class Solution(admonitions.BaseAdmonition):
     node_class = solution
     optional_arguments = 1
     option_spec = admonitions.BaseAdmonition.option_spec | {
-        'expand': directives.flag,
-        'show': directives.flag,
+        'expand': opt_bool,
+        'show': opt_bool,
     }
 
     def run(self):
@@ -48,8 +47,8 @@ class Solution(admonitions.BaseAdmonition):
             cls = node['classes']
             if not cls: cls += ['note', 'dropdown']
             cls += ['solution']
-            if 'expand' in self.options: cls += ['expand']
-            if 'show' in self.options: cls += ['always-show']
+            if self.options.get('expand', False): cls += ['expand']
+            if self.options.get('show', False): cls += ['always-show']
         return res
 
 

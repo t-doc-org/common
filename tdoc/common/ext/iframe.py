@@ -5,7 +5,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions
+from . import __version__, opt_bool, report_exceptions
 
 _log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class IFrame(docutils.SphinxDirective):
     option_spec = {
         'allow': directives.unchanged,
         'class': directives.class_option,
-        'credentialful': directives.flag,
+        'credentialful': opt_bool,
         'referrerpolicy': directives.unchanged,
         'sandbox': directives.unchanged,
         'style': directives.unchanged,
@@ -54,8 +54,9 @@ class IFrame(docutils.SphinxDirective):
 
     @report_exceptions
     def run(self):
-        node = iframe(src=self.get_src(self.arguments[0]),
-                      credentialless='credentialful' not in self.options)
+        node = iframe(
+            src=self.get_src(self.arguments[0]),
+            credentialless=not self.options.get('credentialful', False))
         self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
         for k in _attr_names:
