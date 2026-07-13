@@ -23,6 +23,7 @@ metadata.
 
 {.rubric}
 Options
+
 ```{rst:directive:option} recursive
 When set, the metadata applies to the page descendants (as per the TOC tree) in
 addition to the page itself.

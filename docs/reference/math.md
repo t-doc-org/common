@@ -64,6 +64,7 @@ Options
 :type: IDs
 A space-separated list of CSS classes to add to the graph container.
 ```
+
 ```{rst:directive:option} style: property: value; [property: value; ...]
 CSS styles to apply to the graph container.
 ```

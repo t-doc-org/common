@@ -50,6 +50,7 @@ Options
 :type: IDs
 A space-separated list of CSS classes to add to the diagram container.
 ```
+
 ```{rst:directive:option} style: property: value; [property: value; ...]
 CSS styles to apply to the diagram container.
 ```

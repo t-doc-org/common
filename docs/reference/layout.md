@@ -180,13 +180,16 @@ left to right and from top to bottom.
 
 {.rubric}
 Options
+
 ```{rst:directive:option} cell-style: property: value; [property: value; ...]
 CSS styles to apply to the grid cell elements.
 ```
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the grid container element.
 ```
+
 ```{rst:directive:option} style: property: value; [property: value; ...]
 CSS styles to apply to the grid container element.
 ```
@@ -212,6 +215,7 @@ directive.
 
 {.rubric}
 Options
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the rendered block sections.

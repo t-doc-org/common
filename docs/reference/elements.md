@@ -29,18 +29,22 @@ are displayed.
 
 {.rubric}
 Options
+
 ```{rst:directive:option} class: name [name...]
 :type: IDs
 A space-separated list of CSS classes to add to the admonition. The default is
 `note dropdown`.
 ```
+
 ```{rst:directive:option} name: name
 :type: ID
 A reference target for the admonition.
 ```
+
 ```{rst:directive:option} expand
 When set, the admonition is expanded by default.
 ```
+
 ```{rst:directive:option} show
 When set, the admonition is always shown, even if solutions are hidden or
 removed.
