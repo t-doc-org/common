@@ -25,7 +25,7 @@ exec:
 ```
 
 ```{important}
-Code using Pygame must run in the `main` environment.
+Code using Pygame must run in the `main` {rst:dir}`environment <exec:env>`.
 ```
 
 ````{warning}
@@ -45,7 +45,8 @@ not respond to keyboard input anymore (e.g. typing in an editor won't have any
 effect). It is useful to have a code block like the following on the page, to
 force releasing the keyboard if this happens.
 
-```{exec} python main
+```{exec} python
+:env: main
 import pygame; pygame.quit()
 ```
 ````
@@ -62,6 +63,7 @@ setup_canvas()
 
 ```{defaults} exec
 :editor:
+:env: main
 :after: setup
 :style: max-height: 25rem;
 ```
@@ -89,7 +91,7 @@ The program below is a slightly modified version of the `pygame.examples.liquid`
 example distributed with Pygame, converted to an asynchronous main loop. Press
 {kbd}`Esc` or click the left mouse button to terminate.
 
-```{exec} python main
+```{exec} python
 import pygame
 import math
 import pathlib
@@ -140,7 +142,7 @@ The example below demonstrates loading resources from files specified in the
 [`exec.python.files`](../../reference/exec.md#python) {rst:dir}`metadata`. Press
 {kbd}`Esc` to terminate the program.
 
-```{exec} python main
+```{exec} python
 import pygame
 from random import randint
 
@@ -233,7 +235,7 @@ reload the page.
 Move the vehicle left and right with the cursor keys, and fire with
 {kbd}`Space`. Terminate the program with {kbd}`Esc`.
 
-```{exec} python main
+```{exec} python
 import pygame
 try:
     from pygame.examples.aliens import main
@@ -246,7 +248,7 @@ finally:
 
 Terminate the program with {kbd}`Esc`.
 
-```{exec} python main
+```{exec} python
 :console-style: max-height: 25rem;
 import pygame
 try:

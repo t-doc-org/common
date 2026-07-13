@@ -280,7 +280,8 @@ The following block uses the block above and raises an exception. It runs in a
 separate interpreter to avoid polluting the other blocks on this page; if all
 blocks on a page should use `friendly`, this isn't necessary.
 
-```{exec} python interp-friendly
+```{exec} python
+:env: friendly-env
 :after: friendly
 :console-style: max-height: unset;
 print("Importing foo...")

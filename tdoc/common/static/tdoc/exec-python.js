@@ -8,7 +8,8 @@ class Interpreter {
     files = {}
     runners = {}
 
-    constructor(config) {
+    constructor(env, config) {
+        this.env = env;
         this.config = config;
 
         // Extract files and resolve their URLs.
@@ -18,6 +19,8 @@ class Interpreter {
         }
         this.files[import.meta.resolve('./exec-python.zip')] = '/lib/tdoc.zip';
     }
+
+    get envPrefix() { return this.env !== '' ? `[env=${this.env}] ` : ''; }
 
     setHooks(ns) {
         const p = Interpreter.prototype;
@@ -64,7 +67,7 @@ class WorkerInterpreter extends Interpreter {
         });
         const {promise, resolve} = Promise.withResolvers();
         this.worker.sync.ready = msg => {
-            console.info(`[t-doc] ${msg}`);
+            console.info(`[t-doc] ${this.envPrefix}${msg}`);
             resolve();
         };
         this.setHooks(this.worker.sync);
@@ -115,7 +118,7 @@ core, msg
 `);
         this.core = core;
         this.setHooks(this.core);
-        console.info(`[t-doc] ${msg}`);
+        console.info(`[t-doc] ${this.envPrefix}${msg}`);
     }
 
     writeFiles() {
@@ -156,8 +159,8 @@ core, msg
     }
 }
 
-async function create(cls, config) {
-    const inst = new cls(config);
+async function create(cls, env, config) {
+    const inst = new cls(env, config);
     await inst.init();
     return inst;
 }
@@ -172,8 +175,8 @@ class PythonRunner extends Runner {
         interps = Object.fromEntries(await Promise.all(config._envs.map(
             async env => [
                 env,
-                env === 'main' ? await create(MainInterpreter, config)
-                               : await create(WorkerInterpreter, config),
+                env === 'main' ? await create(MainInterpreter, env, config)
+                               : await create(WorkerInterpreter, env, config),
             ])));
     }
 

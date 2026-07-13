@@ -32,20 +32,18 @@ insert into countries values
 
 ## Directive
 
-````{rst:directive} {exec} runner [env]
+````{rst:directive} {exec} runner
 This directive is a {rst:dir}`code-block` that allows executing code in the
-browser. It supports most of the options of {rst:dir}`code-block`, and a few
-more described below.
-
-`runner` is one of the supported code runners ([`html`](#html),
-[`micropython`](#micropython), [`python`](#python), [`sql`](#sql)). `env` is an
-optional environment name. Code executed in distinct environments is isolated
-from each other. The default environment name is the empty string.
+browser. `runner` is one of the supported code runners ([`html`](#html),
+[`micropython`](#micropython), [`python`](#python), [`sql`](#sql)).
 
 {rst:dir}`exec` directives generate `<tdoc-exec>`{l=html} elements.
 
 {.rubric}
 Options
+
+Most of the options of {rst:dir}`code-block` are supported. Additionally, the
+following options can be specified.
 
 ```{rst:directive:option} after: name [name...]
 Execute one or more {rst:dir}`exec` blocks before this block, in the same
@@ -62,6 +60,12 @@ Display the {rst:dir}`exec` block in an editor. If `ID` is provided, the
 content of the editor is saved in browser local storage and restored on reload.
 `ID` must be unique across all documents, e.g. a
 [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
+```
+
+```{rst:directive:option} env: [name]
+The environment in which the code must be executed. Code executed in distinct
+environments is isolated from each other. The default environment name is the
+empty string.
 ```
 
 ```{rst:directive:option} include: path [path...]

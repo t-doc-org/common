@@ -44,6 +44,7 @@ class Exec(code.CodeBlock):
         'after': opt_names,
         'console-style': directives.unchanged,
         'editor': directives.unchanged,
+        'env': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
         'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
@@ -82,7 +83,9 @@ class Exec(code.CodeBlock):
         node = node.next_node(nodes.literal_block, include_self=True)
         runner = node['language']
         node['runner'] = runner
-        node['env'] = self.arguments[1] if len(self.arguments) >= 2 else ''
+        # TODO(0.85): Remove the optional env in self.arguments
+        node['env'] = self.arguments[1] if len(self.arguments) >= 2 \
+                      else self.options.get('env', '').strip()
         node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
