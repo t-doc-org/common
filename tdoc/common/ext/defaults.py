@@ -3,6 +3,7 @@
 
 import types
 
+from docutils.parsers import rst
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
@@ -23,12 +24,14 @@ def setup(app):
 
 @patch.patch(directives, 'directive')
 def _directives_directive(orig, name, language, document):
+    name = name.lower()
     cls, msgs = orig(name, language, document)
-    # Patch directive classes that have defaults in the config. Those that have
-    # defaults set via {defaults} are patched in Defaults.run().
     if cls is None or is_patched(cls): return cls, msgs
-    # TODO: Convert FunctionType and MethodType directives
-    if isinstance(cls, (types.FunctionType, types.MethodType)): return cls, msgs
+    # Convert old-style directives, updating the directive cache.
+    if isinstance(cls, (types.FunctionType, types.MethodType)):
+        cls = directives._directives[name] = rst.convert_directive_function(cls)
+    # Patch only directive classes referenced by tdoc_directive_defaults.
+    # {defaults} patches those it references.
     defs = document.settings.env.app.config.tdoc_directive_defaults
     if (opts := defs.get(name)) is None: return cls, msgs
     if unknown := set(opts) - set(cls.option_spec):
@@ -76,9 +79,6 @@ class Defaults(docutils.SphinxDirective):
                                          self.state.document)
         if cls is None:
             raise Exception(f"{{defaults}}: Unknown directive: {name}")
-        if isinstance(cls, (types.FunctionType, types.MethodType)):
-            raise Exception(
-                f"{{defaults}}: Unsupported function-type directive: {name}")
 
         # Check option names.
         if unknown := set(self.options) - set(cls.option_spec):
