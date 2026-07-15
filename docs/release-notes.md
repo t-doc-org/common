@@ -3,6 +3,19 @@
 
 # Release notes
 
+(release-0-84)=
+## 0.84 *(2026-07-15)*
+
+- Added the {rst:dir}`{metadata} :recursive: <metadata:recursive>` option to
+  enable page metadata inheritance.
+- Added the {confval}`tdoc_directive_defaults` configuration value.
+- Moved the environment name from the {rst:dir}`exec` argument list to an
+  {rst:dir}`:env: <exec:env>` option, so that it can be set for whole pages with the
+  {rst:dir}`defaults` directive.
+- Changed the default for {rst:dir}`{exec} :reset: <exec:reset>` to `hide`. The
+  button is too dangerous to be this close to the "Run" button in general.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.83...0.84)
+
 (release-0-83)=
 ## 0.83 *(2026-07-05)*
 
