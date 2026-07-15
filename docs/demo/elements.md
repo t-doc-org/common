@@ -67,16 +67,30 @@ The [YouTube](https://youtube.com/) video below is embedded with the
   border-width: 1px;
   padding: 0.2rem 0.5rem;
 }
-.table.reset.table-example > thead > tr {
+.table.reset.table-example th {
   border-bottom-width: 2px;
+}
+.table.reset.table-example :is(th, td):first-child {
+  width: 0;
+  border-right-width: 2px;
+}
+@media screen {
+  .table.reset-print.table-example-print :is(th, td):first-child {
+    width: 0;
+    border-right: 2px solid var(--pst-color-primary);
+  }
 }
 @media print {
   .table.reset-print.table-example-print :is(th, td) {
     border: 1px solid black;
     padding: 0.2rem 0.5rem;
   }
-  .table.reset-print.table-example-print > thead > tr {
+  .table.reset-print.table-example-print th {
     border-bottom-width: 2px;
+  }
+  .table.reset-print.table-example-print :is(th, td):first-child {
+    width: 0;
+    border-right-width: 2px;
   }
 }
 </style>
