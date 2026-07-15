@@ -59,3 +59,51 @@ The [YouTube](https://youtube.com/) video below is embedded with the
 
 ```{youtube} aVwxzDHniEw
 ```
+
+## Tables
+
+<style>
+.table.reset.table-example :is(th, td) {
+  border-width: 1px;
+  padding: 0.2rem 0.5rem;
+}
+.table.reset.table-example > thead > tr {
+  border-bottom-width: 2px;
+}
+@media print {
+  .table.reset-print.table-example-print :is(th, td) {
+    border: 1px solid black;
+    padding: 0.2rem 0.5rem;
+  }
+  .table.reset-print.table-example-print > thead > tr {
+    border-bottom-width: 2px;
+  }
+}
+</style>
+
+This table is a normal Markdown table and gets styled via the `table` class.
+These styles are reset by applying the `reset` class, then overridden via an
+embedded stylesheet. Note that the CSS rules for the `reset` class have
+[specificity](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Specificity)
+(0, 2, x), so **the overrides need to have specificity (0, 3, x)**. This can be
+achieved e.g. by adding a custom class to identify the table (`table-example`
+here), then specify all three classes in the override rules
+(`.table.reset.table-example`).
+
+{.reset .table-example}
+|           | $A$ | $B$ | $C$ |
+| :-------- | :-: | :-: | :-: |
+| $x$       |     |     |     |
+| $y$       |     |     |     |
+| $f(x, y)$ |     |     |     |
+
+The next table is also a normal Markdown table, but its styles are reset for
+print media only by applying the `reset-print` class, then overridden. On screen
+it looks like a normal table.
+
+{.reset-print .table-example-print}
+|           | $A$ | $B$ | $C$ |
+| :-------- | :-: | :-: | :-: |
+| $x$       |     |     |     |
+| $y$       |     |     |     |
+| $f(x, y)$ |     |     |     |

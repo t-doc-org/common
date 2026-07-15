@@ -54,7 +54,7 @@ hr {
 .table > tbody.inv > tr:nth-child(odd) {
     background-color: var(--pst-color-table-row-zebra-low-bg);
 }
-.table > tbody > tr:hover:hover {
+.table > tbody > tr:hover:not(.¶) {
     background-color: var(--pst-color-table-row-hover-bg);
 }
 
@@ -64,6 +64,42 @@ hr {
 }
 :is(th, td):not(.¶) > :last-child {
     margin-bottom: 0;
+}
+
+/* Classes to revert table styles from pydata-sphinx-theme. */
+.table.reset {
+    border: 0 solid var(--pst-color-table-inner-border);
+    background-color: initial;
+}
+.table.reset > :is(thead, tbody, tfoot),
+.table.reset > :is(thead, tbody, tfoot) > tr,
+.table.reset > :is(thead, tbody, tfoot) > tr:hover,
+.table.reset > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    border: 0 solid;
+    border-color: inherit;
+    background-color: initial;
+}
+.table.reset > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    box-shadow: initial;
+    padding: initial;
+}
+@media print {
+    .table.reset-print {
+        border: 0 solid black;
+        background-color: initial;
+    }
+    .table.reset-print > :is(thead, tbody, tfoot),
+    .table.reset-print > :is(thead, tbody, tfoot) > tr,
+    .table.reset-print > :is(thead, tbody, tfoot) > tr:hover,
+    .table.reset-print > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+        border: 0 solid;
+        border-color: inherit;
+        background-color: initial;
+    }
+    .table.reset-print > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+        box-shadow: initial;
+        padding: initial;
+    }
 }
 
 /* Make quotation attributions a bit more compact. */
