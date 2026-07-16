@@ -216,10 +216,9 @@ def on_config_inited(app, config):
     opts.setdefault('use_download_button', False)
 
     # Check that MathJax options are in the right config key.
-    # BUG(myst-parser): Uses mathjax3_config and ignores mathjax4_config
-    if config.mathjax4_config is not None:
+    if config.mathjax3_config is not None:
         raise errors.ConfigError(
-            "mathjax4_config: Set MathJax options in mathjax3_config instead")
+            "mathjax3_config: Set MathJax options in mathjax4_config instead")
 
 
 def update_intersphinx(app):
@@ -334,7 +333,7 @@ def pydata_sphinx_theme_layout(contents, env):
 def add_js(app, page, template, context, doctree):
     tdoc = tdoc_config(app, page, doctree, context)
 
-    # Temporarily override mathjax_path and mathjax3_config, then restore them
+    # Temporarily override mathjax_path and mathjax4_config, then restore them
     # after mathjax.install_mathjax() has run.
     cfg = meta(app.env, page, 'mathjax', {})
     if (out := cfg.get('output', 'svg')) not in ('chtml', 'svg'):
@@ -342,23 +341,19 @@ def add_js(app, page, template, context, doctree):
                      f"svg): {out}")
         out = 'svg'
     context['tdoc_mathjax_save'] = (app.config.mathjax_path,
-                                    app.config.mathjax3_config)
+                                    app.config.mathjax4_config)
     mj_url = tdoc['versions'].pop('mathjax')
     if mj_url.startswith('/'): mj_url = f'..{mj_url}'
-    mj_cfg = app.config.mathjax3_config = merge_dict(
-        copy.deepcopy(app.config.mathjax3_config), cfg)
-    # TODO(0.84): Remove support for MathJax 3
-    if re.search(r'mathjax@3[./]', mj_url) is not None:
-        app.config.mathjax_path = f'{mj_url}/es5/tex-{out}-full.js'
-    else:
-        app.config.mathjax_path = f'{mj_url}/tex-{out}.js'
-        loader = mj_cfg.setdefault('loader', {})
-        exts = mj_cfg.pop('tdoc_tex_extensions', [])
-        loader.setdefault('load', []).extend(f'[tex]/{e}' for e in exts)
-        mj_cfg.setdefault('tex', {}).setdefault('packages', {}) \
-            .setdefault('[+]', []).extend(exts)
-        if 'tdoc-local' in app.tags:
-            loader.setdefault('paths', {}).setdefault('fonts', '/_cache')
+    mj_cfg = app.config.mathjax4_config = merge_dict(
+        copy.deepcopy(app.config.mathjax4_config), cfg)
+    app.config.mathjax_path = f'{mj_url}/tex-{out}.js'
+    loader = mj_cfg.setdefault('loader', {})
+    exts = mj_cfg.pop('tdoc_tex_extensions', [])
+    loader.setdefault('load', []).extend(f'[tex]/{e}' for e in exts)
+    mj_cfg.setdefault('tex', {}).setdefault('packages', {}) \
+        .setdefault('[+]', []).extend(exts)
+    if 'tdoc-local' in app.tags:
+        loader.setdefault('paths', {}).setdefault('fonts', '/_cache')
 
     # Set up early and on-load JavaScript.
     tdoc = util.to_json(tdoc).replace('<', '\\x3c')
@@ -368,7 +363,7 @@ def add_js(app, page, template, context, doctree):
 
 
 def restore_mathjax(app, page, template, context, doctree):
-    app.config.mathjax_path, app.config.mathjax3_config = \
+    app.config.mathjax_path, app.config.mathjax4_config = \
         context['tdoc_mathjax_save']
     del context['tdoc_mathjax_save']
 

@@ -73,7 +73,7 @@ html_show_sphinx = False
 html_theme = 't-doc'
 
 # MathJax options.
-mathjax3_config = {
+mathjax4_config = {
     'loader': {'load': ['input/mml']},
     'options': {
         'menuOptions': {
