@@ -71,7 +71,7 @@ class Leader(Role):
             self.inliner.document.note_pending(node)
         else:
             node = span('', classes=[f'tdoc-{self.name}', f'c{parts[0]}'],
-                        attrs={'style': f'width:{parts[1]}'})
+                        attrs={'style': f'width: {parts[1]};'})
         self.set_source_info(node)
         return [node], []
 

@@ -30,6 +30,10 @@ The quick brown fox {hspace}`3em` jumps over {hspace}`3em` the lazy dog.
     dog.
 4.  Describe the main components of a computer.
     {leader}`.|100%`{leader}`.|100%`{leader}`.|100%`
+5.  $\overrightarrow{AB} = $ {leader}`.`
+6.  $\underleftarrow{AB} = $ {leader}`.`
+7.  $\underleftarrow{\overrightarrow{AB}} = $ {leader}`.`
+8.  $\lim_{x \to 0} f(x) = $ {leader}`.`
 
 ## Frames
 

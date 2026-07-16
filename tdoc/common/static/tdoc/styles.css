@@ -203,13 +203,15 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
     }
 }
 
-/* Leaders */
+/* Leaders. The EOL leaders are heavily inspired from
+   https://markentier.tech/posts/2021/03/responsive-toc-leader-lines-with-css/ */
 .tdoc-leader.eol {
     position: relative;
     overflow: hidden;
 }
 .tdoc-leader.eol::after {
     position: absolute;
+    bottom: 0;
     margin-left: 0.5rem;
 }
 .tdoc-leader:not(.eol) {
