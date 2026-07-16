@@ -39,7 +39,6 @@ def setup(app):
 
 class Exec(code.CodeBlock):
     required_arguments = 1
-    optional_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
         'after': opt_names,
         'console-style': directives.unchanged,
@@ -83,9 +82,7 @@ class Exec(code.CodeBlock):
         node = node.next_node(nodes.literal_block, include_self=True)
         runner = node['language']
         node['runner'] = runner
-        # TODO(0.85): Remove the optional env in self.arguments
-        node['env'] = self.arguments[1] if len(self.arguments) >= 2 \
-                      else self.options.get('env', '').strip()
+        node['env'] = self.options.get('env', '').strip()
         node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
