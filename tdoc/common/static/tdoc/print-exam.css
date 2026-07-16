@@ -28,5 +28,5 @@
         display: none !important;
     }
     .bd-main .bd-content .bd-article-container .bd-article {
-        padding-top: 0;
+        margin-top: 0;
 }
