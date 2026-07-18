@@ -130,13 +130,13 @@ class Users(database.ConnNamespace):
         if invalid := [n for n in names if n.startswith('#')]:
             raise database.Error(f"Invalid user names: {" ".join(invalid)}")
         if unique:
-            dupes = self.execute(f"""
+            dupes = [d for d, in self.execute(f"""
                 select distinct name from users
                 where name in ({database.placeholders(names)})
-            """, names)
+            """, names)]
             if dupes:
                 raise database.Error(
-                    f"Duplicate user names: {" ".join(d for d, in dupes)}")
+                    f"Duplicate user names: {" ".join(dupes)}")
         now = time.time_ns()
         uids = [secrets.randbelow(1 << 63) for _ in names]
         self.executemany("""
