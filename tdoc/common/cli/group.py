@@ -41,17 +41,17 @@ def add_commands(parser):
     p = sp.add_parser('members', help="List members of a group.")
     p.set_defaults(handler=cmd_members)
     arg = p.add_argument
-    cli.add_origin_option(arg)
     arg('--direct', action='store_true', dest='direct',
         help="List only direct memberships.")
     add_groups_re(arg)
+    cli.add_origin_option(arg)
     cli.add_common_options(p)
 
     p = sp.add_parser('memberships', help="List group memberships for a group.")
     p.set_defaults(handler=cmd_memberships)
     arg = p.add_argument
-    cli.add_origin_option(arg)
     add_groups_re(arg)
+    cli.add_origin_option(arg)
     cli.add_common_options(p)
 
     p = sp.add_parser('remove', help="Remove members from one or more groups.")

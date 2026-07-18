@@ -108,6 +108,7 @@ class Users(database.ConnNamespace):
         return {'name': name, 'groups': groups, 'tags': tags}
 
     def uid(self, name):
+        if isinstance(name, int): return name
         if name.startswith('#'): return int(name[1:])
         uids = [u for u, in self.execute("select id from users where name = ?",
                                          (name,))]
@@ -342,17 +343,14 @@ class Groups(database.ConnNamespace):
         if add_users:
             self.executemany("""
                 insert or replace into user_memberships
-                    (origin, user, group_, transitive)
-                    values (?, (select id from users where name = ?), ?, false)
-            """, [(origin, name, group) for name in add_users
+                    (origin, user, group_, transitive) values (?, ?, ?, false)
+            """, [(origin, self.users.uid(user), group) for user in add_users
                   for group in groups])
         if remove_users:
             self.executemany("""
                 delete from user_memberships
-                where origin = ?
-                  and user in (select id from users where name = ?)
-                  and group_ = ?
-            """, [(origin, name, group) for name in remove_users
+                where (origin, user, group_) = (?, ?, ?)
+            """, [(origin, self.users.uid(user), group) for user in remove_users
                   for group in groups])
         if add_groups:
             self.executemany("""
@@ -367,6 +365,24 @@ class Groups(database.ConnNamespace):
             """, [(origin, name, group) for name in remove_groups
                   for group in groups])
         self.compute_transitive_memberships(origin)
+
+    def clone(self, src_origin, dst_origin):
+        self.check_origin(src_origin)
+        self.check_origin(dst_origin)
+        if src_origin == dst_origin:
+            raise database.Error(
+                "Cloning group memberships within the same origin")
+        self.execute("""
+            insert or ignore into user_memberships
+                (origin, user, group_, transitive)
+            select ?, user, group_, false from user_memberships
+            where origin = ? and not transitive
+        """, (dst_origin, src_origin))
+        self.execute("""
+            insert or ignore into group_memberships (origin, member, group_)
+            select ?, member, group_ from group_memberships where origin = ?
+        """, (dst_origin, src_origin))
+        self.compute_transitive_memberships(dst_origin)
 
     def compute_transitive_memberships(self, origin):
         items = list(self.execute("""

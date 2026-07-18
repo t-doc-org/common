@@ -337,6 +337,18 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'group', 'memberships', '--debug', out=[
         r'^users +test-group\n',
     ])
+    vrun(
+        'tdoc', 'site', 'setup', '--debug', '--origin=http://test',
+        '--clone=', '--users=foo,bar', '--groups=users', out=[
+            r'^bar +\([ 0-9]+\) +http://test#\?token=[a-zA-Z0-9-_]{43,}\n',
+            r'^foo +\([ 0-9]+\) +http://test#\?token=[a-zA-Z0-9-_]{43,}\n',
+        ])
+    vrun('tdoc', 'user', 'memberships', '--debug', '--origin=http://test', out=[
+        r'^admin +\([ 0-9]+\) +\*\n +test-group\n',
+        r'^bar +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
+        r'^foo +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
+        r'^test-user +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
+    ])
     vrun('tdoc', 'group', 'remove', '--debug', '--users=admin,test-user',
          '--groups=users', 'test-group')
     vrun('tdoc', 'repo', 'auth', '--enable', 'test-user')

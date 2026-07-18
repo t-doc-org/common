@@ -91,6 +91,22 @@ def add_commands(parser):
     add_sphinx_options(p)
     cli.add_common_options(p)
 
+    p = sp.add_parser('setup', help="Set up the database for a site.")
+    p.set_defaults(handler=cmd_setup)
+    arg = p.add_argument
+    arg('--clone', metavar='ORIGIN', dest='clone', default=None,
+        help="Clone relevant data from the given origin.")
+    for name in ('group', 'groups'):
+        arg(f'--{name}', metavar="GROUP,...", dest='groups',
+            help="A comma-separated list of groups to add newly-created users "
+                 "to.")
+    arg('--origin', metavar='URL', dest='origin', default=None,
+        help="The origin of the site to set up.")
+    for name in ('user', 'users'):
+        arg(f'--{name}', metavar="USER,...", dest='users',
+            help="A comma-separated list of users to create as site owners.")
+    cli.add_common_options(p)
+
 
 def add_sphinx_options(parser):
     arg = parser.add_argument_group("Sphinx options").add_argument
@@ -147,6 +163,26 @@ def cmd_serve(opts):
         except KeyboardInterrupt:
             opts.stderr.write("Interrupted, exiting\n")
     return app.returncode
+
+
+def cmd_setup(opts):
+    with cli.write_db(opts) as db:
+        if opts.clone is not None:
+            if opts.origin is None: raise Exception('No origin specified')
+            db.groups.clone(opts.clone, opts.origin)
+        uids, tokens = [], []
+        if (users := cli.comma_separated(opts.users)):
+            uids = db.users.create(users)
+            tokens = db.tokens.create(uids)
+            for uid in uids: db.repo.enable_auth(uid, True)
+            if groups := cli.comma_separated(opts.groups):
+                if opts.origin is None: raise Exception('No origin specified')
+                db.groups.modify(opts.origin, groups, add_users=uids)
+    wuser = max((len(u) for u in users), default=0)
+    o = opts.stdout
+    for uid, user, token in zip(uids, users, tokens):
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
+                f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
 def sphinx_build(opts, target, *, build, tags=(), **kwargs):
