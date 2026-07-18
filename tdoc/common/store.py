@@ -126,9 +126,17 @@ class Users(database.ConnNamespace):
                         or cast(id as text) regexp :user_re
                 """, {'user_re': user_re})]
 
-    def create(self, names):
+    def create(self, names, unique=True):
         if invalid := [n for n in names if n.startswith('#')]:
             raise database.Error(f"Invalid user names: {" ".join(invalid)}")
+        if unique:
+            dupes = self.execute(f"""
+                select distinct name from users
+                where name in ({database.placeholders(names)})
+            """, names)
+            if dupes:
+                raise database.Error(
+                    f"Duplicate user names: {" ".join(d for d, in dupes)}")
         now = time.time_ns()
         uids = [secrets.randbelow(1 << 63) for _ in names]
         self.executemany("""

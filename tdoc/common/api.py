@@ -740,7 +740,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         # If no existing user was found, and the identity matches auto-creation
         # claims, create a new user.
         if user is None and (name := self.new_user_name(id_token, icfg)):
-            user, = db.users.create([name])
+            user, = db.users.create([name], unique=False)
             db.after_commit(
                 lambda: _log.info("User %(user)d was auto-created", user=user,
                                   event='user:create:auto'))
