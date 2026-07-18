@@ -47,8 +47,8 @@ def cmd_create(opts):
     wuser = max((len(u) for u in opts.user), default=0)
     o = opts.stdout
     for uid, user, token in zip(uids, opts.user, tokens):
-        opts.stdout.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
-                         f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
+                f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
 
 
 def cmd_list(opts):
@@ -74,10 +74,10 @@ def cmd_memberships(opts):
     prev = None
     for uid, user, group, transitive in memberships:
         prefix = f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  " \
-                 if user != prev else f"{'':{wuser + 19 + 5}}"
+                 if uid != prev else f"{'':{wuser + 19 + 5}}"
         if transitive:
             opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
                              "(transitive)\n")
         else:
             opts.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
-        prev = user
+        prev = uid
