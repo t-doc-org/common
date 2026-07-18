@@ -179,10 +179,11 @@ def cmd_setup(opts):
                 if opts.origin is None: raise Exception('No origin specified')
                 db.groups.modify(opts.origin, groups, add_users=uids)
     wuser = max((len(u) for u in users), default=0)
+    origin = cli.root_origin(opts.cfg)
     o = opts.stdout
     for uid, user, token in zip(uids, users, tokens):
         o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
-                f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
+                f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
 def sphinx_build(opts, target, *, build, tags=(), **kwargs):

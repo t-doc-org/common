@@ -90,6 +90,12 @@ def add_origin_option(arg):
         help="The origin on which to operate.")
 
 
+def root_origin(cfg, default=''):
+    dep = cfg.sub('deployment')
+    if (domain := dep.get('domain')) is None: return default
+    return f'{dep.get('scheme', 'https')}://{domain}'
+
+
 def require_common(opts):
     path = pathlib.Path(__file__).parent.resolve().parent.parent.parent
     with contextlib.suppress(Exception):

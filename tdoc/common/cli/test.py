@@ -264,6 +264,10 @@ def exercise_cli(repo_dir, write, opts, vrun):
     write("Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
     (repo_dir / 'tdoc.local.toml').write_text("""\
+[deployment]
+scheme = "http"
+domain = "localhost"
+
 [logging]
 level = "DEBUG"
 format = "{asctime} {leveli} {ctx} {name} {message}"
@@ -340,8 +344,8 @@ path = "tmp/store.sqlite"
     vrun(
         'tdoc', 'site', 'setup', '--debug', '--origin=http://test',
         '--clone=', '--users=foo,bar', '--groups=users', out=[
-            r'^bar +\([ 0-9]+\) +http://test#\?token=[a-zA-Z0-9-_]{43,}\n',
-            r'^foo +\([ 0-9]+\) +http://test#\?token=[a-zA-Z0-9-_]{43,}\n',
+            r'^bar +\([ 0-9]+\) +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
+            r'^foo +\([ 0-9]+\) +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
         ])
     vrun('tdoc', 'user', 'memberships', '--debug', '--origin=http://test', out=[
         r'^admin +\([ 0-9]+\) +\*\n +test-group\n',
@@ -357,13 +361,15 @@ path = "tmp/store.sqlite"
     ])
     vrun('tdoc', 'token', 'create', '--debug', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', out=[
-        r'^admin +\([ 0-9]+\) +#\?token=admin\n +created: ',
-        r'^(test-user +\([ 0-9]+\) +#\?token=[a-zA-Z0-9-_]{43,}\n'
+        r'^admin +\([ 0-9]+\) +http://localhost#\?token=admin\n +created: ',
+        r'^(test-user +\([ 0-9]+\)'
+            r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
             r' +created: [^,]*\n){2}',
     ])
     vrun('tdoc', 'token', 'expire', '--debug', '--users', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', '--expired', out=[
-        r'^(test-user +\([ 0-9]+\) +#\?token=[a-zA-Z0-9-_]{43,}\n'
+        r'^(test-user +\([ 0-9]+\)'
+            r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
             r' +created: [^,]*, expires: .*\n){2}',
     ])
     vrun('tdoc', 'store', 'backup', '--debug', out=[

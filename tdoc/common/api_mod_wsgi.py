@@ -45,9 +45,11 @@ def application(config_path, events_level=logs.NOTSET):
     stack.enter_context(st)
     app = stack.enter_context(api.Api(config=cfg, store=st))
 
+    dep = cfg.sub('deployment')
     return wsgi.cors(
-        origins=rf'https://(?:{wsgi.hostname_re}\.)?{re.escape(domain)}'
-                if (domain := cfg.get('cors.domain')) is not None else (),
+        origins=rf'{re.escape(dep.get('scheme', 'https'))}://'
+                rf'(?:{wsgi.hostname_re}\.)?{re.escape(domain)}'
+                if (domain := dep.get('domain')) is not None else (),
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie',
                  'X-Csrf'),

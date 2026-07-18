@@ -292,12 +292,13 @@ The `tdoc` CLI and the API server read their configuration from a
 If not specified otherwise, configuration values that represent paths interpret
 relative paths as relative to the directory containing the config file.
 
-### `[cors]`
+### `[deployment]`
 
-This table configures cross-origin resource sharing (CORS).
+This table configures a multi-site t-doc deployment.
 
 - `domain`: The apex domain of the deployment. The API server allows
-  cross-origin HTTPS requests from this domain and all direct subdomains.
+  cross-origin requests from this domain and all direct subdomains.
+- `scheme` (default: `"https"`): The scheme over which the deployment is served.
 
 ### `[import-files]`
 

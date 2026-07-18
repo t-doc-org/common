@@ -16,7 +16,6 @@ def add_commands(parser):
     p = sp.add_parser('create', help="Create users.")
     p.set_defaults(handler=cmd_create)
     arg = p.add_argument
-    cli.add_origin_option(arg)
     arg('--token-expire', metavar='TIME', dest='token_expire',
         type='opt_rel_timestamp',
         help="Expire the users' token at the given relative or absolute time.")
@@ -45,10 +44,11 @@ def cmd_create(opts):
         uids = db.users.create(opts.user)
         tokens = db.tokens.create(uids, opts.token_expire)
     wuser = max((len(u) for u in opts.user), default=0)
+    origin = cli.root_origin(opts.cfg)
     o = opts.stdout
     for uid, user, token in zip(uids, opts.user, tokens):
         o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
-                f"{o.LBLUE}{opts.origin}#?token={token}{o.NORM}\n")
+                f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
 def cmd_list(opts):

@@ -116,7 +116,7 @@ class Users(database.ConnNamespace):
         if not uids: raise database.Error(f"User not found: {name}")
         uids.sort()
         raise database.Error(
-            f"Ambiguous user name %r: {" ".join(f"#{u}" for u in uids)}")
+            f"Ambiguous user name '{name}': {" ".join(f"#{u}" for u in uids)}")
 
     def list(self, user_re='.*'):
         return [(uid, name, database.to_datetime(created))
