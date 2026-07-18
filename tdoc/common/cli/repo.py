@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 import certifi
+import contextlib
+import datetime
 import re
 
 from .. import cli, util
@@ -32,6 +34,21 @@ def add_commands(parser):
         help="A regexp to limit the users to consider.")
     cli.add_common_options(p)
 
+    p = sp.add_parser('template', help="Prepare a template repository clone.")
+    p.set_defaults(handler=cmd_template)
+    arg = p.add_argument
+    arg('--author', metavar='AUTHOR', dest='author', required=True,
+        help="The owner of the repository and author of its content.")
+    arg('--email', metavar='EMAIL', dest='email', required=True,
+        help="The email address of the repository owner.")
+    arg('--repo', metavar='NAME', dest='repo',
+        help="The namem of the repository.")
+    arg('--title', metavar='TITLE', dest='title', required=True,
+        help="The title of the site.")
+    arg('path', metavar='PATH', type='path',
+        help="The path of the template repository clone.")
+    cli.add_common_options(p)
+
     p = sp.add_parser('update-run', help="Update run.py.")
     p.set_defaults(handler=cmd_update_run)
     arg = p.add_argument
@@ -59,6 +76,25 @@ def cmd_list_users(opts):
             f"{o.CYAN}{name:{wuser}}{o.NORM} ({uid:19d})  "
             f"access: {"enabled " if enabled else "disabled"}  "
             f"password: {"[none]" if prefix is None else prefix + "****"}\n")
+
+
+def cmd_template(opts):
+    if opts.repo is None: opts.repo = opts.path.name
+    subst = {'AUTHOR': opts.author, 'EMAIL': opts.email, 'TITLE': opts.title,
+             'YEAR': str(datetime.datetime.now().year)}
+    phs = re.compile(f'\\{{({'|'.join(re.escape(k) for k in subst)})\\}}')
+    urls = re.compile(r'(https://github\.com/[^/]+/)([a-zA-Z0-9_-]+)')
+    def on_error(e): _log.error("Walk: %(exc)s", exc=e)
+    for parent, dirs, files in opts.path.walk(on_error=on_error):
+        with contextlib.suppress(ValueError): dirs.remove('.hg')
+        dirs.sort()
+        files.sort()
+        for f in files:
+            if (path := parent / f) == opts.path / run_py_name: continue
+            text = path.read_text('utf-8')
+            new_text = phs.sub(lambda m: subst[m[1]], text)
+            new_text = urls.sub(lambda m: f'{m[1]}{opts.repo}', new_text)
+            if new_text != text: path.write_text(new_text, 'utf-8')
 
 
 run_py_name = 'run.py'
