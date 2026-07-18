@@ -346,7 +346,7 @@ def add_js(app, page, template, context, doctree):
     if mj_url.startswith('/'): mj_url = f'..{mj_url}'
     mj_cfg = app.config.mathjax4_config = merge_dict(
         copy.deepcopy(app.config.mathjax4_config), cfg)
-    app.config.mathjax_path = f'{mj_url}/tex-{out}.js'
+    app.config.mathjax_path = f'{mj_url}/tex-{out}-nofont.js'
     loader = mj_cfg.setdefault('loader', {})
     exts = mj_cfg.pop('tdoc_tex_extensions', [])
     loader.setdefault('load', []).extend(f'[tex]/{e}' for e in exts)

@@ -12,6 +12,7 @@ def cdn_url(dep, version=None):
 
 
 info = {
+    'cffi': {'version_tag': lambda v: f'v{v}'},
     'chartjs': {
         'name': 'chart.js',
         'version': '4.5.1',
@@ -93,9 +94,7 @@ info = {
             'https://github.com/antfu/drauu/tags',
         ],
     },
-    'hatchling': {
-        'version_tag': lambda v: f'hatchling-v{v}',
-    },
+    'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
         'name': 'jsxgraph',
         'version': '1.12.2',
@@ -111,34 +110,32 @@ info = {
             'https://github.com/mathjax/MathJax-src/releases',
         ],
     },
-    'mathjax-bbm-font-extension': {
-        'name': '@mathjax/mathjax-bbm-font-extension',
+    **{k: {
+        'name': f'@mathjax/{k}',
         'version': '4.1.3',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'exclude_from_js': True,
-    },
-    'mathjax-bboldx-font-extension': {
-        'name': '@mathjax/mathjax-bboldx-font-extension',
-        'version': '4.1.3',
-        'tag': 'latest',
-        'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
-        'exclude_from_js': True,
-    },
-    'mathjax-dsfont-font-extension': {
-        'name': '@mathjax/mathjax-dsfont-font-extension',
-        'version': '4.1.3',
-        'tag': 'latest',
-        'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
-        'exclude_from_js': True,
-    },
-    'mathjax-mhchem-font-extension': {
-        'name': '@mathjax/mathjax-mhchem-font-extension',
-        'version': '4.1.3',
-        'tag': 'latest',
-        'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
-        'exclude_from_js': True,
-    },
+    } for k in [
+        # Fonts
+        'mathjax-newcm-font',
+        'mathjax-asana-font',
+        'mathjax-bonum-font',
+        'mathjax-dejavu-font',
+        'mathjax-fira-font',
+        'mathjax-modern-font',
+        'mathjax-pagella-font',
+        'mathjax-schola-font',
+        'mathjax-stix2-font',
+        'mathjax-termes-font',
+        'mathjax-tex-font',
+        # Font extensions
+        'mathjax-bbm-font-extension',
+        'mathjax-bboldx-font-extension',
+        'mathjax-dsfont-font-extension',
+        'mathjax-euler-font-extension',
+        'mathjax-mhchem-font-extension',
+    ]},
     'mermaid': {
         'name': 'mermaid',
         'version': '11.16.0',
@@ -151,15 +148,9 @@ info = {
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
-    'markdown-it-py': {
-        'version_tag': lambda v: f'v{v}',
-    },
-    'mdit-py-plugins': {
-        'version_tag': lambda v: f'v{v}',
-    },
-    'myst-parser': {
-        'version_tag': lambda v: f'v{v}',
-    },
+    'markdown-it-py': {'version_tag': lambda v: f'v{v}'},
+    'mdit-py-plugins': {'version_tag': lambda v: f'v{v}'},
+    'myst-parser': {'version_tag': lambda v: f'v{v}'},
     'polyscript': {
         'name': 'polyscript',
         'version': '0.20.13',

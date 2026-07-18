@@ -74,7 +74,13 @@ html_theme = 't-doc'
 
 # MathJax options.
 mathjax4_config = {
-    'loader': {'load': ['input/mml']},
+    'loader': {
+        'load': ['input/mml'],
+    },
+    'output': {
+        'font': 'mathjax-newcm',
+        'fontExtensions': [],
+    },
     'options': {
         'menuOptions': {
             'settings': {
