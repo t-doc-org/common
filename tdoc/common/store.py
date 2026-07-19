@@ -142,7 +142,7 @@ class Users(database.ConnNamespace):
                 raise database.Error(
                     f"Duplicate user names: {" ".join(dupes)}")
         now = time.time_ns()
-        uids = [secrets.randbelow(1 << 63) for _ in names]
+        uids = [1 + secrets.randbelow((1 << 63) - 1) for _ in names]
         self.executemany("""
             insert into users (id, name, created) values (?, ?, ?)
         """, [(uid, name, now) for uid, name in zip(uids, names)])
