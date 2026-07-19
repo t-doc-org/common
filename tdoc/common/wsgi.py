@@ -246,8 +246,8 @@ class Dispatcher:
     def __call__(self, env, respond, wr=None):
         if wr is None: wr = Request(env, respond)
         ctoken = logs.push_ctx(lambda: 'req:' + secrets.token_hex(8))
-        log_level = logs.NOTSET
-        uri, log_query, log_status = None, False, '<unknown>'
+        log_level, log_query = logs.NOTSET, False
+        log_args, log_status = None, '<unknown>'
         try:
             handler = self.get_handler(wr.env)
             try:
@@ -255,13 +255,11 @@ class Dispatcher:
                 log_level = getattr(handler, '_log_level', logs.NOTSET)
                 log_query = getattr(handler, '_log_query', True)
                 if log_level != logs.NOTSET:
-                    uri = wr.uri(include_query=log_query)
-                    _log.log(
-                        log_level,
-                        "%(method)s %(uri)s\n"
-                        "origin=%(origin)s remote=%(remote)s user=%(user)s",
-                        event='req:start', method=wr.method, uri=uri,
-                        origin=wr.origin, remote=wr.remote_addr, user=wr.user)
+                    log_args = self._log_args(wr, log_query)
+                    msg = "%(method)s %(uri)s\n" \
+                          "origin=%(origin)s remote=%(remote)s"
+                    if 'user' in log_args: msg += " user=0x%(user)016x"
+                    _log.log(log_level, msg, event='req:start', **log_args)
                     chained_respond = wr.respond
                     def respond_log(status, headers, exc_info=None):
                         nonlocal log_status
@@ -275,19 +273,25 @@ class Dispatcher:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
         except Exception as e:
-            if uri is None: uri = wr.uri(include_query=log_query)
+            if log_args is None: log_args = self._log_args(wr, log_query)
             _log.exception("Uncaught exception", event='req:exception',
-                           method=wr.method, uri=uri, origin=wr.origin,
-                           remote=wr.remote_addr, user=wr.user)
+                           **log_args)
             yield from wr.error(HTTPStatus.INTERNAL_SERVER_ERROR,
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
-                if uri is None: uri = wr.uri(include_query=log_query)
+                if log_args is None: log_args = self._log_args(wr, log_query)
                 _log.log(log_level, "%(status)s", event='req:end',
-                         method=wr.method, uri=uri, origin=wr.origin,
-                         remote=wr.remote_addr, user=wr.user, status=log_status)
+                         status=log_status, **log_args)
             logs.pop_ctx(ctoken)
+
+    @staticmethod
+    def _log_args(wr, include_query):
+        kwargs = {'method': wr.method,
+                  'uri': wr.uri(include_query=include_query),
+                  'origin': wr.origin, 'remote': wr.remote_addr}
+        if (v := wr.user) is not None: kwargs['user'] = v
+        return kwargs
 
     def pre_request(self, wr): pass
 

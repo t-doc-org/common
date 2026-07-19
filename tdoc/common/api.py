@@ -574,7 +574,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                     raise wsgi.Error(HTTPStatus.FORBIDDEN,
                                      "At least one login is required")
             if id_token is not None:
-                _log.info("User %(user)d removed login %(name)s",
+                _log.info("User 0x%(user)016x removed login %(name)s",
                           user=wr.user, name=self.token_name(id_token),
                           iss=id_token['iss'], sub=id_token['sub'],
                           event='oidc:login:remove')
@@ -729,13 +729,13 @@ class OidcAuthApi(wsgi.Dispatcher):
             user = state_user
             if (t := state.get('token')) is not None: db.tokens.remove([t])
             db.after_commit(
-                lambda: _log.info("User %(user)d added login %(name)s",
+                lambda: _log.info("User 0x%(user)016x added login %(name)s",
                                   user=user, name=self.token_name(id_token),
                                   iss=id_token['iss'], sub=id_token['sub'],
                                   event='oidc:login:add'))
         elif user is not None:
             db.after_commit(
-                lambda: _log.info("User %(user)d logged in", user=user,
+                lambda: _log.info("User 0x%(user)016x logged in", user=user,
                                   event='oidc:login'))
 
         # If no existing user was found, and the identity matches auto-creation
@@ -743,8 +743,8 @@ class OidcAuthApi(wsgi.Dispatcher):
         if user is None and (name := self.new_user_name(id_token, icfg)):
             user, = db.users.create([name], unique=False)
             db.after_commit(
-                lambda: _log.info("User %(user)d was auto-created", user=user,
-                                  event='user:create:auto'))
+                lambda: _log.info("User 0x%(user)016x was auto-created",
+                                  user=user, event='user:create:auto'))
 
         # If we've found or created a user, add or update the identity and
         # generate a new token.
