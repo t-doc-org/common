@@ -58,9 +58,8 @@ def cmd_list(opts):
     wuser = max((len(r[1]) for r in users), default=0)
     o = opts.stdout
     for uid, user, created in users:
-        opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
-            f"created: {util.local_time(created)}\n")
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
+                f"created: {util.local_time(created)}\n")
 
 
 def cmd_memberships(opts):
@@ -73,11 +72,10 @@ def cmd_memberships(opts):
     o = opts.stdout
     prev = None
     for uid, user, group, transitive in memberships:
-        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}" \
-                 if uid != prev else f"{'':{wuser + 4 + 16}}"
+        if uid != prev:
+            o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}\n")
         if transitive:
-            opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
-                             "(transitive)\n")
+            o.write(f"  {o.LWHITE}{group:{wgroup}}{o.NORM}  (transitive)\n")
         else:
-            opts.stdout.write(f"{prefix}  {o.LWHITE}{group}{o.NORM}\n")
+            o.write(f"  {o.LWHITE}{group}{o.NORM}\n")
         prev = uid

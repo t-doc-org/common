@@ -51,9 +51,8 @@ def cmd_create(opts):
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
     for uid, user, token in zip(uids, opts.user, tokens):
-        opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
-            f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
+                f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
 def cmd_expire(opts):
@@ -71,11 +70,14 @@ def cmd_list(opts):
     epoch = datetime.datetime.fromtimestamp(0, datetime.UTC)
     tokens.sort(key=lambda r: (r[1], r[3], r[4] or epoch, r[2]))
     wuser = max((len(t[1]) for t in tokens), default=0)
+    wtoken = max((len(t[2]) for t in tokens), default=0)
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
+    prev = None
     for uid, user, token, created, expires in tokens:
+        if uid != prev:
+            o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}\n")
         if expires: expires = f", expires: {util.local_time(expires)}"
-        opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
-            f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n"
-            f"  created: {util.local_time(created)}{expires or ""}\n")
+        o.write(f"  {o.LBLUE}{origin}#?token={token:{wtoken}}{o.NORM}"
+                f"  created: {util.local_time(created)}{expires or ""}\n")
+        prev = uid

@@ -71,7 +71,7 @@ def cmd_site(opts):
 
     lock = threading.Lock()
     def write(text):
-        with lock: opts.stdout.write(text)
+        with lock: o.write(text)
 
     def on_error(fn, path, e):
         if path == tests: return
@@ -326,20 +326,20 @@ path = "tmp/store.sqlite"
     vrun('tdoc', 'group', 'add', '--debug', '--users=admin',
          '--groups=users', 'test-group')
     vrun('tdoc', 'user', 'memberships', '--debug', out=[
-        r'^admin +0x[0-9a-f]+ +\*\n +test-group\n',
-        r'^test-user +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
+        r'^admin +0x[0-9a-f]+\n +\*\n +test-group\n',
+        r'^test-user +0x[0-9a-f]+\n +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'list', '--debug', out=[
         r'^\*\ntest-group\nusers\n',
     ])
     vrun('tdoc', 'group', 'members', '--debug', out=[
-        r'^\* +user +admin\n',
-        r'^test-group +group +users\n +user +admin\n'
+        r'^\*\n +user +admin\n',
+        r'^test-group\n +group +users\n +user +admin\n'
             r' +user +test-user  \(transitive\)\n',
-        r'^users +user +test-user\n',
+        r'^users\n +user +test-user\n',
     ])
     vrun('tdoc', 'group', 'memberships', '--debug', out=[
-        r'^users +test-group\n',
+        r'^users\n +test-group\n',
     ])
     vrun(
         'tdoc', 'site', 'setup', '--debug', '--origin=http://test',
@@ -348,10 +348,10 @@ path = "tmp/store.sqlite"
             r'^foo +0x[0-9a-f]+ +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
         ])
     vrun('tdoc', 'user', 'memberships', '--debug', '--origin=http://test', out=[
-        r'^admin +0x[0-9a-f]+ +\*\n +test-group\n',
-        r'^bar +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
-        r'^foo +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
-        r'^test-user +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
+        r'^admin +0x[0-9a-f]+\n +\*\n +test-group\n',
+        r'^bar +0x[0-9a-f]+\n +test-group  \(transitive\)\n +users\n',
+        r'^foo +0x[0-9a-f]+\n +test-group  \(transitive\)\n +users\n',
+        r'^test-user +0x[0-9a-f]+\n +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'remove', '--debug', '--users=admin,test-user',
          '--groups=users', 'test-group')
@@ -361,15 +361,15 @@ path = "tmp/store.sqlite"
     ])
     vrun('tdoc', 'token', 'create', '--debug', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', out=[
-        r'^admin +0x[0-9a-f]+ +http://localhost#\?token=admin\n +created: ',
-        r'^(test-user +0x[0-9a-f]+'
-            r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
+        r'^admin +0x[0-9a-f]+\n +http://localhost#\?token=admin +created: ',
+        r'^test-user +0x[0-9a-f]+\n'
+            r'( +http://localhost#\?token=[a-zA-Z0-9-_]{43,}'
             r' +created: [^,]*\n){2}',
     ])
     vrun('tdoc', 'token', 'expire', '--debug', '--users', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', '--expired', out=[
-        r'^(test-user +0x[0-9a-f]+'
-            r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
+        r'^test-user +0x[0-9a-f]+\n'
+            r'( +http://localhost#\?token=[a-zA-Z0-9-_]{43,}'
             r' +created: [^,]*, expires: .*\n){2}',
     ])
     vrun('tdoc', 'store', 'backup', '--debug', out=[

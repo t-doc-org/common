@@ -72,7 +72,7 @@ def cmd_list_users(opts):
     wuser = max((len(r[1]) for r in infos), default=0)
     o = opts.stdout
     for uid, name, enabled, prefix in infos:
-        opts.stdout.write(
+        o.write(
             f"{o.CYAN}{name:{wuser}}{o.NORM}  0x{uid:016x}  "
             f"access: {"enabled " if enabled else "disabled"}  "
             f"password: {"[none]" if prefix is None else prefix + "****"}\n")
