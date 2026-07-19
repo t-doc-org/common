@@ -18,8 +18,8 @@ the `_venv` directory at the root of the document repository.
 If the stable version of the `t-doc-common` package is broken, the previous
 version of the package can be used until a fix is released.
 
-- Create a text file `run.toml` (versioned) or `run.local.toml` (unversioned) at
-  the root of the site repository, and set its content as follows:
+- Create a text file `run.local.toml` at the root of the site repository, and
+  set its content as follows:
 
   ```{code-block} toml
   version = "previous"
@@ -27,8 +27,8 @@ version of the package can be used until a fix is released.
 
 - Start the local server. This will install and run the previous version.
 
-- To return to the stable version, remove the file `run.toml` or
-  `run.local.toml` created above.
+- To return to the stable version, remove the file `run.local.toml` created
+  above.
 
 (faq-specific-version)=
 ### How can I use a specific version of t-doc?
@@ -36,9 +36,8 @@ version of the package can be used until a fix is released.
 - Check the [release notes](release-notes.md) and find the version of the
   `t-doc-common` package to install, e.g. `0.62`.
 
-- Create a text file `run.toml` (versioned) or `run.local.toml` (unversioned) at
-  the root of the site repository, and set its content as follows (substitute
-  `0.62` with the desired version):
+- Create a text file `run.local.toml` at the root of the site repository, and
+  set its content as follows (substitute `0.62` with the desired version):
 
   ```{code-block} toml
   version = "0.62"
@@ -46,8 +45,8 @@ version of the package can be used until a fix is released.
 
 - Start the local server. This will install and run the selected version.
 
-- To return to the stable version, remove the file `run.toml` or
-  `run.local.toml` created above.
+- To return to the stable version, remove the file `run.local.toml` created
+  above.
 
 ## Editing
 
@@ -55,8 +54,8 @@ version of the package can be used until a fix is released.
 ### Why does `hg push` fail with "push creates new remote head"?
 
 When `hg push` fails with "push creates new remote head", it means that the
-remote repository contains changes that aren't available locally, usually pushed
-by someone else. These changes must first be pulled from the remote and merged
+remote server has changes that aren't available locally, usually pushed by
+someone else. These changes must first be pulled from the remote and merged
 before the push can succeed. **Do not** use `hg push --force` to try and
 force-push the new head.
 
@@ -67,14 +66,14 @@ hg merge
 hg commit
 ```
 
-It may be worth reading a [Mercurial tutorial](edit.md) to get familiar with
-basic version control workflows.
+It may be worth reading a [Mercurial tutorial](edit.md#mercurial) to get
+familiar with basic version control workflows.
 
 (faq-changes-not-deployed)=
 ### Why do my changes not show up on the deployed site?
 
-- Check the "Publish" status on the badge at the bottom of the left sidebar. If
-  it is failing, click on the badge and check the logs of the failing workflow.
+- Check the "Publish" status on the badge in the left sidebar. If it is failing,
+  click the badge and check the logs of the failing workflow.
 
 - Check that the `main` bookmark is active and pointing to the repository head.
   Run:
@@ -93,13 +92,6 @@ basic version control workflows.
 
 ## Troubleshooting
 
-(faq-ssl_ctx)=
-### The local server fails with `ERROR: run() got an unexpected keyword argument 'ssl_ctx'`. How can I fix it?
-
-This is a temporary error due to a compatibility issue with `run-stage2.py`.
-Running the local server again while connected to the internet should fix the
-issue.
-
 (faq-local-server-failure)=
 ### The local server fails to start. How can I fix it?
 
@@ -114,8 +106,8 @@ issue.
 (faq-report-issue)=
 ### How can I report an issue with t-doc?
 
-Contact your favorite support person by email, and provide as much relevant
-information as possible, including:
+Contact your favorite t-doc support person by email, and provide as much
+relevant information as possible, including:
 
 - A precise description of the issue
 - The full error message, if possible with a traceback (run the command with

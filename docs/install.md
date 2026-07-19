@@ -8,6 +8,62 @@
 release-notes
 ```
 
+## Install
+
+- **Install the [required packages](#requirements).** Everything else will be
+  installed automatically when
+  [starting the local server](edit.md#edit-documents).
+
+- **Set up your account** if you haven't done so yet.
+  - You should have received a login link of the form
+    `https://t-doc.org#?token=...`. Navigate to that link to log in.
+  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
+    <span class="fa fa-gear"></span> Settings", click one of the "Add login with
+    ..." buttons and follow the process. You will then be able to log in with
+    that account.
+
+- **Generate a repository access password** if this is the first time you access
+  a t-doc repository.
+  - Go to [`t-doc.org`](https://t-doc.org/) and ensure you are logged in.
+  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
+    <span class="fa fa-gear"></span> Settings", then open "Repository access".
+  - Click "Reset" to generate the password. Keep the dialog open for the next
+    step.
+
+- **Edit the Mercurial configuration** for your user. If the file doesn't exist
+  yet, create it as an empty plain-text file.
+
+  - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME\.hgrc`)
+  - **macOS:** `$HOME/.hgrc` (typically `/Users/USERNAME/.hgrc`)
+  - **Linux:** `$HOME/.hgrc` (typically `/home/USERNAME/.hgrc`)
+
+  Copy the `[auth]` section from the dialog above (if you generated a new
+  password) or from another install (if you already had a password), and paste
+  it into the configuration. Also, add a `[ui]` section and specify your
+  username (substitute `FIRST` and `LAST` with your first and last name, and
+  `EMAIL` with your email address, e.g. `Joe Smith <joe@example.com>`). Save the
+  file.
+
+  ```{code-block} ini
+  [auth]
+  t-doc.prefix = https://rc.t-doc.org/
+  t-doc.username = USER_ID
+  t-doc.password = PASSWORD
+
+  [ui]
+  username = FIRST LAST <EMAIL>
+  ```
+
+## Upgrade
+
+- The [local server](edit.md#edit-documents) indicates when upgrades are
+  available.
+  - Check the changes introduced in new t-doc versions in the
+    [release notes](release-notes.md).
+  - Restart the local server. When prompted, accept the upgrade.
+- Check for upgrades to the [required packages](#requirements) and install them
+  when available.
+
 ## Requirements
 
 t-doc requires the following software to be installed:
@@ -90,51 +146,3 @@ t-doc requires the following software to be installed:
 - Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
   and [Mercurial](https://www.mercurial-scm.org/) via your system's package
   manager.
-
-## Install
-
-- Install the [required packages](#requirements).
-
-- If this is the first time you access a t-doc repository, generate a repository
-  access password.
-  - Go to [`t-doc.org`](https://t-doc.org/) and ensure you are logged in.
-  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
-    <span class="fa fa-gear"></span> Settings", then open "Repository access".
-  - Click "Reset" to generate the password. Keep the dialog open for the next
-    step.
-
-- Edit the Mercurial configuration for your user. If the file doesn't exist yet,
-  create it as an empty plain-text file.
-
-  - **Windows:** `%USERPROFILE%\.hgrc` (typically `C:\Users\USERNAME\.hgrc`)
-  - **macOS:** `$HOME/.hgrc` (typically `/Users/USERNAME/.hgrc`)
-  - **Linux:** `$HOME/.hgrc` (typically `/home/USERNAME/.hgrc`)
-
-  Copy the `[auth]` section from the dialog above (if you generated a new
-  password) or from another install (if you already had a password), and paste
-  it into the configuration. Also, add a `[ui]` section and specify your
-  username (substitute `FIRST` and `LAST` with your first and last name, and
-  `EMAIL` with your email address, e.g. `Joe Smith <joe@example.com>`). Save the
-  file.
-
-  ```{code-block} ini
-  [auth]
-  t-doc.prefix = https://rc.t-doc.org/
-  t-doc.username = USER_ID
-  t-doc.password = PASSWORD
-
-  [ui]
-  username = FIRST LAST <EMAIL>
-  ```
-
-- Everything else will be installed automatically when
-  [starting the local server](edit.md#edit-documents).
-
-## Upgrade
-
-The [local server](edit.md#edit-documents) indicates when an upgrade is
-available.
-
-- Check the changes introduced in the new version in the
-  [release notes](release-notes.md).
-- Restart the local server. When prompted, accept the upgrade.

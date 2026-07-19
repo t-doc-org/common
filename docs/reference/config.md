@@ -289,7 +289,7 @@ The `tdoc` CLI and the API server read their configuration from a
 - The API server reads the file `tdoc.local.toml` at the root of the `common`
   repository.
 
-If not specified otherwise, configuration values that represent paths interpret
+If not specified otherwise, configuration values that represent paths consider
 relative paths as relative to the directory containing the config file.
 
 ### `[deployment]`
