@@ -139,14 +139,15 @@ class Api(wsgi.Dispatcher):
         if req.get('info'):
             with wr.read_db as db:
                 enabled, prefix = db.repo.auth(wr.user)
-            return {'user': str(wr.user), 'enabled': enabled, 'prefix': prefix}
+            return {'user': f'0x{wr.user:016x}', 'enabled': enabled,
+                    'prefix': prefix}
         if req.get('reset'):
             with wr.write_db as db:
                 if not db.repo.auth(wr.user)[0]:
                     raise wsgi.Error(HTTPStatus.FORBIDDEN)
                 rounds = self.config.get('repo.bcrypt_rounds', 10)
                 password = db.repo.new_password(wr.user, rounds=rounds)
-            return {'user': str(wr.user), 'password': password}
+            return {'user': f'0x{wr.user:016x}', 'password': password}
         raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 
     @wsgi.json_endpoint('solutions', require_authn=True)

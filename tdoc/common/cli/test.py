@@ -319,15 +319,15 @@ path = "tmp/store.sqlite"
     write("Interacting with store\n")
     vrun('tdoc', 'user', 'create', '--debug', 'test-user')
     vrun('tdoc', 'user', 'list', '--debug', out=[
-        r'^admin +\([ 0-9]+\) +created: ',
-        r'^test-user +\([ 0-9]+\) +created: ',
+        r'^admin +0x[0-9a-f]+ +created: ',
+        r'^test-user +0x[0-9a-f]+ +created: ',
     ])
     vrun('tdoc', 'group', 'add', '--debug', '--users=test-user', 'users')
     vrun('tdoc', 'group', 'add', '--debug', '--users=admin',
          '--groups=users', 'test-group')
     vrun('tdoc', 'user', 'memberships', '--debug', out=[
-        r'^admin +\([ 0-9]+\) +\*\n +test-group\n',
-        r'^test-user +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
+        r'^admin +0x[0-9a-f]+ +\*\n +test-group\n',
+        r'^test-user +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'list', '--debug', out=[
         r'^\*\ntest-group\nusers\n',
@@ -344,31 +344,31 @@ path = "tmp/store.sqlite"
     vrun(
         'tdoc', 'site', 'setup', '--debug', '--origin=http://test',
         '--clone=', '--users=foo,bar', '--groups=users', out=[
-            r'^bar +\([ 0-9]+\) +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
-            r'^foo +\([ 0-9]+\) +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
+            r'^bar +0x[0-9a-f]+ +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
+            r'^foo +0x[0-9a-f]+ +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n',
         ])
     vrun('tdoc', 'user', 'memberships', '--debug', '--origin=http://test', out=[
-        r'^admin +\([ 0-9]+\) +\*\n +test-group\n',
-        r'^bar +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
-        r'^foo +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
-        r'^test-user +\([ 0-9]+\) +test-group  \(transitive\)\n +users\n',
+        r'^admin +0x[0-9a-f]+ +\*\n +test-group\n',
+        r'^bar +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
+        r'^foo +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
+        r'^test-user +0x[0-9a-f]+ +test-group  \(transitive\)\n +users\n',
     ])
     vrun('tdoc', 'group', 'remove', '--debug', '--users=admin,test-user',
          '--groups=users', 'test-group')
     vrun('tdoc', 'repo', 'auth', '--enable', 'test-user')
     vrun('tdoc', 'repo', 'list-users', out=[
-        r'^test-user +\([ 0-9]+\) +access: enabled +password: \[none\]\n',
+        r'^test-user +0x[0-9a-f]+ +access: enabled +password: \[none\]\n',
     ])
     vrun('tdoc', 'token', 'create', '--debug', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', out=[
-        r'^admin +\([ 0-9]+\) +http://localhost#\?token=admin\n +created: ',
-        r'^(test-user +\([ 0-9]+\)'
+        r'^admin +0x[0-9a-f]+ +http://localhost#\?token=admin\n +created: ',
+        r'^(test-user +0x[0-9a-f]+'
             r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
             r' +created: [^,]*\n){2}',
     ])
     vrun('tdoc', 'token', 'expire', '--debug', '--users', 'test-user')
     vrun('tdoc', 'token', 'list', '--debug', '--expired', out=[
-        r'^(test-user +\([ 0-9]+\)'
+        r'^(test-user +0x[0-9a-f]+'
             r' +http://localhost#\?token=[a-zA-Z0-9-_]{43,}\n'
             r' +created: [^,]*, expires: .*\n){2}',
     ])

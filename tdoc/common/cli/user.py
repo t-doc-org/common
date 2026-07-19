@@ -47,7 +47,7 @@ def cmd_create(opts):
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
     for uid, user, token in zip(uids, opts.user, tokens):
-        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
@@ -59,7 +59,7 @@ def cmd_list(opts):
     o = opts.stdout
     for uid, user, created in users:
         opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
+            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
             f"created: {util.local_time(created)}\n")
 
 
@@ -73,8 +73,8 @@ def cmd_memberships(opts):
     o = opts.stdout
     prev = None
     for uid, user, group, transitive in memberships:
-        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  " \
-                 if uid != prev else f"{'':{wuser + 19 + 5}}"
+        prefix = f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}" \
+                 if uid != prev else f"{'':{wuser + 4 + 16}}"
         if transitive:
             opts.stdout.write(f"{prefix}  {o.LWHITE}{group:{wgroup}}{o.NORM}  "
                              "(transitive)\n")

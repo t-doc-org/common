@@ -52,7 +52,7 @@ def cmd_create(opts):
     o = opts.stdout
     for uid, user, token in zip(uids, opts.user, tokens):
         opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM}  ({uid:19d})  "
+            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
             f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
@@ -76,6 +76,6 @@ def cmd_list(opts):
     for uid, user, token, created, expires in tokens:
         if expires: expires = f", expires: {util.local_time(expires)}"
         opts.stdout.write(
-            f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19d})  "
+            f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
             f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n"
             f"  created: {util.local_time(created)}{expires or ""}\n")

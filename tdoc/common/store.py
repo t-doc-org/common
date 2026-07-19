@@ -4,6 +4,7 @@
 import contextlib
 import functools
 import json
+import re
 import secrets
 import threading
 import time
@@ -88,6 +89,9 @@ class WriteConnection(Connection):
             """, (key, Seqs.mask))
 
 
+uid_re = re.compile(r'^(0x[0-9a-f]+|[0-9]+)$')
+
+
 class Users(database.ConnNamespace):
     def member_of(self, origin, uid, group):
         if uid is None: return False
@@ -109,7 +113,7 @@ class Users(database.ConnNamespace):
 
     def uid(self, name):
         if isinstance(name, int): return name
-        if name.startswith('#'): return int(name[1:])
+        if uid_re.fullmatch(name): return int(name, 0)
         uids = [u for u, in self.execute("select id from users where name = ?",
                                          (name,))]
         if len(uids) == 1: return uids[0]
@@ -127,7 +131,7 @@ class Users(database.ConnNamespace):
                 """, {'user_re': user_re})]
 
     def create(self, names, unique=True):
-        if invalid := [n for n in names if n.startswith('#')]:
+        if invalid := [n for n in names if uid_re.fullmatch(n)]:
             raise database.Error(f"Invalid user names: {" ".join(invalid)}")
         if unique:
             dupes = [d for d, in self.execute(f"""

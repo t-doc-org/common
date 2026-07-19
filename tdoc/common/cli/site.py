@@ -182,7 +182,7 @@ def cmd_setup(opts):
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
     for uid, user, token in zip(uids, users, tokens):
-        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM} ({uid:19})  "
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
