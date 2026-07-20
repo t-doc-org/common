@@ -7,7 +7,7 @@ from docutils.parsers import rst
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, patch, report_exceptions
+from . import __version__, merge_dict, patch, report_exceptions
 
 _log = logging.getLogger(__name__)
 
@@ -23,9 +23,13 @@ def setup(app):
     }
 
 
+_directive_defaults = {
+    'toctree': {'maxdepth': 1},
+}
+
 def set_config_defaults(app, config):
-    config.tdoc_directive_defaults.setdefault('toctree', {}) \
-        .setdefault('maxdepth', 1)
+    merge_dict(config.tdoc_directive_defaults, _directive_defaults,
+               override=False)
 
 
 @patch.patch(directives, 'directive')

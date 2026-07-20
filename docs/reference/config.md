@@ -146,7 +146,10 @@ directive type. Each occurrence replaces the previous one, i.e. they don't
 combine.
 
 The {confval}`tdoc_directive_defaults` `conf.py` option defines site-wide
-directive option defaults.
+directive option defaults. Moreover, the defaults for the following directives
+are changed globally (but they can still be overridden).
+
+- {rst:dir}`{toctree} :maxdepth: <toctree>` defaults to `1` instead of `-1`.
 
 ````{code-block}
 ```{exec} python
