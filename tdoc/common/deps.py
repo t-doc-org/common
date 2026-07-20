@@ -161,6 +161,7 @@ info = {
             'https://github.com/pyscript/polyscript/tags',
         ],
     },
+    'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
         'name': 'pyodide',
         'version': '0.29.4',
@@ -170,6 +171,7 @@ info = {
             'https://pyodide.org/en/stable/project/changelog.html',
         ],
     },
+    'sphinx-book-theme': {'version_tag': lambda v: f'v{v}'},
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
         'version': '3.53.0-build1',
