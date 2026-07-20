@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-85)=
+## 0.85 *(2026-07-20)*
+
+- Changed the default for {rst:dir}`{toctree} :maxdepth: <toctree>` to `1`.
+- Fixed the vertical positioning of end-of-line leaders.
+- Fixed MathJax rendering issues for some symbols, and added support for all
+  fonts.
+- Added CLI sub-commands to simplify the creation of new sites.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.84...0.85)
+
 (release-0-84)=
 ## 0.84 *(2026-07-15)*
 
