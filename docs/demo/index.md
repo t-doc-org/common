@@ -9,7 +9,6 @@ subject: "Demo"
 ```
 
 ```{toctree}
-:maxdepth: 1
 elements
 layout
 math

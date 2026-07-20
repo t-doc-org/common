@@ -15,11 +15,17 @@ _log = logging.getLogger(__name__)
 def setup(app):
     app.add_directive('defaults', Defaults)
     app.add_config_value('tdoc_directive_defaults', {}, 'env', dict)
+    app.connect('config-inited', set_config_defaults)
     return {
         'version': __version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
+
+
+def set_config_defaults(app, config):
+    config.tdoc_directive_defaults.setdefault('toctree', {}) \
+        .setdefault('maxdepth', 1)
 
 
 @patch.patch(directives, 'directive')

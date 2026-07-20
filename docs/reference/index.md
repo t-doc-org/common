@@ -9,7 +9,6 @@ subject: "Reference"
 ```
 
 ```{toctree}
-:maxdepth: 1
 config
 extension
 elements
