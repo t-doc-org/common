@@ -3,8 +3,8 @@ version = "stable"
 hermetic = true
 
 [tags]
-stable = "0.84"
-previous = "0.83"
+stable = "0.85"
+previous = "0.84"
 
 [python]
 minimum = "3.13"
