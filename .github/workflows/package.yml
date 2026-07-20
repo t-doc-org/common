@@ -63,6 +63,9 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    environment:
+      name: github
+      url: https://github.com/t-doc-org/common/releases
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v8
