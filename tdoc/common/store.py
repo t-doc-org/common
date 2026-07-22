@@ -107,7 +107,7 @@ class Users(database.ConnNamespace):
         """, (origin, uid))]
         tags = []
         if self.row("select enabled from repo_auth where user = ?", (uid,),
-                    default=(False,)):
+                    default=(False,))[0]:
             tags.append('repo-access')
         return {'name': name, 'groups': groups, 'tags': tags}
 
