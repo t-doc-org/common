@@ -171,7 +171,7 @@ customElements.define('tdoc-poll', PollElement);
         });
     api.events.sub({add: [...polls.map(p => p.watch), watch]});  // Background
     api.auth.onChange(async () => {
-        if (await api.auth.memberOf('polls:control')) {
+        if (await api.auth.hasPerm('polls:control')) {
             htmlData.tdocPollControl = '';
         } else {
             delete htmlData.tdocPollControl;

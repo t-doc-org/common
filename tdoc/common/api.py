@@ -69,8 +69,8 @@ class Api(wsgi.Dispatcher):
         with self._write_db_lock, self._write_db as db:
             yield db
 
-    def member_of(self, wr, db, group):
-        return db.users.member_of(wr.required_origin, wr.user, group)
+    def has_perm(self, wr, db, perm):
+        return db.users.has_perm(wr.required_origin, wr.user, perm)
 
     def pre_request(self, wr):
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
@@ -110,7 +110,7 @@ class Api(wsgi.Dispatcher):
         origin = wr.required_origin
         with wr.write_db as db:
             if polls := req.get('open'):
-                check(self.member_of(wr, db, 'polls:control'))
+                check(self.has_perm(wr, db, 'polls:control'))
                 for poll in polls:
                     mode = arg(poll, 'mode', lambda v: v in ('single', 'multi'))
                     expires = None if (exp := poll.get('exp')) is None \
@@ -118,16 +118,16 @@ class Api(wsgi.Dispatcher):
                     db.polls.open(origin, arg(poll, 'id'), mode,
                                   arg(poll, 'answers'), expires)
             if ids := req.get('close'):
-                check(self.member_of(wr, db, 'polls:control'))
+                check(self.has_perm(wr, db, 'polls:control'))
                 db.polls.close(origin, ids)
             if ids := req.get('results'):
-                check(self.member_of(wr, db, 'polls:control'))
+                check(self.has_perm(wr, db, 'polls:control'))
                 db.polls.results(origin, ids, arg(req, 'value'))
             if ids := req.get('solutions'):
-                check(self.member_of(wr, db, 'polls:control'))
+                check(self.has_perm(wr, db, 'polls:control'))
                 db.polls.solutions(origin, ids, arg(req, 'value'))
             if ids := req.get('clear'):
-                check(self.member_of(wr, db, 'polls:control'))
+                check(self.has_perm(wr, db, 'polls:control'))
                 db.polls.clear(origin, ids)
             if 'vote' in req:
                 db.polls.vote(origin, *args(req, 'id', 'voter', 'answer',
@@ -156,7 +156,7 @@ class Api(wsgi.Dispatcher):
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
         with wr.write_db as db:
-            check(self.member_of(wr, db, 'solutions:write'))
+            check(self.has_perm(wr, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
 

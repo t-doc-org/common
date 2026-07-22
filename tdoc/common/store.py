@@ -93,23 +93,24 @@ uid_re = re.compile(r'^(0x[0-9a-f]+|[0-9]+)$')
 
 
 class Users(database.ConnNamespace):
-    def member_of(self, origin, uid, group):
+    def has_perm(self, origin, uid, perm):
         if uid is None: return False
         return bool(self.row("""
             select exists(select 1 from user_memberships
                           where (origin, user) = (?, ?) and group_ in (?, '*'))
-        """, (origin, uid, group))[0])
+        """, (origin, uid, perm))[0])
 
     def info(self, origin, uid):
         name, = self.row("select name from users where id = ?", (uid,))
-        groups = [g for g, in self.execute("""
+        perms = [g for g, in self.execute("""
             select group_ from user_memberships where (origin, user) = (?, ?)
         """, (origin, uid))]
         tags = []
         if self.row("select enabled from repo_auth where user = ?", (uid,),
                     default=(False,))[0]:
             tags.append('repo-access')
-        return {'name': name, 'groups': groups, 'tags': tags}
+        # TODO(0.87): Stop populating 'groups'
+        return {'name': name, 'perms': perms, 'groups': perms, 'tags': tags}
 
     def uid(self, name):
         if isinstance(name, int): return name

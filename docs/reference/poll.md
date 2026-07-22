@@ -13,8 +13,8 @@ becomes an answer. Both the question and the answers can contain arbitrary
 markup. Answers can optionally be marked as solutions by prefixing them with `:`
 (the prefix is removed).
 
-Polls can be controlled by members of the group `polls:control`, using the
-buttons in the toolbar.
+Polls can be controlled by users having the `polls:control` permission, using
+the buttons in the toolbar.
 
 - <button class="tdoc fa-play"></button> /
   <button class="tdoc fa-stop"></button>: Open or close the poll. Closed polls

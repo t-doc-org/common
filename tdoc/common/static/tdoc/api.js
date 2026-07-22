@@ -139,8 +139,12 @@ class Auth extends EventTarget {
     set(user) {
         this.user.set(user);
         if (user) {
+            // TODO(0.87): Remove use of .groups
+            htmlData.tdocUserPerms =
+                (user.perms ?? user.groups ?? []).join(' ');
             htmlData.tdocUserTags = (user.tags ?? []).join(' ');
         } else {
+            delete htmlData.tdocUserPerms;
             delete htmlData.tdocUserTags;
         }
         this.dispatchEvent(new CustomEvent('change'));
@@ -161,10 +165,12 @@ class Auth extends EventTarget {
         return this.user.get()?.token;
     }
 
-    async memberOf(group) {
+    async hasPerm(perm) {
         await this.ready;
-        const groups = this.user.get()?.groups ?? [];
-        return groups.includes(group) || groups.includes('*');
+        const user = this.user.get();
+        // TODO(0.87): Remove use of .groups
+        const perms = user?.perms ?? user?.groups ?? [];
+        return perms.includes(perm) || perms.includes('*');
     }
 
     async tags() {

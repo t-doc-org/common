@@ -3,10 +3,6 @@
 
 # Elements
 
-```{metadata}
-solutions: hide
-```
-
 ## SVG
 
 <svg xmlns="http://www.w3.org/2000/svg"
@@ -19,8 +15,8 @@ solutions: hide
 
 ## Solutions
 
-This section has several {rst:dir}`solution` blocks, and the page is
-configured to hide solutions by default. Click the
+This section has several {rst:dir}`solution` blocks that can be controlled
+dynamically. Users having the `solutions:show` permission can click the
 <span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>
 button in the navbar to show or hide them.
 

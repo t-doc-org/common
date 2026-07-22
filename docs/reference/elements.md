@@ -19,9 +19,9 @@ The `solutions` key in the document {rst:dir}`metadata` controls how solutions
 are displayed.
 
 - `dynamic` (default): Solutions are hidden by default, but can be made visible
-  to everyone in real-time by members of the group `solutions:show` using the
-  <button class="tdoc fa-eye"></button> /
-  <button class="tdoc fa-eye-slash"></button> button.
+  to everyone in real-time using the <button class="tdoc fa-eye"></button> /
+  <button class="tdoc fa-eye-slash"></button> button. This requires the
+  `solutions:show` permission.
 - `show`: Solutions are shown on the page.
 - `hide`: Solutions are hidden when the page loads. They can be shown or hidden
   with the <button class="tdoc fa-eye"></button> /

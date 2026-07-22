@@ -62,6 +62,27 @@ other characters, e.g. `*`, define a CSS rule like the following, with the
 ```
 ````
 
+## Permission-based styling
+
+The permissions of logged-in users are available as a whitespace-separated list
+in the `data-tdoc-user-perms` attribute of the `<html>`{l=html} element. This
+allows applying styles dependent on permissions.
+
+The base stylesheet has a rule to hide elements having the class `instructor`
+from users who don't have the `instructor:view` permission. This allows e.g.
+embedding teaching notes that won't be visible to students.
+
+Styling can be applied for other permissions by adding appropriate CSS rules.
+For example, the following rule hides elements having the `poll-controller`
+class from users who can't control polls.
+
+```{code-block} css
+html:not([data-tdoc-user-perms~="*"], [data-tdoc-user-perms~="polls:control"])
+    .poll-controller {
+  display: none;
+}
+```
+
 ## Numbering
 
 ````{rst:role} num

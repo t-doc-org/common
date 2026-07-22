@@ -59,6 +59,33 @@ The text between two frames has appropriate margins.
 This example is short.
 ```
 
+## Permission-based styling
+
+Logged-in users who have the `instructor:view` permission see a frame just below
+this paragraph. Other users don't.
+
+```{container} frame instructor
+You have the `instructor:view` permission.
+```
+
+Users who can control polls (`polls:control`) see instructions below this
+paragraph on how to operate a poll.
+
+<style>
+html:not([data-tdoc-user-perms~="*"], [data-tdoc-user-perms~="polls:control"])
+    .poll-controller {
+  display: none;
+}
+</style>
+
+{.poll-controller}
+- Open the poll with the <button class="tdoc fa-play"></button> button.
+- Let students vote.
+- Close the poll with the <button class="tdoc fa-stop"></button> button.
+- Display the results with the <button class="tdoc fa-eye"></button> button.
+- Display the correct answer with the <button class="tdoc fa-check"></button>
+  button.
+
 ## Numbering & points
 
 This sections uses the {rst:role}`num` role to create numbered sub-sections that

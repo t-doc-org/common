@@ -1317,6 +1317,12 @@ html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
     height: 0px;
 }
 
+/* Permission-based visibility */
+html:not([data-tdoc-user-perms~="*"],
+         [data-tdoc-user-perms~="instructor:view"]):not(#¶) .instructor {
+    display: none;
+}
+
 /* Revert table style changes from pydata-sphinx-theme in Bootstrap modals. */
 .modal .table {
     --bs-table-bg: var(--bs-body-bg);
