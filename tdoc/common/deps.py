@@ -12,6 +12,10 @@ def cdn_url(dep, version=None):
 
 
 info = {
+    'certifi': {
+        'version_tag':
+            lambda v: f'{'.'.join(f'{int(p):02d}' for p in v.split('.'))}',
+    },
     'cffi': {'version_tag': lambda v: f'v{v}'},
     'chartjs': {
         'name': 'chart.js',
@@ -99,6 +103,7 @@ info = {
         'name': 'jsxgraph',
         'version': '1.12.2',
         'tag': 'latest',
+        'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
     },
     'mathjax': {
