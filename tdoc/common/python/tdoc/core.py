@@ -46,12 +46,6 @@ def export(fn):
     return fn
 
 
-def linenos(obj):
-    """Return the start and past-the-end lines of an object."""
-    lines, start = inspect.getsourcelines(obj)
-    return start, start + len(lines)
-
-
 class ContextProxy:
     """A proxy object that forwards attributes accesses to a context value."""
     __slots__ = ('_ContextProxy__var',)
@@ -222,12 +216,10 @@ def _print_exception(exc, /, value, tb):
     te = traceback.TracebackException(exc, value, tb, compact=True)
     # Filter the run() function out of the stack trace
     for i, fs in enumerate(te.stack):
-        if (fs.filename == __file__ and run_start <= fs.lineno < run_end
-                and fs.name == run.__name__):
+        if (fs.filename == __file__ and fs.name == run.__name__):
             del te.stack[i]
             break
     te.print()
 
 
-run_start, run_end = linenos(run)
 sys.excepthook = _print_exception
