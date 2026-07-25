@@ -122,7 +122,7 @@ def paint_heart(c):
          stroke=svg.Stroke('black', width=2), fill='transparent')
 
 img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
-                style='width: 100%; height: 100%')
+                style='width: 100%; height: 100%;')
 img.stylesheet = """
 .bold {
   stroke: blue;
@@ -143,6 +143,10 @@ paint_heart(img.group(transform=svg.translate(360, 30).rotate(20).scale(0.5)))
 render(img)
 ```
 
+Try holding the {kbd}`Ctrl` key and moving the pointer over the image to
+[view image coordinates](/reference/exec.md#image-coordinates). Then hover over
+the coordinates for instructions on how to paste them into an editor.
+
 Animations can be implemented by rendering images repeatedly in a loop, with
 a short sleep between images. **Don't forget to sleep**, otherwise the program
 becomes unstoppable and the page must be reloaded.
@@ -151,7 +155,7 @@ becomes unstoppable and the page must be reloaded.
 :after: python-graphics
 import random
 
-img = svg.Image(400, 100, style='width: 100%; height: 100%')
+img = svg.Image(400, 100, style='width: 100%; height: 100%;')
 sym = img.symbol()
 paint_heart(sym)
 hearts = [(img.use(href=sym),

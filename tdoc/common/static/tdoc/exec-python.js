@@ -1,8 +1,61 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, elmt, focusIfVisible, htmlFragment, on, text} from './core.js';
+import {dec, elmt, focusIfVisible, htmlFragment, on, qs, text} from './core.js';
+import {cmview} from './editor.js';
 import {Runner} from './exec.js';
+
+class Coords {
+    addHandlers(el, fn) {
+        on(el).mousemove(ev => {
+            if (!ev.ctrlKey) {
+                el.style.cursor = '';
+                return;
+            }
+            const [cx, cy] = fn(ev);
+            if (cx === undefined) return;
+            el.style.cursor = 'crosshair';
+            this.show(el, ev.pageX, ev.pageY, cx, cy);
+        }).mouseleave(ev => {
+            if (!ev.ctrlKey) return;
+            this.hide();
+            el.style.cursor = '';
+        });
+    }
+
+    show(owner, x, y, cx, cy) {
+        [this.owner, this.cx, this.cy] = [owner, cx, cy];
+        const m = this.marker;
+        m.classList.remove('hidden');
+        qs(m, 'div').textContent = `(x: ${cx}, y: ${cy})`;
+        m.style.left = `${x}px`;
+        m.style.top = `${y}px`;
+    }
+
+    hide(owner) {
+        if (owner !== undefined && owner !== this.owner) return;
+        delete this.owner;
+        this.marker.classList.add('hidden');
+    }
+
+    get marker() {
+        if (this._marker === undefined) {
+            this._marker = document.body.appendChild(elmt`\
+<div class="tdoc-exec-coords hidden">\
+<svg xmlns="http://www.w3.org/2000/svg"\
+ xmlns:xlink="http://www.w3.org/1999/xlink"\
+ viewBox="-5 -5 10 10" width="10" height="10">\
+<path d="M -5 0 L 5 0 M 0 -5 L 0 5" stroke="black" stroke-width="1px"/>\
+</svg>\
+<div title="Press Shift+Ctrl+X in an editor to paste coordinates"></div>\
+</div>`);
+
+        }
+        return this._marker;
+    }
+}
+
+const coords = new Coords();
 
 class Interpreter {
     files = {}
@@ -84,7 +137,8 @@ class WorkerInterpreter extends Interpreter {
         await this.worker.sync.stop(run_id);
     }
 
-    claimCanvas(parent) {}
+    claimCanvas(runner, parent) {}
+    releaseCanvas(runner) {}
 }
 
 class MainInterpreter extends Interpreter {
@@ -92,9 +146,6 @@ class MainInterpreter extends Interpreter {
         const pyodide = await import(`${tdoc.versions.pyodide}/pyodide.mjs`);
         this.interp = await pyodide.loadPyodide();
         this.interp.setDebug(this.config.debug ?? false);
-        this.canvas = document.body.appendChild(elmt`\
-<canvas id="canvas" class="hidden" width="0" height="0"></canvas>`);
-        this.interp.canvas.setCanvas2D(this.canvas);
         const tasks = [];
         if (this.config.packages && this.config.packages.length > 0) {
             tasks.push(this.interp.loadPackage(this.config.packages));
@@ -153,9 +204,29 @@ core, msg
         await this.core.stop(run_id);
     }
 
-    claimCanvas(parent) {
-        this.canvas.classList.toggle('hidden', !parent);
-        (parent ?? document.body).appendChild(this.canvas);
+    claimCanvas(runner, parent) {
+        if (this.canvasRunner) throw new Error("The canvas is already in use");
+        if (!this.canvas) {
+            this.canvas = elmt`\
+<canvas id="canvas" width="0" height="0"></canvas>`;
+            this.interp.canvas.setCanvas2D(this.canvas);
+            coords.addHandlers(this.canvas, ev => {
+                const cr = this.canvasRunner;
+                if (cr?.node?.classList?.contains?.('no-coords')) return [];
+                const c = this.canvas, {width, height} = c;
+                return [Math.round(ev.offsetX * (width / c.scrollWidth)),
+                        Math.round(ev.offsetY * (height / c.scrollHeight))];
+            });
+        }
+        parent.appendChild(this.canvas);
+        this.canvasRunner = runner;
+    }
+
+    releaseCanvas(runner) {
+        if (!this.canvas || runner !== this.canvasRunner) return;
+        this.canvas.remove();
+        coords.hide(this.canvas);
+        delete this.canvasRunner;
     }
 }
 
@@ -199,6 +270,12 @@ class PythonRunner extends Runner {
         super.addControls(controls);
     }
 
+    get editorExtensions() {
+        return [cmview.keymap.of([
+            {key: "Shift-Ctrl-x", run: () => this.pasteCoords()},
+        ])];
+    }
+
     onReady() {
         if (this.runCtrl) this.runCtrl.disabled = false;
         if (this.stopCtrl) this.stopCtrl.disabled = false;
@@ -231,7 +308,7 @@ class PythonRunner extends Runner {
         } finally {
             await this.interp.stop(run_id);
             if (this.canvas) {
-                this.interp.claimCanvas();
+                this.interp.releaseCanvas(this);
                 this.canvas.remove();
                 delete this.canvas;
             }
@@ -302,13 +379,32 @@ class PythonRunner extends Runner {
     onRender(html, name) {
         const el = this.output.render(
             name, htmlFragment(html).firstElementChild);
+        if (el instanceof SVGSVGElement) {
+            coords.addHandlers(el, ev => {
+                if (this.node.classList.contains('no-coords')) return [];
+                const {x, y, width, height} = el.viewBox.animVal;
+                return [
+                    Math.round(ev.offsetX * (width / el.scrollWidth) + x),
+                    Math.round(ev.offsetY * (height / el.scrollHeight) + y),
+                ];
+            });
+        }
         return [el.scrollWidth, el.scrollHeight];
     }
 
     onSetupCanvas() {
         if (this.canvas) return;
         this.canvas = this.output.render('', elmt`<div class="canvas"></div>`);
-        this.interp.claimCanvas(this.canvas);
+        this.interp.claimCanvas(this, this.canvas);
+    }
+
+    pasteCoords() {
+        const {cx, cy} = coords;
+        if (cx === undefined) return false;
+        this.updateEditorState(state => {
+            return state.replaceSelection(`${cx}, ${cy}`);
+        });
+        return true;
     }
 }
 

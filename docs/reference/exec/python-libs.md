@@ -4,7 +4,7 @@
 # Python libraries
 
 The modules described below are packaged into a library and made available to
-Python code executed through the [`{exec} python`](exec.md#python) directive.
+Python code executed through the [`{exec} python`](../exec.md#python) directive.
 Additionally, all files in the directory `_python` (next to `conf.py`) are also
 included recursively in the library.
 
@@ -13,9 +13,9 @@ included recursively in the library.
 ````{py:module} tdoc.core
 This module
 ([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/python/core.py))
-provides basic functionality for [`{exec} python`](exec.md#python) blocks. It
+provides basic functionality for [`{exec} python`](../exec.md#python) blocks. It
 doesn't need to be imported explicitly: all its public symbols are available in
-the global scope of  [`{exec} python`](exec.md#python) blocks.
+the global scope of  [`{exec} python`](../exec.md#python) blocks.
 ````
 
 ```{py:function} new_id() -> str
@@ -40,6 +40,10 @@ in milliseconds.
 Render an HTML snippet as an output block. Output blocks are displayed ordered
 by name. If an output block with the same name already exists, it is replaced
 with the new one.
+
+If the HTML snippet is an SVG image, it is possible to
+[view coordinates within the image](../exec.md#image-coordinates).
+
 :arg str | Iterator(str) html: The HTML snippet to be rendered.
 :arg str name: The name of the output block.
 :returns: A `Future` that resolves to the size of the output block, as a
@@ -49,6 +53,9 @@ with the new one.
 ```{py:function} setup_canvas()
 Set up a `<canvas>`{l=html} element for rendering by SDL-based packages (e.g.
 `pygame-ce`). This function can only be used in the `main` environment.
+
+It is possible to
+[view coordinates within the canvas](../exec.md#image-coordinates).
 ```
 
 ```{py:function} input(prompt=None) -> str
@@ -101,7 +108,7 @@ a more portable alternative, use {py:func}`asyncio.sleep`.
 ````{py:function} once(key)
 Return `True` when called the first time with a given key, then `False` on
 subsequent calls with the same key. The calls are tracked across
-[`{exec} python`](exec.md#python) blocks and runs. This can be useful e.g. to
+[`{exec} python`](../exec.md#python) blocks and runs. This can be useful e.g. to
 install a package only once.
 :arg str key: A unique key for which to keep track of invocations.
 

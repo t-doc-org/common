@@ -155,6 +155,7 @@ export class Runner {
                 }),
             );
         }
+        extensions.push(...this.editorExtensions);
         const view = newEditor({
             extensions, doc,
             language: this.config?.highlight,
@@ -177,6 +178,8 @@ export class Runner {
         }
     }
 
+    get editorExtensions() { return []; }
+
     // Handle editor updates.
     onEditorUpdate(update) {
         if (!update.docChanged) return;
@@ -196,18 +199,27 @@ export class Runner {
         });
     }
 
+    // Return the EditorView object.
+    get editorView() { return findEditor(this.node); }
+
+    // Dispatch a transaction that updates the editor state.
+    updateEditorState(fn) {
+        const view = this.editorView, state = view.state;
+        let specs = fn(state);
+        if (!Array.isArray(specs)) specs = [specs];
+        view.dispatch(state.update(...specs));
+        if (this.resetEditor) {
+            this.resetEditor.disabled = state.doc.eq(this.origText);
+        }
+    }
+
     // Replace the text of the editor, attaching the given annotations to the
     // transaction.
     setEditorText(text, annotations) {
-        const view = findEditor(this.node)
-        if (!view) return;
-        view.dispatch(view.state.update({
-            changes: {from: 0, to: view.state.doc.length, insert: text},
-            annotations,
-        }));
-        if (this.resetEditor) {
-            this.resetEditor.disabled = view.state.doc.eq(this.origText);
-        }
+        this.updateEditorState(state => {
+            return {changes: {from: 0, to: state.doc.length, insert: text},
+                    annotations};
+        });
     }
 
     // Add controls to the {exec} block.
@@ -248,7 +260,7 @@ export class Runner {
     // Return the text content of the editor if an editor was added, or the
     // content of the <pre> tag.
     get text() {
-        const view = findEditor(this.node);
+        const view = this.editorView;
         return view ? view.state.doc.toString() : this.preText;
     }
 

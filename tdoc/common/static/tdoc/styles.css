@@ -967,6 +967,27 @@ div.cm-editor div.cm-scroller {
 html[data-theme=dark] div.cm-editor {
     background-color: var(--pst-color-surface);
 }
+.tdoc-exec-coords {
+    position: absolute;
+    z-index: 100;
+    pointer-events: none;
+}
+.tdoc-exec-coords > svg {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+}
+.tdoc-exec-coords > div {
+    margin-left: 15px;
+    margin-top: 15px;
+    border: 1px solid var(--pst-color-info);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.2rem;
+    text-wrap: nowrap;
+    line-height: normal;
+    background-color: var(--pst-color-info-bg);
+    pointer-events: auto;
+}
 
 /* Exec outputs */
 div.tdoc-exec-output {

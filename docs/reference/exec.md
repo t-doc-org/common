@@ -3,6 +3,11 @@
 
 # Code execution
 
+```{toctree}
+:hidden:
+exec/python-libs
+```
+
 ```{role} py(code)
 :language: python
 ```
@@ -193,6 +198,22 @@ content.
 :include: people.sql
 select * from people;
 ```
+
+## Output
+
+The output of running a code block (if any) is displayed below the block.
+Depending on the runner, blocks can display text, images, or arbitrary HTML. The
+output can change dynamically.
+
+### Image coordinates
+
+When a block outputs an `<svg>`{l=html} image or uses a `<canvas>`{l=html}, the
+coordinates within the element can be viewed by holding the {kbd}`Ctrl` key and
+moving the mouse pointer over the element. The displayed coordinates can be
+pasted into an editor with {kbd}`Shift+Ctrl+X`.
+
+This functionality can be disabled by adding the `no-coords` class to the
+{rst:dir}`exec` directive.
 
 ## Libraries
 
@@ -450,9 +471,12 @@ directives.
 - Create the file `tdoc/exec-RUNNER.js` in the `_static` directory.
   - Import
   [`./exec.js`](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/exec.js).
-  - Subclass `Runner`, set the static attribute `name` and implement the desired
+  - Subclass {js:class}`Runner`, set the static attribute
+    {js:attr}`name <Runner.[static] name>` and implement
+    the desired
     functionality in the class.
-  - Call `Runner.apply()` with the subclass at the end of the module.
+  - Call {js:func}`Runner.register() <Runner.[static] register>` with the
+    subclass at the end of the module.
 
   ```{code-block} js
   import {Runner} from './exec.js';
@@ -463,7 +487,7 @@ directives.
       // Implement runner functionality
   }
 
-  Runner.apply(MyRunner);  // Background
+  Runner.register(MyRunner);
   ```
 
 - In `conf.py`, add a configuration `dict` for the runner to the `exec` key of

@@ -19,5 +19,4 @@ diagram
 quiz
 poll
 exec
-python-libs
 ```
