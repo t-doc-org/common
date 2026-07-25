@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-86)=
+## 0.86 *(2026-07-25)*
+
+- Added
+  [permission-based styling](/reference/layout.md#permission-based-styling).
+- Added the [display of coordinates](/reference/exec.md#image-coordinates) in
+  rendered images and canvases.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.85...0.86)
+
 (release-0-85)=
 ## 0.85 *(2026-07-20)*
 
@@ -129,7 +138,7 @@
 (release-0-72)=
 ## 0.72 *(2026-04-19)*
 
-- Added a [mechanism](reference/config.md#import-files) to the local server to
+- Added a [mechanism](/reference/config.md#import-files) to the local server to
   import out-of-repository files.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.71...0.72)
 
