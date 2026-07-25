@@ -359,16 +359,18 @@ class Symbol(Container):
 
 
 class Image(Container):
-    __slots__ = Container._slots + ('width', 'height', 'stylesheet')
+    __slots__ = Container._slots + ('width', 'height', 'x', 'y', 'stylesheet')
 
-    def __init__(self, width, height, *, stylesheet=None, **kwargs):
-        self.width, self.height, self.stylesheet = width, height, stylesheet
+    def __init__(self, width, height, *, x=0, y=0, stylesheet=None, **kwargs):
+        self.width, self.height, self.x, self.y = width, height, x, y
+        self.stylesheet = stylesheet
         super().__init__(**kwargs)
 
     def _attrs(self):
         yield ' xmlns="http://www.w3.org/2000/svg"'
         yield ' xmlns:xlink="http://www.w3.org/1999/xlink"'
-        yield f' viewBox="0 0 {esc(self.width)} {esc(self.height)}"'
+        yield f' viewBox="{esc(self.x)} {esc(self.y)}' \
+              f' {esc(self.width)} {esc(self.height)}"'
         yield f' width="{esc(self.width)}" height="{esc(self.height)}"'
         yield from super()._attrs()
 
