@@ -8,18 +8,13 @@ import {Runner} from './exec.js';
 class Coords {
     addHandlers(el, fn) {
         on(el).mousemove(ev => {
-            if (!ev.ctrlKey) {
-                el.style.cursor = '';
-                return;
-            }
+            if (!ev.ctrlKey) return;
             const [cx, cy] = fn(ev);
             if (cx === undefined) return;
-            el.style.cursor = 'crosshair';
             this.show(el, ev.pageX, ev.pageY, cx, cy);
         }).mouseleave(ev => {
             if (!ev.ctrlKey) return;
             this.hide();
-            el.style.cursor = '';
         });
     }
 
