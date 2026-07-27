@@ -195,23 +195,20 @@ following attributes:
 <script type="module">
 const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
-function sumProduct(max) {
-  return () => {
-    const va = core.randomInt(1, max), vb = core.randomInt(1, max);
-    return {
-      va, vb,
-      equal(other) { return this.va === other.va && this.vb === other.vb; },
-      history: max ** 2 / 2,
+quiz.generators.sumProduct = () => {
+  const max = 12;
+  const va = core.randomInt(1, max), vb = core.randomInt(1, max);
+  return {
+    va, vb,
+    equal(other) { return this.va === other.va && this.vb === other.vb; },
+    history: max ** 2 / 2,
 
-      a(ph) { ph.textContent = `${va}`; },
-      b(ph) { ph.textContent = `${vb}`; },
-      sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
-      product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
-    };
+    a(ph) { ph.textContent = `${va}`; },
+    b(ph) { ph.textContent = `${vb}`; },
+    sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
+    product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
   };
-}
-
-quiz.generators.sumProduct = sumProduct(12);
+};
 </script>
 ```
 
