@@ -782,7 +782,29 @@ tdoc-quiz p:has(.tdoc-quiz-field.right)::after {
     height: 0;
     clear: both;
 }
-tdoc-quiz .tdoc-quiz-field.bad {
+tdoc-quiz ul.tdoc-quiz-group {
+    padding-inline-start: 0;
+    list-style: none;
+}
+tdoc-quiz ul.tdoc-quiz-group li {
+    display: flex;
+    align-items: baseline;
+    column-gap: 0.8rem;
+}
+tdoc-quiz ul.tdoc-quiz-group li > input {
+    margin-left: 0.3rem;
+}
+tdoc-quiz ul.tdoc-quiz-group li > label {
+    flex-grow: 1;
+}
+tdoc-quiz ul.tdoc-quiz-group li > label > p:first-child {
+    margin-top: 0;
+}
+tdoc-quiz ul.tdoc-quiz-group li > label > p:last-child {
+    margin-bottom: 0;
+}
+tdoc-quiz .tdoc-quiz-field.bad,
+tdoc-quiz ul.tdoc-quiz-group:has(.tdoc-quiz-field.bad) {
     background-color: var(--pst-color-danger-bg);
 }
 tdoc-quiz .tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {

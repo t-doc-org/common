@@ -5,6 +5,10 @@ import {
     asyncProps, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
 } from './core.js';
 
+function hasChecked(field) {
+    return field.type === 'checkbox' || field.type === 'radio';
+}
+
 class QuizBase {
     constructor(node) { this.node = node; }
 
@@ -18,11 +22,12 @@ class QuizBase {
     }
 
     showHint(field, text, invalid = false) {
-        this.hintField = field;
+        const anchor = field.closest('.tdoc-quiz-group') ?? field;
+        this.hintAnchor = anchor;
         this.hint.textContent = text;
         this.hint.style.left = this.hint.style.right = '';
         const cr = qs(this.node, '.content').getBoundingClientRect();
-        const fr = field.getBoundingClientRect();
+        const fr = anchor.getBoundingClientRect();
         const hr = this.hint.getBoundingClientRect();
         this.hint.style.top = `calc(${fr.top - cr.top - hr.height}px - 0.5rem)`;
         if (fr.left + hr.width >= cr.left + cr.width) {
@@ -46,9 +51,12 @@ class QuizBase {
         on(this.btn)
             .click(() => this.onClick())
             .blur(e => {
-                if (e.relatedTarget !== this.hintField) {
-                    this.hint.classList.remove('show');
+                const rt = e.relatedTarget;
+                if (rt === this.hintAnchor) return;
+                if (rt && rt.closest('.tdoc-quiz-group') === this.hintAnchor) {
+                    return;
                 }
+                this.hint.classList.remove('show');
             });
     }
 
@@ -56,7 +64,7 @@ class QuizBase {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
         if (e.key === 'Enter') {
             e.preventDefault();
-            (nextField(this.fields, field) || this.btn).focus()
+            (nextField(this.fields, field) ?? this.btn).focus()
             if (e.shiftKey) this.btn.click();
         } else if (e.key === 'ArrowUp' && !e.shiftKey) {
             e.preventDefault();
@@ -69,13 +77,13 @@ class QuizBase {
 
     async onClick() {
         this.hint.classList.remove('show');
-        let res = true;
+        let res = true, focus;
         for (const field of this.fields) {
             const args = await this.check(field);
             const ok = !args.invalid && args.ok;
-            if (res && !ok) field.focus();
             res = res && ok;
             field.classList.toggle('bad', !ok);
+            if (!focus && !ok) focus = field;
             if (!this.hint.classList.contains('show')) {
                 if (args.invalid) {
                     this.showHint(field, args.invalid, true);
@@ -87,6 +95,13 @@ class QuizBase {
         if (res) {
             enable(false, ...this.fields, this.btn);
             this.onSuccess();
+        } else {
+            if (hasChecked(focus)) {
+                const group = focus.closest('.tdoc-quiz-group');
+                focus = qs(group, '[type=checkbox], [type=radio]:checked')
+                        ?? qs(group, '[type=radio]');
+            }
+            focus.focus();
         }
     }
 
@@ -248,13 +263,14 @@ function checkFns(spec) {
 
 async function checkArgs(field) {
     const text = dec.decode(await fromBase64(field.dataset.text));
+    const group = field.closest('.tdoc-quiz-group');
     return {
         field,
         text,
-        role: field.dataset.role,
-        answer: field.value,
+        role: field.dataset.role ?? group?.dataset?.role,
+        answer: hasChecked(field) ? (field.checked ? '1' : '0') : field.value,
         solution: text,
-        hint: field.dataset.hint,
+        hint: field.dataset.hint ?? group?.dataset?.hint,
 
         apply(fns) {
             for (const [fn, name] of fns) {

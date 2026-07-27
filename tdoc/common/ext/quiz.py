@@ -7,13 +7,14 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions, Role, to_base64
+from . import __version__, report_exceptions, opt_bool, Role, to_base64
 
 _log = logging.getLogger(__name__)
 
 
 def setup(app):
     app.add_directive('quiz', Quiz)
+    app.add_directive('quiz-check', QuizCheck)
     app.add_role('quiz-ph', QuizPh)
     app.add_role('quiz-hint', QuizHint)
     app.add_role('quiz-input', QuizInput)
@@ -23,6 +24,8 @@ def setup(app):
     app.add_node(quiz_hint)
     app.add_node(quiz_input, html=(visit_quiz_input, None))
     app.add_node(quiz_select, html=(visit_quiz_select, None))
+    app.add_node(quiz_group, html=(visit_quiz_group, depart_quiz_group))
+    app.add_node(quiz_check, html=(visit_quiz_check, depart_quiz_check))
     app.connect('html-page-context', add_js)
     return {
         'version': __version__,
@@ -38,8 +41,10 @@ def add_js(app, page, template, context, doctree):
 
 class quiz_input(nodes.Inline, nodes.Element): pass
 class quiz_select(nodes.Inline, nodes.Element): pass
+class quiz_group(nodes.Sequential, nodes.Element): pass
+class quiz_check(nodes.Part, nodes.Element): pass
 
-field_types = (quiz_input, quiz_select)
+field_types = (quiz_input, quiz_select, quiz_check)
 
 
 class Quiz(docutils.SphinxDirective):
@@ -190,8 +195,9 @@ class QuizField(Role):
 
 
 def attributes(node):
-    attrs = {'data-role': node['role'], 'data-text': to_base64(node['text'])}
+    attrs = {'data-text': to_base64(node['text'])}
     if v := node.get('style'): attrs['style'] = v
+    if v := node.get('role'): attrs['data-role'] = v
     if v := node.get('check'): attrs['data-check'] = v
     if v := node.get('hint'): attrs['data-hint'] = v
     return attrs
@@ -231,3 +237,66 @@ def visit_quiz_select(self, node):
             f'<option value="{self.attval(opt)}">{html.escape(opt)}</option>')
     self.body.append('</select>')
     raise nodes.SkipNode()
+
+
+class QuizCheck(docutils.SphinxDirective):
+    option_spec = {
+        'multi': opt_bool,
+        'hint': directives.unchanged,
+        'class': directives.class_option,
+        'style': directives.unchanged,
+    }
+    has_content = True
+
+    @report_exceptions
+    def run(self):
+        children = self.parse_content_to_nodes()
+        if len(children) != 1 or not isinstance(children[0], nodes.bullet_list):
+            raise Exception("{quiz-check}: Must contain a bullet list")
+        node = quiz_group('', *(quiz_check('', *c) for c in children[0]))
+        self.set_source_info(node)
+        self.state.document.set_id(node)
+        node['role'] = self.name
+        node['type'] = 'checkbox' if self.options.get('multi', False) \
+                       else 'radio'
+        if v := self.options.get('hint'): node['hint'] = v
+        # Find and remove ':' prefixes that tag solutions.
+        pid = node['ids'][0]
+        for i, c in enumerate(node):
+            c['ids'].append(f'{pid}-{i}')
+            n = c.next_node(nodes.Text)
+            if (sol := n.startswith(':')):
+                p = n.parent
+                if len(n) > 1:
+                    p.replace(n, n.__class__(n[1:]))
+                else:
+                    p.remove(n)
+                    if not p.children: p.parent.remove(p)
+            c['text'] = '1' if sol else '0'
+        node['classes'] += self.options.get('class', [])
+        return [node]
+
+
+def visit_quiz_group(self, node):
+    attrs = {'data-role': node['role']}
+    if v := node.get('hint'): attrs['data-hint'] = v
+    if v := node.get('style'): attrs['style'] = v
+    self.body.append(self.starttag(node, 'ul', classes=['tdoc-quiz-group'],
+                                   **attrs))
+
+
+def depart_quiz_group(self, node):
+    self.body.append('</ul>\n')
+
+
+def visit_quiz_check(self, node):
+    self.body.append('<li>')
+    self.body.append(self.starttag(
+        node, 'input', suffix='', type=node.parent['type'],
+        classes=['tdoc-quiz-field'], name=node.parent['ids'][0],
+        **attributes(node)))
+    self.body.append(f'<label for="{node['ids'][0]}">\n')
+
+
+def depart_quiz_check(self, node):
+    self.body.append('</label></li>\n')
