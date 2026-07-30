@@ -779,11 +779,14 @@ tdoc-quiz ul.tdoc-quiz-group.right {
     clear: right;
     margin-left: 1rem;
 }
+tdoc-quiz .tdoc-quiz-field.right + .tdoc-quiz-field.right {
+    margin-top: 0.25rem;
+}
 tdoc-quiz ul.tdoc-quiz-group.right + p {
     margin-top: 0.25rem;
 }
-tdoc-quiz .tdoc-quiz-field.right + .tdoc-quiz-field.right {
-    margin-top: 0.25rem;
+tdoc-quiz ul.tdoc-quiz-group.right + p:last-child {
+    margin-bottom: 0.25rem;
 }
 tdoc-quiz :has(> :is(.tdoc-quiz-field, ul.tdoc-quiz-group).right)::after {
     content: ".";
