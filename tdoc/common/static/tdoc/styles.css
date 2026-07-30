@@ -1618,7 +1618,7 @@ mjx-container[display="true"]:not(#¶) {
 }
 
 /* Keep list markers at the top for math content. */
-:is(ol, ul) > li > div.math > mjx-container > svg {
+:is(ol, ul) > li div.math > mjx-container > svg {
     vertical-align: top !important;  /* Override element style */
 }
 
