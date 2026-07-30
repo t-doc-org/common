@@ -90,6 +90,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     Which of the following are second-order polynoms?
 8.  ```{defaults} quiz-check
     :multi:
+    :randomize:
     :class: columns-3
     :right: width: 60%;
     ```

@@ -163,6 +163,10 @@ When set, allow multiple answers in the field group. Uses checkboxes instead of
 radio buttons.
 ```
 
+```{rst:directive:option} randomize
+When set, randomize the order of the choices when the page loads.
+```
+
 ```{rst:directive:option} hint: text
 An optional hint to display when any of the fields in the group are checked
 wrong. This replaces {rst:role}`quiz-hint` for multiple-choice questions.

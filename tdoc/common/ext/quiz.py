@@ -248,6 +248,7 @@ class QuizCheck(docutils.SphinxDirective):
         'class': directives.class_option,
         'hint': directives.unchanged,
         'multi': opt_bool,
+        'randomize': opt_bool,
         'right': directives.unchanged,
         'style': directives.unchanged,
     }
@@ -265,6 +266,7 @@ class QuizCheck(docutils.SphinxDirective):
         node['type'] = 'checkbox' if self.options.get('multi', False) \
                        else 'radio'
         if v := self.options.get('hint'): node['hint'] = v
+        if self.options.get('randomize', False): node['randomize'] = True
         # Find and remove ':' prefixes that tag solutions.
         pid = node['ids'][0]
         for i, c in enumerate(node):
@@ -290,6 +292,7 @@ class QuizCheck(docutils.SphinxDirective):
 def visit_quiz_group(self, node):
     attrs = {'data-role': node['role']}
     if v := node.get('hint'): attrs['data-hint'] = v
+    if node.get('randomize'): attrs['data-randomize'] = ''
     if v := node.get('style'): attrs['style'] = v
     self.body.append(self.starttag(node, 'ul', classes=['tdoc-quiz-group'],
                                    **attrs))

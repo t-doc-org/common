@@ -40,6 +40,12 @@ class QuizBase {
     }
 
     setupFields(container) {
+        for (const g of qsa(container, '.tdoc-quiz-group')) {
+            if (g.dataset.randomize === undefined) continue;
+            for (let i = g.children.length; i >= 0; --i) {
+                g.appendChild(g.children[Math.random() * i | 0]);
+            }
+        }
         this.fields = qsa(container, '.tdoc-quiz-field');
         this.btn = qs(container, 'button.tdoc-check');
         for (const field of this.fields) {
