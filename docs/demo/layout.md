@@ -184,6 +184,20 @@ This is the last quote.
   5.  Item 5
 ```
 
+## Column layouts
+
+The list below is laid out in 3 columns.
+
+{.lower-alpha-paren .columns-3}
+1.  Item 1
+2.  Item 2
+3.  Item 3
+4.  Item 4
+5.  Item 5
+6.  Item 6
+7.  Item 7
+8.  Item 8
+
 ## Grid layouts
 
 The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to

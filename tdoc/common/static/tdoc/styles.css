@@ -263,13 +263,13 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
 }
 
 /* List styling */
-:is(ol, ul):is(.columns-2, .columns-3, .columns-4, .columns-5, .columns-6,
-               .columns-7, .columns-8):not(.none) {
+:is(ol, ul) {
     column-gap: 2rem;
 }
 :is(ol, ul).none {
     list-style-type: none;
     padding-left: 0;
+    column-gap: normal;
 }
 :is(ol, ul).disc {
     list-style-type: disc;
@@ -795,9 +795,6 @@ tdoc-quiz :has(> :is(.tdoc-quiz-field, ul.tdoc-quiz-group).right)::after {
 tdoc-quiz ul.tdoc-quiz-group {
     padding-inline-start: 0;
     list-style: none;
-}
-tdoc-quiz ul.tdoc-quiz-group:is(.columns-2, .columns-3, .columns-4, .columns-5,
-                                .columns-6, .columns-7, .columns-8) {
     column-gap: 1rem;
 }
 tdoc-quiz ul.tdoc-quiz-group li {

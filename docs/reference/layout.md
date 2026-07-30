@@ -188,6 +188,11 @@ specified in the `points` {rst:dir}`metadata`.
   `[" ({0} point)", " ({0} points)"]`.
 `````
 
+## Columns
+
+The `column-N` classes (with `N` = 2..8) can be added to block elements (e.g.
+lists) to lay them out in multiple columns.
+
 ## Grid
 
 `````{rst:directive} {list-grid}
