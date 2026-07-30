@@ -88,28 +88,24 @@ They can also be laid out as lists, usually with right-aligned fields.
     - :$ax^2 + bx + c$
     ```
     Which of the following are second-order polynoms?
-8.  ```{quiz-check}
+8.  ```{defaults} quiz-check
     :multi:
     :class: columns-3
     :right: width: 60%;
+    ```
+    ```{quiz-check}
     - :$x = 30°$
     - $x = 45°$
     - :$x = \frac{\pi}{6}$
     ```
     $sin(x) = \frac{1}{2}$
 9.  ```{quiz-check}
-    :multi:
-    :class: columns-3
-    :right: width: 60%;
     - $x = 45°$
     - :$x = \frac{\sqrt{2}}{2}$
     - :$x = sin(\frac{\pi}{4})$
     ```
     $cos(\frac{\pi}{4}) = x$
 10. ```{quiz-check}
-    :multi:
-    :class: columns-3
-    :right: width: 60%;
     - $x = 30°$
     - :$x = 60°$
     - :$x = 240°$

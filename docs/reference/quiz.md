@@ -184,7 +184,9 @@ Moves the field or field group to the right of the question text, by applying a
 placed before the question text**, otherwise it may be vertically misaligned.
 
 Additional styles can optionally be provided as the value of the option, e.g.
-`width: 10rem;`.
+`width: 10rem;`. The value `true` is the same as providing no value, and the
+value `false` is the same as not setting the option (this can be useful in
+{rst:dir}`defaults`).
 ```
 
 ```{rst:directive:option} class: name [name...]

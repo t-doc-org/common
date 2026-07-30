@@ -187,9 +187,9 @@ class QuizField(Role):
 
 def set_style(node, options):
     style = []
-    if (v := options.get('right')) is not None:
+    if (v := options.get('right', 'false').strip()) != 'false':
         node['classes'].append('right')
-        if v := v.strip():
+        if v not in ('', 'true'):
             if not v.endswith(';'): v += ';'
             style.append(v)
     if v := options.get('style', '').strip():
