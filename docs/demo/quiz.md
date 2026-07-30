@@ -52,6 +52,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 ```
 
 ````{quiz}
+{.lower-alpha-paren}
 1.  {input}`42`{quiz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
 2.  {input}`42`{quiz-hint}`It's composed of digits from 0 to 9.`
@@ -61,11 +62,11 @@ They can also be laid out as lists, usually with right-aligned fields.
     What is the answer to the ultimate question of life, the
     universe, and everything? Explain your reasoning in full detail, provide
     references, and indicate plausible alternatives.
-5.  {yes-no}`yes`{quiz-hint}`Be positive.`
+4.  {yes-no}`yes`{quiz-hint}`Be positive.`
     Are you sure about your previous answer?
-4.  This input field uses the whole line. Guess what the answer is.
+5.  This input field uses the whole line. Guess what the answer is.
     {input100}`42`{quiz-hint}`You've seen this before.`
-5.  What is the capital of Switzerland?
+6.  What is the capital of Switzerland?
     ```{quiz-check}
     :class: columns-3
     :hint: The answer might surprise you.
@@ -76,7 +77,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     - Geneva
     - :None of the above
     ```
-5.  ```{quiz-check}
+7.  ```{quiz-check}
     :multi:
     :class: columns-2
     :hint: It should have an x squared, and no funny functions.
@@ -86,7 +87,34 @@ They can also be laid out as lists, usually with right-aligned fields.
     - $2sin(x^2) + \frac{5}{x}$
     - :$ax^2 + bx + c$
     ```
-    Select all second-order polynoms.
+    Which of the following are second-order polynoms?
+8.  ```{quiz-check}
+    :multi:
+    :class: columns-3
+    :right: width: 60%;
+    - :$x = 30°$
+    - $x = 45°$
+    - :$x = \frac{\pi}{6}$
+    ```
+    $sin(x) = \frac{1}{2}$
+9.  ```{quiz-check}
+    :multi:
+    :class: columns-3
+    :right: width: 60%;
+    - $x = 45°$
+    - :$x = \frac{\sqrt{2}}{2}$
+    - :$x = sin(\frac{\pi}{4})$
+    ```
+    $cos(\frac{\pi}{4}) = x$
+10. ```{quiz-check}
+    :multi:
+    :class: columns-3
+    :right: width: 60%;
+    - $x = 30°$
+    - :$x = 60°$
+    - :$x = 240°$
+    ```
+    $tan(x) = \sqrt{3}$
 ````
 
 ## Table
