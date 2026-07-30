@@ -150,6 +150,40 @@ This is the last quote.
 > **Quote {nump}`quote`:** Technically, of course, he was right. Socially, he
 > was annoying us.
 
+## Lists
+
+```{list-grid}
+:style: grid-template-columns: 1fr 1fr;
+- # Bullet list
+  - Item 1
+  - Item 2
+  - Item 3
+
+    Item 3, second paragraph
+
+    Item 3, third paragraph
+
+  - Item 4
+    - Item 4.1
+    - Item 4.2
+  - Item 5
+
+- # Numbered list
+  {.lower-alpha-paren}
+  1.  Item 1
+  2.  Item 2
+  3.  Item 3
+
+      Item 3, second paragraph
+
+      Item 3, third paragraph
+
+  4.  Item 4
+      - Item 4.1
+      - Item 4.2
+  5.  Item 5
+```
+
 ## Grid layouts
 
 The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to

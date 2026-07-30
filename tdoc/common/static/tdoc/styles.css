@@ -40,6 +40,12 @@ hr {
     opacity: 1;
 }
 
+/* BUG(pydata-sphinx-theme): The first paragraph in list items has a smaller
+   bottom margin. We want that only if it's the only child. */
+:is(ol, ul) li > p:first-child:not(:last-child) {
+    margin-bottom: 1.15rem;
+}
+
 /* Invert the even and odd row colors in tables, so that the first row below the
    header has a different color than the header. */
 .table > tbody > tr:nth-child(even) {

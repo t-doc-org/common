@@ -3,23 +3,6 @@
 
 # Elements
 
-## Lists
-
-This is a bullet list.
-
-- First item
-- Second item
-- Third item
-
-  Second paragraph of third item
-
-  Third paragraph of third item
-
-- Fourth item
-
-This is a numbered list.
-
-
 ## SVG
 
 <svg xmlns="http://www.w3.org/2000/svg"
