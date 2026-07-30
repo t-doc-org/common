@@ -178,20 +178,24 @@ class QuizField(Role):
         node['text'] = self.text
         node['classes'] = self.options['classes'][:]
         if v := self.options.get('check'): node['check'] = v
-        style = []
-        if (v := self.options.get('right')) is not None:
-            node['classes'].append('right')
-            if v := v.strip():
-                if not v.endswith(';'): v += ';'
-                style.append(v)
-        if v := self.options.get('style', '').strip():
-            if not v.endswith(';'): v += ';'
-            style.append(v)
-        if style: node['style'] = ' '.join(style)
+        set_style(node, self.options)
         self.update_node(node)
         return [node], []
 
     def update_node(self, node): pass
+
+
+def set_style(node, options):
+    style = []
+    if (v := options.get('right')) is not None:
+        node['classes'].append('right')
+        if v := v.strip():
+            if not v.endswith(';'): v += ';'
+            style.append(v)
+    if v := options.get('style', '').strip():
+        if not v.endswith(';'): v += ';'
+        style.append(v)
+    if style: node['style'] = ' '.join(style)
 
 
 def attributes(node):
@@ -241,9 +245,10 @@ def visit_quiz_select(self, node):
 
 class QuizCheck(docutils.SphinxDirective):
     option_spec = {
-        'multi': opt_bool,
-        'hint': directives.unchanged,
         'class': directives.class_option,
+        'hint': directives.unchanged,
+        'multi': opt_bool,
+        'right': directives.unchanged,
         'style': directives.unchanged,
     }
     has_content = True
@@ -278,6 +283,7 @@ class QuizCheck(docutils.SphinxDirective):
             raise Exception("{quiz-check}: Single-choice fields must have "
                             "exactly one answer")
         node['classes'] += self.options.get('class', [])
+        set_style(node, self.options)
         return [node]
 
 

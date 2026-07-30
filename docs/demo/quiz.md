@@ -76,16 +76,17 @@ They can also be laid out as lists, usually with right-aligned fields.
     - Geneva
     - :None of the above
     ```
-5.  Select all second-order polynoms.
-    ```{quiz-check}
+5.  ```{quiz-check}
     :multi:
     :class: columns-2
     :hint: It should have an x squared, and no funny functions.
+    :right:
     - $2x + 3$
     - :$5x^2 + 3x - 7$
     - $2sin(x^2) + \frac{5}{x}$
     - :$ax^2 + bx + c$
     ```
+    Select all second-order polynoms.
 ````
 
 ## Table

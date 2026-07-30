@@ -155,6 +155,9 @@ The correct choice(s) are marked as solutions by prefixing them with `:`
 {.rubric}
 Options
 
+See the [common field options](#common) below (except the {rst:dir}`check`
+option, which isn't supported).
+
 ```{rst:directive:option} multi
 When set, allow multiple answers in the field group. Uses checkboxes instead of
 radio buttons.
@@ -162,16 +165,7 @@ radio buttons.
 
 ```{rst:directive:option} hint: text
 An optional hint to display when any of the fields in the group are checked
-wrong.
-```
-
-```{rst:directive:option} class: name [name...]
-:type: IDs
-A space-separated list of CSS classes to add to the field group.
-```
-
-```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the field group, e.g. `width: 10rem;`.
+wrong. This replaces {rst:role}`quiz-hint` for multiple-choice questions.
 ```
 ````
 
@@ -185,9 +179,9 @@ field. The functions are applied in order.
 ```
 
 ```{rst:directive:option} right: [property: value; ...]
-Moves the field to the right of the question text, by applying a `float: right;`
-style. When using this option, **the role must be placed before the question
-text**, otherwise it may be vertically misaligned.
+Moves the field or field group to the right of the question text, by applying a
+`float: right;` style. When using this option, **the role or directive must be
+placed before the question text**, otherwise it may be vertically misaligned.
 
 Additional styles can optionally be provided as the value of the option, e.g.
 `width: 10rem;`.
@@ -195,11 +189,11 @@ Additional styles can optionally be provided as the value of the option, e.g.
 
 ```{rst:directive:option} class: name [name...]
 :type: IDs
-A space-separated list of CSS classes to add to the field.
+A space-separated list of CSS classes to add to the field or field group.
 ```
 
 ```{rst:directive:option} style: property: value; [property: value; ...]
-CSS styles to apply to the field, e.g. `width: 10rem;`.
+CSS styles to apply to the field or field group, e.g. `width: 10rem;`.
 ```
 
 {#generator}
