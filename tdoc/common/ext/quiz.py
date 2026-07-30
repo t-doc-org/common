@@ -273,6 +273,10 @@ class QuizCheck(docutils.SphinxDirective):
                     p.remove(n)
                     if not p.children: p.parent.remove(p)
             c['text'] = '1' if sol else '0'
+        if node['type'] == 'radio' \
+                and not sum(c['text'] == '1' for c in node) == 1:
+            raise Exception("{quiz-check}: Single-choice fields must have "
+                            "exactly one answer")
         node['classes'] += self.options.get('class', [])
         return [node]
 

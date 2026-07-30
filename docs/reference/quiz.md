@@ -145,6 +145,36 @@ value with `|` to preserve newlines.
 ````
 `````
 
+````{rst:directive} {quiz-check}
+This directive defines a group of `<input type="radio">`{l=html} or
+`<input type="checkbox">`{l=html} fields, for use in multiple-choice questions.
+The content of the directive is a bullet list, where each list item is a choice.
+The correct choice(s) are marked as solutions by prefixing them with `:`
+(the prefix is removed). The list items can contain arbitrary markup.
+
+{.rubric}
+Options
+
+```{rst:directive:option} multi
+When set, allow multiple answers in the field group. Uses checkboxes instead of
+radio buttons.
+```
+
+```{rst:directive:option} hint: text
+An optional hint to display when any of the fields in the group are checked
+wrong.
+```
+
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the field group.
+```
+
+```{rst:directive:option} style: property: value; [property: value; ...]
+CSS styles to apply to the field group, e.g. `width: 10rem;`.
+```
+````
+
 {#common}
 ### Common field options
 
@@ -153,6 +183,7 @@ value with `|` to preserve newlines.
 A list of [check functions](#check) to apply when checking the answer for the
 field. The functions are applied in order.
 ```
+
 ```{rst:directive:option} right: [property: value; ...]
 Moves the field to the right of the question text, by applying a `float: right;`
 style. When using this option, **the role must be placed before the question
@@ -161,6 +192,12 @@ text**, otherwise it may be vertically misaligned.
 Additional styles can optionally be provided as the value of the option, e.g.
 `width: 10rem;`.
 ```
+
+```{rst:directive:option} class: name [name...]
+:type: IDs
+A space-separated list of CSS classes to add to the field.
+```
+
 ```{rst:directive:option} style: property: value; [property: value; ...]
 CSS styles to apply to the field, e.g. `width: 10rem;`.
 ```

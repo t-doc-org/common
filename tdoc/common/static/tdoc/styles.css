@@ -789,7 +789,7 @@ tdoc-quiz ul.tdoc-quiz-group {
 tdoc-quiz ul.tdoc-quiz-group li {
     display: flex;
     align-items: baseline;
-    column-gap: 0.8rem;
+    column-gap: 0.6rem;
 }
 tdoc-quiz ul.tdoc-quiz-group li > input {
     margin-left: 0.3rem;

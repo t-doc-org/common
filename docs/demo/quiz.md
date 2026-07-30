@@ -51,7 +51,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 :style: width: 100%; margin-top: 0.25rem;
 ```
 
-```{quiz}
+````{quiz}
 1.  {input}`42`{quiz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
 2.  {input}`42`{quiz-hint}`It's composed of digits from 0 to 9.`
@@ -65,7 +65,28 @@ They can also be laid out as lists, usually with right-aligned fields.
     Are you sure about your previous answer?
 4.  This input field uses the whole line. Guess what the answer is.
     {input100}`42`{quiz-hint}`You've seen this before.`
-```
+5.  What is the capital of Switzerland?
+    ```{quiz-check}
+    :class: columns-3
+    :hint: The answer might surprise you.
+    - Berlin
+    - Zürich
+    - Paris
+    - Bern
+    - Geneva
+    - :None of the above
+    ```
+5.  Select all second-order polynoms.
+    ```{quiz-check}
+    :multi:
+    :class: columns-2
+    :hint: It should have an x squared, and no funny functions.
+    - $2x + 3$
+    - :$5x^2 + 3x - 7$
+    - $2sin(x^2) + \frac{5}{x}$
+    - :$ax^2 + bx + c$
+    ```
+````
 
 ## Table
 
