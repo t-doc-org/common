@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-87)=
+## 0.87 *(2026-07-31)*
+
+- Added the {rst:dir}`quiz-check` directive for multiple-choice quiz questions.
+- Improved the layout of lists with multiple paragraphs or nested lists.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.86...0.87)
+
 (release-0-86)=
 ## 0.86 *(2026-07-25)*
 
