@@ -119,25 +119,40 @@ They can also be laid out as lists, usually with right-aligned fields.
 <script type="module">
 const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
 
-function sumProduct(max) {
-  return () => {
-    const va = core.randomInt(1, max), vb = core.randomInt(1, max);
-    const div = Number.isInteger(vb / va) ? "divides" : "doesn't divide";
-    return {
-      va, vb,
-      equal(other) { return this.va === other.va && this.vb === other.vb; },
-      history: max ** 2 / 2,
+quiz.generators.sumProduct = () => {
+  const max = 12, va = core.randomInt(1, max), vb = core.randomInt(1, max);
+  const div = Number.isInteger(vb / va) ? "divides" : "doesn't divide";
+  return {
+    va, vb,
+    equal(other) { return this.va === other.va && this.vb === other.vb; },
+    history: max ** 2 / 2,
 
-      a(ph) { ph.textContent = `${va}`; },
-      b(ph) { ph.textContent = `${vb}`; },
-      sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
-      product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
-      div(args) { args.ok = args.answer === div; }
-    };
+    a(ph) { ph.textContent = `${va}`; },
+    b(ph) { ph.textContent = `${vb}`; },
+    sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
+    product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
+    div(args) { args.ok = args.answer === div; }
   };
-}
+};
 
-quiz.generators.sumProduct = sumProduct(12);
+quiz.generators.numbers = () => {
+  const max = 99, vn = core.randomInt(0, 99);
+  const multiple = m => args => { args.ok = +args.answer === +(vn % m === 0); };
+  const interval = (l, u) => args => {
+    args.ok = +args.answer === +(l <= vn && vn < u);
+  };
+  return {
+    vn,
+    equal(other) { return this.vn === other.vn; },
+    history: max / 2,
+
+    n(ph) { ph.textContent = `${vn}`; },
+    multiple_0: multiple(2), multiple_1: multiple(3),
+    multiple_2: multiple(5), multiple_3: multiple(9),
+    interval_0: interval(0, 25), interval_2: interval(50, 75),
+    interval_1: interval(25, 50), interval_3: interval(75, 100),
+  };
+};
 </script>
 
 Table-based quizzes can be generated dynamically, for drill exercises.
@@ -156,3 +171,41 @@ Table-based quizzes can be generated dynamically, for drill exercises.
 | :----------: | :----------: | :----------: | :--------------: | :------------: |
 | {quiz-ph}`a` | {quiz-ph}`b` | {input}`sum` | {input}`product` | {divides}`div` |
 ```
+
+Table-based quizzes that use {rst:dir}`quiz-check` must be created with
+`{list-table}`, as Markdown tables cannot contain directives.
+
+<style>
+.numbers-quiz :is(th, td) {
+  text-align: center;
+}
+</style>
+
+```{defaults} quiz-check
+```
+
+`````{quiz} table numbers
+````{list-table}
+:header-rows: 1
+:class: numbers-quiz
+- - $n$
+  - Multiple of
+  - In interval
+- - {quiz-ph}`n`
+  - ```{quiz-check} multiple
+    :multi:
+    :class: columns-4
+    - 2
+    - 3
+    - 5
+    - 9
+    ```
+  - ```{quiz-check} interval
+    :class: columns-2
+    - $n \in \left[0; 25\right[$
+    - $n \in \left[25; 50\right[$
+    - $n \in \left[50; 75\right[$
+    - $n \in \left[75; 100\right[$
+    ```
+````
+`````

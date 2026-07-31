@@ -41,7 +41,7 @@ class FlexTable(docutils.SphinxDirective):
             try:
                 row = self.parse_row(line, lineno)
             except Exception as e:
-                return [self.state.document.reporter.error(e, line=lineno)]
+                return [self.reporter.error(e, line=lineno)]
             table.append(row)
         return [table]
 

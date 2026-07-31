@@ -3,6 +3,7 @@
 
 import {
     asyncProps, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
+    typesetMath,
 } from './core.js';
 
 function hasChecked(field) {
@@ -189,13 +190,26 @@ class TableQuiz extends QuizBase {
         }
         this.entries.push(entry);
 
-        // Set up the <tbody> for the new entry.
+        // Set up the <tbody> for the new entry. Update id attributes and
+        // references to them to avoid collisions.
         const tbody = this.tbody.cloneNode(true);
         if (inv) tbody.classList.add('inv');
         for (const ph of qsa(tbody, 'tdoc-quiz-ph')) {
             entry[ph.getAttribute('text')](ph);
         }
+        for (const g of qsa(tbody, '.tdoc-quiz-group')) {
+            const suffix = `-qe${this.entries.length}`;
+            g.id += suffix;
+            for (const el of qsa(g, 'input')) {
+                el.id += suffix;
+                el.setAttribute('name', el.getAttribute('name') + suffix);
+            }
+            for (const el of qsa(g, 'label')) {
+                el.setAttribute('for', el.getAttribute('for') + suffix);
+            }
+        }
         this.table.appendChild(tbody);
+        typesetMath(tbody);
         this.setupFields(tbody);
         if (focus) qs(tbody, '.tdoc-quiz-field')?.focus?.();
     }

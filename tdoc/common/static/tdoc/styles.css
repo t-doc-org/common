@@ -801,9 +801,11 @@ tdoc-quiz :has(> :is(.tdoc-quiz-field, ul.tdoc-quiz-group).right)::after {
     clear: both;
 }
 tdoc-quiz ul.tdoc-quiz-group {
+    margin-bottom: 0;
     padding-inline-start: 0;
     list-style: none;
     column-gap: 1rem;
+    text-align: left;
 }
 tdoc-quiz ul.tdoc-quiz-group li {
     display: flex;
@@ -827,7 +829,7 @@ tdoc-quiz ul.tdoc-quiz-group:has(.tdoc-quiz-field.bad) {
     background-color: var(--pst-color-danger-bg);
 }
 tdoc-quiz .tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {
-    vertical-align: middle;
+    vertical-align: baseline;
 }
 tdoc-quiz .tdoc-quiz-entry > tr > td:last-child {
     width: 0;

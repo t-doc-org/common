@@ -39,12 +39,18 @@ def add_js(app, page, template, context, doctree):
         app.add_js_file('tdoc/quiz.js', type='module')
 
 
+class quiz(nodes.Body, nodes.Element): pass
+class quiz_ph(nodes.Inline, nodes.Element): pass
+class quiz_hint(nodes.Inline, nodes.Element): pass
+
 class quiz_input(nodes.Inline, nodes.Element): pass
 class quiz_select(nodes.Inline, nodes.Element): pass
 class quiz_group(nodes.Sequential, nodes.Element): pass
 class quiz_check(nodes.Part, nodes.Element): pass
 
+field_roles = (quiz_input, quiz_select)
 field_types = (quiz_input, quiz_select, quiz_check)
+named_types = (quiz_ph,) + field_types
 
 
 class Quiz(docutils.SphinxDirective):
@@ -73,21 +79,14 @@ class Quiz(docutils.SphinxDirective):
         if not any(True for c in children
                    for n in c.findall(lambda n: isinstance(n, field_types))):
             raise Exception("{quiz}: Must contain at least one field")
-        if typ == 'table':
-            if not sum(1 for c in children if isinstance(c, nodes.table)):
-                raise Exception("{quiz} table: Must contain a single table")
-            names = set()
-            for c in children:
-                for n in c.findall(
-                        lambda n: isinstance(n, field_types + (quiz_ph,))):
-                    if (name := n['text']) in names:
-                        raise Exception("{quiz}: Duplicate placeholder or "
-                                        f" field name: {name}")
-                    names.add(name)
+        if typ == 'static':
+            self.handle_static(children)
+        elif typ == 'table':
+            self.handle_table(children)
 
-        # Associate hints with fields.
+        # Associate hints with role fields.
         for child in children:
-            for field in child.findall(lambda n: isinstance(n, field_types)):
+            for field in child.findall(lambda n: isinstance(n, field_roles)):
                 for n in field.findall(include_self=False, descend=False,
                                        siblings=True):
                     if isinstance(n, nodes.Text) and not n.strip(): continue
@@ -109,8 +108,33 @@ class Quiz(docutils.SphinxDirective):
         if v := self.options.get('style', '').strip(): node['style'] = v
         return [node]
 
+    def handle_static(self, children):
+        for c in children:
+            for g in c.findall(lambda n: isinstance(n, quiz_group)
+                                         and n['type'] == 'radio'):
+                if sum(f['text'] == '1' for f in g) != 1:
+                    _log.error("{quiz-check}: Single-choice fields must have "
+                               "exactly one solution", location=g)
 
-class quiz(nodes.Body, nodes.Element): pass
+    def handle_table(self, children):
+        if not sum(isinstance(c, nodes.table) for c in children):
+            raise Exception("{quiz} table: Must contain a single table")
+        names = set()
+        for c in children:
+            for g in c.findall(quiz_group):
+                if (name := g.get('name')) is None:
+                    _log.error("{quiz-check}: Must have a name", location=g)
+                    continue
+                for i, n in enumerate(g):
+                    if n['text'] != '0':
+                        _log.error("{quiz-check}: Must not define solutions",
+                                   location=n)
+                    n['text'] = f'{name}_{i}'
+            for n in c.findall(lambda n: isinstance(n, named_types)):
+                if (name := n['text']) in names:
+                    raise Exception("{quiz}: Duplicate placeholder or "
+                                    f"field name: {name}")
+                names.add(name)
 
 
 def visit_quiz(self, node):
@@ -141,9 +165,6 @@ class QuizPh(Role):
         return [node], []
 
 
-class quiz_ph(nodes.Inline, nodes.Element): pass
-
-
 def visit_quiz_ph(self, node):
     self.body.append(self.starttag(node, 'tdoc-quiz-ph', suffix='',
                                    text=node['text']))
@@ -157,9 +178,6 @@ class QuizHint(Role):
         self.set_source_info(node)
         node['text'] = self.text
         return [node], []
-
-
-class quiz_hint(nodes.Inline, nodes.Element): pass
 
 
 class QuizField(Role):
@@ -244,6 +262,7 @@ def visit_quiz_select(self, node):
 
 
 class QuizCheck(docutils.SphinxDirective):
+    optional_arguments = 1
     option_spec = {
         'class': directives.class_option,
         'hint': directives.unchanged,
@@ -262,6 +281,7 @@ class QuizCheck(docutils.SphinxDirective):
         node = quiz_group('', *(quiz_check('', *c) for c in children[0]))
         self.set_source_info(node)
         self.state.document.set_id(node)
+        if self.arguments: node['name'] = self.arguments[0]
         node['role'] = self.name
         node['type'] = 'checkbox' if self.options.get('multi', False) \
                        else 'radio'
@@ -280,10 +300,6 @@ class QuizCheck(docutils.SphinxDirective):
                     p.remove(n)
                     if not p.children: p.parent.remove(p)
             c['text'] = '1' if sol else '0'
-        if node['type'] == 'radio' \
-                and not sum(c['text'] == '1' for c in node) == 1:
-            raise Exception("{quiz-check}: Single-choice fields must have "
-                            "exactly one answer")
         node['classes'] += self.options.get('class', [])
         set_style(node, self.options)
         return [node]

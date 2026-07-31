@@ -120,10 +120,9 @@ def report_exceptions(fn):
         try:
             return fn(self, *args, **kwargs)
         except Exception as e:
-            if isinstance(self, Role):
-                err = self.inliner.document.reporter.error(e, line=self.lineno)
-                return [], [err]
-            return [self.state.document.reporter.error(e, line=self.lineno)]
+            msgs = [self.reporter.error(e, line=self.lineno)]
+            if isinstance(self, Role): return [], msgs
+            return msgs
     return wrapper
 
 
@@ -443,6 +442,9 @@ class RoleMixin:
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
         return self(*args, **kwargs)
+
+    @property
+    def reporter(self): return self.inliner.reporter
 
 
 class Role(docutils.SphinxRole, RoleMixin): pass

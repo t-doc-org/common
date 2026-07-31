@@ -14,7 +14,7 @@ markup, and user input fields are placed with {rst:role}`quiz-input` and
 - [`table`](#table): A table-based quiz with dynamically generated questions.
 
 The <button class="tdoc fa-check"></button> button checks the provided answers.
-It turns green when all the answers are correct, and all the quiz is locked.
+It turns green when all the answers are correct, and the quiz fields are locked.
 
 {rst:dir}`quiz` directives generate `<tdoc-quiz>`{l=html} elements.
 
@@ -69,6 +69,8 @@ looked up in the object returned by the [generator function](#generator).
 This role defines a placeholder for a variable part of a question in a
 dynamically generated quiz. The text of the role is an identifier to be looked
 up in the object returned by the [generator function](#generator).
+
+{rst:role}`quiz-ph` roles generate `<tdoc-quiz-ph>`{l=html} elements.
 `````
 
 ## Field
@@ -145,7 +147,7 @@ value with `|` to preserve newlines.
 ````
 `````
 
-````{rst:directive} {quiz-check}
+````{rst:directive} {quiz-check} [name]
 This directive defines a group of `<input type="radio">`{l=html} or
 `<input type="checkbox">`{l=html} fields, for use in multiple-choice questions.
 The content of the directive is a bullet list, where each list item is a choice.
@@ -155,8 +157,8 @@ The correct choice(s) are marked as solutions by prefixing them with `:`
 {.rubric}
 Options
 
-See the [common field options](#common) below (except the {rst:dir}`check`
-option, which isn't supported).
+See the [common field options](#common) below (the {rst:dir}`check` option isn't
+supported).
 
 ```{rst:directive:option} multi
 When set, allow multiple answers in the field group. Uses checkboxes instead of
@@ -202,53 +204,6 @@ A space-separated list of CSS classes to add to the field or field group.
 CSS styles to apply to the field or field group, e.g. `width: 10rem;`.
 ```
 
-{#generator}
-## Generator function
-
-A generator function generates a new question for a dynamically generated quiz.
-It must be given a name by assigning it to a property of
-{js:data}`quiz.generators`, so that it can be referenced from {rst:dir}`quiz`
-directives. It takes no arguments and returns a question object with the
-following attributes:
-
-- One function per {rst:role}`quiz-ph`, named after the text of the role. The
-  function receives the empty
-  [`HTMLSpanElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLSpanElement)
-  corresponding to the placeholder as an argument, and must modify it to set the
-  variable part (e.g. set its `textContent`).
-
-- One [check function](#check) per {rst:role}`quiz-input` and
-  {rst:role}`quiz-select` role, named after the text of the role.
-
-- An optional `equal()` function taking a previous question object and returning
-  `true` iff they are equal. If this attribute is present, new questions are
-  compared to previous ones and rejected if they compare equal. This avoids
-  generating duplicates.
-
-- An optional `history` value specifying how far back to check for duplicates
-  when generating a new question.
-
-```{code-block} html
-<script type="module">
-const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
-
-quiz.generators.sumProduct = () => {
-  const max = 12;
-  const va = core.randomInt(1, max), vb = core.randomInt(1, max);
-  return {
-    va, vb,
-    equal(other) { return this.va === other.va && this.vb === other.vb; },
-    history: max ** 2 / 2,
-
-    a(ph) { ph.textContent = `${va}`; },
-    b(ph) { ph.textContent = `${vb}`; },
-    sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
-    product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
-  };
-};
-</script>
-```
-
 {#check}
 ## Check function
 
@@ -259,7 +214,11 @@ single argument, an object that contains the following attributes:
 - `text` (string): The text of the role that created the field.
 - `field`: The DOM object of the field.
 - `answer` (string): Initially populated with the answer provided by the user.
+  - For radio and checkbox fields, the value is `'1'` if the field is selected,
+    or `'0'` if it isn't.
 - `solution` (string): Initially populated with the text of the role.
+  - For radio and checkbox fields, the value is `'1'` if the field is marked as
+    a solution, or `'0'` if it isn't.
 
 The check function can modify the existing attributes above, for use by the next
 check function. It can also set the following attributes:
@@ -291,7 +250,7 @@ reference. The following built-in checks are pre-defined:
   usually doesn't need to be specified.
   - If the solution is a string, `ok` is set to `true` iff the answer and
     solution compare equal.
-  - If the solution is an `Array`, `ok` is set to `true` iff the array includes
+  - If the solution is an `Array`, `ok` is set to `true` iff the array contains
     the answer.
   - If the solution is an object, the answer is looked up in the object, and
     `ok` is set to `true` iff the result is `true`. If the result is a string,
@@ -309,12 +268,62 @@ quiz.checks.split = (args, param = ',') => {
 </script>
 ```
 
+{#generator}
+## Generator function
+
+A generator function generates a new question for a dynamically generated quiz.
+It must be given a name by assigning it to a property of
+{js:data}`quiz.generators`, so that it can be referenced from {rst:dir}`quiz`
+directives. It takes no arguments and returns a question object with the
+following attributes:
+
+- One function per {rst:role}`quiz-ph`, named after the text of the role. The
+  function receives the empty
+  [`HTMLSpanElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLSpanElement)
+  corresponding to the placeholder as an argument, and must modify it to set the
+  variable part (e.g. set its `textContent`).
+
+- One [check function](#check) per {rst:role}`quiz-input` and
+  {rst:role}`quiz-select` role, named after the text of the role.
+
+- One [check function](#check) per {rst:dir}`quiz-check` choice, named
+  `NAME_IDX`, where `NAME` is the name of the field group and `IDX` is the
+  zero-based index of the choice.
+
+- An optional `equal()` function taking a previous question object and returning
+  `true` iff they are equal. If this attribute is present, new questions are
+  compared to previous ones and rejected if they compare equal. This avoids
+  generating duplicates.
+
+- An optional `history` value specifying how far back to check for duplicates
+  when generating a new question.
+
+```{code-block} html
+<script type="module">
+const [core, quiz] = await tdoc.import('tdoc/core.js', 'tdoc/quiz.js');
+
+quiz.generators.sumProduct = () => {
+  const max = 12, va = core.randomInt(1, max), vb = core.randomInt(1, max);
+  return {
+    va, vb,
+    equal(other) { return this.va === other.va && this.vb === other.vb; },
+    history: max ** 2 / 2,
+
+    a(ph) { ph.textContent = `${va}`; },
+    b(ph) { ph.textContent = `${vb}`; },
+    sum(args) { args.ok = args.answer.trim() === (va + vb).toString(); },
+    product(args) { args.ok = args.answer.trim() === (va * vb).toString(); },
+  };
+};
+</script>
+```
+
 ## Field hint
 
 `````{rst:role} quiz-hint
 This role defines a hint to display when the answer for a field is wrong. It
-must be placed **immediately after** the field for which it provides a hint,
-with only whitespace between them.
+must be placed **immediately after** the field role for which it provides a
+hint, with only whitespace between them.
 
 ````{code-block}
 ```{role} input(quiz-input)
