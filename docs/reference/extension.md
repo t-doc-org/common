@@ -35,6 +35,7 @@ The following tables shows how roles and directives map to custom elements.
 |{rst:dir}`mermaid`|`<tdoc-dyn type="mermaid">`{l=html}|{js:class}`~core.DynElement`|
 |{rst:dir}`poll`|`<tdoc-poll>`{l=html}|{js:class}`~poll.PollElement`|
 |{rst:dir}`quiz`|`<tdoc-quiz>`{l=html}|{js:class}`~quiz.QuizElement`|
+|{rst:role}`quiz-ph`|`<tdoc-quiz-ph>`{l=html}|{js:class}`~core.TdocElement`|
 
 ### Lifecycle hooks
 
@@ -211,14 +212,13 @@ instances, whose `outerHTML` is substituted as-is.
 Return a `Proxy` object that sets event listeners on an element. This is a more
 compact way to call `el.addEventListener()`. To set a listener, call the method
 on the proxy that corresponds to the event, and pass the listener function as an
-argument. The methods return the `Proxy`, so multiple liseteners can be set with
+argument. The methods return the `Proxy`, so multiple listeners can be set with
 chained calls.
 
 ```{code-block} js
 on(qs(document, 'button'))
     .click(() => alert("Clicked"))
-    .mouseenter(() => alert("Mouse entered"))
-    .mouseleave(() => alert("Mouse left"));
+    .mouseenter(() => alert("Mouse entered"));
 ```
 
 :arg !HTMLElement el: The DOM element on which to set event listeners.
@@ -299,7 +299,7 @@ The following methods can be defined on `handler`:
 ````
 
 ````{js:class} DynElement
-The class implementing `<tdoc-dyn>` custom elements. It extends
+The class implementing `<tdoc-dyn>`{l=html} custom elements. It extends
 {js:class}`TdocElement`.
 
 {.rubric}

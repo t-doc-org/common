@@ -41,9 +41,14 @@ hr {
 }
 
 /* BUG(pydata-sphinx-theme): The first paragraph in list items has a smaller
-   bottom margin. We want that only if it's the only child. */
-:is(ol, ul) li > p:first-child:not(:last-child) {
+   bottom margin. We want that only if it's the only child, or if it's followed
+   by a sub-list as a last child. */
+:is(ol, ul) li
+        > p:first-child:not(:last-child, :has(+ :is(ol, ul):last-child)) {
     margin-bottom: 1.15rem;
+}
+:is(ol, ul) li > :is(ol, ul) {
+    margin-bottom: 1rem;
 }
 
 /* Invert the even and odd row colors in tables, so that the first row below the

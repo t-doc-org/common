@@ -166,7 +166,20 @@ This is the last quote.
   - Item 4
     - Item 4.1
     - Item 4.2
+
   - Item 5
+
+    - Item 5.1
+    - Item 5.2
+
+    Item 5, after sub-list
+
+    - Item 5.3
+    - Item 5.4
+
+    Item 5, after second sub-list
+
+  - Item 6
 
 - # Numbered list
   {.lower-alpha-paren}
@@ -181,7 +194,20 @@ This is the last quote.
   4.  Item 4
       - Item 4.1
       - Item 4.2
+
   5.  Item 5
+
+      - Item 5.1
+      - Item 5.2
+
+      Item 5, after sub-list
+
+      - Item 5.3
+      - Item 5.4
+
+      Item 5, after second sub-list
+
+  6.  Item 6
 ```
 
 ## Column layouts
