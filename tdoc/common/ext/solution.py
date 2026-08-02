@@ -14,7 +14,6 @@ _log = logging.getLogger(__name__)
 def setup(app):
     app.add_directive('solution', Solution)
     app.add_node(solution, html=(visit_solution, depart_solution))
-    app.connect('html-page-context', set_html_context)
     app.connect('html-page-context', add_header_button, priority=500.5)
     return {
         'version': __version__,
@@ -52,26 +51,23 @@ class Solution(admonitions.BaseAdmonition):
         return res
 
 
-def set_html_context(app, docname, template, context, doctree):
-    # TODO: Move into add_header_button, after conditionals
+def add_header_button(app, docname, template, context, doctree):
+    if doctree is None: return
+    if all('always-show' in sol['classes']
+           for sol in doctree.findall(solution)): return
     v = meta(app.env, docname, 'solutions', 'dynamic')
     if v not in ('show', 'hide', 'dynamic'):
         _log.warning(f"{{solution}}: Invalid 'solutions' value: {v}")
         v = app.env.metadata[docname]['solutions'] = 'show'
-    if v != 'show': context['html_attrs']['data-tdoc-solutions'] = v
-
-
-def add_header_button(app, page, template, context, doctree):
-    if doctree is None: return
-    if all('always-show' in sol['classes']
-           for sol in doctree.findall(solution)): return
-    context["header_buttons"].append({
-        'type': 'javascript',
-        'javascript': 'tdoc.toggleSolutions()',
-        'icon': 'fa-eye-slash tfa',
-        'tooltip': _("Toggle solutions"),
-        'label': 'toggle-solutions',
-    })
+    if v != 'show':
+        context['html_attrs']['data-tdoc-solutions'] = v
+        context["header_buttons"].append({
+            'type': 'javascript',
+            'javascript': 'tdoc.toggleSolutions()',
+            'icon': 'fa-eye-slash tfa',
+            'tooltip': _("Toggle solutions"),
+            'label': 'toggle-solutions',
+        })
 
 
 def visit_solution(self, node):

@@ -46,8 +46,7 @@ When set, the admonition is expanded by default.
 ```
 
 ```{rst:directive:option} show
-When set, the admonition is always shown, even if solutions are hidden or
-removed.
+When set, the admonition is always shown, even if solutions are hidden.
 ```
 ````
 
