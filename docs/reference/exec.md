@@ -367,7 +367,7 @@ procedure depends on the target device type.
 
 To enable connecting to a target device, it must first be **paired with the
 browser**. Connect the target via USB, select
-"<span class="tdoc fa-plug"></span>&nbsp;Connect" in the "Tools" menu
+"<i class="fa-plug tfa"></i>&nbsp;Connect" in the "Tools" menu
 (<button class="tdoc fa-screwdriver-wrench"></button>), and select the device
 in the list. This needs to be done only once; once a device is paired, it will
 be connected automatically when the page loads, unless multiple paired devices
@@ -382,9 +382,9 @@ target returns to the
 accepts further commands.
 
 To **write a program permanently to a target's flash memory**, select
-"<span class="tdoc fa-file-arrow-up"></span>&nbsp;Write&nbsp;to&nbsp;<code>main.py</code>"
+"<i class="fa-file-arrow-up tfa"></i>&nbsp;Write&nbsp;to&nbsp;<code>main.py</code>"
 in the "Tools" menu. The program can be removed again with
-"<span class="tdoc fa-trash"></span>&nbsp;Remove&nbsp;<code>main.py</code>".
+"<i class="fa-trash tfa"></i>&nbsp;Remove&nbsp;<code>main.py</code>".
 
 ### Python
 
