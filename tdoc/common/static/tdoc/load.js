@@ -81,36 +81,19 @@ domLoaded.then(() => {
 tdoc.terminateServer = async () => await api.terminate();
 
 // Handle the "toggle solutions" button.
-// TODO: Wait for domLoaded
-const toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
+let toggleSolutionsBtn;
+
 function updateSolutionsTooltip() {
+    if (toggleSolutionsBtn === undefined) return;
     const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                   "Show solutions" : "Hide solutions";
     bootstrap.Tooltip.getInstance(toggleSolutionsBtn)
         ?.setContent?.({'.tooltip-inner': title});
 }
-if (toggleSolutionsBtn) {
-    on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
-    if (htmlData.tdocSolutions === 'dynamic') {
-        api.events.sub({add: [new api.Watch(
-            {name: 'solutions', page: page.path},
-            data => {
-                htmlData.tdocSolutionsState = data.show ?? 'hide';
-                updateSolutionsTooltip();
-            })]});
-        api.auth.onChange(async () => {
-            if (await api.auth.hasPerm('solutions:write')) {
-                htmlData.tdocSolutionsCtrl = '';
-            } else {
-                delete htmlData.tdocSolutionsCtrl;
-            }
-        });
-    }
-}
 
 tdoc.toggleSolutions = () => {
-    const show = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ? 'show'
-                                                                    : 'hide'
+    const show = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
+                 'show' : 'hide';
     if (htmlData.tdocSolutions === 'dynamic') {
         if (htmlData.tdocSolutionsCtrl !== undefined) api.solutions(show);
     } else {
@@ -118,6 +101,29 @@ tdoc.toggleSolutions = () => {
         updateSolutionsTooltip();
     }
 };
+
+domLoaded.then(() => {
+    toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
+    if (toggleSolutionsBtn) {
+        on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
+        if (htmlData.tdocSolutions === 'dynamic') {
+            api.events.sub({add: [new api.Watch(
+                {name: 'solutions', page: page.path},
+                data => {
+                    htmlData.tdocSolutionsState = data.show ?? 'hide';
+                    updateSolutionsTooltip();
+                })]});
+            api.auth.onChange(async () => {
+                if (await api.auth.hasPerm('solutions:write')) {
+                    htmlData.tdocSolutionsCtrl = '';
+                } else {
+                    delete htmlData.tdocSolutionsCtrl;
+                }
+            });
+        }
+    }
+
+});
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
@@ -146,6 +152,7 @@ tdoc.draw = async () => {
     }
 
     const {createDrauu} = await import(`${tdoc.versions.drauu}/index.mjs`);
+    await domLoaded;
     drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
