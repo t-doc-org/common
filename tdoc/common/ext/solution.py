@@ -64,7 +64,7 @@ def add_header_button(app, docname, template, context, doctree):
         context["header_buttons"].append({
             'type': 'javascript',
             'javascript': 'tdoc.toggleSolutions()',
-            'icon': 'fa-eye-slash tfa',
+            'icon': 'fa-eye tfa',
             'tooltip': _("Toggle solutions"),
             'label': 'toggle-solutions',
         })
