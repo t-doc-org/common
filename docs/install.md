@@ -17,16 +17,16 @@ release-notes
 - **Set up your account** if you haven't done so yet.
   - You should have received a login link of the form
     `https://t-doc.org#?token=...`. Navigate to that link to log in.
-  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
-    <span class="fa fa-gear"></span> Settings", click one of the "Add login with
-    ..." buttons and follow the process. You will then be able to log in with
-    that account.
+  - In the navigation bar, select "<i class="fa-user tfa"></i> &rarr;
+    <i class="fa-gear tfa"></i> Settings", click one of the "Add login
+    with ..." buttons and follow the process. You will then be able to log in
+    with that account.
 
 - **Generate a repository access password** if this is the first time you access
   a t-doc repository.
   - Go to [`t-doc.org`](https://t-doc.org/) and ensure you are logged in.
-  - In the navigation bar, select "<span class="fa fa-user"></span> &rarr;
-    <span class="fa fa-gear"></span> Settings", then open "Repository access".
+  - In the navigation bar, select "<i class="fa-user tfa"></i> &rarr;
+    <i class="fa-gear tfa"></i> Settings", then open "Repository access".
   - Click "Reset" to generate the password. Keep the dialog open for the next
     step.
 

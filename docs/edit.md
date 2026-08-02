@@ -110,8 +110,8 @@ located below the `docs` directory.
     rebuild, and [report the issue](#faq-report-issue) to the t-doc authors.
 
 - **Stop the local server** by clicking the
-  <span class="fa fa-door-closed"></span> button in the navigation bar, by
-  typing {kbd}`Ctrl+C` in the terminal, or by closing the terminal window.
+  <i class="fa-door-closed tfa"></i> button in the navigation bar, by typing
+  {kbd}`Ctrl+C` in the terminal, or by closing the terminal window.
 
 - Don't forget to **commit changes frequently**.
 

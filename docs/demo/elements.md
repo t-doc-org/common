@@ -17,8 +17,8 @@
 
 This section has several {rst:dir}`solution` blocks that can be controlled
 dynamically. Users having the `solutions:show` permission can click the
-<span class="tdoc fa-eye"></span> / <span class="tdoc fa-eye-slash"></span>
-button in the navbar to show or hide them.
+<i class="fa-eye tfa"></i> / <i class="fa-eye-slash tfa"></i> button in the
+navbar to show or hide them.
 
 ```{solution}
 This solution follows the per-page setting.

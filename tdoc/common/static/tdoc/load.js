@@ -81,6 +81,7 @@ domLoaded.then(() => {
 tdoc.terminateServer = async () => await api.terminate();
 
 // Handle the "toggle solutions" button.
+// TODO: Wait for domLoaded
 const toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
 function updateSolutionsTooltip() {
     const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?

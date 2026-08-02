@@ -5,6 +5,17 @@
    :not(.¶) to add to the CLASS specificity weight. !important is only used to
    overide styles set on elements directly. */
 
+/* Set global variables. */
+html:not(#¶) {
+    /* Revert font attributes to pre pydata-sphinx-theme 0.16.0. */
+    --pst-font-size-h1: 2.5rem;
+    --pst-font-size-h2: 2rem;
+    --pst-font-size-h6: 1.1rem;
+    --pst-font-weight-heading: 400;
+    /* Use the same color for "high-contrast" links as for normal ones. */
+    --pst-color-link-higher-contrast: var(--pst-color-link);
+}
+
 /* Utility classes */
 .hidden:not(#¶) {
     display: none;
@@ -19,14 +30,6 @@ section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
     .no-print {
         display: none !important;
     }
-}
-
-/* Revert font attributes to pre pydata-sphinx-theme 0.16.0. */
-html {
-    --pst-font-size-h1: 2.5rem;
-    --pst-font-size-h2: 2rem;
-    --pst-font-size-h6: 1.1rem;
-    --pst-font-weight-heading: 400;
 }
 
 /* Set the maximum width of sidebars instead of a fixed width. */
@@ -119,12 +122,8 @@ blockquote div > p:has(+ p.attribution) {
 }
 
 /* Server termination buttons */
-.article-header-buttons > button.btn-terminate::before {
-    font: var(--fa-font-solid);
-    content: '\f52a';
-}
-.article-header-buttons > button.btn-terminate:hover::before {
-    content: '\f52b';
+.article-header-buttons > button.btn-terminate:hover .fa-door-closed {
+    --fa: '\f52b';  /* door-open */
 }
 
 /* TOC */
@@ -566,14 +565,11 @@ html[data-theme=dark][data-tdoc-solutions=dynamic][data-tdoc-solutions-state=hid
 .article-header-buttons > button.btn-toggle-solutions {
     min-width: 2.7rem;
 }
-.article-header-buttons > button.btn-toggle-solutions::before {
-    font: var(--fa-font-solid);
-    content: '\f070';
-}
 html:is([data-tdoc-solutions]:not([data-tdoc-solutions-state]),
-        [data-tdoc-solutions-state=hide]
-    ) .article-header-buttons > button.btn-toggle-solutions::before {
-    content: '\f06e';
+        [data-tdoc-solutions-state=hide])
+    .article-header-buttons > button.btn-toggle-solutions .fa-eye-slash {
+    /* TODO: Make eye the default, and switch to eye-slash here */
+    --fa: '\f06e';  /* eye */
 }
 html:not([data-tdoc-solutions=hide]):not([data-tdoc-solutions-ctrl])
         .article-header-buttons > button.btn-toggle-solutions {
@@ -583,7 +579,6 @@ html[data-tdoc-solutions=dynamic][data-tdoc-solutions-ctrl] .bd-header-article {
     /* Don't hide the navbar when dynamic solutions can be controlled. */
     display: flex;
 }
-
 
 /* Inline code */
 a code {
@@ -623,9 +618,20 @@ div.highlight pre > .linenos::before {
 }
 
 /* Icons */
-span:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
-                                                     [class*=" fa-"]) {
-    font: var(--fa-font-solid);
+.tfa:is([class^=fa-], [class*=" fa-"])::before,
+.tfar:is([class^=fa-], [class*=" fa-"])::before,
+:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
+                                                 [class*=" fa-"])::before,
+:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) :is([class^=fa-],
+                                                  [class*=" fa-"])::before {
+    display: inline-block;
+    font: var(--tdoc-fa-font, var(--fa-font-solid));
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    content: var(--fa) / "";
+}
+.tfar {
+    --tdoc-fa-font: var(--fa-font-regular);
 }
 
 /* Buttons */
@@ -645,7 +651,6 @@ button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
                                                        [class*=" fa-"]) {
     width: 1.8rem;
     height: 1.8rem;
-    font: var(--fa-font-solid);
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -664,10 +669,6 @@ select:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
 }
 
 /* Drawing */
-.article-header-buttons > button.btn-draw::before {
-    font: var(--fa-font-solid);
-    content: '\f304';
-}
 .bd-header-article .header-article-items__start {
     display: flex;
     align-items: start;
@@ -681,8 +682,6 @@ html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
 }
 .tdoc-draw-toolbar input[type=checkbox] {
     appearance: none;
-    font: var(--fa-font-solid);
-    font-size: 1.3rem;
 }
 .tdoc-draw-toolbar input[type=checkbox]:checked {
     background-color: var(--pst-color-border);
@@ -695,10 +694,6 @@ html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
 .tdoc-draw-toolbar .tdoc-size:focus-visible {
     outline: none;
 }
-.tdoc-draw-toolbar button {
-    font: var(--fa-font-solid);
-    font-size: 1.3rem;
-}
 .tdoc-draw-toolbar :is(.tdoc-tool, .tdoc-color) button {
     width: 2.5rem;
     justify-content: center;
@@ -709,7 +704,6 @@ html:not([data-tdoc-draw]) .tdoc-draw-toolbar {
 .tdoc-draw-toolbar :is(.tdoc-tool, .tdoc-color) .dropdown-item {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
-    font: var(--fa-font-solid);
     font-size: 1.3rem;
     justify-content: center;
 }
@@ -1336,7 +1330,6 @@ html[data-theme=dark] div.graphviz > :is(img.graphviz, object.graphviz, svg) {
     cursor: pointer;
 }
 .dropdown-menu .btn__icon-container.tdoc:is([class^=fa-], [class*=" fa-"]) {
-    font: var(--fa-font-solid);
     display: inline-flex;
     width: 1.7rem;
     align-items: center;
@@ -1359,18 +1352,12 @@ html[data-theme=dark] div.graphviz > :is(img.graphviz, object.graphviz, svg) {
 }
 
 /* Login functionality */
-.article-header-buttons > .dropdown-user > button::before {
-    font: var(--fa-font-regular);
-    content: '\f007';
+html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
+        .fa-user {
+    --tdoc-fa-font: var(--fa-font-regular);
 }
 html[data-tdoc-user-tags] .article-header-buttons > .dropdown-user
-        > button::before {
-    font: var(--fa-font-solid);
-}
-html[data-tdoc-user-tags] .article-header-buttons > .dropdown-user
-        .dropdown-item.btn-login {
-    display: none;
-}
+        .dropdown-item.btn-login,
 html:not([data-tdoc-user-tags]) .article-header-buttons > .dropdown-user
         .dropdown-item.btn-settings {
     display: none;
@@ -1493,9 +1480,13 @@ html:not([data-tdoc-user-tags~=repo-access], [data-tdoc-local])
 }
 
 /* Fix the alignment of navbar icons. */
+.article-header-buttons {
+    align-items: center;
+}
 .article-header-buttons > button,
 .article-header-buttons > .dropdown > button {
     justify-content: center;
+    height: 2.15rem;
 }
 .article-header-buttons > .btn > .btn__icon-container {
     display: inline-flex;

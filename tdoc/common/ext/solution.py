@@ -53,6 +53,7 @@ class Solution(admonitions.BaseAdmonition):
 
 
 def set_html_context(app, docname, template, context, doctree):
+    # TODO: Move into add_header_button, after conditionals
     v = meta(app.env, docname, 'solutions', 'dynamic')
     if v not in ('show', 'hide', 'dynamic'):
         _log.warning(f"{{solution}}: Invalid 'solutions' value: {v}")
@@ -67,6 +68,7 @@ def add_header_button(app, page, template, context, doctree):
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.toggleSolutions()',
+        'icon': 'fa-eye-slash tfa',
         'tooltip': _("Toggle solutions"),
         'label': 'toggle-solutions',
     })

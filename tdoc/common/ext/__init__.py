@@ -210,6 +210,7 @@ def on_config_inited(app, config):
 
     # Override defaults in html_theme_options.
     opts = config.html_theme_options
+    opts.setdefault('navbar_persistent', [])
     opts.setdefault('use_sidenotes', True)
     opts.setdefault('path_to_docs', 'docs')
     opts.setdefault('use_download_button', False)
@@ -390,6 +391,7 @@ def add_terminate_button(app, page, template, context, doctree):
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.terminateServer()',
+        'icon': 'fa-door-closed tfa',
         'tooltip': _("Terminate the local server"),
         'label': 'terminate',
     })
@@ -399,6 +401,7 @@ def add_draw_button(app, page, template, context, doctree):
     context["header_buttons"].append({
         'type': 'javascript',
         'javascript': 'tdoc.draw()',
+        'icon': 'fa-pen tfa',
         'tooltip': _("Draw"),
         'label': 'draw',
     })
@@ -407,23 +410,24 @@ def add_draw_button(app, page, template, context, doctree):
 def add_user_button(app, page, template, context, doctree):
     context["header_buttons"].append({
         'type': 'group',
+        'icon': 'fa-user tfa',
         'label': 'user',
         'buttons': [{
             'type': 'link',
+            'icon': 'fa-user tfa',
             'text': "Not logged in",
-            'icon': 'fa fa-user',
             'label': 'user',
         }, {
             'type': 'javascript',
             'javascript': 'tdoc.login()',
+            'icon': 'fa-right-to-bracket tfa',
             'text': "Log in",
-            'icon': 'fa fa-right-to-bracket',
             'label': 'login',
         }, {
             'type': 'javascript',
             'javascript': 'tdoc.settings()',
+            'icon': 'fa-gear tfa',
             'text': "Settings",
-            'icon': 'fa fa-gear',
             'label': 'settings',
         }],
     })
