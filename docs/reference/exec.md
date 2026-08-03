@@ -413,7 +413,7 @@ enables the following functionality:
   path ends with a `/`, the filename part of the URL is used as the target
   filename.
 - **[Define environment variables](https://pyodide.org/en/latest/usage/api/js-api.html#exports.PyodideConfig.env):**
-  The `env` key is a dict of environment variables to pass to Python. This
+  The `env` key is a mapping of environment variable name to value. This
   currently only works in the `main` environment.
 
 ```{code-block} yaml

@@ -7,36 +7,44 @@
 exec:
   python:
     packages: [numpy, pygame-ce]
+    env:
+        PYGAME_HIDE_SUPPORT_PROMPT:
     files:
+      liquid.png:
       basket.png:
       pineapple.png:
-versions:
-  pyodide: 0.27.7
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/aliens.py":
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/eventlist.py":
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/alien1.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/alien2.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/alien3.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/background.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/bomb.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/boom.wav": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/car_door.wav": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/explosion1.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/house_lo.wav": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/player1.gif": data/
+      "https://raw.githubusercontent.com/pygame-community/pygame-ce/refs/heads/main/examples/data/shot.gif": data/
 ```
 
 [`pygame-ce`](https://github.com/pygame-community/pygame-ce) can be used in
 [`{exec} python`](../../reference/exec.md#python) blocks by listing it in the
 [`exec.python.packages`](../../reference/exec.md#python) {rst:dir}`metadata`.
+Define the `PYGAME_HIDE_SUPPORT_PROMPT` environment variable to prevent console
+output while importing `pygame`.
 
 ```
 exec:
   python:
     packages: [pygame-ce]
+    env:
+        PYGAME_HIDE_SUPPORT_PROMPT:
 ```
 
 ```{important}
 Code using Pygame must run in the `main` {rst:dir}`environment <exec:env>`.
 ```
-
-````{warning}
-`pygame-ce` is broken in recent Pyodide versions (>=0.28). Specify an earlier
-version (e.g. 0.27.7) via the `versions.pyodide` {rst:dir}`metadata`.
-
-```
-versions:
-  pyodide: 0.27.7
-```
-````
 
 ````{tip}
 Pygame grabs the keyboard in `pygame.init()`, and releases it in
@@ -55,9 +63,7 @@ import pygame; pygame.quit()
 :name: setup
 :when: never
 :class: hidden
-import io
-with redirect(stdout=io.StringIO()):
-    import tdoc.pygame
+import tdoc.pygame
 setup_canvas()
 ```
 
@@ -87,22 +93,20 @@ Pygame programs require a few minor adjustments to run in the browser.
 | `pygame.time.wait()`       | {py:func}`asyncio.sleep()`                         |
 | `pygame.event.wait()`      | `pygame.event.poll()` + {py:func}`asyncio.sleep()` |
 
-The program below is a slightly modified version of the `pygame.examples.liquid`
-example distributed with Pygame, converted to an asynchronous main loop. Press
-{kbd}`Esc` or click the left mouse button to terminate.
+The program below is a slightly modified version of the
+[`liquid.py`](https://github.com/pygame-community/pygame-ce/blob/main/examples/liquid.py)
+example in the `pygame-ce` repository, converted to an asynchronous main loop.
+Press {kbd}`Esc` or click the left mouse button to terminate.
 
 ```{exec} python
 import pygame
 import math
-import pathlib
-
-examples = pathlib.Path(pygame.__file__).parent / "examples"
 
 async def main():
     pygame.init()
     screen = pygame.display.set_mode((640, 480), pygame.DOUBLEBUF)
 
-    bitmap = pygame.image.load(examples / "data" / "liquid.bmp")
+    bitmap = pygame.image.load("liquid.png")
     bitmap = pygame.transform.scale2x(bitmap)
     bitmap = pygame.transform.scale2x(bitmap)
 
@@ -218,11 +222,16 @@ finally:
     pygame.quit()
 ```
 
-## Examples distributed with Pygame
+## Examples from Pygame repository
 
-Some of the examples distributed with `pygame-ce` can be run unchanged by
-monkey-patching the functionality of Pygame related to time. This only works on
+Some of the
+[examples](https://github.com/pygame-community/pygame-ce/tree/main/examples) in
+the `pygame-ce` repository can be run unchanged by monkey-patching the
+functionality of Pygame related to time. This only works on
 [Chromium-based browsers](#run-sync).
+
+For the examples below, the `.py` files and all required assets are loaded
+directly from GitHub into the in-memory filesystem.
 
 ```{note}
 The examples cannot be interrupted via the
@@ -238,7 +247,7 @@ Move the vehicle left and right with the cursor keys, and fire with
 ```{exec} python
 import pygame
 try:
-    from pygame.examples.aliens import main
+    from aliens import main
     main()
 finally:
     pygame.quit()
@@ -252,7 +261,7 @@ Terminate the program with {kbd}`Esc`.
 :console-style: max-height: 25rem;
 import pygame
 try:
-    from pygame.examples.eventlist import main
+    from eventlist import main
     main()
 except SystemExit:
     pass
