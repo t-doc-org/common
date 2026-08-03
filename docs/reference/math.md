@@ -252,3 +252,39 @@ arguments, only the listed values are drawn.
 :arg !number|Array ys: The labels to draw on the Y axis.
 :returns: An attribute object.
 ```
+
+```{js:function} gcd(a, b)
+An alias for {js:func}`math.gcd`.
+```
+
+```{js:function} clip(value, {max, min})
+An alias for {js:func}`math.clip`.
+```
+
+## `tdoc/math.js`
+
+```{js:module} math
+This module
+([source](https://github.com/t-doc-org/common/blob/main/tdoc/common/static/tdoc/math.js))
+provides functionality related to mathematics.
+```
+
+{.rubric}
+Functions
+
+```{js:function} gcd(a, b)
+Return the greatest common divisor of two natural numbers.
+
+:arg !number a: The first number.
+:arg !number b: The second number.
+:returns: The greatest common divisor of `a` and `b`.
+```
+
+```{js:function} clip(value, {min, max})
+Return `value` if it is in the interval `[min; max]`, or `NaN` otherwise.
+
+:arg !number value: The value to clip.
+:arg !number|undefined min: The lower bound of the interval. Defaults to `-max`.
+:arg !number max: The upper bound of the interval.
+:returns: `value` if it is in the interval, or `NaN` otherwise.
+```

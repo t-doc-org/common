@@ -9,7 +9,7 @@ export function gcd(a, b) {
 
 // Clip value to [min; max], with min defaulting to -max. Return NaN if the
 // value is outside of the range.
-export function clip(value, {max, min}) {
+export function clip(value, {min, max}) {
   if (value > max) return NaN;
   if (min === undefined) min = -max;
   if (value < min) return NaN;
