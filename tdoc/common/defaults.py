@@ -146,4 +146,11 @@ mathjax4_config = {
 # Domain storage options.
 tdoc_domain_storage = {
     'origin': 'https://t-doc.org',
+    'remove_keys': [
+        # TODO(2026-10-01): Remove the keys below
+        'tdoc:api:user',
+        'tdoc:api-dev:user',
+        'tdoc:api-staging:user',
+        'tdoc:clientId',
+    ],
 }

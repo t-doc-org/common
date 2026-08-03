@@ -13,6 +13,7 @@
     if (!tdoc.local && !(ds.allowed_origins && ds.allowed_keys)) return;
     const origins = new RegExp(ds.allowed_origins ?? '');
     const keys = new RegExp(ds.allowed_keys ?? '');
+    for (const k of ds.remove_keys ?? []) localStorage.removeItem(k);
     const port = await new Promise(resolve => {
         function onInit(e) {
             if (!((tdoc.local && e.origin === location.origin)

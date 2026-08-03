@@ -39,23 +39,16 @@ class Auth extends EventTarget {
         super();
         this.user = new StoredJson(`tdoc:api${bes}:user-info`);
         this.domain = new AsyncStoredJson(`tdoc:domain:api${bes}:auth`, {});
-        this.oldDomain = new AsyncStoredJson(`tdoc:api${bes}:user`);
         this.state = new StoredJson('tdoc:api:state', {}, sessionStorage);
         this.ready = this.init();
     }
 
     async init() {
-        // TODO(0.84): Remove migration code, and unset stores containing tokens
-        let domain = await this.domain.get();
-        if (domain.loggedIn === undefined
-                && await this.oldDomain.get() !== undefined) {
-            domain = {loggedIn: true};
-            await this.domain.set(domain);
-        }
         const updated = await onHashParams(
             ['token', 'auth', 'auth_error'],
             (...args) => this.onParams(...args));
         if (!updated) {
+            const domain = await this.domain.get();
             await this.updateUser(undefined, domain.loggedIn ?? false);
         }
 
@@ -126,14 +119,12 @@ class Auth extends EventTarget {
         }
         this.set(user);
         this.domain.update(v => { v.loggedIn = user !== undefined; });  // BG
-        this.oldDomain.set(user);  // Background
         return res;
     }
 
     unsetUser() {
         this.set(undefined);
         this.domain.update(v => { v.loggedIn = false; });  // Background
-        this.oldDomain.set(undefined);  // Background
     }
 
     set(user) {
