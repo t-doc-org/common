@@ -161,7 +161,7 @@ info = {
     'myst-parser': {'version_tag': lambda v: f'v{v}'},
     'polyscript': {
         'name': 'polyscript',
-        'version': '0.20.13',
+        'version': '0.20.18',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
