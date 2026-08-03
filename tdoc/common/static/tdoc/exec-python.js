@@ -139,14 +139,9 @@ class WorkerInterpreter extends Interpreter {
 class MainInterpreter extends Interpreter {
     async init() {
         const pyodide = await import(`${tdoc.versions.pyodide}/pyodide.mjs`);
-        this.interp = await pyodide.loadPyodide();
+        this.interp = await pyodide.loadPyodide(this.config);
         this.interp.setDebug(this.config.debug ?? false);
-        const tasks = [];
-        if (this.config.packages && this.config.packages.length > 0) {
-            tasks.push(this.interp.loadPackage(this.config.packages));
-        }
-        tasks.push(this.writeFiles(this.files));
-        await Promise.all(tasks);
+        await this.writeFiles(this.files);
         const [core, msg] = this.interp.runPython(`\
 import platform
 import sys

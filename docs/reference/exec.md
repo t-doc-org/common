@@ -412,6 +412,9 @@ enables the following functionality:
   target paths are resolved relative to `$HOME` (`/home/pyodide`). If the target
   path ends with a `/`, the filename part of the URL is used as the target
   filename.
+- **[Define environment variables](https://pyodide.org/en/latest/usage/api/js-api.html#exports.PyodideConfig.env):**
+  The `env` key is a dict of environment variables to pass to Python. This
+  currently only works in the `main` environment.
 
 ```{code-block} yaml
 exec:
@@ -421,6 +424,8 @@ exec:
       input.txt:                    # .../_static/input.txt => $HOME/input.txt
       db/init.sql: /tmp/            # .../_static/db/init.sql => /tmp/init.sql
       ../index.html: homepage.html  # .../index.html => $HOME/homepage.html
+    env:
+      DEBUG: true
 ```
 
 The following `conf.py` options enable site-wide customization of Pyodide.
