@@ -130,9 +130,7 @@ class Auth extends EventTarget {
     set(user) {
         this.user.set(user);
         if (user) {
-            // TODO(0.87): Remove use of .groups
-            htmlData.tdocUserPerms =
-                (user.perms ?? user.groups ?? []).join(' ');
+            htmlData.tdocUserPerms = (user.perms ?? []).join(' ');
             htmlData.tdocUserTags = (user.tags ?? []).join(' ');
         } else {
             delete htmlData.tdocUserPerms;
@@ -159,8 +157,7 @@ class Auth extends EventTarget {
     async hasPerm(perm) {
         await this.ready;
         const user = this.user.get();
-        // TODO(0.87): Remove use of .groups
-        const perms = user?.perms ?? user?.groups ?? [];
+        const perms = user?.perms ?? [];
         return perms.includes(perm) || perms.includes('*');
     }
 

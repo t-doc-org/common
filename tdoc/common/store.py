@@ -109,8 +109,7 @@ class Users(database.ConnNamespace):
         if self.row("select enabled from repo_auth where user = ?", (uid,),
                     default=(False,))[0]:
             tags.append('repo-access')
-        # TODO(0.87): Stop populating 'groups'
-        return {'name': name, 'perms': perms, 'groups': perms, 'tags': tags}
+        return {'name': name, 'perms': perms, 'tags': tags}
 
     def uid(self, name):
         if isinstance(name, int): return name
