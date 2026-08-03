@@ -230,7 +230,7 @@ class Auth extends EventTarget {
 <button type="submit" class="btn btn-primary text-nowrap login" disabled>\
 Log in</button>\
 </form>\
-<div class="hstack gap-2 text-nowrap issuers"></div>\
+<div class="hstack flex-wrap gap-2 text-nowrap issuers"></div>\
 </div><div class="modal-footer flex-nowrap">\
 <div class="flex-fill message"></div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
@@ -273,7 +273,7 @@ Log in</button>\
 <tr class="px-2"><th class="w-100 px-2">Login</th><th class="px-2">Issuer</th>\
 <th class="px-2">Last used</th><th class="px-2"></th></tr>\
 </thead><tbody class="align-middle"></tbody></table>\
-<div class="hstack gap-2 text-nowrap issuers"></div>\
+<div class="hstack flex-wrap gap-2 text-nowrap issuers"></div>\
 <div class="accordion repo hidden"><div class="accordion-item">\
 <h2 class="accordion-header m-0">\
 <button type="button" class="accordion-button collapsed p-2 fw-bold"\
