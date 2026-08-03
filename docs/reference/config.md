@@ -47,7 +47,7 @@ t-doc uses the following document metadata fields for per-page configuration.
   ```{code-block} yaml
   exec:
     python:
-      packages: [sqlite3]
+      packages: [numpy]
   ```
 
 - `hide`: A set of [elements to hide](layout.md#hide-elements) on the page.

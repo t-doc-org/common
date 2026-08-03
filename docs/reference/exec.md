@@ -416,7 +416,7 @@ enables the following functionality:
 ```{code-block} yaml
 exec:
   python:
-    packages: [sqlite3]
+    packages: [numpy]
     files:
       input.txt:                    # .../_static/input.txt => $HOME/input.txt
       db/init.sql: /tmp/            # .../_static/db/init.sql => /tmp/init.sql

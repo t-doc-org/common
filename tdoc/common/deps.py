@@ -172,7 +172,7 @@ info = {
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
         'name': 'pyodide',
-        'version': '0.29.4',
+        'version': '314.0.3',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [

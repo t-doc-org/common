@@ -13,7 +13,7 @@ exec:
   python:
     files:
       database.sql:
-    packages: [micropip, sqlite3]
+    packages: [numpy, micropip]
 ```
 
 The [`{exec} python`](../reference/exec.md#python) directive allows executing
@@ -332,12 +332,11 @@ name = input("Name:")
 print(f"Hello, {name}!")
 ```
 
-## Packages
+## SQLite
 
-Additional packages can be made available through the `exec.python.packages`
-{rst:dir}`metadata`, which holds a
-[list of packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages)
-to load.
+The `sqlite3` module is available and can be used to operate on SQLite
+databases. These databases are held in the interpreter's filesystem, and while
+they persist across program runs, they don't persist across page reloads.
 
 ```{exec} python
 import pathlib
@@ -351,6 +350,21 @@ if not exists:
   db.executescript(pathlib.Path('database.sql').read_text())
 for k, v in db.execute('select * from kv;'):
   print(f"key: {k}, value: {v}")
+```
+
+## Packages
+
+Additional packages can be made available through the `exec.python.packages`
+{rst:dir}`metadata`, which holds a
+[list of packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages)
+to load.
+
+```{exec} python
+import numpy as np
+
+a = np.array([1, 2, 3])
+b = np.array([4, 5, 6])
+print(a + b, a * b)
 ```
 
 Packages can also be installed directly from [PyPI](https://pypi.org/) using
