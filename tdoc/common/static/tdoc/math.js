@@ -7,6 +7,15 @@ export function gcd(a, b) {
     return a;
 }
 
+// Clip value to [min; max], with min defaulting to -max. Return NaN if the
+// value is outside of the range.
+export function clip(value, {max, min}) {
+  if (value > max) return NaN;
+  if (min === undefined) min = -max;
+  if (value < min) return NaN;
+  return value;
+}
+
 // Add v to sum, using Neumaier's algorithm.
 // https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
 export function add(v, sum, e = 0) {

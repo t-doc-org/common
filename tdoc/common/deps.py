@@ -101,7 +101,10 @@ info = {
     'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
         'name': 'jsxgraph',
-        'version': '1.12.2',
+        # BUG(jsxgraph-1.13.1): SVG rendering may break for functions with
+        # large values (e.g. tan(x), 1/x)
+        # <https://github.com/jsxgraph/jsxgraph/issues/824>.
+        'version': '1.13.1',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',

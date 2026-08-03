@@ -386,7 +386,7 @@ render.regularPolygon = (el, {sides}) => {
       [Math.cos(Math.PI * (-0.5 - s1)), Math.sin(Math.PI * (-0.5 - s1))],
       [Math.cos(Math.PI * (-0.5 + s1)), Math.sin(Math.PI * (-0.5 + s1))],
       sides,
-    ]);
+    ], {borders: {strokeColor: JXG.palette.black}});
   });
 };
 </script>

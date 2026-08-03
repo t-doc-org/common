@@ -4,9 +4,9 @@
 import {
     asyncProps, dyn, htmle, mathJaxReady, mergeAttrs, qs, qsa,
 } from './core.js';
-import {Distribution, gcd, Sample} from './math.js';
+import {clip, Distribution, gcd, Sample} from './math.js';
 
-export {gcd};
+export {clip, gcd};
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
