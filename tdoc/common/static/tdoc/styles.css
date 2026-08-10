@@ -7,6 +7,9 @@
 
 /* Set global variables. */
 html:not(#¶) {
+    /* Remove "Cascadia Code", it has programming ligatures. */
+    --pst-font-family-monospace-system: ui-monospace, "Source Code Pro",
+        "Menlo", "Consolas", "DejaVu Sans Mono", monospace;
     /* Revert font attributes to pre pydata-sphinx-theme 0.16.0. */
     --pst-font-size-h1: 2.5rem;
     --pst-font-size-h2: 2rem;
