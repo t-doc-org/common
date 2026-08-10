@@ -117,3 +117,24 @@ it looks like a normal table.
 | $x$       |     |     |     |
 | $y$       |     |     |     |
 | $f(x, y)$ |     |     |     |
+
+## Code
+
+Inline code: `a <= b and b >= c and c != d`{l=py}
+
+````{list-grid}
+:style: grid-template-columns: 1fr 1fr;
+- # Code block
+  ```{code-block} python
+  a = b = c = d = 0
+  if a <= b and b >= c and c != d:
+    print("Boom!")
+  ```
+- # Code editor
+  ```{exec} python
+  :editor:
+  a = b = c = d = 0
+  if a <= b and b >= c and c != d:
+    print("Boom!")
+  ```
+````
