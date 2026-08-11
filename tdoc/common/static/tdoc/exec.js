@@ -62,7 +62,7 @@ const editorPrefix = 'tdoc:editor:';
 const runners = asyncProps({}, {name: 'exec.runners'});
 
 export class ExecElement extends TdocElement {
-    async connectedCallback() {
+    async onInit() {
         try {
             const cls = await runners[this.getAttribute('runner')];
             this.runner = new cls(this);

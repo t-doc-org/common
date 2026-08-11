@@ -151,7 +151,7 @@ export class PollElement extends TdocElement {
         this.poll = new Poll(this);
     }
 
-    async connectedCallback() {
+    async onInit() {
         this.poll.init();
         await this._ready();
     }

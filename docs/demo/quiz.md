@@ -51,7 +51,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 :style: width: 100%; margin-top: 0.25rem;
 ```
 
-````{quiz}
+`````{quiz}
 {.lower-alpha-paren}
 1.  {input}`42`{quiz-hint}`It's a positive integer.`
     Calculate $6 \cdot 7 $.
@@ -112,7 +112,27 @@ They can also be laid out as lists, usually with right-aligned fields.
     - :$x = 240°$
     ```
     $tan(x) = \sqrt{3}$
-````
+11. ```{defaults} quiz-check
+    ```
+    Which program prints the numbers from 1 to 5?
+    ````{quiz-check}
+    :randomize:
+    :style: display: grid; grid-template-columns: 1fr 1fr;
+    - ```{exec} python
+      :linenos:
+      for i in range(5):
+        print(i)
+      ```
+    - :
+      ```{exec} python
+      :linenos:
+      i = 0
+      while i < 5:
+        i += 1
+        print(i)
+      ```
+    ````
+`````
 
 ## Table
 

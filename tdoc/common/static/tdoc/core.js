@@ -897,6 +897,7 @@ elements.`;
         this.ready = new Promise(resolve => { this.#readyResolve = resolve; });
     }
 
+    #inited = false;
     #ready = false;
     #readyResolve;
 
@@ -917,7 +918,14 @@ elements.`;
         }
     }
 
-    async connectedCallback() { await this._ready(); }
+    async onInit() { await this._ready(); }
+
+    async connectedCallback() {
+        if (!this.#inited) {
+            this.#inited = true;
+            await this.onInit();
+        }
+    }
 }
 
 // Query matching <tdoc-*> elements from a node, then yield them asynchronously
@@ -950,7 +958,7 @@ export const dyn = {
 };
 
 export class DynElement extends TdocElement {
-    async connectedCallback() {
+    async onInit() {
         try {
             let render = await dyn.render[this.type];
             const ms = render[dyn.timeout];
