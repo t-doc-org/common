@@ -1184,6 +1184,15 @@ div.tdoc-exec-output .table > tbody > tr:nth-child(odd).tdoc-no-results {
     background-size: 28.28px 28.28px;
 }
 
+/* Exec blocks within quizzes */
+tdoc-quiz ul.tdoc-quiz-group li > label tdoc-exec:first-child {
+    margin-top: 0;
+}
+tdoc-quiz ul.tdoc-quiz-group li > label
+        tdoc-exec.hidden:first-child + div.tdoc-exec-output {
+    margin-top: 0;
+}
+
 /* Dynamically-rendered blocks */
 tdoc-dyn:not(.¶) {
     display: block;
