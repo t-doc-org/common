@@ -689,12 +689,14 @@ button:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
 /* Input fields */
 input[type=text]:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
     border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
     padding-block: 1px;
     padding-inline: 2px;
 }
 select:is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) {
     background-color: field;
     border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
     padding: 2px;
 }
 
@@ -1149,6 +1151,7 @@ div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input > .input {
 }
 div.tdoc-exec-output.tdoc-sectioned > div.tdoc-input > input[type=text] {
     border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
     padding-block: 1px;
     padding-inline: 2px;
 }
