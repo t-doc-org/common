@@ -489,9 +489,11 @@ class ConsoleOut {
             const div = this.out = this.output.render(
                 this.name,
                 elmt`<div class="tdoc-console highlight"><pre></pre></div>`);
-            on(div.appendChild(elmt`\
+            if (!this.output.runner.node.classList.contains('hidden')) {
+                on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .click(() => div.remove());
+                    .click(() => div.remove());
+            }
             const style = this.output.runner.consoleStyle;
             if (style) qs(div, 'pre').setAttribute('style', style);
         }
