@@ -8,9 +8,9 @@
 
 - Updated Pyodide. The default Python version is now 3.14.2, and `pygame-ce` is
   supported again.
-- Updated JSXGraph. Note that this version has a
+- Updated JSXGraph. Note that **this version has a
   [bug](https://github.com/jsxgraph/jsxgraph/issues/824) where function graphs
-  with very large values (e.g. $tan(x)$) may fail to render; use
+  with very large values (e.g. $\tan(x)$) may fail to render**; use
   {js:func}`math.clip` to limit the function value to work around the issue.
 - Updated sphinx-book-theme and pydata-sphinx-theme. This may cause some minor
   visual differences.

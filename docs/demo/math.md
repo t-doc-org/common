@@ -216,11 +216,11 @@ render.sinCos = el => {
   }, board => {
     board.create('functiongraph',
       [x => Math.sin(x)],
-      {name: `\\(sin(x)\\)`, strokeColor: JXG.palette.blue,
+      {name: `\\(\\sin(x)\\)`, strokeColor: JXG.palette.blue,
        label: {position: '0.6fr left', strokeColor: JXG.palette.blue}});
     board.create('functiongraph',
       [x => Math.cos(x)],
-      {name: `\\(cos(x)\\)`, strokeColor: JXG.palette.red,
+      {name: `\\(\\cos(x)\\)`, strokeColor: JXG.palette.red,
        label: {position: '0.69fr right', strokeColor: JXG.palette.red}});
   });
 };
@@ -318,7 +318,7 @@ render.trigCircle = el => {
     // Place the elements related to the sine.
     const sinColor = JXG.palette.blue;
     board.create('arrow', [[0, 0], py], {
-      name: '\\(sin(\\alpha)\\)', withLabel: true,
+      name: '\\(\\sin(\\alpha)\\)', withLabel: true,
       label: {
         position: '0.5fr left', anchorX: 'right', anchorY: 'middle',
         distance: 0, offset: [-7, 0], strokeColor: sinColor,
@@ -341,14 +341,14 @@ render.trigCircle = el => {
       dash: 2, strokeColor: JXG.palette.black,
     });
     board.create('text',
-      [2, 5.7, () => `\\(sin(\\alpha)=${Math.sin(alpha()).toFixed(3)}\\)`], {
+      [2, 5.7, () => `\\(\\sin(\\alpha)=${Math.sin(alpha()).toFixed(3)}\\)`], {
       strokeColor: sinColor, fixed: true,
     });
 
     // Place the elments related to the cosine.
     const cosColor = JXG.palette.red;
     board.create('arrow', [[0, 0], px], {
-      name: '\\(cos(\\alpha)\\)', withLabel: true,
+      name: '\\(\\cos(\\alpha)\\)', withLabel: true,
       label: {
         position: '0.5fr right', anchorX: 'middle', anchorY: 'top',
         distance: 0, offset: [0, -7], strokeColor: cosColor,
@@ -371,7 +371,7 @@ render.trigCircle = el => {
       dash: 2, strokeColor: JXG.palette.black,
     });
     board.create('text',
-      [2, 5.4, () => `\\(cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
+      [2, 5.4, () => `\\(\\cos(\\alpha)=${Math.cos(alpha()).toFixed(3)}\\)`], {
       strokeColor: cosColor, fixed: true,
     });
   });

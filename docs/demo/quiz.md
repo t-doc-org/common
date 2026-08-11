@@ -84,7 +84,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     :right:
     - $2x + 3$
     - :$5x^2 + 3x - 7$
-    - $2sin(x^2) + \frac{5}{x}$
+    - $2\sin(x^2) + \frac{5}{x}$
     - :$ax^2 + bx + c$
     ```
     Which of the following are second-order polynoms?
@@ -99,19 +99,19 @@ They can also be laid out as lists, usually with right-aligned fields.
     - $x = 45°$
     - :$x = \frac{\pi}{6}$
     ```
-    $sin(x) = \frac{1}{2}$
+    $\sin(x) = \frac{1}{2}$
 9.  ```{quiz-check}
     - $x = 45°$
     - :$x = \frac{\sqrt{2}}{2}$
-    - :$x = sin(\frac{\pi}{4})$
+    - :$x = \sin(\frac{\pi}{4})$
     ```
-    $cos(\frac{\pi}{4}) = x$
+    $\cos(\frac{\pi}{4}) = x$
 10. ```{quiz-check}
     - $x = 30°$
     - :$x = 60°$
     - :$x = 240°$
     ```
-    $tan(x) = \sqrt{3}$
+    $\tan(x) = \sqrt{3}$
 11. ```{defaults} quiz-check
     ```
     Which program prints the numbers from 1 to 5?
