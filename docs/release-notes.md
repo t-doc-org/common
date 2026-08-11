@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-89)=
+## 0.89 *(2026-08-11)*
+
+- Downgraded JSXGraph. The bug introduced in the previous release was fixed but
+  not released yet; until then, we'll use the older version.
+- Fixed the monospace font to avoid programming ligatures.
+- Fixed the layout of {rst:dir}`exec` blocks within {rst:dir}`quiz-check`
+  groups.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.88...0.89)
+
 (release-0-88)=
 ## 0.88 *(2026-08-04)*
 
