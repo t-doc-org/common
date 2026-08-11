@@ -117,7 +117,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     Which program prints the numbers from 1 to 5?
     ````{quiz-check}
     :randomize:
-    :style: display: grid; grid-template-columns: 1fr 1fr;
+    :class: grid-2
     - ```{exec} python
       :linenos:
       for i in range(5):
