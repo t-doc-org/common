@@ -1371,6 +1371,30 @@ html:not([data-tdoc-user-perms~="*"],
          [data-tdoc-user-perms~="instructor:view"]):not(#¶) .instructor {
     display: none;
 }
+html[data-theme=light] {
+    --tdoc-color-instructor: #8045e5;
+    --tdoc-color-instructor-bg: #e0c7ff;
+    --tdoc-color-instructor-highlight: #651ee0;
+}
+html[data-theme=dark] {
+    --tdoc-color-instructor: #9c5ffd;
+    --tdoc-color-instructor-bg: #341a61;
+    --tdoc-color-instructor-highlight: #7c2bfc;
+}
+.frame.docutils.container.instructor {
+    border-color: var(--tdoc-color-instructor);
+}
+.admonition.instructor, div.admonition.instructor {
+    border-color: var(--tdoc-color-instructor);
+}
+.admonition.instructor > .admonition-title,
+div.admonition.instructor >.admonition-title {
+    background-color: var(--tdoc-color-instructor-bg);
+}
+.admonition.instructor > .admonition-title:after,
+div.admonition.instructor > .admonition-title:after {
+    color: var(--tdoc-color-instructor);
+}
 
 /* Revert table style changes from pydata-sphinx-theme in Bootstrap modals. */
 .modal .table {

@@ -61,10 +61,15 @@ This example is short.
 
 ## Permission-based styling
 
-Logged-in users who have the `instructor:view` permission see a frame just below
-this paragraph. Other users don't.
+Logged-in users who have the `instructor:view` permission see a frame and an
+admonition just below this paragraph. Other users see neither.
 
 ```{container} frame instructor
+You have the `instructor:view` permission.
+```
+
+```{admonition} For instructors
+:class: instructor note
 You have the `instructor:view` permission.
 ```
 
