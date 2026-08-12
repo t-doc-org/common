@@ -320,10 +320,16 @@ export function onMessage(source, fn) {
     messageSources.set(source, fn);
 }
 
+// Return true iff the given element is visible on the page.
+export function isVisible(el) {
+    if (el.checkVisibility) return el.checkVisibility();
+    return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+}
+
 // Return true iff the given element is within the root viewport.
 //
 // WARNING: This function may force a reflow, and may therefore be expensive.
-export function isVisible(el) {
+export function isInViewport(el) {
     const rect = el.getBoundingClientRect();
     return rect.top >= 0 && rect.left >= 0 &&
            rect.bottom <= document.documentElement.clientHeight &&
@@ -441,9 +447,9 @@ export function typesetMath(...args) {
 // Focus an element if it is visible and no other element has the focus.
 //
 // WARNING: This function may force a reflow, and may therefore be expensive.
-export function focusIfVisible(el) {
+export function focusIfInViewport(el) {
     const active = document.activeElement;
-    if ((!active || active.tagName === 'BODY') && isVisible(el)) el.focus();
+    if ((!active || active.tagName === 'BODY') && isInViewport(el)) el.focus();
 }
 
 // Generate a random integer within an inclusive range.

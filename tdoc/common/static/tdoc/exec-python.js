@@ -1,7 +1,9 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, elmt, focusIfVisible, htmlFragment, on, qs, text} from './core.js';
+import {
+    dec, elmt, focusIfInViewport, htmlFragment, on, qs, text,
+} from './core.js';
 import {cmview} from './editor.js';
 import {Runner} from './exec.js';
 
@@ -323,7 +325,7 @@ class PythonRunner extends Runner {
                 this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
-                setTimeout(() => { focusIfVisible(input); });
+                setTimeout(() => { focusIfInViewport(input); });
                 break;
             }
             case 'text': {
@@ -332,7 +334,7 @@ class PythonRunner extends Runner {
                 this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
-                setTimeout(() => { focusIfVisible(input); });
+                setTimeout(() => { focusIfInViewport(input); });
                 break;
             }
             case 'buttons-right':

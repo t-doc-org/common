@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    asyncProps, elmt, on, qs, qsa, RateLimited, showAlert, Stored, TdocElement,
-    text,
+    asyncProps, elmt, isVisible, on, qs, qsa, RateLimited, showAlert, Stored,
+    TdocElement, text,
 } from './core.js';
 import {cmstate, cmview, findEditor, newEditor} from './editor.js';
 
@@ -489,7 +489,7 @@ class ConsoleOut {
             const div = this.out = this.output.render(
                 this.name,
                 elmt`<div class="tdoc-console highlight"><pre></pre></div>`);
-            if (!this.output.runner.node.classList.contains('hidden')) {
+            if (isVisible(this.output.runner.node)) {
                 on(div.appendChild(elmt`\
 <button class="fa-xmark tdoc-remove" title="Remove"></button>`))
                     .click(() => div.remove());
