@@ -126,11 +126,7 @@ class SqlRunner extends Runner {
         for (const col of columns) {
             tr.appendChild(elmt`<th class="text-center">${col}</th>`);
         }
-        if (this.runCtrl) {
-            on(container.appendChild(elmt`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                .click(() => { output.remove(); });
-        }
+        this.addOutputRemove(output, container);
         return output;
     }
 

@@ -237,6 +237,14 @@ export class Runner {
         return ctrl;
     }
 
+    // Return true iff a run control is available to the user.
+    hasRunControl() {
+        const el = qs(this.node, '.tdoc-run');
+        // Check visibility of the parent, as the run control itself may be
+        // temporarily hidden (e.g. replaced by the stop control).
+        return el && isVisible(el.parentNode);
+    }
+
     // Create a "Stop" control.
     stopControl() {
         const ctrl =
@@ -353,6 +361,7 @@ export class Runner {
     appendErrorOutput() {
         const output = elmt`\
 <div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`;
+        this.addOutputRemove(output);
         this.appendOutputs(output);
         return output;
     }
@@ -363,6 +372,15 @@ export class Runner {
     }
 
     sectionedOutput() { return new SectionedOutput(this); }
+
+    // Add a "Remove" control to allow the user to remove generated output.
+    addOutputRemove(output, parent = output) {
+        if (this.hasRunControl()) {
+            on(parent.appendChild(elmt`\
+<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
+                .click(() => output.remove());
+        }
+    }
 }
 
 class SectionedOutput {
@@ -489,11 +507,7 @@ class ConsoleOut {
             const div = this.out = this.output.render(
                 this.name,
                 elmt`<div class="tdoc-console highlight"><pre></pre></div>`);
-            if (isVisible(this.output.runner.node)) {
-                on(div.appendChild(elmt`\
-<button class="fa-xmark tdoc-remove" title="Remove"></button>`))
-                    .click(() => div.remove());
-            }
+            this.output.runner.addOutputRemove(div);
             const style = this.output.runner.consoleStyle;
             if (style) qs(div, 'pre').setAttribute('style', style);
         }

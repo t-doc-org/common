@@ -345,7 +345,7 @@ class PythonRunner extends Runner {
                 }
                 for (const [index, label] of args[0].entries()) {
                     const btn = div.appendChild(
-                        elmt`<button class="tdoc-button"></button>`);
+                        elmt`<button class="tdoc"></button>`);
                     const icon = /^@icon\{([^}]+)\}$/.exec(label);
                     if (icon) {
                         btn.classList.add(`fa-${icon[1]}`);

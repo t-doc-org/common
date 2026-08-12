@@ -976,6 +976,7 @@ tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty)))
 .tdoc-autosize > textarea,
 .tdoc-autosize::after {
     border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
     padding-block: 1px;
     padding-inline: 2px;
     font: inherit;
