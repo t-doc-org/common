@@ -55,7 +55,7 @@ The duration after opening when the poll should be closed automatically. The
 value is of the form `2h35m42s` or `never`. The default is 15 minutes.
 ```
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the outer container.
 ```

@@ -70,7 +70,7 @@ export class ExecElement extends TdocElement {
             await this._ready();
 
             // Execute immediately if requested.
-            if (this.runner.when === 'load') this.runner.doRun();  // Background
+            if (this.runner.when.includes('load')) this.runner.doRun();  // BG
         } catch (e) {
             console.error(e);
             await showAlert(e);
@@ -118,7 +118,11 @@ export class Runner {
     get outputStyle() { return this.attr('output-style'); }
     get reset() { return this.attr('reset'); }
     get then() { return this.attr('then'); }
-    get when() { return this.attr('when'); }
+
+    get when() {
+        const v = this.attr('when');
+        return v ? v.split(' ') : [];
+    }
 
     // The configuration for the runner.
     get config() { return tdoc.exec?.[this.constructor.name] ?? {}; }
@@ -137,7 +141,7 @@ export class Runner {
                 update(update) { return runner.onEditorUpdate(update); }
             }),
         ];
-        if (this.when !== 'never') {
+        if (this.when.includes('click')) {
             extensions.push(cmview.keymap.of([
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));

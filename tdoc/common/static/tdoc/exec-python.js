@@ -252,7 +252,7 @@ class PythonRunner extends Runner {
     get interp() { return interps[this.env]; }
 
     addControls(controls) {
-        if (this.when !== 'never') {
+        if (this.when.includes('click')) {
             this.runCtrl = controls.appendChild(this.runControl());
             this.runCtrl.disabled = true;
             this.stopCtrl = controls.appendChild(this.stopControl());
@@ -274,8 +274,8 @@ class PythonRunner extends Runner {
     }
 
     preRun(run_id) {
-        this.runCtrl.classList.add('hidden');
-        this.stopCtrl.classList.remove('hidden');
+        if (this.runCtrl) this.runCtrl.classList.add('hidden');
+        if (this.stopCtrl) this.stopCtrl.classList.remove('hidden');
         this.interp.runners[run_id] = this;
     }
 
@@ -285,8 +285,8 @@ class PythonRunner extends Runner {
             this.input.remove();
             delete this.input;
         }
-        this.runCtrl.classList.remove('hidden');
-        this.stopCtrl.classList.add('hidden');
+        if (this.runCtrl) this.runCtrl.classList.remove('hidden');
+        if (this.stopCtrl) this.stopCtrl.classList.add('hidden');
     }
 
     async run(run_id) {

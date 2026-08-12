@@ -171,11 +171,11 @@ are changed globally (but they can still be overridden).
 ```
 
 ```{defaults} exec
-:when: never
+:when: click
 ```
 
 ```{exec} python
-# Uses ':when: never' and no :class:
+# Uses ':when: click' and no :class:
 ```
 ````
 `````

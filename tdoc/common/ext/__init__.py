@@ -114,6 +114,17 @@ def opt_classes(arg):
     return classes
 
 
+def opt_set(*values):
+    if values: values = frozenset(values)
+    def parse(arg):
+        if arg is None: return set()
+        vs = set(arg.split())
+        if values and (u := vs - values):
+            raise ValueError(f"invalid values: {" ".join(u)}")
+        return vs
+    return parse
+
+
 def log_exception(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):

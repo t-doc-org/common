@@ -133,7 +133,7 @@ Inline code: `a <= b and b >= c and c != d`{l=py}
 - # Code editor
   ```{exec} python
   :editor:
-  :when: never
+  :when:
   a = b = c = d = 0
   if a <= b and b >= c and c != d:
     print("Boom!")

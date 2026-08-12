@@ -30,7 +30,7 @@ are displayed.
 {.rubric}
 Options
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the admonition. The default is
 `note dropdown`.
@@ -72,7 +72,7 @@ autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
 ```
 ````
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the `<iframe>`{l=html}.
 ```
@@ -164,7 +164,7 @@ stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
 
 {.rubric}
 Options
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the `<table>`{l=html}.
 ```

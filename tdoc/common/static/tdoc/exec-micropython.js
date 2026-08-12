@@ -18,7 +18,7 @@ class MicroPythonRunner extends Runner {
     }
 
     addControls(controls) {
-        if (this.when !== 'never') {
+        if (this.when.includes('click')) {
             this.runCtrl = controls.appendChild(this.runControl());
             controls.appendChild(this.toolsControl());
             this.input = this.inputControl(data => this.mp.send(data + '\r\n'));
@@ -84,7 +84,7 @@ class MicroPythonRunner extends Runner {
     }
 
     onReady() {
-        if (this.when === 'never') return;
+        if (this.when.length === 0) return;
         this.enableInput(false);
         this.setSerial();
         onSerial(this, {

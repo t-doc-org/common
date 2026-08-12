@@ -61,7 +61,7 @@ import pygame; pygame.quit()
 
 ```{exec} python
 :name: setup
-:when: never
+:when:
 :class: hidden
 import tdoc.pygame
 setup_canvas()

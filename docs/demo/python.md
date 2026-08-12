@@ -39,7 +39,7 @@ Module setup code can be defined as a named
 
 ```{exec} python
 :name: python-setup
-:when: never
+:when:
 :linenos:
 def factorial(n):
   res = 1
@@ -49,7 +49,7 @@ def factorial(n):
 ```
 
 ```{defaults} exec
-:when: load
+:when: load click
 :editor:
 ```
 
@@ -256,7 +256,7 @@ dependency.
 ```{exec} python
 :name: friendly
 :editor: none
-:when: never
+:when:
 if once('friendly'):  # Install only once per interpreter
   # Install friendly and markdown-it-py from PyPI. The latter is required by
   # rich, which is used by friendly, but it isn't part of rich's dependencies.

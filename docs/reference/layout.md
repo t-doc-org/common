@@ -164,15 +164,15 @@ supported:
 
 ## Exercise {nump}`ex:intro`{points}`2`
 
-Calculate...
+Calculate ...
 
 ## Exercise {nump}`ex`{points}`3`
 
-Prove that...
+Prove that ...
 
 ## Bonus {nump}`bonus`{points}`1!:Bonus {0}`
 
-Explain how...
+Explain how ...
 ````
 
 The points values are formatted using
@@ -211,7 +211,7 @@ Options
 CSS styles to apply to the grid cell elements.
 ```
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the grid container element.
 ```
@@ -242,7 +242,7 @@ directive.
 {.rubric}
 Options
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the rendered block sections.
 ```

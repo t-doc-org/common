@@ -46,7 +46,7 @@ elements, and their {js:attr}`~core.DynElement.controller` property is left
 {.rubric}
 Options
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the diagram container.
 ```

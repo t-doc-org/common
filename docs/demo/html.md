@@ -24,7 +24,7 @@ is displayed in a console output block. Its size can be controlled with
 {rst:dir}`:console-style: <exec:console-style>`.
 
 ```{exec} html
-:when: load
+:when: load click
 :editor:
 :style: height: 17rem;
 :output-style: height: 10rem;
@@ -102,7 +102,7 @@ correctly. So an [`{exec} html`](../reference/exec.md#html) block can specify
 just an HTML snippet, and optionally styles (with a `<style>` element):
 
 ```{exec} html
-:when: load
+:when: load click
 :editor:
 :output-style: height: 7rem;
 <style>h1 { margin: 0; font-size: 5rem; }</style>
@@ -112,7 +112,7 @@ just an HTML snippet, and optionally styles (with a `<style>` element):
 Or scripts (with a `<script>` element):
 
 ```{exec} html
-:when: load
+:when: load click
 :editor:
 :output-style: height: 3rem;
 :console-style: max-height: 5rem;

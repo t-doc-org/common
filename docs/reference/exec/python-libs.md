@@ -113,7 +113,7 @@ install a package only once.
 :arg str key: A unique key for which to keep track of invocations.
 
 ```{exec} python
-:when: load
+:when: load click
 if once('install'):
   print("Installing...")
 else:
@@ -171,7 +171,7 @@ To create an SVG image, instantiate the {py:class}`Image` class,
 rendering images.
 
 ```{exec} python
-:when: load
+:when: load click
 :editor:
 from tdoc import svg
 

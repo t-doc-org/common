@@ -16,7 +16,7 @@ The {rst:dir}`exec` directive allows executing code from the browser.
 
 ```{exec} sql
 :name: sql-countries
-:when: never
+:when:
 :class: hidden
 create table countries (
   country text not null,
@@ -50,9 +50,9 @@ Options
 Most of the options of {rst:dir}`code-block` are supported. Additionally, the
 following options can be specified.
 
-```{rst:directive:option} after: name [name...]
-Execute one or more {rst:dir}`exec` blocks before this block, in the same
-environment.
+```{rst:directive:option} after: name [name ...]
+Execute one or more {rst:dir}`exec` blocks [before](#sequencing) this block, in
+the same environment.
 ```
 
 ```{rst:directive:option} console-style: property: value; [property: value; ...]
@@ -73,7 +73,7 @@ environments is isolated from each other. The default environment name is the
 empty string.
 ```
 
-```{rst:directive:option} include: path [path...]
+```{rst:directive:option} include: path [path ...]
 :type: relative paths
 Prepend the content of one or more files to the block's content.
 ```
@@ -93,15 +93,20 @@ shown only when the initial editor content isn't empty (`auto`).
 CSS styles to apply to the code block and editor, e.g. `max-height: 20rem`.
 ```
 
-```{rst:directive:option} then: name [name...]
-Execute one or more {rst:dir}`exec` blocks after this block, in the same
-environment.
+```{rst:directive:option} then: name [name ...]
+Execute one or more {rst:dir}`exec` blocks [after](#sequencing) this block, in
+the same environment.
 ```
 
-```{rst:directive:option} when: value
-:type: click | load | never
-Determine when the block's code is executed: on user request (`click`, the
-default), when the page loads (`load`) or not at all (`never`).
+```{rst:directive:option} when: [trigger ...]
+Define the [triggers](#trigger) that cause the block's code is executed. The
+arguments can include zero or more of the following values:
+
+- `load`: Execute the code when the page loads.
+- `click`: Execute the code on user request.
+
+The default is `click`. When no triggers are specified, the code isn't executed,
+except as part of a [sequence](#sequencing).
 ```
 ````
 
@@ -109,7 +114,7 @@ default), when the page loads (`load`) or not at all (`never`).
 
 By default, {rst:dir}`exec` blocks are executed on click
 ({rst:dir}`:when: click <exec:when>`), with controls displayed next to the
-  block.
+block. The controls displayed depend on the type of block.
 
 ```{exec} sql
 :after: sql-countries
@@ -117,14 +122,34 @@ select * from countries where country_code = 'LI';
 ```
 
 They can also be executed immediately on load
-({rst:dir}`:when: load <exec:when>`) or not at all
-({rst:dir}`:when: never <exec:when>`, useful for definitions that are referenced
-by other blocks). The controls displayed depend on the type of block.
+({rst:dir}`:when: load <exec:when>`).
 
 ```{exec} sql
 :after: sql-countries
 :when: load
 select * from countries where country_code = 'LI';
+```
+
+Both can be combined ({rst:dir}`:when: load click <exec:when>`), to execute
+immediately on load and on click.
+
+```{exec} sql
+:after: sql-countries
+:when: load click
+:editor:
+select * from countries where country_code = 'LI';
+```
+
+If no triggers are specified, the block isn't executed on its own. It can still
+be executed as part of a [sequence](#sequencing).
+
+```{exec} sql
+:when:
+create table countries (
+  country text not null,
+  country_code text not null,
+  dial_code text not null
+);
 ```
 
 ## Editor
@@ -167,14 +192,14 @@ executed.
 
 ```{exec} sql
 :name: sql-people
-:when: never
+:when:
 -- :name: sql-people
 create table people (first_name text not null, last_name text not null);
 ```
 
 ```{exec} sql
 :name: sql-people-select
-:when: never
+:when:
 -- :name: sql-people-select
 select * from people;
 ```

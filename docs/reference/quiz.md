@@ -21,7 +21,7 @@ It turns green when all the answers are correct, and the quiz fields are locked.
 {.rubric}
 Options
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the outer container.
 ```
@@ -195,7 +195,7 @@ value `false` is the same as not setting the option (this can be useful in
 {rst:dir}`defaults`).
 ```
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the field or field group.
 ```

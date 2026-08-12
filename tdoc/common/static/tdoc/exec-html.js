@@ -16,7 +16,7 @@ class HtmlRunner extends Runner {
     }
 
     addControls(controls) {
-        if (this.when === 'click' || (this.editable && this.when !== 'never')) {
+        if (this.when.includes('click')) {
             this.runCtrl = controls.appendChild(this.runControl());
         }
         super.addControls(controls);

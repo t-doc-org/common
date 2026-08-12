@@ -60,7 +60,7 @@ returned by the renderer.
 {.rubric}
 Options
 
-```{rst:directive:option} class: name [name...]
+```{rst:directive:option} class: [name ...]
 :type: IDs
 A space-separated list of CSS classes to add to the graph container.
 ```

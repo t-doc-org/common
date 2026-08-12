@@ -16,7 +16,7 @@ uploading and executing Python code on an embedded system running
 
 ```{exec} micropython
 :name: preamble
-:when: never
+:when:
 print("(This line is printed from the preamble.)")
 ```
 

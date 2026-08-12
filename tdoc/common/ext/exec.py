@@ -11,7 +11,7 @@ from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
 from . import __version__, format_attrs, merge_dict, meta, opt_classes, \
-              opt_names, report_exceptions, UniqueChecker
+              opt_names, opt_set, report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -50,7 +50,7 @@ class Exec(code.CodeBlock):
         'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
         'style': directives.unchanged,
         'then': opt_names,
-        'when': lambda c: directives.choice(c, ('click', 'load', 'never')),
+        'when': opt_set('click', 'load', 'never'),
     }
 
     @staticmethod
@@ -90,13 +90,19 @@ class Exec(code.CodeBlock):
         if name is not None: node['name'] = name
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
+        if (v := self.options.get('editor')) not in (None, 'none'):
+            node['editor'] = v
         if v := self.options.get('output-style'): node['output-style'] = v
         if (v := self.options.get('reset')) and v != 'hide': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
-        node['when'] = self.options.get('when', 'click')
-        if (v := self.options.get('editor')) not in (None, 'none'):
-            node['editor'] = v
+        # TODO(0.91): Remove 'never' and backward-compatibility code
+        w = self.options.get('when', {'click'})
+        w -= {'never'}
+        if runner in ('html', 'sql', 'pnm') and 'editor' in node \
+                and 'load' in w:
+            w.add('click')
+        node['when'] = w
 
 
 class exec(nodes.literal_block): pass
@@ -138,7 +144,7 @@ def set_html_page_config(app, docname, config, doctree):
     md = meta(app.env, docname, 'exec', {})
     for runner, nodes in Exec.find_nodes(doctree).items():
         c = cfg[runner] = md.get(runner, {}).copy()
-        if envs := set(n['env'] for n in nodes if n['when'] != 'never'):
+        if envs := set(n['env'] for n in nodes if n['when']):
             c['_envs'] = sorted(envs)
     if cfg: config['exec'] = cfg
 
@@ -215,13 +221,13 @@ def visit_exec(self, node):
             after=' '.join(node.get('after', ())) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
-            env=node['env'] if node['when'] != 'never' else None,
+            env=node['env'] if node['when'] else None,
             name=node.get('name'),
             output_style=node.get('output-style'),
             reset=node.get('reset'),
             runner=node['runner'],
             then=' '.join(node.get('then', ())) or None,
-            when=node['when'])
+            when=' '.join(sorted(node['when'])) or None)
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)
         if attrs := format_attrs(self, style=node.get('style')):

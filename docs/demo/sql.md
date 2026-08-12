@@ -20,7 +20,7 @@ blocks.
 
 ```{exec} sql
 :name: sql_countries
-:when: never
+:when:
 create table countries (
   country text not null,
   country_code text not null,
@@ -40,7 +40,7 @@ insert into countries values
 
 ```{defaults} exec
 :after: sql_countries
-:when: load
+:when: load click
 ```
 
 ## Queries
@@ -65,6 +65,7 @@ select * from countries where country_code = 'CH';
 ### Empty results
 
 ```{exec} sql
+:when: load
 select * from countries where false;
 ```
 
@@ -72,7 +73,7 @@ select * from countries where false;
 
 ```{exec} sql
 :name: sql-wide
-:when: never
+:when:
 :class: hidden
 create table wide (
   column0 text,
@@ -92,10 +93,10 @@ create table wide (
   column14 text,
   column15 text
 );
+insert into wide values (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 ```
 ```{exec} sql
 :after: sql-wide
-:when: click
 select * from wide;
 ```
 
@@ -106,14 +107,13 @@ The height of large results tables can be limited with
 
 ```{exec} sql
 :name: sql-tall
-:when: never
+:when:
 :class: hidden
 create table tall (value integer);
 insert into tall values (0), (1), (2), (3), (4), (5), (6), (7);
 ```
 ```{exec} sql
 :after: sql-tall
-:when: click
 :output-style: max-height: 10rem
 select t1.value, t2.value from tall as t1, tall as t2;
 ```
@@ -129,5 +129,6 @@ select * from countries where country_code = 'FR';
 ## SQL errors
 
 ```{exec} sql
+:when: load
 select * from unknown_table;
 ```

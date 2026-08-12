@@ -60,7 +60,7 @@ class SqlRunner extends Runner {
     }
 
     addControls(controls) {
-        if (this.when === 'click' || (this.editable && this.when !== 'never')) {
+        if (this.when.includes('click')) {
             this.runCtrl = controls.appendChild(this.runControl());
             this.runCtrl.disabled = true;
         }
