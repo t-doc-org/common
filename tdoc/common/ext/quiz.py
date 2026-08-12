@@ -7,7 +7,8 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions, opt_bool, Role, to_base64
+from . import __version__, opt_bool, opt_classes, report_exceptions, Role, \
+              to_base64
 
 _log = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ named_types = (quiz_ph,) + field_types
 class Quiz(docutils.SphinxDirective):
     optional_arguments = 2
     option_spec = {
-        'class': directives.class_option,
+        'class': opt_classes,
         'style': directives.unchanged,
     }
     has_content = True
@@ -264,7 +265,7 @@ def visit_quiz_select(self, node):
 class QuizCheck(docutils.SphinxDirective):
     optional_arguments = 1
     option_spec = {
-        'class': directives.class_option,
+        'class': opt_classes,
         'hint': directives.unchanged,
         'multi': opt_bool,
         'randomize': opt_bool,

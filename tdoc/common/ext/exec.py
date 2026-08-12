@@ -10,8 +10,8 @@ from docutils.parsers.rst import directives
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, format_attrs, merge_dict, meta, opt_names, \
-              report_exceptions, UniqueChecker
+from . import __version__, format_attrs, merge_dict, meta, opt_classes, \
+              opt_names, report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -41,6 +41,7 @@ class Exec(code.CodeBlock):
     required_arguments = 1
     option_spec = code.CodeBlock.option_spec | {
         'after': opt_names,
+        'class': opt_classes,
         'console-style': directives.unchanged,
         'editor': directives.unchanged,
         'env': directives.unchanged,

@@ -6,7 +6,7 @@ from docutils.parsers.rst import directives
 from mdit_py_plugins.attrs import parse
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions
+from . import __version__, opt_classes, report_exceptions
 
 _log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def setup(app):
 
 class FlexTable(docutils.SphinxDirective):
     option_spec = {
-        'class': directives.class_option,
+        'class': opt_classes,
         'name': directives.unchanged,
     }
     has_content = True

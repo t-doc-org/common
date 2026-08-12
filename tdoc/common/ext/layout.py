@@ -9,7 +9,7 @@ from docutils.transforms import misc
 import markupsafe
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions, Role
+from . import __version__, opt_classes, report_exceptions, Role
 
 _log = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class Block(docutils.SphinxDirective):
 class Blocks(docutils.SphinxDirective):
     required_arguments = 1
     option_spec = {
-        'class': directives.class_option,
+        'class': opt_classes,
     }
 
     @report_exceptions
@@ -155,7 +155,7 @@ def closest_section(node):
 class ListGrid(docutils.SphinxDirective):
     option_spec = {
         'cell-style': directives.unchanged,
-        'class': directives.class_option,
+        'class': opt_classes,
         'style': directives.unchanged,
     }
     has_content = True

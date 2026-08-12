@@ -103,6 +103,17 @@ def opt_names(arg):
     return [nodes.fully_normalize_name(n) for n in arg.split()]
 
 
+def opt_classes(arg):
+    # TODO: Monkey-patch all directives to use this instead of class_option
+    if arg is None: return []
+    classes = []
+    for a in arg.split():
+        if not (name := nodes.make_id(a)):
+            raise ValueError(f"cannot make \"{a}\" into a class name")
+        classes.append(name)
+    return classes
+
+
 def log_exception(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
@@ -505,7 +516,7 @@ template_re = re.compile(r'(?s)([a-zA-Z0-9_-]+)(?:\((.*)\))?')
 
 class Dyn(docutils.SphinxDirective):
     option_spec = {
-        'class': directives.class_option,
+        'class': opt_classes,
         'style': directives.unchanged,
     }
 

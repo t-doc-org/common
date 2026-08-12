@@ -7,7 +7,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, report_exceptions, UniqueChecker
+from . import __version__, opt_classes, report_exceptions, UniqueChecker
 from .. import util
 
 _log = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class Poll(docutils.SphinxDirective):
         'number': lambda c: directives.choice(c,
             ('none', 'decimal', 'lower-alpha', 'upper-alpha')),
         'close-after': directives.unchanged,
-        'class': directives.class_option,
+        'class': opt_classes,
     }
     has_content = True
 
