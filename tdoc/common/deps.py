@@ -181,6 +181,7 @@ info = {
             'https://pyodide.org/en/stable/project/changelog.html',
         ],
     },
+    'rollup': {'version_tag': lambda v: f'v{v}'},
     'sphinx-book-theme': {'version_tag': lambda v: f'v{v}'},
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
