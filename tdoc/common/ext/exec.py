@@ -50,7 +50,7 @@ class Exec(code.CodeBlock):
         'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
         'style': directives.unchanged,
         'then': opt_names,
-        'when': opt_set('click', 'load', 'never'),
+        'when': opt_set('click', 'load'),
     }
 
     @staticmethod
@@ -96,13 +96,7 @@ class Exec(code.CodeBlock):
         if (v := self.options.get('reset')) and v != 'hide': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v
         if v := self.options.get('then'): node['then'] = v
-        # TODO(0.91): Remove 'never' and backward-compatibility code
-        w = self.options.get('when', {'click'})
-        w -= {'never'}
-        if runner in ('html', 'sql', 'pnm') and 'editor' in node \
-                and 'load' in w:
-            w.add('click')
-        node['when'] = w
+        node['when'] = self.options.get('when', {'click'})
 
 
 class exec(nodes.literal_block): pass
