@@ -1003,7 +1003,10 @@ tdoc-exec > div.tdoc-exec-controls {
     flex-direction: column;
     row-gap: 0.3rem;
 }
-div.literal-block-wrapper > tdoc-exec pre {
+div.literal-block-wrapper > tdoc-exec {
+    margin: 0;
+}
+div.literal-block-wrapper > tdoc-exec:has(.tdoc-exec-controls) pre {
     border-right: 1px solid var(--pst-color-border);
 }
 div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
