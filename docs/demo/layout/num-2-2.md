@@ -3,51 +3,7 @@
 
 # Numbering 2.2
 
-```{defaults} list-grid
-:style: grid-template-columns: 0fr 1fr; gap: 0.25rem 0.5rem;
-```
-
-## `{num}`
-
-```{list-grid}
-- **Want:**
-- 16, 17, 18
-- **Got:**
-- {num}`layout-num`, {num}`layout-num`, {num}`layout-num`
-```
-
-## `{num1}`
-
-```{list-grid}
-- **Want:**
-- 16, 17, 18
-- **Got:**
-- {num1}`layout-num1`, {num1}`layout-num1`, {num1}`layout-num1`
-```
-
-## `{num2}`
-
-```{list-grid}
-- **Want:**
-- 16, 17, 18
-- **Got:**
-- {num2}`layout-num2`, {num2}`layout-num2`, {num2}`layout-num2`
-```
-
-## `{num3}`
-
-```{list-grid}
-- **Want:**
-- 7, 8, 9
-- **Got:**
-- {num3}`layout-num3`, {num3}`layout-num3`, {num3}`layout-num3`
-```
-
-## `{nump}`
-
-```{list-grid}
-- **Want:**
-- 1, 2, 3
-- **Got:**
-- {nump}`layout-nump`, {nump}`layout-nump`, {nump}`layout-nump`
-```
+|        |`{num}`   |`{num1}`  |`{num2}`  |`{num3}`|`{nump}`|
+|:-------|:--------:|:--------:|:--------:|:------:|:------:|
+|**Want**|16, 17, 18|16, 17, 18|16, 17, 18|7, 8, 9 |1, 2, 3 |
+|**Got** |{num}`layout-num`, {num}`layout-num`, {num}`layout-num`|{num1}`layout-num1`, {num1}`layout-num1`, {num1}`layout-num1`|{num2}`layout-num2`, {num2}`layout-num2`, {num2}`layout-num2`|{num3}`layout-num3`, {num3}`layout-num3`, {num3}`layout-num3`|{nump}`layout-nump`, {nump}`layout-nump`, {nump}`layout-nump`|
