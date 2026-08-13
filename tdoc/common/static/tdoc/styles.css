@@ -427,6 +427,29 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
 :is(ol, ul).avoid-break-items > li {
     break-inside: avoid;
 }
+ul.contains-task-list {
+    padding-left: 0.8rem;
+}
+ul.contains-task-list > li.task-list-item {
+    list-style-type: none;
+}
+ul.contains-task-list > li.task-list-item input.task-list-item-checkbox {
+    margin-right: 0.8rem;
+}
+ul.contains-task-list > li.task-list-item
+        input.task-list-item-checkbox:disabled {
+    appearance: none;
+}
+ul.contains-task-list > li.task-list-item
+        input.task-list-item-checkbox:disabled::before {
+    --tdoc-fa-font: var(--fa-font-regular);
+    --fa: "\f0c8";  /* square */
+}
+ul.contains-task-list > li.task-list-item
+        input.task-list-item-checkbox:disabled:checked::before {
+    --tdoc-fa-font: var(--fa-font-solid);
+    --fa: "\f14a";  /* square-check */
+}
 
 /* Grid tables */
 table.grid {
@@ -653,7 +676,9 @@ div.highlight pre > .linenos::before {
 :is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
                                                  [class*=" fa-"])::before,
 :is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) :is([class^=fa-],
-                                                  [class*=" fa-"])::before {
+                                                  [class*=" fa-"])::before,
+ul.contains-task-list > li.task-list-item
+        input.task-list-item-checkbox:disabled::before {
     display: inline-block;
     font: var(--tdoc-fa-font, var(--fa-font-solid));
     text-rendering: auto;
