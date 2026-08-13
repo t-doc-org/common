@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-90)=
+## 0.90 *(2026-08-13)*
+
+- Fixed the {rst:role}`num1` and {rst:role}`num2` roles to use the page
+  hierarchy instead of file names to determine when to reset the numbering, and
+  added {rst:role}`num3`.
+- Made {rst:dir}`{exec} :when: <exec:when>` more flexible by changing it to a
+  set of triggers.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.89...0.90)
+
 (release-0-89)=
 ## 0.89 *(2026-08-11)*
 
