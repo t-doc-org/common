@@ -146,14 +146,16 @@ info = {
     ]},
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.16.0',
+        'version': '11.16.1',
         'tag': 'latest',
+        'version_tag': lambda v: f'mermaid@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
         'version': '0.2.2',
         'tag': 'latest',
+        'version_tag': lambda v: f'@mermaid-js/layout-elk@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'markdown-it-py': {'version_tag': lambda v: f'v{v}'},
