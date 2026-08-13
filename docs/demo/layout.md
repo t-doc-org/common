@@ -5,6 +5,8 @@
 
 ```{toctree}
 :hidden:
+layout/num-1
+layout/num-2
 layout/hide
 ```
 ```{metadata}

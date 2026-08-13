@@ -109,19 +109,36 @@ After completing {numref}`exercise %s<ex:intro>`, ...
 ````
 
 ````{rst:role} num1
-This role is identical to {rst:role}`num`, but the numbering is per first-level
-page name prefix. For example, numbering is continous across the pages
-`abc/page1` and `abc/page2`, but is reset for `def/page3`.
+This role is identical to {rst:role}`num`, but the numbering resets for each
+first-level subtree in the page hierarchy (as defined by {rst:dir}`toctree`
+directives). For example, with the following hierarchy, numbering is continuous
+across the pages `chapter-1`, `section-1-1` and `section-1-2`, but is reset for
+`chapter-2`.
+
+```{code-block}
+:class: line-height-normal
+index
+├── chapter-1
+│   ├── section-1-1
+│   └── section-1-2
+└── chapter-2
+    └── section-2-1
+```
 ````
 
 ````{rst:role} num2
-This role is identical to {rst:role}`num`, but the numbering is per second-level
-page name prefix. For example, numbering is continous across the pages
-`abc/def/page1` and `abc/def/page2`, but is reset for `abc/ghi/page3`.
+This role is identical to {rst:role}`num1`, but the numbering resets for each
+second-level subtree in the page hierarchy.
+````
+
+````{rst:role} num3
+This role is identical to {rst:role}`num1`, but the numbering resets for each
+third-level subtree in the page hierarchy.
 ````
 
 ````{rst:role} nump
-This role is identical to {rst:role}`num`, but the numbering is per page.
+This role is identical to {rst:role}`num`, but the numbering resets for each
+page.
 ````
 
 ## Points

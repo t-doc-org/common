@@ -6,6 +6,7 @@ import itertools
 from docutils import nodes
 from sphinx import errors
 from sphinx.environment import collectors
+from sphinx.environment.adapters import toctree
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
 from . import __version__, meta, ReferenceRole, report_exceptions, Role, table
@@ -17,6 +18,7 @@ def setup(app):
     app.add_role('num', Num)
     app.add_role('num1', Num)
     app.add_role('num2', Num)
+    app.add_role('num3', Num)
     app.add_role('nump', Num)
     app.add_enumerable_node(num, 'num', lambda n: '<num_title>',
                             html=(visit_num, depart_num))
@@ -125,23 +127,24 @@ class NumCollector(collectors.EnvironmentCollector):
         doc = app.env.docname
         nums = app.env.tdoc_nums[doc] = {}
         for node in doctree.findall(num):
-            scope = doc if (typ := node['type']) == 'nump' \
-                    else docname_prefix(doc, 2) if typ == 'num2' \
-                    else docname_prefix(doc, 1) if typ == 'num1' \
-                    else None
-            nums[node['ids'][0]] = (scope, node['cid'])
-
-
-def docname_prefix(docname, level):
-    return '/'.join(docname.split('/', level)[:level])
+            nums[node['ids'][0]] = (node['type'], node['cid'])
 
 
 def number_per_namespace(app, env):
+    tree = toctree.TocTree(env)
+
     # Convert the global numbering to per-namespace numbering.
     per_ns = {}
     for doc, fignums in env.toc_fignumbers.items():
         if (fignums := fignums.get('num')) is None: continue
-        nums = env.tdoc_nums[doc]
+        nums = {}
+        for nid, (typ, cid) in env.tdoc_nums[doc].items():
+            scope = doc if typ == 'nump' \
+                    else toctree_prefix(doc, 3, tree) if typ == 'num3' \
+                    else toctree_prefix(doc, 2, tree) if typ == 'num2' \
+                    else toctree_prefix(doc, 1, tree) if typ == 'num1' \
+                    else None
+            nums[nid] = (scope, cid)
         for nid, n in fignums.items():
             *sect, cnt = n
             per_ns.setdefault(nums[nid], {}).setdefault(tuple(sect), []) \
@@ -159,6 +162,10 @@ def number_per_namespace(app, env):
     del env.tdoc_old_num_fignumbers
     return [doc for doc, fignums in env.toc_fignumbers.items()
             if not fignums_equal(fignums.get('num'), old.get(doc))]
+
+
+def toctree_prefix(docname, level, tree):
+    return tuple(tree.get_toctree_ancestors(docname)[-level:])
 
 
 def fignums_equal(lhs, rhs):
