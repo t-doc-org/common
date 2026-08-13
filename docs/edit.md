@@ -109,6 +109,13 @@ located below the `docs` directory.
     failures. If this happens, restart the local server to trigger a full
     rebuild, and [report the issue](#faq-report-issue) to the t-doc authors.
 
+  ```{important}
+  Please use only
+  [printable ASCII](https://en.wikipedia.org/wiki/ASCII#Printable_character_table)
+  characters in file names. While accented characters may seem to work, they
+  cause issues across platforms (e.g. Windows vs. Linux).
+  ```
+
 - **Stop the local server** by clicking the
   <i class="fa-door-closed tfa"></i> button in the navigation bar, by typing
   {kbd}`Ctrl+C` in the terminal, or by closing the terminal window.
