@@ -458,7 +458,7 @@ class DbObservable(DynObservable):
 
 class SolutionsObservable(DbObservable, name='solutions'):
     def __init__(self, req, events, wr):
-        self._origin = wr.required_origin
+        self._origin = req['_origin'] = wr.required_origin
         self._page = arg(req, 'page')
         super().__init__(req, events)
 
@@ -471,7 +471,7 @@ class SolutionsObservable(DbObservable, name='solutions'):
 
 class PollObservable(DbObservable, name='poll'):
     def __init__(self, req, events, wr):
-        self._origin = wr.required_origin
+        self._origin = req['_origin'] = wr.required_origin
         self._id = arg(req, 'id')
         super().__init__(req, events)
 
@@ -487,7 +487,7 @@ class PollObservable(DbObservable, name='poll'):
 
 class PollVotesObservable(DbObservable, name='poll/votes'):
     def __init__(self, req, events, wr):
-        self._origin = wr.required_origin
+        self._origin = req['_origin'] = wr.required_origin
         self._voter, self._ids = args(req, 'voter', 'ids')
         self._ids.sort()
         super().__init__(req, events)
