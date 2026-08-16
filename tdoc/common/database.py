@@ -43,7 +43,7 @@ class Connection(sqlite3.Connection):
         res = super().__exit__(typ, value, tb)
         if typ is None:
             for fn in self._after_commit: fn()
-            del self._after_commit
+        del self._after_commit
         return res
 
     def after_commit(self, fn):
