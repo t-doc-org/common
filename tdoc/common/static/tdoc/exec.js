@@ -71,6 +71,7 @@ class Store {
 
     async init(config) {
         config.extensions.push(
+            cmview.EditorView.updateListener.of(u => this.onUpdate(u)),
             cmview.EditorView.domEventObservers({
                 blur: () => this.storer.flush(),
             }),
@@ -80,7 +81,7 @@ class Store {
     start() {}
     schedule(fn) { this.storer.schedule(fn); }
     flush() { this.storer.flush(); }
-    onUpdate(update, doc, isOrig) {}
+    onUpdate(update) {}
 }
 
 // Ensure that the text of editors is stored before navigating away.
@@ -102,13 +103,14 @@ class LocalStore extends Store {
         if (text !== undefined) config.doc = text;
     }
 
-    onUpdate(update, doc, isOrig) {
+    onUpdate(update) {
         for (const tr of update.transactions) {
             if (tr.annotation(storeUpdate)) return;
         }
+        const doc = update.state.doc;
         this.schedule(() => {
-            this.store.set(isOrig ?? doc.eq(this.runner.origText) ?
-                           undefined : doc.toString());
+            this.store.set(doc.eq(this.runner.origText) ? undefined
+                                                        : doc.toString());
         });
     }
 
@@ -158,7 +160,7 @@ class CollabStore extends Store {
         api.events.sub({add: [this.watch]});  // Background
     }
 
-    onUpdate(update, doc, isOrig) { this.schedulePush(); }
+    onUpdate(update) { this.schedulePush(); }
 
     async onRemoteUpdate(data) {
         const view = this.runner.editorView;
@@ -282,11 +284,7 @@ export class Runner {
             this.preText.trimEnd().split(/\r\n?|\n/));
         const runner = this;
         const config = {
-            extensions: [
-                cmview.ViewPlugin.fromClass(class {
-                    update(update) { return runner.onEditorUpdate(update); }
-                }),
-            ],
+            extensions: [],
             doc: this.origText,
             language: this.config?.highlight,
             parent: qs(this.node, 'div.highlight'),
@@ -296,6 +294,8 @@ export class Runner {
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
+
+        // Set up the editor store.
         if (this.editorId) {
             if (await api.auth.name() === undefined
                     || !this.node.classList.contains('collab')) {
@@ -305,40 +305,36 @@ export class Runner {
             }
             await this.store.init(config);
         }
+
+        // Set up the reset button.
+        const reset = this.reset;
+        if (reset === 'show' ||
+                (reset === 'auto' && !this.origText.eq(cmstate.Text.empty))) {
+            const btn = this.resetEditor = elmt`\
+<button class="fa-rotate-left tdoc-reset-editor"\
+ title="Reset editor content"></button>`;
+            on(btn).click(() => {
+                this.setEditorText(this.origText);
+                if (this.store) this.store.flush();
+            });
+            config.extensions.push(cmview.EditorView.updateListener.of(u => {
+                if (!u.docChanged) return;
+                btn.disabled = u.state.doc.eq(this.origText);
+            }));
+        }
+
+        // Create the editor.
         config.extensions.push(...this.editorExtensions);
         const view = newEditor(config);
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
-        if (this.store) this.store.start();
-
-        const reset = this.reset;
-        if (reset === 'show' ||
-                (reset === 'auto' && !this.origText.eq(cmstate.Text.empty))) {
-            this.resetEditor = elmt`\
-<button class="fa-rotate-left tdoc-reset-editor"\
- title="Reset editor content"></button>`;
+        if (this.resetEditor) {
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
-            on(this.resetEditor).click(() => {
-                this.setEditorText(this.origText);
-                if (this.store) this.store.flush();
-                this.resetEditor.disabled = true;
-            });
         }
+        if (this.store) this.store.start();
     }
 
     get editorExtensions() { return []; }
-
-    // Handle editor updates.
-    onEditorUpdate(update) {
-        if (!update.docChanged) return;
-        const doc = update.state.doc;
-        let isOrig;  // Compute isOrig only if necessary
-        if (this.resetEditor) {
-            isOrig = doc.eq(this.origText);
-            this.resetEditor.disabled = isOrig;
-        }
-        if (this.store) this.store.onUpdate(update, doc, isOrig);
-    }
 
     // Return the EditorView object.
     get editorView() { return findEditor(this.node); }
@@ -349,9 +345,6 @@ export class Runner {
         let specs = fn(state);
         if (!Array.isArray(specs)) specs = [specs];
         view.dispatch(state.update(...specs));
-        if (this.resetEditor) {
-            this.resetEditor.disabled = state.doc.eq(this.origText);
-        }
     }
 
     // Replace the text of the editor, attaching the given annotations to the
