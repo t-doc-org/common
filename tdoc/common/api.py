@@ -105,6 +105,27 @@ class Api(wsgi.Dispatcher):
     def handle_health(self, wr, req):
         return {}
 
+    @wsgi.json_endpoint('editor', require_authn=True)
+    def handle_editor(self, wr, req):
+        origin = wr.required_origin
+        instance = f'u:{wr.user:016x}'
+        if editor := req.get('init'):
+            with wr.read_db as db:
+                version, text = db.editors.text(origin, editor, instance)
+                return {'version': version, 'text': text, 'instance': instance}
+        elif editor := req.get('pull'):
+            with wr.read_db as db:
+                version = arg(req, 'version')
+                updates = db.editors.history(origin, editor, instance, version)
+                return {'updates': updates}
+        elif editor := req.get('push'):
+            version, updates, text = args(req, 'version', 'updates', 'text')
+            with wr.write_db as db:
+                success = db.editors.add_updates(
+                    origin, editor, instance, version, updates, text, wr.user)
+            return {'success': success}
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+
     @wsgi.json_endpoint('poll')
     def handle_poll(self, wr, req):
         origin = wr.required_origin
@@ -498,6 +519,22 @@ class PollVotesObservable(DbObservable, name='poll/votes'):
 
     def query(self, db):
         return db.polls.votes_data(self._origin, self._voter, self._ids), None
+
+
+class EditorObservable(DbObservable, name='editor'):
+    def __init__(self, req, events, wr):
+        self._origin = req['_origin'] = wr.required_origin
+        self._editor = arg(req, 'editor')
+        self._instance = req['_instance'] = f'u:{wr.user:016x}'
+        super().__init__(req, events)
+
+    def wake_keys(self, db):
+        return [db.editors.instance_key(self._origin, self._editor,
+                                        self._instance)]
+
+    def query(self, db):
+        return {'version': db.editors.version(self._origin, self._editor,
+                                              self._instance)}, None
 
 
 class OidcAuthApi(wsgi.Dispatcher):

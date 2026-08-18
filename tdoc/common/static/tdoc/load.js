@@ -18,7 +18,7 @@ if (tdoc.local) {
         } else if (data !== build) {
             location.reload();
         }
-    })]});
+    })]});  // Background
 }
 
 // Show repositories with remote changes.
@@ -43,7 +43,7 @@ if (tdoc.local) {
                 rows.push(elmt`<tr><td>${repo}</td><td>${count}</td></tr>`);
             }
             body.replaceChildren(...rows);
-        })]});
+        })]});  // Background
     });
 }
 
@@ -112,7 +112,7 @@ domLoaded.then(() => {
                 data => {
                     htmlData.tdocSolutionsState = data.show ?? 'hide';
                     updateSolutionsTooltip();
-                })]});
+                })]});  // Background
             api.auth.onChange(async () => {
                 if (await api.auth.hasPerm('solutions:write')) {
                     htmlData.tdocSolutionsCtrl = '';

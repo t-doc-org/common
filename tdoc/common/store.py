@@ -67,6 +67,9 @@ class Connection(database.Connection):
     @functools.cached_property
     def polls(self): return Polls(self)
 
+    @functools.cached_property
+    def editors(self): return Editors(self)
+
 
 class WriteConnection(Connection):
     def __enter__(self):
@@ -566,6 +569,72 @@ class Polls(database.ConnNamespace):
         return {'votes': votes}
 
 
+class Editors(database.ConnNamespace):
+    @staticmethod
+    def instance_key(origin, editor, instance):
+        return f'editor:{origin}:{editor}:{instance}'
+
+    def version(self, origin, editor, instance):
+        return self.row("""
+            select version from editor_texts
+            where (origin, editor, instance) = (?, ?, ?)
+        """, (origin, editor, instance), default=(-1,))[0] + 1
+
+    def text(self, origin, editor, instance):
+        version, text = self.row("""
+            select version, text from editor_texts
+            where (origin, editor, instance) = (?, ?, ?)
+        """, (origin, editor, instance), default=(-1, None))
+        return version + 1, json.loads(text) if text is not None else None
+
+    def history(self, origin, editor, instance, version):
+        updates = []
+        for v, us in self.execute("""
+                    select version, updates from editor_histories
+                    where (origin, editor, instance) = (?, ?, ?)
+                      and version >= ?
+                    order by version
+                """, (origin, editor, instance, version)):
+            us = json.loads(us)
+            if not updates and (lu := v - version + 1) < len(us): us = us[:lu]
+            updates.extend(us)
+            if v != version + len(updates) - 1:
+                raise Exception(
+                    f"Inconsistent editor history entry at version {v}")
+        return updates
+
+    def add_updates(self, origin, editor, instance, version, updates, text,
+                    user):
+        if not isinstance(updates, list):
+            raise TypeError("Invalid type for updates")
+        if len(updates) == 0: return True
+        want = self.row("""
+            select version from editor_texts
+            where (origin, editor, instance) = (?, ?, ?)
+        """, (origin, editor, instance), default=(-1,))[0] + 1
+        _log.info("version=%(version)s want=%(want)s updates=%(updates)s",
+                  version=version, want=want, updates=len(updates))
+        if version != want:
+            if version > want:
+                raise database.Error(
+                    f"Editor update version too large: {version} > {want}")
+            return False
+        version += len(updates) - 1
+        self.execute("""
+            insert into editor_histories
+                (origin, editor, instance, version, updates, time, user)
+            values (?, ?, ?, ?, ?, ?, ?)
+        """, (origin, editor, instance, version, util.to_json(updates),
+              time.time_ns(), user))
+        self.execute("""
+            insert or replace into editor_texts
+                (origin, editor, instance, version, text)
+            values (?, ?, ?, ?, ?)
+        """, (origin, editor, instance, version, util.to_json(text)))
+        self.notify(self.instance_key(origin, editor, instance))
+        return True
+
+
 class Waker:
     def __init__(self, cv, limit):
         self.cv = cv
@@ -893,3 +962,29 @@ class Store(database.Database):
                     coalesce((select value from meta where key = 'dev'), 0))
             """)
             db.execute("delete from meta where key = 'dev'")
+
+    def version_10(self, db, local, now):
+        # Create tables for editor content.
+        db.create("""
+            create table editor_texts (
+                origin text not null,
+                editor text not null,
+                instance text not null,
+                version integer not null,
+                text text not null,
+                primary key (origin, editor, instance)
+            ) strict
+        """)
+        db.create("""
+            create table editor_histories (
+                origin text not null,
+                editor text not null,
+                instance text not null,
+                version integer not null,
+                updates text not null,
+                time integer not null,
+                user integer,
+                primary key (origin, editor, instance, version),
+                foreign key (user) references users (id)
+            ) strict
+        """)

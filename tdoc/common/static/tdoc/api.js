@@ -399,6 +399,10 @@ export const auth = new Auth();
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
+export async function editor(req) {
+    return await auth.call(`/editor`, {req});
+}
+
 export async function poll(req) {
     return await auth.call(`/poll`, {req});
 }

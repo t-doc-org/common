@@ -1,9 +1,10 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+import * as api from './api.js';
 import {
-    asyncProps, elmt, isVisible, on, qs, qsa, RateLimited, showAlert, Stored,
-    TdocElement, text,
+    asyncProps, elmt, isVisible, Mutex, on, qs, qsa, RateLimited, showAlert,
+    Stored, TdocElement, text, toBase64,
 } from './core.js';
 import {
     collab as cmcollab, state as cmstate, view as cmview, findEditor, newEditor,
@@ -61,6 +62,146 @@ function fixLineNos(node) {
 const storeUpdate = cmstate.Annotation.define();
 const editorPrefix = 'tdoc:editor:';
 
+class Store {
+    constructor(runner) {
+        this.runner = runner;
+        this.id = runner.editorId;
+        this.storer = new RateLimited(this.constructor.interval);
+    }
+
+    async init(config) {
+        config.extensions.push(
+            cmview.EditorView.domEventObservers({
+                blur: () => this.storer.flush(),
+            }),
+        );
+    }
+
+    start() {}
+    schedule(fn) { this.storer.schedule(fn); }
+    flush() { this.storer.flush(); }
+    onUpdate(update, doc, isOrig) {}
+}
+
+// Ensure that the text of editors is stored before navigating away.
+on(window).beforeunload(() => {
+    for (const node of qsa(document, 'tdoc-exec[editor]')) {
+        const store = node.runner.store;
+        if (store) store.flush();
+    }
+    // TODO: Ask for confirmation if there are unsaved changes
+});
+
+class LocalStore extends Store {
+    static interval = 5000;
+
+    async init(config) {
+        await super.init(config);
+        this.store = new Stored(editorPrefix + this.id);
+        const text = this.store.get();
+        if (text !== undefined) config.doc = text;
+    }
+
+    onUpdate(update, doc, isOrig) {
+        for (const tr of update.transactions) {
+            if (tr.annotation(storeUpdate)) return;
+        }
+        this.schedule(() => {
+            this.store.set(isOrig ?? doc.eq(this.runner.origText) ?
+                           undefined : doc.toString());
+        });
+    }
+
+    onStorageUpdate(text) {
+        // TODO: Use Transaction.remote.of(true) instead of storeUpdate
+        this.runner.setEditorText(text, [storeUpdate.of(true)]);
+    }
+}
+
+// Update the text of editors when their stored content changes.
+on(window).storage(e => {
+    if (e.storageArea !== localStorage) return;
+    if (!e.key.startsWith(editorPrefix)) return;
+    const name = e.key.slice(editorPrefix.length);
+    const node = qs(document, `tdoc-exec[editor="${CSS.escape(name)}"]`);
+    const store = node?.runner?.store;
+    if (store instanceof LocalStore) store.onStorageUpdate(e.newValue);
+});
+
+class CollabStore extends Store {
+    static interval = 1000;
+    static clientId;
+
+    async init(config) {
+        await super.init(config);
+        if (!this.constructor.clientId) {
+            this.constructor.clientId = await toBase64(
+                crypto.getRandomValues(new Uint8Array(6)));
+        }
+        const {version, text} = await api.editor({init: this.id});
+        // TODO: Set readonly with message if request fails, and retry
+        // TODO: Fix inconsistency if two clients have different origText and
+        // the store has no text (version = 0)
+        if (text !== null) config.doc = cmstate.Text.of(text);
+        this.mu = new Mutex();
+        config.extensions.push(
+            cmcollab.collab({
+                startVersion: version,
+                clientID: this.constructor.clientId,
+            }),
+        );
+    }
+
+    start() {
+        this.watch = new api.Watch({name: 'editor', editor: this.id},
+                                   data => this.onRemoteUpdate(data));
+        api.events.sub({add: [this.watch]});  // Background
+    }
+
+    onUpdate(update, doc, isOrig) { this.schedulePush(); }
+
+    async onRemoteUpdate(data) {
+        const view = this.runner.editorView;
+        const version = cmcollab.getSyncedVersion(view.state);
+        if (data.version === version) return;
+        console.log(`Remote update: ${version} => ${data.version}`);
+        if (data.version < version) {
+            // TODO: Show message, recommend copying text and reloading
+            console.warn(`\
+Remote version (${data.version}) < synced version (${version})`);
+            return;
+        }
+        // TODO: Pull in the background
+        const {updates} = await api.editor({pull: this.id, version});
+        view.dispatch(cmcollab.receiveUpdates(view.state, updates.map(u => ({
+            clientID: u.i, changes: cmstate.ChangeSet.fromJSON(u.c),
+        }))));
+        if (cmcollab.sendableUpdates(view.state).length > 0) {
+            this.schedulePush();
+        }
+    }
+
+    schedulePush() { this.schedule(() => this.push()); }
+
+    async push() {
+        await this.mu.locked(async () => {
+            const state = this.runner.editorView.state;
+            const updates = cmcollab.sendableUpdates(state);
+            if (updates.length === 0) return;
+            console.log(`Pushing ${updates.length} updates`);
+            // TODO: Handle request failures => retry with backoff
+            const {success} = await api.editor({
+                push: this.id, version: cmcollab.getSyncedVersion(state),
+                updates: updates.map(u => ({
+                    i: u.clientID, c: u.changes.toJSON(),
+                })),
+                text: state.doc.toJSON(),
+            });
+            console.log(`Push result: ${success}`);
+        });
+    }
+}
+
 const runners = asyncProps({}, {name: 'exec.runners'});
 
 export class ExecElement extends TdocElement {
@@ -99,7 +240,7 @@ export class Runner {
 
     async init() {
         fixLineNos(this.node);
-        if (this.editable) this.addEditor();
+        if (this.editable) await this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
         this.addControls(controls);
         if (controls.children.length > 0) this.node.appendChild(controls);
@@ -136,50 +277,51 @@ export class Runner {
     get editorId() { return this.editor || undefined; }
 
     // Add an editor to the {exec} block.
-    addEditor() {
+    async addEditor() {
+        this.origText = cmstate.Text.of(
+            this.preText.trimEnd().split(/\r\n?|\n/));
         const runner = this;
-        const extensions = [
-            cmview.ViewPlugin.fromClass(class {
-                update(update) { return runner.onEditorUpdate(update); }
-            }),
-        ];
+        const config = {
+            extensions: [
+                cmview.ViewPlugin.fromClass(class {
+                    update(update) { return runner.onEditorUpdate(update); }
+                }),
+            ],
+            doc: this.origText,
+            language: this.config?.highlight,
+            parent: qs(this.node, 'div.highlight'),
+        };
         if (this.when.includes('click')) {
-            extensions.push(cmview.keymap.of([
+            config.extensions.push(cmview.keymap.of([
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
-        const preText = this.preText.trimEnd();
-        let doc = preText;
-        const editorId = this.editorId;
-        if (editorId) {
-            this.editorStore = new Stored(editorPrefix + editorId, doc);
-            doc = this.editorStore.get();
-            this.editorStorer = new RateLimited(5000);
-            extensions.push(
-                cmview.EditorView.domEventObservers({
-                    'blur': () => this.editorStorer.flush(),
-                }),
-            );
+        if (this.editorId) {
+            if (await api.auth.name() === undefined
+                    || !this.node.classList.contains('collab')) {
+                this.store = new LocalStore(this);
+            } else {
+                this.store = new CollabStore(this);
+            }
+            await this.store.init(config);
         }
-        extensions.push(...this.editorExtensions);
-        const view = newEditor({
-            extensions, doc,
-            language: this.config?.highlight,
-            parent: qs(this.node, 'div.highlight'),
-        });
-        this.origText = view.state.toText(preText);
+        config.extensions.push(...this.editorExtensions);
+        const view = newEditor(config);
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
+        if (this.store) this.store.start();
 
         const reset = this.reset;
-        if (reset === 'show' || (reset === 'auto' && (preText !== ''))) {
+        if (reset === 'show' ||
+                (reset === 'auto' && !this.origText.eq(cmstate.Text.empty))) {
             this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
             on(this.resetEditor).click(() => {
                 this.setEditorText(this.origText);
-                if (this.editorStorer) this.editorStorer.flush();
+                if (this.store) this.store.flush();
+                this.resetEditor.disabled = true;
             });
         }
     }
@@ -195,14 +337,7 @@ export class Runner {
             isOrig = doc.eq(this.origText);
             this.resetEditor.disabled = isOrig;
         }
-        if (!this.editorStorer) return;
-        for (const tr of update.transactions) {
-            if (tr.annotation(storeUpdate)) return;
-        }
-        this.editorStorer.schedule(() => {
-            this.editorStore.set(isOrig ?? doc.eq(this.origText) ? undefined
-                                 : doc.toString());
-        });
+        if (this.store) this.store.onUpdate(update, doc, isOrig);
     }
 
     // Return the EditorView object.
@@ -532,21 +667,3 @@ class ConsoleOut {
         if (atBottom) out.scrollTo(out.scrollLeft, out.scrollHeight);
     }
 }
-
-// Ensure that the text of editors is stored before navigating away.
-on(window).beforeunload(() => {
-    for (const node of qsa(document, 'tdoc-exec[editor]')) {
-        const storer = node.runner.editorStorer;
-        if (storer) storer.flush();
-    }
-});
-
-// Update the text of editors when their stored content changes.
-on(window).storage(e => {
-    if (e.storageArea !== localStorage) return;
-    if (!e.key.startsWith(editorPrefix)) return;
-    const name = e.key.slice(editorPrefix.length);
-    const node = qs(document, `tdoc-exec[editor="${CSS.escape(name)}"]`);
-    if (!node) return;
-    node.runner.setEditorText(e.newValue, [storeUpdate.of(true)]);
-});
