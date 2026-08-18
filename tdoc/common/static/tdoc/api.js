@@ -34,6 +34,10 @@ export async function call(path, opts) {
     });
 }
 
+// TODO: Force page reload on user change
+// TODO: Use sessionStorage for post-reload messages
+// TODO: Remove obsolete code related to tokens in local storage
+
 class Auth extends EventTarget {
     constructor() {
         super();
@@ -256,7 +260,7 @@ Log in</button>\
     }
 
     async showSettingsModal(message, kind = 'success') {
-        const [info, auth] = await Promise.all([
+        const [info, rauth] = await Promise.all([
             this.info(),
             this.call(`/repo`, {req: {info: true}}),
         ]);
@@ -334,12 +338,13 @@ The login ${login.name} has been removed successfully.`;
         const hgrc = qs(repo, '.hgrc');
         const user = qs(hgrc, '.user');
         const pass = qs(hgrc, '.pass');
-        if (auth.enabled) {
-            user.textContent = auth.user;
-            pass.textContent = auth.prefix !== null ?
-                               auth.prefix + '*'.repeat(48 - auth.prefix.length)
-                               : "[no password set]";
-            pass.classList.toggle('fst-italic', auth.prefix === null);
+        if (rauth.enabled) {
+            user.textContent = rauth.user;
+            pass.textContent =
+                rauth.prefix !== null ?
+                rauth.prefix + '*'.repeat(48 - rauth.prefix.length)
+                : "[no password set]";
+            pass.classList.toggle('fst-italic', rauth.prefix === null);
             repo.classList.remove('hidden');
         }
 
@@ -349,7 +354,7 @@ The login ${login.name} has been removed successfully.`;
             this.state.update(v => { delete v.modal; });
         });
         on(qs(repo, '.reset')).click(async e => {
-            if (auth.prefix !== null && !confirm(`\
+            if (rauth.prefix !== null && !confirm(`\
 Are you sure you want to reset the repository access password?
 
 You will need to set the new password in your Mercurial configuration.`)) {
@@ -359,7 +364,7 @@ You will need to set the new password in your Mercurial configuration.`)) {
                 const resp = await this.call(`/repo`, {req: {reset: true}});
                 user.textContent = resp.user;
                 pass.textContent = resp.password;
-                auth.prefix = '';
+                rauth.prefix = '';
                 return `\
 The password has been reset. Copy it now, as it won't be shown again.`;
             });
