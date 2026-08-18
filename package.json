@@ -1,6 +1,7 @@
 {
   "devDependencies": {
     "@codemirror/autocomplete": "^6.18.6",
+    "@codemirror/collab": "6.1.1",
     "@codemirror/commands": "^6.8.1",
     "@codemirror/lang-angular": "^0.1.4",
     "@codemirror/lang-cpp": "^6.0.3",

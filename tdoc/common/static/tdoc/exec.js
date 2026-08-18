@@ -5,7 +5,9 @@ import {
     asyncProps, elmt, isVisible, on, qs, qsa, RateLimited, showAlert, Stored,
     TdocElement, text,
 } from './core.js';
-import {cmstate, cmview, findEditor, newEditor} from './editor.js';
+import {
+    collab as cmcollab, state as cmstate, view as cmview, findEditor, newEditor,
+} from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
 export class UserError extends Error {

@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import * as autocomplete from '@codemirror/autocomplete';
+import * as collab from '@codemirror/collab';
 import * as commands from '@codemirror/commands';
 import * as language from '@codemirror/language';
 import * as lint from '@codemirror/lint';
 import * as search from '@codemirror/search';
-import * as cmstate from '@codemirror/state';
-import * as cmview from '@codemirror/view';
+import * as state from '@codemirror/state';
+import * as view from '@codemirror/view';
+
+export {autocomplete, collab, commands, language, lint, search, state, view};
 
 import {oneDark} from '@codemirror/theme-one-dark';
+
+export {oneDark};
 
 import {apl} from '@codemirror/legacy-modes/mode/apl';
 import {asciiArmor} from '@codemirror/legacy-modes/mode/asciiarmor';
@@ -112,12 +117,10 @@ import {wast} from '@codemirror/lang-wast';
 import {xml} from '@codemirror/lang-xml';
 import {yaml} from '@codemirror/lang-yaml';
 
-export {cmstate, cmview};
-
 // Map pygments lexers to CodeMirror language support. Based on
 // <https://pygments.org/docs/lexers/> and
 // <https://github.com/codemirror/language-data/blob/main/src/language-data.ts>
-const cm5_langs = [
+let cm5_langs = [
     // @codemirror/legacy-modes/mode/*
     ['apl', apl],
     ['asc', 'pem', asciiArmor],
@@ -205,7 +208,7 @@ const cm5_langs = [
     ['webidl', webIDL],
     ['xquery', 'xqy', 'xq', 'xql', 'xqm', xQuery],
 ];
-const cm6_langs = [
+let cm6_langs = [
     // @codemirror/lang-*
     ['ng2', 'html+ng2', angular],
     ['c', 'c++', 'cpp', cpp],
@@ -247,98 +250,15 @@ const cm6_langs = [
     ['xml', 'xslt', 'genshi', 'kid', 'xml+genshi', 'xml+kid', xml],
     ['yaml', yaml],
 ];
-const languages = {};
+export const languages = {};
 for (const entries of cm5_langs) {
     const lang = new language.LanguageSupport(
         language.StreamLanguage.define(entries.pop()));
     for (const e of entries) languages[e] = lang;
 }
+cm5_langs = undefined;
 for (const entries of cm6_langs) {
     const lang = entries.pop();
     for (const e of entries) languages[e] = lang;
 }
-
-// React to theme changes and update all editor themes as well.
-const theme = new cmstate.Compartment();
-const lightTheme = cmview.EditorView.theme({}, {dark: false});
-const darkTheme = oneDark;
-
-function currentTheme() {
-    return document.documentElement.dataset.theme === 'dark' ?
-           darkTheme : lightTheme;
-}
-
-document.addEventListener('themechange', e => {
-    const curTheme = currentTheme();
-    for (const div of document.querySelectorAll('div.cm-editor')) {
-        cmview.EditorView.findFromDOM(div).dispatch(
-            {effects: theme.reconfigure(curTheme)});
-    }
-});
-
-// The default extensions appended to the user-provided ones.
-const defaultExtensions = [
-    autocomplete.autocompletion({defaultKeymap: false}),
-    autocomplete.closeBrackets(),
-    commands.history(),
-    language.bracketMatching(),
-    language.foldGutter(),
-    language.indentOnInput(),
-    language.indentUnit.of('  '),
-    language.syntaxHighlighting(language.defaultHighlightStyle,
-                                {fallback: true}),
-    search.highlightSelectionMatches(),
-    cmstate.EditorState.allowMultipleSelections.of(true),
-    cmstate.EditorState.tabSize.of(2),
-    cmview.crosshairCursor(),
-    cmview.drawSelection(),
-    cmview.dropCursor(),
-    cmview.highlightActiveLine(),
-    cmview.highlightActiveLineGutter(),
-    cmview.highlightSpecialChars(),
-    cmview.keymap.of([
-        {key: 'Mod-e', run: commands.deleteLine},
-        ...autocomplete.closeBracketsKeymap,
-        ...autocomplete.completionKeymap.map(k =>
-            k.key === 'Enter' ? {
-                ...k, key: 'Tab',
-            } : k
-        ),
-        ...commands.defaultKeymap.map(k =>
-            k.key === 'Home' ? {
-                ...k,
-                run: commands.cursorLineStart, shift: commands.selectLineStart,
-            } : k
-        ),
-        ...commands.historyKeymap,
-        commands.indentWithTab,
-        ...language.foldKeymap,
-        ...lint.lintKeymap,
-        ...search.searchKeymap,
-    ]),
-    cmview.lineNumbers(),
-    cmview.rectangularSelection(),
-    cmview.EditorView.lineWrapping,
-];
-
-// Create a new editor.
-export function newEditor(config) {
-    if (!config.extensions) config.extensions = [];
-    config.extensions.push(
-        theme.of(currentTheme()),
-        ...defaultExtensions,
-    );
-    if (config.language) {
-        const lang = languages[config.language];
-        if (lang) config.extensions.push(lang());
-        delete config.language;
-    }
-    return new cmview.EditorView(config);
-}
-
-// Find an editor in or below the given element. Returns null if no editor is
-// found.
-export function findEditor(el) {
-    const dom = el.querySelector('div.cm-editor');
-    return dom ? cmview.EditorView.findFromDOM(dom) : null;
-}
+cm6_langs = undefined;

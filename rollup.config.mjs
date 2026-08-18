@@ -11,7 +11,7 @@ const __filename = import.meta.filename || url.fileURLToPath(import.meta.url)
 const __dirname = import.meta.dirname || path.dirname(__filename)
 
 export default {
-    input: "./tdoc/common/scripts/editor.js",
+    input: "./tdoc/common/scripts/codemirror.js",
     output: {
         chunkFileNames: '[name].js',
         compact: true,
