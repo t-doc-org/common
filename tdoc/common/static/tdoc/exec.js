@@ -59,7 +59,6 @@ function fixLineNos(node) {
     }
 }
 
-const storeUpdate = cmstate.Annotation.define();
 const editorPrefix = 'tdoc:editor:';
 
 // TODO: Make stores ViewPlugins, so that they get reset when setting the state?
@@ -107,8 +106,9 @@ class LocalStore extends Store {
     }
 
     onUpdate(update) {
+        if (!update.docChanged) return;
         for (const tr of update.transactions) {
-            if (tr.annotation(storeUpdate)) return;
+            if (tr.annotation(cmstate.Transaction.remote)) return;
         }
         const doc = update.state.doc;
         this.schedule(() => {
@@ -117,11 +117,10 @@ class LocalStore extends Store {
     }
 
     onStorageUpdate(text, view) {
-        // TODO: Use Transaction.remote.of(true) instead of storeUpdate
         const state = view.state;
         view.dispatch(state.update({
             changes: {from: 0, to: state.doc.length, insert: text},
-            annotations: [storeUpdate.of(true)],
+            annotations: cmstate.Transaction.remote.of(true),
         }));
     }
 }
@@ -170,7 +169,10 @@ class CollabStore extends Store {
         api.events.sub({add: [this.watch]});  // Background
     }
 
-    onUpdate(update) { this.schedulePush(update.view); }
+    onUpdate(update) {
+        if (!update.docChanged) return;
+        this.schedulePush(update.view);
+    }
 
     async onRemoteUpdate(data, view) {
         const version = cmcollab.getSyncedVersion(view.state);
