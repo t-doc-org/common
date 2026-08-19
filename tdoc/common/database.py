@@ -24,8 +24,7 @@ def placeholders(args): return ', '.join('?' * len(args))
 
 
 class Error(Exception): pass
-client_errors = (TypeError, ValueError,
-                 sqlite3.DataError, sqlite3.IntegrityError)
+client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
 
 class Connection(sqlite3.Connection):

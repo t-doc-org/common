@@ -95,7 +95,7 @@ class Api(wsgi.Dispatcher):
         except database.Error as e:
             _log.exception("Store error", exc_limit=-1, exc_chain=False,
                            event='store:error')
-            raise wsgi.Error(HTTPStatus.FORBIDDEN,
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST,
                              e.args[0] if e.args else None)
 
     def post_request(self, wr):
