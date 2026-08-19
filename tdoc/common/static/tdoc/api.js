@@ -440,7 +440,8 @@ class EventsApi {
         for (const w of add) this.watches.set(w.id, w);
         if (!this.running) {
             if (this.watches.size === 0) return;
-            this.run();  // In the background
+            // TODO: Delay startup so initial watches get aggregated
+            this.run();  // Background
             return;
         }
         const sid = await this.sid;

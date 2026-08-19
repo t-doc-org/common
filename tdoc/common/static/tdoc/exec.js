@@ -62,10 +62,13 @@ function fixLineNos(node) {
 const storeUpdate = cmstate.Annotation.define();
 const editorPrefix = 'tdoc:editor:';
 
+// TODO: Make stores ViewPlugins, so that they get reset when setting the state?
+
 class Store {
-    constructor(runner) {
-        this.runner = runner;
-        this.id = runner.editorId;
+    constructor(id, initial) {
+        this.id = id;
+        this.initial = initial;
+        // TODO: Add an idle duration (=> min & max intervals)
         this.storer = new RateLimited(this.constructor.interval);
     }
 
@@ -78,7 +81,7 @@ class Store {
         );
     }
 
-    start() {}
+    start(view) {}
     schedule(fn) { this.storer.schedule(fn); }
     flush() { this.storer.flush(); }
     onUpdate(update) {}
@@ -109,14 +112,17 @@ class LocalStore extends Store {
         }
         const doc = update.state.doc;
         this.schedule(() => {
-            this.store.set(doc.eq(this.runner.origText) ? undefined
-                                                        : doc.toString());
+            this.store.set(doc.eq(this.initial) ? undefined : doc.toString());
         });
     }
 
-    onStorageUpdate(text) {
+    onStorageUpdate(text, view) {
         // TODO: Use Transaction.remote.of(true) instead of storeUpdate
-        this.runner.setEditorText(text, [storeUpdate.of(true)]);
+        const state = view.state;
+        view.dispatch(state.update({
+            changes: {from: 0, to: state.doc.length, insert: text},
+            annotations: [storeUpdate.of(true)],
+        }));
     }
 }
 
@@ -126,8 +132,12 @@ on(window).storage(e => {
     if (!e.key.startsWith(editorPrefix)) return;
     const name = e.key.slice(editorPrefix.length);
     const node = qs(document, `tdoc-exec[editor="${CSS.escape(name)}"]`);
-    const store = node?.runner?.store;
-    if (store instanceof LocalStore) store.onStorageUpdate(e.newValue);
+    const runner = node?.runner;
+    if (!runner) return;
+    const store = runner.store;
+    if (store instanceof LocalStore) {
+        store.onStorageUpdate(e.newValue, runner.editorView);
+    }
 });
 
 class CollabStore extends Store {
@@ -154,16 +164,15 @@ class CollabStore extends Store {
         );
     }
 
-    start() {
+    start(view) {
         this.watch = new api.Watch({name: 'editor', editor: this.id},
-                                   data => this.onRemoteUpdate(data));
+                                   data => this.onRemoteUpdate(data, view));
         api.events.sub({add: [this.watch]});  // Background
     }
 
-    onUpdate(update) { this.schedulePush(); }
+    onUpdate(update) { this.schedulePush(update.view); }
 
-    async onRemoteUpdate(data) {
-        const view = this.runner.editorView;
+    async onRemoteUpdate(data, view) {
         const version = cmcollab.getSyncedVersion(view.state);
         if (data.version === version) return;
         console.log(`Remote update: ${version} => ${data.version}`);
@@ -183,11 +192,11 @@ Remote version (${data.version}) < synced version (${version})`);
         }
     }
 
-    schedulePush() { this.schedule(() => this.push()); }
+    schedulePush(view) { this.schedule(() => this.push(view)); }
 
-    async push() {
+    async push(view) {
         await this.mu.locked(async () => {
-            const state = this.runner.editorView.state;
+            const state = view.state;
             const updates = cmcollab.sendableUpdates(state);
             if (updates.length === 0) return;
             console.log(`Pushing ${updates.length} updates`);
@@ -299,9 +308,9 @@ export class Runner {
         if (this.editorId) {
             if (await api.auth.name() === undefined
                     || !this.node.classList.contains('collab')) {
-                this.store = new LocalStore(this);
+                this.store = new LocalStore(this.editorId, this.origText);
             } else {
-                this.store = new CollabStore(this);
+                this.store = new CollabStore(this.editorId, this.origText);
             }
             await this.store.init(config);
         }
@@ -331,7 +340,7 @@ export class Runner {
         if (this.resetEditor) {
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
         }
-        if (this.store) this.store.start();
+        if (this.store) this.store.start(view);
     }
 
     get editorExtensions() { return []; }
