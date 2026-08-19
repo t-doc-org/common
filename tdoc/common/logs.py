@@ -442,11 +442,13 @@ class LogStore(database.Database):
 
     def version_1(self, db, local, now):
         super().version_1(db, local, now)
+        # The log table is intentionally not "without rowid", because it doesn't
+        # have a primary key.
         db.create("""
             create table log (
-                time int not null,
+                time integer not null,
                 record text not null,
-                level int,
+                level integer,
                 message text,
                 msg text,
                 args text,
@@ -455,7 +457,7 @@ class LogStore(database.Database):
                 logger text,
                 ctx text,
                 file text,
-                line int,
+                line integer,
                 function text
             ) strict
         """)

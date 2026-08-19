@@ -44,7 +44,7 @@ class Connection(database.Connection):
 
     def check_origin(self, origin):
         if not origin and not self.local:
-            raise Exception("No origin specified")
+            raise database.Error("No origin specified")
 
     @functools.cached_property
     def users(self): return Users(self)
@@ -576,61 +576,70 @@ class Editors(database.ConnNamespace):
 
     def version(self, origin, editor, instance):
         return self.row("""
-            select version from editor_texts
+            select version from editor_instances
             where (origin, editor, instance) = (?, ?, ?)
         """, (origin, editor, instance), default=(-1,))[0] + 1
 
     def text(self, origin, editor, instance):
         version, text = self.row("""
-            select version, text from editor_texts
+            select version, text from editor_instances
             where (origin, editor, instance) = (?, ?, ?)
         """, (origin, editor, instance), default=(-1, None))
         return version + 1, json.loads(text) if text is not None else None
 
     def history(self, origin, editor, instance, version):
+        iid = self.row("""
+            select id from editor_instances
+            where (origin, editor, instance) = (?, ?, ?)
+        """, (origin, editor, instance), default=(None,))[0]
+        if iid is None: return []
         updates = []
         for v, us in self.execute("""
                     select version, updates from editor_histories
-                    where (origin, editor, instance) = (?, ?, ?)
-                      and version >= ?
+                    where instance = ? and version >= ?
                     order by version
-                """, (origin, editor, instance, version)):
+                """, (iid, version)):
             us = json.loads(us)
             if not updates and (lu := v - version + 1) < len(us): us = us[:lu]
             updates.extend(us)
             if v != version + len(updates) - 1:
-                raise Exception(
+                raise database.Error(
                     f"Inconsistent editor history entry at version {v}")
         return updates
 
     def add_updates(self, origin, editor, instance, version, updates, text,
                     user):
+        if len(editor) > max_id_len: raise database.Error("Invalid editor ID")
         if not isinstance(updates, list):
-            raise TypeError("Invalid type for updates")
+            raise database.Error("Invalid type for updates")
         if len(updates) == 0: return True
-        want = self.row("""
-            select version from editor_texts
+        iid, v = self.row("""
+            select id, version from editor_instances
             where (origin, editor, instance) = (?, ?, ?)
-        """, (origin, editor, instance), default=(-1,))[0] + 1
-        _log.info("version=%(version)s want=%(want)s updates=%(updates)s",
-                  version=version, want=want, updates=len(updates))
-        if version != want:
+        """, (origin, editor, instance), default=(None, -1))
+        if version != (want := v + 1):
             if version > want:
                 raise database.Error(
                     f"Editor update version too large: {version} > {want}")
             return False
         version += len(updates) - 1
+        if iid is None:
+            cur = self.execute("""
+                insert into editor_instances
+                    (origin, editor, instance, version, text)
+                values (?, ?, ?, ?, ?)
+            """, (origin, editor, instance, version, util.to_json(text)))
+            iid = cur.lastrowid
+        else:
+            self.execute("""
+                update editor_instances set (version, text) = (?, ?)
+                where id = ?
+            """, (version, util.to_json(text), iid))
         self.execute("""
             insert into editor_histories
-                (origin, editor, instance, version, updates, time, user)
-            values (?, ?, ?, ?, ?, ?, ?)
-        """, (origin, editor, instance, version, util.to_json(updates),
-              time.time_ns(), user))
-        self.execute("""
-            insert or replace into editor_texts
-                (origin, editor, instance, version, text)
+                (instance, version, updates, time, user)
             values (?, ?, ?, ?, ?)
-        """, (origin, editor, instance, version, util.to_json(text)))
+        """, (iid, version, util.to_json(updates), time.time_ns(), user))
         self.notify(self.instance_key(origin, editor, instance))
         return True
 
@@ -854,6 +863,8 @@ class Store(database.Database):
 
     def version_3(self, db, local, now):
         # Create tables for poll state.
+        # TODO: Add an integer primary key to polls, and reference it from
+        # poll_votes. Convert the latter to "without rowid".
         db.create("""
             create table polls (
                 origin text not null,
@@ -899,6 +910,8 @@ class Store(database.Database):
         db.execute("alter table users_ rename to users")
 
         # Create tables for OIDC.
+        # The oidc_users table is intentionally not "without rowid", because the
+        # id_token can be large.
         db.create("""
             create table oidc_states (
                 state text primary key,
@@ -966,25 +979,28 @@ class Store(database.Database):
     def version_10(self, db, local, now):
         # Create tables for editor content.
         db.create("""
-            create table editor_texts (
+            create table editor_instances (
+                id integer primary key,
                 origin text not null,
                 editor text not null,
                 instance text not null,
                 version integer not null,
-                text text not null,
-                primary key (origin, editor, instance)
+                text text not null
             ) strict
         """)
         db.create("""
+            create unique index editor_instances_oei
+            on editor_instances (origin, editor, instance)
+        """)
+        db.create("""
             create table editor_histories (
-                origin text not null,
-                editor text not null,
-                instance text not null,
+                instance integer not null,
                 version integer not null,
                 updates text not null,
                 time integer not null,
                 user integer,
-                primary key (origin, editor, instance, version),
+                primary key (instance, version),
+                foreign key (instance) references editor_instances (id),
                 foreign key (user) references users (id)
-            ) strict
+            ) strict, without rowid
         """)

@@ -55,6 +55,11 @@ class Connection(sqlite3.Connection):
         raise NotImplementedError("executescript")
 
     def create(self, sql, params=()):
+        # As a general rule (see <https://www.sqlite.org/withoutrowid.html>):
+        #  - Tables with an integer primary key should not be "without rowid"
+        #  - Tables with a non-integer or composite primary key where the
+        #    average size of a row doesn't exceed 1/20 of the page size (200
+        #    bytes for 4KiB pages) should be "without rowid".
         sql = textwrap.dedent(sql.lstrip('\n').rstrip())
         if not sql.endswith(';'): sql += ';'
         return self.execute(sql, params)
