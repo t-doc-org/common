@@ -1,10 +1,12 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
+import * as api from './api.js';
 import {
     autocomplete, collab, commands, language, languages, lint, oneDark, search,
     state, view,
 } from './codemirror.js';
+import {Mutex, on, randomId, RateLimited, Stored, toBase64} from './core.js';
 
 export {autocomplete, collab, commands, language, lint, search, state, view};
 
@@ -89,4 +91,178 @@ export function newEditor(config) {
 export function findEditor(el) {
     const dom = el.querySelector('div.cm-editor');
     return dom ? view.EditorView.findFromDOM(dom) : null;
+}
+
+// A base class for an editor backend store.
+class Store {
+    static instances = new Map();
+    static ext = new state.Compartment();
+
+    static define(id, initial) {
+        const cls = this;
+        return view.ViewPlugin.fromClass(class extends cls {
+            static id = id;
+            static initial = initial;
+        }, {
+            eventObservers: {
+                blur() { this.storer.flush(); },
+            },
+            provide(plugin) { return cls.ext.of([]); },
+        });
+    }
+
+    get id() { return this.constructor.id; }
+    get initial() { return this.constructor.initial; }
+
+    constructor(view) {
+        this.view = view;
+        // TODO: Add an idle duration (=> min & max intervals)
+        this.storer = new RateLimited(this.constructor.interval);
+        Store.instances.set(this.id, this);
+    }
+
+    destroy() {
+        this.flush();
+        Store.instances.delete(this.id);
+    }
+
+    schedule(fn) { this.storer.schedule(fn); }
+    flush() { this.storer.flush(); }
+
+    setText(text, history = false) {
+        this.view.dispatch({
+            changes: {from: 0, to: this.view.state.doc.length, insert: text},
+            annotations: [state.Transaction.remote.of(true),
+                          state.Transaction.addToHistory.of(history)],
+        });
+    }
+}
+
+// Ensure that the text of editors is stored before navigating away.
+on(window).beforeunload(() => {
+    for (const store of Store.instances.values()) store.flush();
+    // TODO: Ask for confirmation if there are unsaved changes
+});
+
+// A backend store using localStorage.
+class LocalStore extends Store {
+    static interval = 5000;
+    static prefix = 'tdoc:editor:';
+
+    constructor(view) {
+        super(view);
+        this.store = new Stored(LocalStore.prefix + this.id);
+        queueMicrotask(() => {  // State cannot be changed in constructor
+            const text = this.store.get();
+            if (text !== undefined) this.setText(text);
+        });
+    }
+
+    update(update) {
+        if (!update.docChanged) return;
+        for (const tr of update.transactions) {
+            if (tr.annotation(state.Transaction.remote)) return;
+        }
+        const doc = update.state.doc;
+        this.schedule(() => {
+            this.store.set(doc.eq(this.initial) ? undefined : doc.toString());
+        });
+    }
+}
+
+export function localStore(id, initial) {
+    return LocalStore.define(id, initial);
+}
+
+// Update the text of editors when their stored content changes.
+on(window).storage(e => {
+    if (e.storageArea !== localStorage) return;
+    if (!e.key.startsWith(LocalStore.prefix)) return;
+    const store = Store.instances.get(e.key.slice(LocalStore.prefix.length));
+    if (store instanceof LocalStore) store.setText(e.newValue, true);
+});
+
+// A collaborative backend store using the API.
+class CollabStore extends Store {
+    static interval = 1000;
+
+    constructor(view) {
+        super(view);
+        this.mu = new Mutex();
+        // TODO: Set readonly until initialized
+        this.ready = this.init();  // Background
+    }
+
+    async init() {
+        const {version, text} = await api.editor({init: this.id});
+        if (text !== null) this.setText(state.Text.of(text));
+        this.view.dispatch({
+            effects: this.constructor.ext.reconfigure(collab.collab({
+                startVersion: version,
+                clientID: await randomId(6),
+            })),
+        });
+        // TODO: Set readonly with message if request fails, and retry
+        // TODO: Fix inconsistency if two clients have different origText and
+        // the store has no text (version = 0)
+        this.watch = new api.Watch({name: 'editor', editor: this.id},
+                                   data => this.onRemoteUpdate(data));
+        api.events.sub({add: [this.watch]});  // Background
+    }
+
+    destroy() {
+        api.events.sub({remove: [this.watch]});  // Background
+        super.destroy();
+    }
+
+    update(update) {
+        if (update.docChanged) this.schedulePush();
+    }
+
+    async onRemoteUpdate(data) {
+        const version = collab.getSyncedVersion(this.view.state);
+        if (data.version === version) return;
+        console.log(`Remote update: ${version} => ${data.version}`);
+        if (data.version < version) {
+            // TODO: Show message, recommend copying text and reloading
+            console.warn(`\
+Remote version (${data.version}) < synced version (${version})`);
+            return;
+        }
+        // TODO: Pull in the background
+        const {updates} = await api.editor({pull: this.id, version});
+        this.view.dispatch(collab.receiveUpdates(
+            this.view.state,
+            updates.map(u => ({
+                clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
+            }))));
+        if (collab.sendableUpdates(this.view.state).length > 0) {
+            this.schedulePush();
+        }
+    }
+
+    schedulePush() { this.schedule(() => this.push()); }
+
+    async push() {
+        await this.ready;
+        await this.mu.locked(async () => {
+            const state = this.view.state;
+            const updates = collab.sendableUpdates(state);
+            if (updates.length === 0) return;
+            console.log(`Pushing ${updates.length} updates`);
+            // TODO: Handle request failures => retry with backoff
+            const {success} = await api.editor({
+                push: this.id, version: collab.getSyncedVersion(state),
+                updates: updates.map(u => ({
+                    i: u.clientID, c: u.changes.toJSON(),
+                })),
+                text: state.doc.toJSON(),
+            });
+            console.log(`Push result: ${success}`);
+        });
+    }
+}
+
+export function collabStore(id, initial) {
+    return CollabStore.define(id, initial);
 }

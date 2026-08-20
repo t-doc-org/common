@@ -3,11 +3,11 @@
 
 import * as api from './api.js';
 import {
-    asyncProps, elmt, isVisible, Mutex, on, qs, qsa, randomId, RateLimited,
-    showAlert, Stored, TdocElement, text, toBase64,
+    asyncProps, elmt, isVisible, on, qs, qsa, showAlert, TdocElement, text,
 } from './core.js';
 import {
-    collab as cmcollab, state as cmstate, view as cmview, findEditor, newEditor,
+    collabStore, findEditor, localStore, newEditor, state as cmstate,
+    view as cmview,
 } from './editor.js';
 
 // An error that is caused by the user, and that doesn't need to be logged.
@@ -57,180 +57,6 @@ function fixLineNos(node) {
         ln.dataset.n = ln.textContent;
         ln.replaceChildren();
     }
-}
-
-class Store {
-    static instances = new Map();
-    static ext = new cmstate.Compartment();
-
-    static define(id, initial) {
-        const cls = this;
-        return cmview.ViewPlugin.fromClass(class extends cls {
-            static id = id;
-            static initial = initial;
-        }, {
-            eventObservers: {
-                blur() { this.storer.flush(); },
-            },
-            provide(plugin) { return cls.ext.of([]); },
-        });
-    }
-
-    get id() { return this.constructor.id; }
-    get initial() { return this.constructor.initial; }
-
-    constructor(view) {
-        this.view = view;
-        // TODO: Add an idle duration (=> min & max intervals)
-        this.storer = new RateLimited(this.constructor.interval);
-        Store.instances.set(this.id, this);
-    }
-
-    destroy() {
-        this.flush();
-        Store.instances.delete(this.id);
-    }
-
-    schedule(fn) { this.storer.schedule(fn); }
-    flush() { this.storer.flush(); }
-    update(update) {}
-
-    setText(text, history = false) {
-        this.view.dispatch({
-            changes: {from: 0, to: this.view.state.doc.length, insert: text},
-            annotations: [cmstate.Transaction.remote.of(true),
-                          cmstate.Transaction.addToHistory.of(history)],
-        });
-    }
-}
-
-// Ensure that the text of editors is stored before navigating away.
-on(window).beforeunload(() => {
-    for (const store of Store.instances.values()) store.flush();
-    // TODO: Ask for confirmation if there are unsaved changes
-});
-
-
-class LocalStore extends Store {
-    static interval = 5000;
-    static prefix = 'tdoc:editor:';
-
-    constructor(view) {
-        super(view);
-        this.store = new Stored(LocalStore.prefix + this.id);
-        queueMicrotask(() => {  // State cannot be changed in constructor
-            const text = this.store.get();
-            if (text !== undefined) this.setText(text);
-        });
-    }
-
-    update(update) {
-        if (!update.docChanged) return;
-        for (const tr of update.transactions) {
-            if (tr.annotation(cmstate.Transaction.remote)) return;
-        }
-        const doc = update.state.doc;
-        this.schedule(() => {
-            this.store.set(doc.eq(this.initial) ? undefined : doc.toString());
-        });
-    }
-}
-
-function localStore(id, initial) {
-    return LocalStore.define(id, initial);
-}
-
-// Update the text of editors when their stored content changes.
-on(window).storage(e => {
-    if (e.storageArea !== localStorage) return;
-    if (!e.key.startsWith(LocalStore.prefix)) return;
-    const store = Store.instances.get(e.key.slice(LocalStore.prefix.length));
-    if (store instanceof LocalStore) store.setText(e.newValue, true);
-});
-
-class CollabStore extends Store {
-    static interval = 1000;
-
-    constructor(view) {
-        super(view);
-        this.mu = new Mutex();
-        // TODO: Set readonly until initialized
-        this.ready = this.init();  // Background
-    }
-
-    async init() {
-        const {version, text} = await api.editor({init: this.id});
-        const state = this.view.state;
-        if (text !== null) this.setText(cmstate.Text.of(text));
-        this.view.dispatch({
-            effects: this.constructor.ext.reconfigure(cmcollab.collab({
-                startVersion: version,
-                clientID: await randomId(6),
-            })),
-        });
-        // TODO: Set readonly with message if request fails, and retry
-        // TODO: Fix inconsistency if two clients have different origText and
-        // the store has no text (version = 0)
-        this.watch = new api.Watch({name: 'editor', editor: this.id},
-                                   data => this.onRemoteUpdate(data));
-        api.events.sub({add: [this.watch]});  // Background
-    }
-
-    destroy() {
-        api.events.sub({remove: [this.watch]});  // Background
-        super.destroy();
-    }
-
-    update(update) {
-        if (update.docChanged) this.schedulePush();
-    }
-
-    async onRemoteUpdate(data) {
-        const version = cmcollab.getSyncedVersion(this.view.state);
-        if (data.version === version) return;
-        console.log(`Remote update: ${version} => ${data.version}`);
-        if (data.version < version) {
-            // TODO: Show message, recommend copying text and reloading
-            console.warn(`\
-Remote version (${data.version}) < synced version (${version})`);
-            return;
-        }
-        // TODO: Pull in the background
-        const {updates} = await api.editor({pull: this.id, version});
-        this.view.dispatch(cmcollab.receiveUpdates(
-            this.view.state,
-            updates.map(u => ({
-                clientID: u.i, changes: cmstate.ChangeSet.fromJSON(u.c),
-            }))));
-        if (cmcollab.sendableUpdates(this.view.state).length > 0) {
-            this.schedulePush();
-        }
-    }
-
-    schedulePush() { this.schedule(() => this.push()); }
-
-    async push() {
-        await this.ready;
-        await this.mu.locked(async () => {
-            const state = this.view.state;
-            const updates = cmcollab.sendableUpdates(state);
-            if (updates.length === 0) return;
-            console.log(`Pushing ${updates.length} updates`);
-            // TODO: Handle request failures => retry with backoff
-            const {success} = await api.editor({
-                push: this.id, version: cmcollab.getSyncedVersion(state),
-                updates: updates.map(u => ({
-                    i: u.clientID, c: u.changes.toJSON(),
-                })),
-                text: state.doc.toJSON(),
-            });
-            console.log(`Push result: ${success}`);
-        });
-    }
-}
-
-function collabStore(id, initial) {
-    return CollabStore.define(id, initial);
 }
 
 const runners = asyncProps({}, {name: 'exec.runners'});
@@ -326,6 +152,7 @@ export class Runner {
 
         // Set up the editor store.
         if (this.editorId) {
+            // TODO: Determine "logged-in" status synchronously
             if (await api.auth.name() === undefined
                     || !this.node.classList.contains('collab')) {
                 config.extensions.push(
