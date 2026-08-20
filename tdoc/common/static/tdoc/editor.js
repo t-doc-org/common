@@ -93,10 +93,31 @@ export function findEditor(el) {
     return dom ? view.EditorView.findFromDOM(dom) : null;
 }
 
+// An array of transactions. Each transaction must be based on the previous
+// state; using add() ensures this is the case.
+export class Transactions extends Array {
+    constructor(state) {
+        super();
+        this.state = state;
+    }
+
+    add(...specs) {
+        for (const s of specs) {
+            const tr = this.state.update(s);
+            this.push(tr);
+            this.state = tr.state;
+        }
+    }
+}
+
 // A base class for an editor backend store.
 class Store {
     static instances = new Map();
-    static ext = new state.Compartment();
+    static ro = new state.Compartment();
+
+    static extensions(plugin) {
+        return [this.ro.of(state.EditorState.readOnly.of(true))];
+    }
 
     static define(id, initial) {
         const cls = this;
@@ -107,7 +128,7 @@ class Store {
             eventObservers: {
                 blur() { this.storer.flush(); },
             },
-            provide(plugin) { return cls.ext.of([]); },
+            provide(plugin) { return cls.extensions(plugin); },
         });
     }
 
@@ -129,11 +150,18 @@ class Store {
     flush() { this.storer.flush(); }
 
     setText(text, history = false) {
-        this.view.dispatch({
+        return {
             changes: {from: 0, to: this.view.state.doc.length, insert: text},
             annotations: [state.Transaction.remote.of(true),
                           state.Transaction.addToHistory.of(history)],
-        });
+        };
+    }
+
+    readOnly(value) {
+        return {
+            effects: this.constructor.ro.reconfigure(
+                state.EditorState.readOnly.of(value)),
+        };
     }
 }
 
@@ -152,7 +180,8 @@ class LocalStore extends Store {
         this.store = new Stored(LocalStore.prefix + this.id);
         queueMicrotask(() => {  // State cannot be changed in constructor
             const text = this.store.get();
-            if (text !== undefined) this.setText(text);
+            this.view.dispatch(text !== undefined ? this.setText(text) : {},
+                               this.readOnly(false));
         });
     }
 
@@ -177,28 +206,39 @@ on(window).storage(e => {
     if (e.storageArea !== localStorage) return;
     if (!e.key.startsWith(LocalStore.prefix)) return;
     const store = Store.instances.get(e.key.slice(LocalStore.prefix.length));
-    if (store instanceof LocalStore) store.setText(e.newValue, true);
+    if (store instanceof LocalStore) {
+        store.view.dispatch(store.setText(e.newValue, true));
+    }
 });
 
 // A collaborative backend store using the API.
 class CollabStore extends Store {
+    static collab = new state.Compartment();
+
+    static extensions(plugin) {
+        return [super.extensions(plugin), this.collab.of([])];
+    }
+
     constructor(view) {
         super(view);
         this.mu = new Mutex();
-        // TODO: Set readonly until initialized
         this.ready = this.init();  // Background
     }
 
     async init() {
         const {version, text} = await api.editor({init: this.id});
-        if (text !== null) this.setText(state.Text.of(text));
-        this.view.dispatch({
-            effects: this.constructor.ext.reconfigure(collab.collab({
+        // TODO: Show message and retry on failure
+        const trs = new Transactions(this.view.state);
+        // This needs to be a separate transaction, otherwise the change is
+        // reported to the collab plugin.
+        if (text !== null) trs.add(this.setText(state.Text.of(text)));
+        trs.add({
+            effects: this.constructor.collab.reconfigure(collab.collab({
                 startVersion: version,
                 clientID: await randomId(6),
             })),
-        });
-        // TODO: Set readonly with message if request fails, and retry
+        }, this.readOnly(false));
+        this.view.dispatch(trs);
         // TODO: Fix inconsistency if two clients have different origText and
         // the store has no text (version = 0)
         this.watch = new api.Watch({name: 'editor', editor: this.id},
