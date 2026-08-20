@@ -856,22 +856,43 @@ export function backoff(min, max, retries) {
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all
 // calls in a sequence except the last one can be dropped.
 export class RateLimited {
-    constructor(interval) { this.interval = interval; }
+    constructor(interval) {
+        const {min, max} = typeof interval === 'number' ?
+                           {min: interval, max: interval} : interval;
+        this.min = min ?? max;
+        this.max = max ?? min;
+    }
 
     // Schedule a function. It will be called after "interval" at the latest.
     // Scheduling a new function while the previous one hasn't been run yet
     // replaces the previous one.
     schedule(fn) {
-        const active = this.fn;
         this.fn = fn;
-        if (!active) setTimeout(() => this.flush(), this.interval);
+        const now = performance.now();
+        if (this.latest === undefined) {
+            this.latest = now + this.max;
+        } else if (now + this.min < this.latest) {
+            clearTimeout(this.timer);
+        } else {
+            return;
+        }
+        this.timer = setTimeout(() => this._run(), this.min);
     }
 
     // Call the current scheduled function immediately.
     flush() {
+        const timer = this.timer;
+        if (timer) clearTimeout(timer);
+        this._run();
+    }
+
+    _run() {
+        delete this.latest;
+        delete this.timer;
         const fn = this.fn;
         delete this.fn;
         if (fn) fn();
+
     }
 }
 

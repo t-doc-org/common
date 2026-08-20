@@ -116,8 +116,7 @@ class Store {
 
     constructor(view) {
         this.view = view;
-        // TODO: Add an idle duration (=> min & max intervals)
-        this.storer = new RateLimited(this.constructor.interval);
+        this.storer = new RateLimited({min: 1000, max: 5000});
         Store.instances.set(this.id, this);
     }
 
@@ -146,7 +145,6 @@ on(window).beforeunload(() => {
 
 // A backend store using localStorage.
 class LocalStore extends Store {
-    static interval = 5000;
     static prefix = 'tdoc:editor:';
 
     constructor(view) {
@@ -184,8 +182,6 @@ on(window).storage(e => {
 
 // A collaborative backend store using the API.
 class CollabStore extends Store {
-    static interval = 1000;
-
     constructor(view) {
         super(view);
         this.mu = new Mutex();

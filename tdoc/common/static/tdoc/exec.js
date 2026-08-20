@@ -161,6 +161,7 @@ export class Runner {
                 config.extensions.push(
                     collabStore(this.editorId, this.origText));
             }
+            // TODO: Add a "synchronized" indicator
         }
 
         // Set up the reset button.
