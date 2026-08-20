@@ -457,6 +457,12 @@ export function randomInt(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));
 }
 
+// Generate a base64-encoded random value with the given number of bytes of
+// entropy.
+export async function randomId(size) {
+    return await toBase64(crypto.getRandomValues(new Uint8Array(size)));
+}
+
 // Convert a number to a given radix, optionally left-padding with zeroes.
 export function toRadix(value, radix, length) {
     let s = value.toString(radix);
@@ -833,7 +839,7 @@ export const clientId = (async () => {
     const stored = new AsyncStored('tdoc:domain:clientId');
     let id = await stored.get();
     if (id === undefined) {
-        id = await toBase64(crypto.getRandomValues(new Uint8Array(33)));
+        id = await randomId(33);
         stored.set(id);  // Background
     }
     return id;

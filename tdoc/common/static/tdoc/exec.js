@@ -3,8 +3,8 @@
 
 import * as api from './api.js';
 import {
-    asyncProps, elmt, isVisible, Mutex, on, qs, qsa, RateLimited, showAlert,
-    Stored, TdocElement, text, toBase64,
+    asyncProps, elmt, isVisible, Mutex, on, qs, qsa, randomId, RateLimited,
+    showAlert, Stored, TdocElement, text, toBase64,
 } from './core.js';
 import {
     collab as cmcollab, state as cmstate, view as cmview, findEditor, newEditor,
@@ -59,53 +59,72 @@ function fixLineNos(node) {
     }
 }
 
-const editorPrefix = 'tdoc:editor:';
-
-// TODO: Make stores ViewPlugins, so that they get reset when setting the state?
-
 class Store {
-    constructor(id, initial) {
-        this.id = id;
-        this.initial = initial;
+    static instances = new Map();
+    static ext = new cmstate.Compartment();
+
+    static define(id, initial) {
+        const cls = this;
+        return cmview.ViewPlugin.fromClass(class extends cls {
+            static id = id;
+            static initial = initial;
+        }, {
+            eventObservers: {
+                blur() { this.storer.flush(); },
+            },
+            provide(plugin) { return cls.ext.of([]); },
+        });
+    }
+
+    get id() { return this.constructor.id; }
+    get initial() { return this.constructor.initial; }
+
+    constructor(view) {
+        this.view = view;
         // TODO: Add an idle duration (=> min & max intervals)
         this.storer = new RateLimited(this.constructor.interval);
+        Store.instances.set(this.id, this);
     }
 
-    async init(config) {
-        config.extensions.push(
-            cmview.EditorView.updateListener.of(u => this.onUpdate(u)),
-            cmview.EditorView.domEventObservers({
-                blur: () => this.storer.flush(),
-            }),
-        );
+    destroy() {
+        this.flush();
+        Store.instances.delete(this.id);
     }
 
-    start(view) {}
     schedule(fn) { this.storer.schedule(fn); }
     flush() { this.storer.flush(); }
-    onUpdate(update) {}
+    update(update) {}
+
+    setText(text, history = false) {
+        this.view.dispatch({
+            changes: {from: 0, to: this.view.state.doc.length, insert: text},
+            annotations: [cmstate.Transaction.remote.of(true),
+                          cmstate.Transaction.addToHistory.of(history)],
+        });
+    }
 }
 
 // Ensure that the text of editors is stored before navigating away.
 on(window).beforeunload(() => {
-    for (const node of qsa(document, 'tdoc-exec[editor]')) {
-        const store = node.runner.store;
-        if (store) store.flush();
-    }
+    for (const store of Store.instances.values()) store.flush();
     // TODO: Ask for confirmation if there are unsaved changes
 });
 
+
 class LocalStore extends Store {
     static interval = 5000;
+    static prefix = 'tdoc:editor:';
 
-    async init(config) {
-        await super.init(config);
-        this.store = new Stored(editorPrefix + this.id);
-        const text = this.store.get();
-        if (text !== undefined) config.doc = text;
+    constructor(view) {
+        super(view);
+        this.store = new Stored(LocalStore.prefix + this.id);
+        queueMicrotask(() => {  // State cannot be changed in constructor
+            const text = this.store.get();
+            if (text !== undefined) this.setText(text);
+        });
     }
 
-    onUpdate(update) {
+    update(update) {
         if (!update.docChanged) return;
         for (const tr of update.transactions) {
             if (tr.annotation(cmstate.Transaction.remote)) return;
@@ -115,67 +134,59 @@ class LocalStore extends Store {
             this.store.set(doc.eq(this.initial) ? undefined : doc.toString());
         });
     }
+}
 
-    onStorageUpdate(text, view) {
-        const state = view.state;
-        view.dispatch(state.update({
-            changes: {from: 0, to: state.doc.length, insert: text},
-            annotations: cmstate.Transaction.remote.of(true),
-        }));
-    }
+function localStore(id, initial) {
+    return LocalStore.define(id, initial);
 }
 
 // Update the text of editors when their stored content changes.
 on(window).storage(e => {
     if (e.storageArea !== localStorage) return;
-    if (!e.key.startsWith(editorPrefix)) return;
-    const name = e.key.slice(editorPrefix.length);
-    const node = qs(document, `tdoc-exec[editor="${CSS.escape(name)}"]`);
-    const runner = node?.runner;
-    if (!runner) return;
-    const store = runner.store;
-    if (store instanceof LocalStore) {
-        store.onStorageUpdate(e.newValue, runner.editorView);
-    }
+    if (!e.key.startsWith(LocalStore.prefix)) return;
+    const store = Store.instances.get(e.key.slice(LocalStore.prefix.length));
+    if (store instanceof LocalStore) store.setText(e.newValue, true);
 });
 
 class CollabStore extends Store {
     static interval = 1000;
-    static clientId;
 
-    async init(config) {
-        await super.init(config);
-        if (!this.constructor.clientId) {
-            this.constructor.clientId = await toBase64(
-                crypto.getRandomValues(new Uint8Array(6)));
-        }
+    constructor(view) {
+        super(view);
+        this.mu = new Mutex();
+        // TODO: Set readonly until initialized
+        this.ready = this.init();  // Background
+    }
+
+    async init() {
         const {version, text} = await api.editor({init: this.id});
+        const state = this.view.state;
+        if (text !== null) this.setText(cmstate.Text.of(text));
+        this.view.dispatch({
+            effects: this.constructor.ext.reconfigure(cmcollab.collab({
+                startVersion: version,
+                clientID: await randomId(6),
+            })),
+        });
         // TODO: Set readonly with message if request fails, and retry
         // TODO: Fix inconsistency if two clients have different origText and
         // the store has no text (version = 0)
-        if (text !== null) config.doc = cmstate.Text.of(text);
-        this.mu = new Mutex();
-        config.extensions.push(
-            cmcollab.collab({
-                startVersion: version,
-                clientID: this.constructor.clientId,
-            }),
-        );
-    }
-
-    start(view) {
         this.watch = new api.Watch({name: 'editor', editor: this.id},
-                                   data => this.onRemoteUpdate(data, view));
+                                   data => this.onRemoteUpdate(data));
         api.events.sub({add: [this.watch]});  // Background
     }
 
-    onUpdate(update) {
-        if (!update.docChanged) return;
-        this.schedulePush(update.view);
+    destroy() {
+        api.events.sub({remove: [this.watch]});  // Background
+        super.destroy();
     }
 
-    async onRemoteUpdate(data, view) {
-        const version = cmcollab.getSyncedVersion(view.state);
+    update(update) {
+        if (update.docChanged) this.schedulePush();
+    }
+
+    async onRemoteUpdate(data) {
+        const version = cmcollab.getSyncedVersion(this.view.state);
         if (data.version === version) return;
         console.log(`Remote update: ${version} => ${data.version}`);
         if (data.version < version) {
@@ -186,19 +197,22 @@ Remote version (${data.version}) < synced version (${version})`);
         }
         // TODO: Pull in the background
         const {updates} = await api.editor({pull: this.id, version});
-        view.dispatch(cmcollab.receiveUpdates(view.state, updates.map(u => ({
-            clientID: u.i, changes: cmstate.ChangeSet.fromJSON(u.c),
-        }))));
-        if (cmcollab.sendableUpdates(view.state).length > 0) {
+        this.view.dispatch(cmcollab.receiveUpdates(
+            this.view.state,
+            updates.map(u => ({
+                clientID: u.i, changes: cmstate.ChangeSet.fromJSON(u.c),
+            }))));
+        if (cmcollab.sendableUpdates(this.view.state).length > 0) {
             this.schedulePush();
         }
     }
 
-    schedulePush(view) { this.schedule(() => this.push(view)); }
+    schedulePush() { this.schedule(() => this.push()); }
 
-    async push(view) {
+    async push() {
+        await this.ready;
         await this.mu.locked(async () => {
-            const state = view.state;
+            const state = this.view.state;
             const updates = cmcollab.sendableUpdates(state);
             if (updates.length === 0) return;
             console.log(`Pushing ${updates.length} updates`);
@@ -213,6 +227,10 @@ Remote version (${data.version}) < synced version (${version})`);
             console.log(`Push result: ${success}`);
         });
     }
+}
+
+function collabStore(id, initial) {
+    return CollabStore.define(id, initial);
 }
 
 const runners = asyncProps({}, {name: 'exec.runners'});
@@ -310,11 +328,12 @@ export class Runner {
         if (this.editorId) {
             if (await api.auth.name() === undefined
                     || !this.node.classList.contains('collab')) {
-                this.store = new LocalStore(this.editorId, this.origText);
+                config.extensions.push(
+                    localStore(this.editorId, this.origText));
             } else {
-                this.store = new CollabStore(this.editorId, this.origText);
+                config.extensions.push(
+                    collabStore(this.editorId, this.origText));
             }
-            await this.store.init(config);
         }
 
         // Set up the reset button.
@@ -326,7 +345,8 @@ export class Runner {
  title="Reset editor content"></button>`;
             on(btn).click(() => {
                 this.setEditorText(this.origText);
-                if (this.store) this.store.flush();
+                // TODO: Add a "flush" annotation
+                // if (this.store) this.store.flush();
             });
             config.extensions.push(cmview.EditorView.updateListener.of(u => {
                 if (!u.docChanged) return;
@@ -342,7 +362,6 @@ export class Runner {
         if (this.resetEditor) {
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
         }
-        if (this.store) this.store.start(view);
     }
 
     get editorExtensions() { return []; }
