@@ -868,15 +868,20 @@ export class RateLimited {
     // replaces the previous one.
     schedule(fn) {
         this.fn = fn;
-        const now = performance.now();
-        if (this.latest === undefined) {
+        const now = performance.now(), latest = this.latest;
+        let delay = this.min;
+        if (latest === undefined) {  // Not scheduled
             this.latest = now + this.max;
-        } else if (now + this.min < this.latest) {
-            clearTimeout(this.timer);
-        } else {
+        } else if (latest === null) {  // Scheduled at max
             return;
+        } else {  // Re-scheduling
+            clearTimeout(this.timer);
+            if (now + delay >= latest) {  // Schedule at latest
+                delay = latest - now;
+                this.latest = null;
+            }
         }
-        this.timer = setTimeout(() => this._run(), this.min);
+        this.timer = setTimeout(() => this._run(), delay);
     }
 
     // Call the current scheduled function immediately.
