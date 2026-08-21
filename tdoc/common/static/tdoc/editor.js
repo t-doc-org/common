@@ -6,7 +6,9 @@ import {
     autocomplete, collab, commands, language, languages, lint, oneDark, search,
     state, view,
 } from './codemirror.js';
-import {Mutex, on, randomId, RateLimited, Stored, toBase64} from './core.js';
+import {
+    CondVar, Mutex, on, randomId, RateLimited, Stored, toBase64,
+} from './core.js';
 
 export {autocomplete, collab, commands, language, lint, search, state, view};
 
@@ -144,6 +146,14 @@ class Store {
         Store.instances.delete(this.config.id);
     }
 
+    update(update) {
+        if (!update.docChanged) return;
+        for (const tr of update.transactions) {
+            if (tr.annotation(state.Transaction.remote)) return;
+        }
+        this.onLocalChange(update.state.doc);
+    }
+
     schedule(fn) { this.storer.schedule(fn); }
     flush() { this.storer.flush(); }
     status(status, msg) { this.config.onStatus?.(status, msg); }
@@ -186,12 +196,7 @@ class LocalStore extends Store {
         });
     }
 
-    update(update) {
-        if (!update.docChanged) return;
-        for (const tr of update.transactions) {
-            if (tr.annotation(state.Transaction.remote)) return;
-        }
-        const doc = update.state.doc;
+    onLocalChange(doc) {
         this.schedule(() => {
             this.store.set(doc.eq(this.config.initial) ? undefined
                                                        : doc.toString());
@@ -221,35 +226,14 @@ class CollabStore extends Store {
 
     constructor(view) {
         super(view);
-        this.mu = new Mutex();
+        this.poke = new CondVar();
         this.status('init', "Loading...");
-        this.ready = this.init();  // Background
-    }
-
-    async init() {
-        const {version, text} = await api.editor({init: this.config.id});
-        // TODO: Show message and retry on failure
-        const trs = new Transactions(this.view.state);
-        // This needs to be a separate transaction, otherwise the change is
-        // reported to the collab plugin.
-        if (text !== null) trs.add(this.setText(state.Text.of(text)));
-        trs.add({
-            effects: this.constructor.collab.reconfigure(collab.collab({
-                startVersion: version,
-                clientID: await randomId(6),
-            })),
-        }, this.readOnly(false));
-        this.view.dispatch(trs);
-        this.saved();
-        // TODO: Fix inconsistency if two clients have different origText and
-        // the store has no text (version = 0)
-        this.watch = new api.Watch({name: 'editor', editor: this.config.id},
-                                   data => this.onRemoteUpdate(data));
-        api.events.sub({add: [this.watch]});  // Background
+        this.sync();  // Background
     }
 
     destroy() {
-        api.events.sub({remove: [this.watch]});  // Background
+        this._stop = true;
+        this.poke.notify();
         super.destroy();
     }
 
@@ -257,59 +241,113 @@ class CollabStore extends Store {
         this.status('saved', "The editor content is saved in the cloud.");
     }
 
-    update(update) {
-        if (update.docChanged) this.schedulePush();
-    }
-
-    onRemoteUpdate(data) {
-        this.pull(data.version);  // Background
-    }
-
-    async pull(remoteVersion) {
-        if (remoteVersion === collab.getSyncedVersion(this.view.state)) return;
-        await this.mu.locked(async () => {
-            const version = collab.getSyncedVersion(this.view.state);
-            if (remoteVersion === version) return;
-            console.log(`Remote update: ${version} => ${remoteVersion}`);
-            const {updates} = await api.editor({pull: this.config.id, version});
-            this.view.dispatch(collab.receiveUpdates(
-                this.view.state,
-                updates.map(u => ({
-                    clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
-                }))));
-            if (collab.sendableUpdates(this.view.state).length > 0) {
-                this.schedulePush();
-            } else {
-                this.saved();
-            }
+    onLocalChange(doc) {
+        this.status('push', "Saving...");
+        this.schedule(() => {
+            this._push = true;
+            this.poke.notify();
         });
     }
 
-    schedulePush() {
-        this.status('push', "Saving...");
-        this.schedule(() => this.push());
+    async sync() {
+        // Fetch the initial editor text.
+        // TODO: Retry on failure
+        const version = await this.init();
+        this.saved();
+
+        // TODO: Fix inconsistency if two clients have different origText and
+        // the store has no text (version = 0)
+
+        // Start the remote watcher.
+        let remoteVersion = version;
+        this.watch = new api.Watch(
+            {name: 'editor', editor: this.config.id},
+            data => {
+                remoteVersion = data.version;
+                this._pull = true;
+                this.poke.notify();
+            });
+        api.events.sub({add: [this.watch]});  // Background
+
+        // Whenever poked, pull remote updates until synchronized, then push
+        // if requested. Pushes fail if there are remote updates, so pulling is
+        // prioritized.
+        try {
+            for (;;) {
+                await this.poke.wait(
+                    () => this._stop || this._pull || this._push);
+                if (this._stop) break;
+
+                // Keep pulling as long as there are remote updates.
+                this._pull = false;
+                let pulled = false;
+                for (;;) {
+                    const v = collab.getSyncedVersion(this.view.state);
+                    if (v === remoteVersion) break;
+                    console.debug(`Pulling ${v} => ${remoteVersion}`);
+                    // TODO: Retry on failure
+                    await this.pull();
+                    pulled = true;
+                }
+
+                // Push local updates if there are any.
+                if (collab.sendableUpdates(this.view.state).length > 0) {
+                    if (pulled || this._push) {
+                        this._push = false;
+                        const st = this.view.state;
+                        const v = collab.getSyncedVersion(st);
+                        const u = collab.sendableUpdates(st).length;
+                        console.log(`Pushing ${v} => ${v + u}`);
+                        // TODO: Retry on failure
+                        await this.push();
+                    }
+                } else {
+                    this.saved();
+                }
+            }
+        } finally {
+            api.events.sub({remove: [this.watch]});  // Background
+        }
+    }
+
+    async init() {
+        const {version, text} = await api.editor({init: this.config.id});
+        const trs = new Transactions(this.view.state);
+        // This needs to be a separate transaction, otherwise the change is
+        // reported to the collab plugin.
+        if (text !== null) trs.add(this.setText(state.Text.of(text)));
+        trs.add({
+            effects: this.constructor.collab.reconfigure(collab.collab({
+                startVersion: version, clientID: await randomId(6),
+            })),
+        }, this.readOnly(false));
+        this.view.dispatch(trs);
+        return version;
+    }
+
+    async pull() {
+        const {updates} = await api.editor({
+            pull: this.config.id,
+            version: collab.getSyncedVersion(this.view.state),
+        });
+        if (this._stop) return;
+        this.view.dispatch(collab.receiveUpdates(
+            this.view.state,
+            updates.map(u => ({
+                clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
+            }))));
     }
 
     async push() {
-        await this.ready;
-        await this.mu.locked(async () => {
-            const state = this.view.state;
-            const updates = collab.sendableUpdates(state);
-            if (updates.length === 0) {
-                this.saved();
-                return;
-            }
-            console.log(`Pushing ${updates.length} updates`);
-            // TODO: Handle request failures => retry with backoff
-            const {success} = await api.editor({
-                push: this.config.id, version: collab.getSyncedVersion(state),
-                updates: updates.map(u => ({
-                    i: u.clientID, c: u.changes.toJSON(),
-                })),
-                text: state.doc.toJSON(),
-            });
-            console.log(`Push result: ${success}`);
+        const st = this.view.state;
+        const {success} = await api.editor({
+            push: this.config.id, version: collab.getSyncedVersion(st),
+            updates: collab.sendableUpdates(st).map(u => ({
+                i: u.clientID, c: u.changes.toJSON(),
+            })),
+            text: st.doc.toJSON(),
         });
+        return success;
     }
 }
 

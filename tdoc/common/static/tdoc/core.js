@@ -199,6 +199,27 @@ export class Mutex {
     }
 }
 
+// A conditional variable for asynchronous code.
+export class CondVar {
+    async wait(cond) {
+        while (!cond()) {
+            if (!this.np) {
+                ({promise: this.np, resolve: this.nr} =
+                    Promise.withResolvers());
+            }
+            await this.np;
+        }
+    }
+
+    notify() {
+        const notify = this.nr;
+        if (!notify) return;
+        delete this.np;
+        delete this.nr;
+        notify();
+    }
+}
+
 // Pending accesses to asyncProps properties.
 const pendingAsyncGet = new Set();
 
