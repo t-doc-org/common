@@ -11,9 +11,9 @@ import pyjson5
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, format_attrs, merge_dict, meta, opt_classes, \
-              opt_names, opt_set, report_exceptions, UniqueChecker
-from .. import util
+from . import __version__, editor_options, format_attrs, merge_dict, meta, \
+              opt_classes, opt_names, opt_set, parse_editor_options, \
+              report_exceptions, UniqueChecker
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -41,12 +41,10 @@ def setup(app):
 
 class Exec(code.CodeBlock):
     required_arguments = 1
-    option_spec = code.CodeBlock.option_spec | {
+    option_spec = code.CodeBlock.option_spec | editor_options | {
         'after': opt_names,
         'class': opt_classes,
         'console-style': directives.unchanged,
-        'editor': directives.unchanged,
-        'editor-config': directives.unchanged,
         'env': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
@@ -93,12 +91,7 @@ class Exec(code.CodeBlock):
         if name is not None: node['name'] = name
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
-        if (v := self.options.get('editor')) not in (None, 'none'):
-            cfg = {}
-            if v: cfg.update(id=v, store='local')
-            if v := self.options.get('editor-config'):
-                cfg.update(pyjson5.decode(f'{{{v}}}'))
-            node['editor'] = util.to_json(cfg) if cfg else ''
+        parse_editor_options(self.options, node)
         if v := self.options.get('output-style'): node['output-style'] = v
         if (v := self.options.get('reset')) and v != 'hide': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v

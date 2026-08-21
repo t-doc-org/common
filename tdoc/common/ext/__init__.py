@@ -125,6 +125,21 @@ def opt_set(*values):
     return parse
 
 
+editor_options = {
+    'editor': directives.unchanged,
+    'editor-config': directives.unchanged,
+}
+
+
+def parse_editor_options(options, node):
+    if (v := options.get('editor')) not in (None, 'none'):
+        cfg = {}
+        if v: cfg.update(id=v, store='local')
+        if v := options.get('editor-config'):
+            cfg.update(pyjson5.decode(f'{{{v}}}'))
+        node['editor'] = util.to_json(cfg) if cfg else ''
+
+
 def log_exception(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
