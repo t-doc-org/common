@@ -67,6 +67,16 @@ be unique across all documents, e.g. a
 [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
 ```
 
+```{rst:directive:option} editor-config: config
+Configuration for the editor, as a [JSON5](https://spec.json5.org/) object
+(without enclosing `{}`). The following keys are supported:
+
+- `store`: Where to store editor content.
+  - `'local'` (default): Store in browser
+    [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
+  - `'cloud'`: Store in the cloud.
+```
+
 ```{rst:directive:option} env: [name]
 The environment in which the code must be executed. Code executed in distinct
 environments is isolated from each other. The default environment name is the
@@ -172,17 +182,17 @@ both anonymous and logged-in users.
 select * from countries where country_code = 'LI';
 ```
 
-Editor content can also be saved in remote storage, by adding `collab` to
-`:class:`. This makes the corresponding editors fully collaborative, i.e. the
-same text can be edited simultaneously from multiple clients (and eventually by
-multiple users). This only works for logged-in users, and requires an internet
-connection.
+Editor content can also be saved in remote storage, adding `store: 'cloud'` to
+{rst:dir}`:editor-config: <exec:editor-config>`. This makes editors fully
+collaborative, i.e. the same text can be edited simultaneously from multiple
+clients (and eventually by multiple users). This only works for logged-in users,
+and requires a permanent internet connection.
 
 ```{exec} sql
 :after: sql-countries
 :editor: fa165f12-60bd-4639-b880-38e40ac3e88c
+:editor-config: store: 'cloud'
 :reset: show
-:class: collab
 select * from countries where country_code = 'LI';
 ```
 

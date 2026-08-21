@@ -93,7 +93,11 @@ export class Runner {
     // Initialize the runner.
     static async init(config) {}
 
-    constructor(node) { this.node = node; }
+    constructor(node) {
+        this.node = node;
+        const e = this.attr('editor');
+        if (e !== undefined) this.editor = e !== '' ? JSON.parse(e) : {};
+    }
 
     async init() {
         fixLineNos(this.node);
@@ -113,7 +117,6 @@ export class Runner {
     // Attribute accessors.
     get after() { return this.attr('after'); }
     get consoleStyle() { return this.attr('console-style'); }
-    get editor() { return this.attr('editor'); }
     get env() { return this.attr('env'); }
     get outputStyle() { return this.attr('output-style'); }
     get reset() { return this.attr('reset'); }
@@ -129,9 +132,6 @@ export class Runner {
 
     // True iff the {exec} block has an editor.
     get editable() { return this.editor !== undefined; }
-
-    // The ID of the editor.
-    get editorId() { return this.editor || undefined; }
 
     // Add an editor to the {exec} block.
     async addEditor() {
@@ -151,10 +151,10 @@ export class Runner {
         }
 
         // Set up the editor store.
-        if (this.editorId) {
+        if (this.editor?.id) {
             this.editorStatus = elmt`<i></i>`;
             const cfg = {
-                id: this.editorId, initial: this.origText,
+                id: this.editor.id, initial: this.origText,
                 onStatus: (status, msg) => {
                     this.editorStatus.className =
                         `tfa tdoc-editor-status ${status}`;
@@ -162,11 +162,11 @@ export class Runner {
                 },
             };
             // TODO: Determine "logged-in" status synchronously
-            if (await api.auth.name() === undefined
-                    || !this.node.classList.contains('collab')) {
-                config.extensions.push(localStore(cfg));
-            } else {
+            const store = this.editor.store;
+            if (store === 'cloud' && await api.auth.name() !== undefined) {
                 config.extensions.push(collabStore(cfg));
+            } else if (store) {
+                config.extensions.push(localStore(cfg));
             }
         }
 
@@ -177,11 +177,7 @@ export class Runner {
             const btn = this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;
-            on(btn).click(() => {
-                this.setEditorText(this.origText);
-                // TODO: Add a "flush" annotation
-                // if (this.store) this.store.flush();
-            });
+            on(btn).click(() => this.setEditorText(this.origText));
             config.extensions.push(cmview.EditorView.updateListener.of(u => {
                 if (!u.docChanged) return;
                 btn.disabled = u.state.doc.eq(this.origText);
