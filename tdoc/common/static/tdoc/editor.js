@@ -261,22 +261,28 @@ class CollabStore extends Store {
         if (update.docChanged) this.schedulePush();
     }
 
-    async onRemoteUpdate(data) {
-        const version = collab.getSyncedVersion(this.view.state);
-        if (data.version === version) return;
-        console.log(`Remote update: ${version} => ${data.version}`);
-        // TODO: Pull in the background
-        const {updates} = await api.editor({pull: this.config.id, version});
-        this.view.dispatch(collab.receiveUpdates(
-            this.view.state,
-            updates.map(u => ({
-                clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
-            }))));
-        if (collab.sendableUpdates(this.view.state).length > 0) {
-            this.schedulePush();
-        } else {
-            this.saved();
-        }
+    onRemoteUpdate(data) {
+        this.pull(data.version);  // Background
+    }
+
+    async pull(remoteVersion) {
+        if (remoteVersion === collab.getSyncedVersion(this.view.state)) return;
+        await this.mu.locked(async () => {
+            const version = collab.getSyncedVersion(this.view.state);
+            if (remoteVersion === version) return;
+            console.log(`Remote update: ${version} => ${remoteVersion}`);
+            const {updates} = await api.editor({pull: this.config.id, version});
+            this.view.dispatch(collab.receiveUpdates(
+                this.view.state,
+                updates.map(u => ({
+                    clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
+                }))));
+            if (collab.sendableUpdates(this.view.state).length > 0) {
+                this.schedulePush();
+            } else {
+                this.saved();
+            }
+        });
     }
 
     schedulePush() {
