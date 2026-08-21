@@ -7,10 +7,12 @@ import {
     state, view,
 } from './codemirror.js';
 import {
-    CondVar, Mutex, on, randomId, RateLimited, Stored, toBase64,
+    CondVar, debug, Mutex, on, randomId, RateLimited, Stored, toBase64,
 } from './core.js';
 
 export {autocomplete, collab, commands, language, lint, search, state, view};
+
+// debug({enable: 'editor'});
 
 // React to theme changes and update all editor themes as well.
 const theme = new state.Compartment();
@@ -284,7 +286,9 @@ class CollabStore extends Store {
                 for (;;) {
                     const v = collab.getSyncedVersion(this.view.state);
                     if (v === remoteVersion) break;
-                    console.debug(`Pulling ${v} => ${remoteVersion}`);
+                    if (debug('editor')) {
+                        console.debug(`Pulling ${v} => ${remoteVersion}`);
+                    }
                     // TODO: Retry on failure
                     await this.pull();
                     pulled = true;
@@ -294,10 +298,12 @@ class CollabStore extends Store {
                 if (collab.sendableUpdates(this.view.state).length > 0) {
                     if (pulled || this._push) {
                         this._push = false;
-                        const st = this.view.state;
-                        const v = collab.getSyncedVersion(st);
-                        const u = collab.sendableUpdates(st).length;
-                        console.log(`Pushing ${v} => ${v + u}`);
+                        if (debug('editor')) {
+                            const st = this.view.state;
+                            const v = collab.getSyncedVersion(st);
+                            const u = collab.sendableUpdates(st).length;
+                            console.log(`Pushing ${v} => ${v + u}`);
+                        }
                         // TODO: Retry on failure
                         await this.push();
                     }

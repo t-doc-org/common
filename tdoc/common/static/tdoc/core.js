@@ -8,6 +8,18 @@ export const dec = new TextDecoder();
 // The dataset of the <html> tag.
 export const htmlData = document.documentElement.dataset;
 
+const onHandler = {
+    get(obj, prop, recv) {
+        return (handler, opts) => {
+            obj.addEventListener(prop, handler, opts);
+            return recv;
+        }
+    }
+};
+
+// Return a proxy object whose methods set event handlers.
+export function on(node) { return new Proxy(node, onHandler); }
+
 // Information about the page.
 export const page = {
     origin: tdoc.local ? '' : location.origin,
@@ -55,6 +67,27 @@ export function onHashParams(names, fn) {
     const res = handleHashParams(names, fn);
     on(window).hashchange(() => handleHashParams(names, fn));
     return res;
+}
+
+function asArray(v) {
+    v ??= [];
+    return Array.isArray(v) ? v : [v];
+}
+
+// Manage a set of debug tags.
+const _debug = new Set();
+onHashParams(['debug'], v => {
+    for (let tag of v.split(',')) {
+        tag = tag.trim();
+        if (tag !== '') _debug.add(tag);
+    }
+});
+
+// Enable a set of tags, and return true iff the given tag is enabled.
+export function debug(tag) {
+    if (typeof tag === 'string') return _debug.has(tag) || _debug.has('all');
+    for (const t of asArray(tag.disable)) _debug.remove(t);
+    for (const t of asArray(tag.enable)) _debug.add(t);
 }
 
 // Resolves when the DOM content has loaded and deferred scripts have executed.
@@ -319,18 +352,6 @@ export async function mergeAttrs(mergeTo, attrs, ...as) {
 export function enable(value, ...els) {
     for (const el of els) el.disabled = !value;
 }
-
-const onHandler = {
-    get(obj, prop, recv) {
-        return (handler, opts) => {
-            obj.addEventListener(prop, handler, opts);
-            return recv;
-        }
-    }
-};
-
-// Return a proxy object whose methods set event handlers.
-export function on(node) { return new Proxy(node, onHandler); }
 
 const messageSources = new WeakMap();
 on(window).message(e => messageSources.get(e.source)?.(e));
