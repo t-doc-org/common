@@ -671,8 +671,8 @@ div.highlight pre > .linenos::before {
 }
 
 /* Icons */
-.tfa:is([class^=fa-], [class*=" fa-"])::before,
-.tfar:is([class^=fa-], [class*=" fa-"])::before,
+.tfa::before,
+.tfar::before,
 :is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]):is([class^=fa-],
                                                  [class*=" fa-"])::before,
 :is(.tdoc, [class^=tdoc-], [class*=" tdoc-"]) :is([class^=fa-],
@@ -1009,6 +1009,48 @@ tdoc-poll .tdoc-poll-answers:not(:has(.tdoc-poll-pct:not(:empty)))
     word-break: break-word;
 }
 
+/* Editors */
+div.cm-editor.cm-focused {
+    outline: none;
+}
+div.cm-editor div.cm-scroller {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.875em;
+}
+html[data-theme=dark] div.cm-editor {
+    background-color: var(--pst-color-surface);
+}
+.tdoc-editor-status {
+    height: 1.8rem;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--pst-color-text-muted);
+}
+.tdoc-editor-status.local {
+    --tdoc-fa-font: var(--fa-font-regular);
+    --fa: '\f0c7';  /* floppy-disk */
+}
+.tdoc-editor-status.init {
+    --fa: '\f0ed';  /* cloud-arrow-down */
+}
+.tdoc-editor-status.push {
+    --fa: '\f110';  /* spinner */
+    --fa: '\f2f1';  /* rotate */
+    animation: spin 4s linear infinite;
+}
+.tdoc-editor-status.saved {
+    --tdoc-fa-font: var(--fa-font-regular);
+    --fa: '\f0c2';  /* cloud */
+}
+.tdoc-editor-status.error {
+    --fa: '\f071';  /* triangle-exclamation */
+    color: var(--pst-color-danger);
+}
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
 /* Exec blocks */
 tdoc-exec {
     margin: 1rem 0;
@@ -1039,7 +1081,7 @@ div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
     margin-bottom: 0.3rem;
     margin-right: 0.3rem;
 }
-tdoc-exec[editor] div.highlight :is(pre, button.copybtn) {
+tdoc-exec[editor] div.highlight:has(> .cm-editor) :is(pre, button.copybtn) {
     display: none;
 }
 tdoc-exec[editor] div.cm-editor {
@@ -1054,16 +1096,6 @@ div.literal-block-wrapper > tdoc-exec[editor] div.cm-editor {
     border-bottom: none;
     border-left: none;
     border-radius: 0;
-}
-div.cm-editor.cm-focused {
-    outline: none;
-}
-div.cm-editor div.cm-scroller {
-    font-family: var(--pst-font-family-monospace);
-    font-size: 0.875em;
-}
-html[data-theme=dark] div.cm-editor {
-    background-color: var(--pst-color-surface);
 }
 .tdoc-exec-coords {
     position: absolute;

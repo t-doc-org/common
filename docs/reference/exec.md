@@ -173,9 +173,10 @@ select * from countries where country_code = 'LI';
 ```
 
 Editor content can also be saved in remote storage, by adding `collab` to
-`:class:`. This makes the editors fully collaborative, i.e. the same text can be
-edited simultaneously from multiple clients (and eventually by multiple users).
-This only works for logged-in users, and requires an internet connection.
+`:class:`. This makes the corresponding editors fully collaborative, i.e. the
+same text can be edited simultaneously from multiple clients (and eventually by
+multiple users). This only works for logged-in users, and requires an internet
+connection.
 
 ```{exec} sql
 :after: sql-countries

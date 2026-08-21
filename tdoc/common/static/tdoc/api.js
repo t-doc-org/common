@@ -396,6 +396,8 @@ ${prefix} ${label}</button>\
 }
 
 export const auth = new Auth();
+// TODO: Wait for user info to be available, either from localStorage or
+// request, then make user info getters synchronous
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 

@@ -152,16 +152,22 @@ export class Runner {
 
         // Set up the editor store.
         if (this.editorId) {
+            this.editorStatus = elmt`<i></i>`;
+            const cfg = {
+                id: this.editorId, initial: this.origText,
+                onStatus: (status, msg) => {
+                    this.editorStatus.className =
+                        `tfa tdoc-editor-status ${status}`;
+                    this.editorStatus.setAttribute('title', msg);
+                },
+            };
             // TODO: Determine "logged-in" status synchronously
             if (await api.auth.name() === undefined
                     || !this.node.classList.contains('collab')) {
-                config.extensions.push(
-                    localStore(this.editorId, this.origText));
+                config.extensions.push(localStore(cfg));
             } else {
-                config.extensions.push(
-                    collabStore(this.editorId, this.origText));
+                config.extensions.push(collabStore(cfg));
             }
-            // TODO: Add a "synchronized" indicator
         }
 
         // Set up the reset button.
@@ -217,6 +223,7 @@ export class Runner {
     // Add controls to the {exec} block.
     addControls(controls) {
         if (this.resetEditor) controls.appendChild(this.resetEditor);
+        if (this.editorStatus) controls.appendChild(this.editorStatus);
     }
 
     // Create a "Run" control.

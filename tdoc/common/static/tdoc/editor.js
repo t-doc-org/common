@@ -119,11 +119,10 @@ class Store {
         return [this.ro.of(state.EditorState.readOnly.of(true))];
     }
 
-    static define(id, initial) {
+    static define(config) {
         const cls = this;
         return view.ViewPlugin.fromClass(class extends cls {
-            static id = id;
-            static initial = initial;
+            static config = config;
         }, {
             eventObservers: {
                 blur() { this.storer.flush(); },
@@ -132,22 +131,22 @@ class Store {
         });
     }
 
-    get id() { return this.constructor.id; }
-    get initial() { return this.constructor.initial; }
+    get config() { return this.constructor.config; }
 
     constructor(view) {
         this.view = view;
         this.storer = new RateLimited({min: 1000, max: 5000});
-        Store.instances.set(this.id, this);
+        Store.instances.set(this.config.id, this);
     }
 
     destroy() {
         this.flush();
-        Store.instances.delete(this.id);
+        Store.instances.delete(this.config.id);
     }
 
     schedule(fn) { this.storer.schedule(fn); }
     flush() { this.storer.flush(); }
+    status(status, msg) { this.config.onStatus?.(status, msg); }
 
     setText(text, history = false) {
         return {
@@ -177,7 +176,9 @@ class LocalStore extends Store {
 
     constructor(view) {
         super(view);
-        this.store = new Stored(LocalStore.prefix + this.id);
+        this.store = new Stored(LocalStore.prefix + this.config.id);
+        this.status('local',
+                    "The editor content is saved locally in this browser.");
         queueMicrotask(() => {  // State cannot be changed in constructor
             const text = this.store.get();
             this.view.dispatch(text !== undefined ? this.setText(text) : {},
@@ -192,14 +193,13 @@ class LocalStore extends Store {
         }
         const doc = update.state.doc;
         this.schedule(() => {
-            this.store.set(doc.eq(this.initial) ? undefined : doc.toString());
+            this.store.set(doc.eq(this.config.initial) ? undefined
+                                                       : doc.toString());
         });
     }
 }
 
-export function localStore(id, initial) {
-    return LocalStore.define(id, initial);
-}
+export function localStore(config) { return LocalStore.define(config); }
 
 // Update the text of editors when their stored content changes.
 on(window).storage(e => {
@@ -222,11 +222,12 @@ class CollabStore extends Store {
     constructor(view) {
         super(view);
         this.mu = new Mutex();
+        this.status('init', "Loading...");
         this.ready = this.init();  // Background
     }
 
     async init() {
-        const {version, text} = await api.editor({init: this.id});
+        const {version, text} = await api.editor({init: this.config.id});
         // TODO: Show message and retry on failure
         const trs = new Transactions(this.view.state);
         // This needs to be a separate transaction, otherwise the change is
@@ -239,9 +240,10 @@ class CollabStore extends Store {
             })),
         }, this.readOnly(false));
         this.view.dispatch(trs);
+        this.saved();
         // TODO: Fix inconsistency if two clients have different origText and
         // the store has no text (version = 0)
-        this.watch = new api.Watch({name: 'editor', editor: this.id},
+        this.watch = new api.Watch({name: 'editor', editor: this.config.id},
                                    data => this.onRemoteUpdate(data));
         api.events.sub({add: [this.watch]});  // Background
     }
@@ -249,6 +251,10 @@ class CollabStore extends Store {
     destroy() {
         api.events.sub({remove: [this.watch]});  // Background
         super.destroy();
+    }
+
+    saved() {
+        this.status('saved', "The editor content is saved in the cloud.");
     }
 
     update(update) {
@@ -259,14 +265,8 @@ class CollabStore extends Store {
         const version = collab.getSyncedVersion(this.view.state);
         if (data.version === version) return;
         console.log(`Remote update: ${version} => ${data.version}`);
-        if (data.version < version) {
-            // TODO: Show message, recommend copying text and reloading
-            console.warn(`\
-Remote version (${data.version}) < synced version (${version})`);
-            return;
-        }
         // TODO: Pull in the background
-        const {updates} = await api.editor({pull: this.id, version});
+        const {updates} = await api.editor({pull: this.config.id, version});
         this.view.dispatch(collab.receiveUpdates(
             this.view.state,
             updates.map(u => ({
@@ -274,21 +274,29 @@ Remote version (${data.version}) < synced version (${version})`);
             }))));
         if (collab.sendableUpdates(this.view.state).length > 0) {
             this.schedulePush();
+        } else {
+            this.saved();
         }
     }
 
-    schedulePush() { this.schedule(() => this.push()); }
+    schedulePush() {
+        this.status('push', "Saving...");
+        this.schedule(() => this.push());
+    }
 
     async push() {
         await this.ready;
         await this.mu.locked(async () => {
             const state = this.view.state;
             const updates = collab.sendableUpdates(state);
-            if (updates.length === 0) return;
+            if (updates.length === 0) {
+                this.saved();
+                return;
+            }
             console.log(`Pushing ${updates.length} updates`);
             // TODO: Handle request failures => retry with backoff
             const {success} = await api.editor({
-                push: this.id, version: collab.getSyncedVersion(state),
+                push: this.config.id, version: collab.getSyncedVersion(state),
                 updates: updates.map(u => ({
                     i: u.clientID, c: u.changes.toJSON(),
                 })),
@@ -299,6 +307,4 @@ Remote version (${data.version}) < synced version (${version})`);
     }
 }
 
-export function collabStore(id, initial) {
-    return CollabStore.define(id, initial);
-}
+export function collabStore(config) { return CollabStore.define(config); }
