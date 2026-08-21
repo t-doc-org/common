@@ -7,8 +7,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, opt_bool, opt_classes, report_exceptions, Role, \
-              to_base64
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ def setup(app):
     app.add_node(quiz_check, html=(visit_quiz_check, depart_quiz_check))
     app.connect('html-page-context', add_js)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -57,12 +56,12 @@ named_types = (quiz_ph,) + field_types
 class Quiz(docutils.SphinxDirective):
     optional_arguments = 2
     option_spec = {
-        'class': opt_classes,
+        'class': ext.opt_classes,
         'style': directives.unchanged,
     }
     has_content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         typ = self.arguments[0] if len(self.arguments) > 0 else 'static'
         gen = self.arguments[1] if len(self.arguments) > 1 else None
@@ -158,7 +157,7 @@ def depart_quiz(self, node):
     self.body.append('</tdoc-quiz>\n')
 
 
-class QuizPh(Role):
+class QuizPh(ext.Role):
     def run(self):
         node = quiz_ph()
         self.set_source_info(node)
@@ -173,7 +172,7 @@ def visit_quiz_ph(self, node):
     raise nodes.SkipNode()
 
 
-class QuizHint(Role):
+class QuizHint(ext.Role):
     def run(self):
         node = quiz_hint()
         self.set_source_info(node)
@@ -181,7 +180,7 @@ class QuizHint(Role):
         return [node], []
 
 
-class QuizField(Role):
+class QuizField(ext.Role):
     options = {
         'check': directives.unchanged,
         'right': directives.unchanged,
@@ -189,7 +188,7 @@ class QuizField(Role):
     }
     content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         node = self.node_type()
         self.set_source_info(node)
@@ -218,7 +217,7 @@ def set_style(node, options):
 
 
 def attributes(node):
-    attrs = {'data-text': to_base64(node['text'])}
+    attrs = {'data-text': ext.to_base64(node['text'])}
     if v := node.get('style'): attrs['style'] = v
     if v := node.get('role'): attrs['data-role'] = v
     if v := node.get('check'): attrs['data-check'] = v
@@ -265,16 +264,16 @@ def visit_quiz_select(self, node):
 class QuizCheck(docutils.SphinxDirective):
     optional_arguments = 1
     option_spec = {
-        'class': opt_classes,
+        'class': ext.opt_classes,
         'hint': directives.unchanged,
-        'multi': opt_bool,
-        'randomize': opt_bool,
+        'multi': ext.opt_bool,
+        'randomize': ext.opt_bool,
         'right': directives.unchanged,
         'style': directives.unchanged,
     }
     has_content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
         if len(children) != 1 or not isinstance(children[0], nodes.bullet_list):

@@ -5,7 +5,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, opt_bool, opt_classes, report_exceptions
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def setup(app):
     app.add_directive('iframe', IFrame)
     app.add_directive('youtube', YouTube)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -44,15 +44,15 @@ class IFrame(docutils.SphinxDirective):
     required_arguments = 1
     option_spec = {
         'allow': directives.unchanged,
-        'class': opt_classes,
-        'credentialful': opt_bool,
+        'class': ext.opt_classes,
+        'credentialful': ext.opt_bool,
         'referrerpolicy': directives.unchanged,
         'sandbox': directives.unchanged,
         'style': directives.unchanged,
         'title': directives.unchanged,
     }
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         node = iframe(
             src=self.get_src(self.arguments[0]),

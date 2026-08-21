@@ -4,7 +4,7 @@
 from docutils import nodes
 from sphinx.util import logging
 
-from . import __version__, Dyn
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -12,13 +12,13 @@ _log = logging.getLogger(__name__)
 def setup(app):
     app.add_directive('mermaid', Mermaid)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
 
 
-class Mermaid(Dyn):
+class Mermaid(ext.Dyn):
     has_content = True
 
     def populate(self, node):

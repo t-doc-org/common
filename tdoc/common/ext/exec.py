@@ -11,9 +11,7 @@ import pyjson5
 from sphinx.directives import code
 from sphinx.util import display, logging, osutil
 
-from . import __version__, editor_options, format_attrs, merge_dict, meta, \
-              opt_classes, opt_names, opt_set, parse_editor_options, \
-              report_exceptions, UniqueChecker
+from .. import ext
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -22,7 +20,7 @@ _base = pathlib.Path(__file__).parent.resolve().parent
 def setup(app):
     app.add_directive('exec', Exec)
     app.add_node(exec, html=(visit_exec, depart_exec))
-    app.add_env_collector(UniqueChecker('exec-editor',
+    app.add_env_collector(ext.UniqueChecker('exec-editor',
         lambda doctree: ((n, n.get('editor')) for n in doctree.findall(exec)),
         lambda v: f"{{exec}}: Duplicate :editor: ID: {v}"))
     app.connect('doctree-resolved', check_nodes)
@@ -33,7 +31,7 @@ def setup(app):
     app.connect('config-inited', set_python_modules)
     app.connect('write-started', write_static_files)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -41,17 +39,17 @@ def setup(app):
 
 class Exec(code.CodeBlock):
     required_arguments = 1
-    option_spec = code.CodeBlock.option_spec | editor_options | {
-        'after': opt_names,
-        'class': opt_classes,
+    option_spec = code.CodeBlock.option_spec | ext.editor_options | {
+        'after': ext.opt_names,
+        'class': ext.opt_classes,
         'console-style': directives.unchanged,
         'env': directives.unchanged,
         'include': directives.unchanged_required,
         'output-style': directives.unchanged,
         'reset': lambda c: directives.choice(c, ('show', 'hide', 'auto')),
         'style': directives.unchanged,
-        'then': opt_names,
-        'when': opt_set('click', 'load'),
+        'then': ext.opt_names,
+        'when': ext.opt_set('click', 'load'),
     }
 
     @staticmethod
@@ -61,7 +59,7 @@ class Exec(code.CodeBlock):
             nodes.setdefault(node['runner'], []).append(node)
         return nodes
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         if include := self.options.get('include'):
             content = statemachine.StringList()
@@ -91,7 +89,7 @@ class Exec(code.CodeBlock):
         if name is not None: node['name'] = name
         if v := self.options.get('after'): node['after'] = v
         if v := self.options.get('console-style'): node['console-style'] = v
-        parse_editor_options(self.options, node)
+        ext.parse_editor_options(self.options, node)
         if v := self.options.get('output-style'): node['output-style'] = v
         if (v := self.options.get('reset')) and v != 'hide': node['reset'] = v
         if v := self.options.get('style'): node['style'] = v
@@ -103,7 +101,7 @@ class exec(nodes.literal_block): pass
 
 
 def check_nodes(app, doctree, docname):
-    md = meta(app.env, docname, 'exec', {})
+    md = ext.meta(app.env, docname, 'exec', {})
     for runner, nodes in Exec.find_nodes(doctree).items():
         # Check references.
         names = set()
@@ -135,7 +133,7 @@ def check_refs(node, names, runner, typ, doctree):
 def set_html_page_config(app, docname, config, doctree):
     if docname is None or doctree is None: return
     cfg = {}
-    md = meta(app.env, docname, 'exec', {})
+    md = ext.meta(app.env, docname, 'exec', {})
     for runner, nodes in Exec.find_nodes(doctree).items():
         c = cfg[runner] = md.get(runner, {}).copy()
         if envs := set(n['env'] for n in nodes if n['when']):
@@ -159,7 +157,7 @@ _default_metadata = {
 }
 
 def set_default_metadata(app, config):
-    merge_dict(app.config.metadata, _default_metadata, override=False)
+    ext.merge_dict(app.config.metadata, _default_metadata, override=False)
 
 
 def set_python_modules(app, config):
@@ -211,7 +209,7 @@ def visit_exec(self, node):
         return self.visit_literal_block(node)
     except nodes.SkipNode:
         def subst(m): return f'{m.group(1)} {attrs}{m.group(2)}'
-        attrs = format_attrs(self,
+        attrs = ext.format_attrs(self,
             after=' '.join(node.get('after', ())) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
@@ -224,7 +222,7 @@ def visit_exec(self, node):
             when=' '.join(sorted(node['when'])) or None)
         if attrs:
             self.body[-1] = div_attrs_re.sub(subst, self.body[-1], count=1)
-        if attrs := format_attrs(self, style=node.get('style')):
+        if attrs := ext.format_attrs(self, style=node.get('style')):
             self.body[-1] = pre_attrs_re.sub(subst, self.body[-1], count=1)
         self.body[-1] = tag_re.sub(
             lambda m: f'<tdoc-exec {m.group(1)}</tdoc-exec>', self.body[-1])

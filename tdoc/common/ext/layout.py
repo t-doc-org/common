@@ -9,7 +9,7 @@ from docutils.transforms import misc
 import markupsafe
 from sphinx.util import docutils, logging
 
-from . import __version__, opt_classes, report_exceptions, Role
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -30,13 +30,13 @@ def setup(app):
     app.connect('doctree-read', move_blocks, priority=499)
     app.connect('html-page-context', set_html_context)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
 
 
-class Space(Role):
+class Space(ext.Role):
     def run(self):
         node = span('', classes=[f'tdoc-{self.name}'],
                     attrs={'style': f'{self.attr}:{self.text}'})
@@ -60,7 +60,7 @@ def leave_span(self, node):
     self.body.append('</span>')
 
 
-class Leader(Role):
+class Leader(ext.Role):
     def run(self):
         parts = self.text.split('|', 1)
         if len(parts) == 1:
@@ -84,7 +84,7 @@ class Block(docutils.SphinxDirective):
     required_arguments = 1
     has_content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
         node = block('', *children, type=self.arguments[0])
@@ -95,10 +95,10 @@ class Block(docutils.SphinxDirective):
 class Blocks(docutils.SphinxDirective):
     required_arguments = 1
     option_spec = {
-        'class': opt_classes,
+        'class': ext.opt_classes,
     }
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         node = blocks(type=self.arguments[0])
         self.set_source_info(node)
@@ -155,12 +155,12 @@ def closest_section(node):
 class ListGrid(docutils.SphinxDirective):
     option_spec = {
         'cell-style': directives.unchanged,
-        'class': opt_classes,
+        'class': ext.opt_classes,
         'style': directives.unchanged,
     }
     has_content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
         if len(children) != 1 or not isinstance(children[0], nodes.bullet_list):

@@ -7,7 +7,8 @@ from docutils.parsers import rst
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, merge_dict, patch, report_exceptions
+from . import patch
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def setup(app):
     app.add_config_value('tdoc_directive_defaults', {}, 'env', dict)
     app.connect('config-inited', set_config_defaults)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -28,8 +29,8 @@ _directive_defaults = {
 }
 
 def set_config_defaults(app, config):
-    merge_dict(config.tdoc_directive_defaults, _directive_defaults,
-               override=False)
+    ext.merge_dict(config.tdoc_directive_defaults, _directive_defaults,
+                   override=False)
 
 
 @patch.patch(directives, 'directive')
@@ -81,7 +82,7 @@ class Defaults(docutils.SphinxDirective):
     option_spec = DefaultsOpts()
     has_content = False
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         # Find the directive class.
         name = self.arguments[0].lower()

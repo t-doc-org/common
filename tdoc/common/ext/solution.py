@@ -6,9 +6,10 @@ from docutils.parsers.rst.directives import admonitions
 from sphinx import config
 from sphinx.util import logging
 
-from . import _, __version__, meta, opt_bool
+from .. import ext
 
 _log = logging.getLogger(__name__)
+_ = ext._
 
 
 def setup(app):
@@ -16,7 +17,7 @@ def setup(app):
     app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('html-page-context', add_header_button, priority=500.5)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -29,8 +30,8 @@ class Solution(admonitions.BaseAdmonition):
     node_class = solution
     optional_arguments = 1
     option_spec = admonitions.BaseAdmonition.option_spec | {
-        'expand': opt_bool,
-        'show': opt_bool,
+        'expand': ext.opt_bool,
+        'show': ext.opt_bool,
     }
 
     def run(self):
@@ -55,7 +56,7 @@ def add_header_button(app, docname, template, context, doctree):
     if doctree is None: return
     if all('always-show' in sol['classes']
            for sol in doctree.findall(solution)): return
-    v = meta(app.env, docname, 'solutions', 'dynamic')
+    v = ext.meta(app.env, docname, 'solutions', 'dynamic')
     if v not in ('show', 'hide', 'dynamic'):
         _log.warning(f"{{solution}}: Invalid 'solutions' value: {v}")
         v = app.env.metadata[docname]['solutions'] = 'show'

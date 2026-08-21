@@ -9,7 +9,8 @@ from sphinx.environment import collectors
 from sphinx.environment.adapters import toctree
 from sphinx.util import docutils, logging, nodes as sphinx_nodes
 
-from . import __version__, meta, ReferenceRole, report_exceptions, Role, table
+from . import table
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def setup(app):
     app.connect('doctree-resolved', handle_points, priority=499)
 
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -65,7 +66,7 @@ def update_numfig_format(app, config):
             numfig_format[k] = no_num
 
 
-class Num(ReferenceRole):
+class Num(ext.ReferenceRole):
     def run(self):
         node = num()
         self.set_source_info(node)
@@ -213,8 +214,8 @@ def depart_num(self, node):
     self.body.append('</span>')
 
 
-class Points(Role):
-    @report_exceptions
+class Points(ext.Role):
+    @ext.report_exceptions
     def run(self):
         node = points()
         self.set_source_info(node)
@@ -235,9 +236,9 @@ class points(nodes.Inline, nodes.TextElement): pass
 
 def handle_points(app, doctree, docname):
     # Format points values, in the document body and in the TOC.
-    fmt = meta(app.env, docname, 'points.format', "{0:.3g}")
-    tfmt = meta(app.env, docname, 'points.text',
-                [" ({0} point)", " ({0} points)"])
+    fmt = ext.meta(app.env, docname, 'points.format', "{0:.3g}")
+    tfmt = ext.meta(app.env, docname, 'points.text',
+                    [" ({0} point)", " ({0} points)"])
     if isinstance(tfmt, str): tfmt = [tfmt, tfmt]
     tfmt = [f.format(fmt) for f in tfmt]
     pns = [(pn, pn.parent.next_node(num)) for pn in doctree.findall(points)]

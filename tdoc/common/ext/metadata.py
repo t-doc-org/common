@@ -8,7 +8,7 @@ from docutils import nodes
 import pyjson5
 from sphinx.util import docutils, logging
 
-from . import __version__, merge_dict, opt_bool, report_exceptions
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def setup(app):
     app.connect('env-updated', extract_metadata)
     app.connect('html-page-context', add_head_elements)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -43,10 +43,10 @@ class Metadata(docutils.SphinxDirective):
     optional_arguments = 1
     has_content = True
     option_spec = {
-        'recursive': opt_bool,
+        'recursive': ext.opt_bool,
     }
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         fmt = self.arguments[0] if self.arguments else 'yaml'
         if (parse := parsers.get(fmt)) is None:
@@ -59,7 +59,7 @@ class Metadata(docutils.SphinxDirective):
 
 def set_base_metadata(app, doctree):
     # Apply base metadata from config.
-    merge_dict(app.env.metadata[app.env.docname], app.config.metadata)
+    ext.merge_dict(app.env.metadata[app.env.docname], app.config.metadata)
 
 
 def extract_metadata(app, env):
@@ -72,13 +72,13 @@ def extract_metadata(app, env):
 
     # Apply recursive metadata from parent pages.
     def apply_recursive(docname, parent_attrs):
-        if parent_attrs: merge_dict(env.metadata[docname], parent_attrs)
+        if parent_attrs: ext.merge_dict(env.metadata[docname], parent_attrs)
         if not (children := env.toctree_includes.get(docname)): return
 
         attrs = copy.deepcopy(parent_attrs)
         for node in env.get_doctree(docname).findall(
                 lambda n: isinstance(n, metadata) and n['recursive']):
-            if (v := node['attrs']) is not None: merge_dict(attrs, v)
+            if (v := node['attrs']) is not None: ext.merge_dict(attrs, v)
         for child in children: apply_recursive(child, attrs)
 
     apply_recursive(app.config.root_doc, {})
@@ -87,7 +87,7 @@ def extract_metadata(app, env):
     for docname in env.found_docs:
         md = env.metadata[docname]
         for node in env.get_doctree(docname).findall(metadata):
-            if (v := node['attrs']) is not None: merge_dict(md, v)
+            if (v := node['attrs']) is not None: ext.merge_dict(md, v)
 
     # Force a rebuild of pages whose metadata has changed.
     return [docname for docname, md in env.metadata.items()

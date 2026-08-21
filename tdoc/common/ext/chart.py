@@ -3,7 +3,7 @@
 
 from sphinx.util import logging
 
-from . import __version__, Dyn, dyn
+from .. import ext
 
 _log = logging.getLogger(__name__)
 
@@ -12,13 +12,13 @@ def setup(app):
     app.add_directive('chartjs', ChartJs)
     app.connect('html-page-context', add_css_js)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
 
 
-class ChartJs(Dyn):
+class ChartJs(ext.Dyn):
     required_arguments = 1
     has_content = True
 
@@ -27,5 +27,5 @@ class ChartJs(Dyn):
 
 
 def add_css_js(app, page, template, context, doctree):
-    if doctree and doctree.next_node(dyn.has_type('chartjs')) is not None:
+    if doctree and doctree.next_node(ext.dyn.has_type('chartjs')) is not None:
         app.add_js_file('tdoc/chart.js', type='module')

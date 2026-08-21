@@ -7,8 +7,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from sphinx.util import docutils, logging
 
-from . import __version__, opt_classes, report_exceptions, UniqueChecker
-from .. import util
+from .. import ext, util
 
 _log = logging.getLogger(__name__)
 
@@ -18,12 +17,12 @@ def setup(app):
     app.add_node(poll, html=(visit_poll, depart_poll))
     app.add_node(answers, html=(visit_answers, depart_answers))
     app.add_node(answer, html=(visit_answer, depart_answer))
-    app.add_env_collector(UniqueChecker('poll-id',
+    app.add_env_collector(ext.UniqueChecker('poll-id',
         lambda doctree: ((n, n['id']) for n in doctree.findall(poll)),
         lambda v: f"{{poll}}: Duplicate poll ID: {v}"))
     app.connect('html-page-context', add_js)
     return {
-        'version': __version__,
+        'version': ext.__version__,
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
@@ -36,11 +35,11 @@ class Poll(docutils.SphinxDirective):
         'number': lambda c: directives.choice(c,
             ('none', 'decimal', 'lower-alpha', 'upper-alpha')),
         'close-after': directives.unchanged,
-        'class': opt_classes,
+        'class': ext.opt_classes,
     }
     has_content = True
 
-    @report_exceptions
+    @ext.report_exceptions
     def run(self):
         children = self.parse_content_to_nodes()
         if any(True for c in children for n in c.findall(poll)):
