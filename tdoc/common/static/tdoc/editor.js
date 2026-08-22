@@ -177,6 +177,8 @@ class Store {
 }
 
 // Ensure that the text of editors is stored before navigating away.
+// TODO: Flush in visibilitychange, block in beforeunload
+// TODO: Use "keepalive: true" for push request when flushing
 on(window).beforeunload(() => {
     for (const store of Store.instances.values()) store.flush();
     // TODO: Ask for confirmation if there are unsaved changes
@@ -337,20 +339,21 @@ class CollabStore extends Store {
             version: collab.getSyncedVersion(this.view.state),
         });
         if (this._stop) return;
-        this.view.dispatch(collab.receiveUpdates(
-            this.view.state,
-            updates.map(u => ({
-                clientID: u.i, changes: state.ChangeSet.fromJSON(u.c),
-            }))));
+        const up = [];
+        for (const [c, us] of updates) {
+            for (const u of us) {
+                up.push({clientID: c, changes: state.ChangeSet.fromJSON(u)});
+            }
+        }
+        this.view.dispatch(collab.receiveUpdates(this.view.state, up));
     }
 
     async push() {
         const st = this.view.state;
         const {success} = await api.editor({
             push: this.config.id, version: collab.getSyncedVersion(st),
-            updates: collab.sendableUpdates(st).map(u => ({
-                i: u.clientID, c: u.changes.toJSON(),
-            })),
+            client: collab.getClientID(st),
+            updates: collab.sendableUpdates(st).map(u => u.changes.toJSON()),
             text: st.doc.toJSON(),
         });
         return success;

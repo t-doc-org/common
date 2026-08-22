@@ -119,10 +119,12 @@ class Api(wsgi.Dispatcher):
                 updates = db.editors.history(origin, editor, instance, version)
                 return {'updates': updates}
         elif editor := req.get('push'):
-            version, updates, text = args(req, 'version', 'updates', 'text')
+            version, client, updates, text = args(req, 'version', 'client',
+                                                  'updates', 'text')
             with wr.write_db as db:
                 success = db.editors.add_updates(
-                    origin, editor, instance, version, updates, text, wr.user)
+                    origin, editor, instance, version, client,
+                    updates, text, wr.user)
             return {'success': success}
         raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 

@@ -593,23 +593,25 @@ class Editors(database.ConnNamespace):
             where (origin, editor, instance) = (?, ?, ?)
         """, (origin, editor, instance), default=(None,))[0]
         if iid is None: return []
-        updates = []
-        for v, us in self.execute("""
-                    select version, updates from editor_histories
+        updates, wv = [], version - 1
+        for v, c, us in self.execute("""
+                    select version, client, updates from editor_histories
                     where instance = ? and version >= ?
                     order by version
                 """, (iid, version)):
             us = json.loads(us)
             if not updates and (lu := v - version + 1) < len(us): us = us[:lu]
-            updates.extend(us)
-            if v != version + len(updates) - 1:
+            updates.append((c, us))
+            wv += len(us)
+            if v != wv:
                 raise database.Error(
                     f"Inconsistent editor history entry at version {v}")
         return updates
 
-    def add_updates(self, origin, editor, instance, version, updates, text,
-                    user):
+    def add_updates(self, origin, editor, instance, version, client, updates,
+                    text, user):
         if len(editor) > max_id_len: raise database.Error("Invalid editor ID")
+        if len(client) > max_id_len: raise database.Error("Invalid client ID")
         if not isinstance(updates, list):
             raise database.Error("Invalid type for updates")
         if len(updates) == 0: return True
@@ -637,9 +639,10 @@ class Editors(database.ConnNamespace):
             """, (version, util.to_json(text), iid))
         self.execute("""
             insert into editor_histories
-                (instance, version, updates, time, user)
-            values (?, ?, ?, ?, ?)
-        """, (iid, version, util.to_json(updates), time.time_ns(), user))
+                (instance, version, client, updates, time, user)
+            values (?, ?, ?, ?, ?, ?)
+        """, (iid, version, client, util.to_json(updates), time.time_ns(),
+              user))
         self.notify(self.instance_key(origin, editor, instance))
         return True
 
@@ -996,6 +999,7 @@ class Store(database.Database):
             create table editor_histories (
                 instance integer not null,
                 version integer not null,
+                client text not null,
                 updates text not null,
                 time integer not null,
                 user integer,
