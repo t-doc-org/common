@@ -11,6 +11,7 @@ import secrets
 import sys
 import threading
 import time
+from urllib import parse
 from wsgiref import util as wsgiutil
 
 from . import logs, util
@@ -93,6 +94,17 @@ def token_cookie_header(token):
     m.update(_token_cookie_attrs)
     m['max-age'] = 400 * 24 * 3600 if token else 0
     return ('Set-Cookie', m.OutputString())
+
+
+def origin(url):
+    return parse.urlunparse(parse.urlparse(url)._replace(
+            path='', params='', query='', fragment=''))
+
+
+def with_hash_params(url, params):
+    parts = parse.urlparse(url)
+    parts = parts._replace(fragment='?' + parse.urlencode(params))
+    return parse.urlunparse(parts)
 
 
 class Request:

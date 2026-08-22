@@ -128,6 +128,23 @@ export function htmlFragment(html) {
     return el.content;
 }
 
+// Render the given value as an HTML snippet.
+function asHtml(v) {
+    if (v === undefined || v === '') {
+        return '';
+    } else if (v === null) {
+        return 'null';
+    } else if (v instanceof Element) {
+        return v.outerHTML;
+    } else if (v instanceof DocumentFragment) {
+        const el = document.createElement('template');
+        el.content.append(v);
+        return el.innerHTML;
+    } else {
+        return escape(v.toString());
+    }
+}
+
 // Perform string interpolation of an HTML snippet.
 function interpolateHtml(html, values) {
     if (html.length === 1 && (values[0] === undefined || values[0] === '')) {
@@ -136,20 +153,8 @@ function interpolateHtml(html, values) {
     const parts = [];
     for (const [i, s] of html.entries()) {
         parts.push(s);
-        const v = values[i];
-        if (v === undefined || v === '') {
-            continue;
-        } else if (v === null) {
-            parts.push('null');
-        } else if (v instanceof Element) {
-            parts.push(v.outerHTML);
-        } else if (v instanceof DocumentFragment) {
-            const el = document.createElement('template');
-            el.content.append(v);
-            parts.push(el.innerHTML);
-        } else {
-            parts.push(escape(v.toString()));
-        }
+        const v = asHtml(values[i]);
+        if (v) parts.push(v);
     }
     return parts.join('');
 }
@@ -189,11 +194,6 @@ export class HtmlError extends Error {
 export function htmle(tmpl, ...values) {
     return new HtmlError(html(tmpl, ...values));
 }
-
-// Display alerts for unhandled exceptions in promises.
-addEventListener('unhandledrejection', async e => {
-    await showAlert(e.reason);
-});
 
 // Query a single matching element below an element.
 export function qs(el, selector) {
@@ -386,55 +386,6 @@ export function addTooltip(el, opts) {
         ...opts,
     });
 }
-
-// Show an alert at the top of the article.
-export async function showAlert(message, kind = 'success') {
-    if (message instanceof Error) {
-        const e = HtmlError.of(message);
-        [message, kind] = [e.html, e.kind ?? 'danger'];
-    }
-    await domLoaded;
-    let el = qs(document, '.tdoc-alerts');
-    if (!el) {
-        el = qs(document, '.bd-header-article').appendChild(elmt`\
-<div class="tdoc-alerts"></div>`);
-    }
-    el.appendChild(elmt`\
-<div class="alert alert-${kind} alert-dismissible" role="alert">\
-<div>${message}</div>\
-<button type="button" class="btn-close" data-bs-dismiss="alert"\
- aria-label="Close"></button>\
-`);
-}
-
-// Show a modal dialog.
-export function showModal(el) {
-    const modal = new bootstrap.Modal(el);
-    on(el)['hide.bs.modal'](() => document.activeElement.blur());
-    on(el)['hidden.bs.modal'](() => {
-        modal.dispose();
-        el.remove();
-    });
-    modal.show();
-    return modal;
-}
-
-// Call the given function, and set its return value or any thrown exceptions as
-// text content of the .message element.
-export async function toModalMessage(modal, fn) {
-    let msg, err = false;
-    try {
-        msg = await fn();
-    } catch (e) {
-        msg = e.message;
-        err = true;
-    }
-    const el = qs(modal, '.message');
-    el.textContent = msg ?? "";
-    el.classList.toggle('text-danger', err);
-    el.classList.toggle('text-success', !err);
-}
-
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 // TODO: Typeset automatically using a web component
@@ -941,6 +892,78 @@ export class RateLimited {
         if (fn) fn();
 
     }
+}
+
+
+const alerts = new StoredJson('tdoc:alerts', undefined, sessionStorage);
+
+// Show an alert at the top of the article.
+export async function showAlert(message,
+                                {kind = 'success', load = false} = {}) {
+    if (message instanceof Error) {
+        const e = HtmlError.of(message);
+        [message, kind] = [e.html, e.kind ?? 'danger'];
+    }
+    if (load) {
+        const as = alerts.get() ?? [];
+        as.push({html: asHtml(message), kind});
+        alerts.set(as);
+        return;
+    }
+    await domLoaded;
+    let el = qs(document, '.tdoc-alerts');
+    if (!el) {
+        el = qs(document, '.bd-header-article').appendChild(elmt`\
+<div class="tdoc-alerts"></div>`);
+    }
+    el.appendChild(elmt`\
+<div class="alert alert-${kind} alert-dismissible" role="alert">\
+<div>${message}</div>\
+<button type="button" class="btn-close" data-bs-dismiss="alert"\
+ aria-label="Close"></button>\
+`);
+}
+
+// Display alerts for unhandled exceptions in promises.
+addEventListener('unhandledrejection', async e => {
+    await showAlert(e.reason);
+});
+
+(async () => {
+    const as = alerts.get();
+    if (as === undefined) return;
+    alerts.set(undefined);
+    for (const {html, kind} of as) {
+        await showAlert(htmlFragment(html), {kind});
+    }
+})();
+
+// Show a modal dialog.
+export function showModal(el) {
+    const modal = new bootstrap.Modal(el);
+    on(el)['hide.bs.modal'](() => document.activeElement.blur());
+    on(el)['hidden.bs.modal'](() => {
+        modal.dispose();
+        el.remove();
+    });
+    modal.show();
+    return modal;
+}
+
+// Call the given function, and set its return value or any thrown exceptions as
+// text content of the .message element.
+export async function toModalMessage(modal, fn) {
+    let msg, err = false;
+    try {
+        msg = await fn();
+    } catch (e) {
+        msg = e.message;
+        err = true;
+    }
+    const el = qs(modal, '.message');
+    el.textContent = msg ?? "";
+    el.classList.toggle('text-danger', err);
+    el.classList.toggle('text-success', !err);
 }
 
 export class TdocElement extends HTMLElement {

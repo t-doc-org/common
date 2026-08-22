@@ -653,53 +653,46 @@ class OidcAuthApi(wsgi.Dispatcher):
     @wsgi.json_endpoint('login')
     def handle_login(self, wr, req):
         token = wr.token
-
-        # Handle "log in as" in local mode.
-        if wr.local and (ruser := req.get('user')):
-            with wr.write_db as db:
+        auth = wr.uri(include_query=False).rsplit('/', 1)[0]
+        redirect_uri = f'{auth}/redirect'
+        issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
+        if (href_origin := wsgi.origin(href)) != wr.origin:
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
+        state_id = secrets.token_urlsafe()
+        state = {'cnonce': cnonce, 'href': href}
+        query = {'state': state_id}
+        if wr.local and issuer.startswith('local:'):
+            # Handle "log in as" in local mode.
+            if wr.user is not None or href_origin != wsgi.origin(redirect_uri):
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            with wr.read_db as db:
                 try:
-                    uid = db.users.uid(ruser)
+                    uid = db.users.uid(issuer[6:])
                 except Exception as e:
                     raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
-                if (token := db.tokens.find(uid)) is None:
-                    token, = db.tokens.create([uid])
-            wr.set_token_cookie(token)
-            return {}
-
-        # Handle OIDC login.
-        issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
-        href_origin = parse.urlunparse(parse.urlparse(href)._replace(
-            path='', params='', query='', fragment=''))
-        if href_origin != wr.env.get('HTTP_ORIGIN'):
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
-        icfg, disc = self.issuer(issuer)
-        if icfg is None: raise wsgi.Error(HTTPStatus.BAD_REQUEST)
-        state, nonce = secrets.token_urlsafe(), secrets.token_urlsafe()
-        # Create the PKCE challenge as per RFC7636
-        # <https://datatracker.ietf.org/doc/html/rfc7636>.
-        verifier = secrets.token_urlsafe(32)
-        challenge = base64.urlsafe_b64encode(hashlib.sha256(
-            verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
+            state.update(login_as=str(uid))
+            url = parse.urlparse(redirect_uri)
+        else:
+            # Handle OIDC login.
+            icfg, disc = self.issuer(issuer)
+            if icfg is None: raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            nonce = secrets.token_urlsafe()
+            # Create the PKCE challenge as per RFC7636
+            # <https://datatracker.ietf.org/doc/html/rfc7636>.
+            verifier = secrets.token_urlsafe(32)
+            challenge = base64.urlsafe_b64encode(hashlib.sha256(
+                verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
+            state.update(issuer=issuer, nonce=nonce, verifier=verifier,
+                         user=wr.user, token=token)
+            url = parse.urlparse(disc['authorization_endpoint'])
+            query.update(client_id=icfg['client_id'], code_challenge=challenge,
+                         code_challenge_method='S256', nonce=nonce,
+                         prompt='select_account', redirect_uri=redirect_uri,
+                         response_type='code', scope='openid profile email')
         with wr.write_db as db:
-            db.oidc.create_state(state, {
-                'issuer': issuer, 'cnonce': cnonce, 'nonce': nonce,
-                'verifier': verifier, 'user': wr.user, 'token': token,
-                'href': href,
-            })
-        auth = wr.uri().rsplit('/', 1)[0]
-        parts = parse.urlparse(disc['authorization_endpoint'])
-        parts = parts._replace(query=parse.urlencode({
-            'client_id': icfg['client_id'],
-            'code_challenge': challenge,
-            'code_challenge_method': 'S256',
-            'nonce': nonce,
-            'prompt': 'select_account',
-            'redirect_uri': f'{auth}/redirect',
-            'response_type': 'code',
-            'scope': 'openid profile email',
-            'state': state,
-        }))
-        return {'redirect': parse.urlunparse(parts)}
+            db.oidc.create_state(state_id, state)
+        url = url._replace(query=parse.urlencode(query))
+        return {'redirect': parse.urlunparse(url)}
 
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
                    log_query=False)
@@ -707,13 +700,17 @@ class OidcAuthApi(wsgi.Dispatcher):
         qs = parse.parse_qs(wr.query)
         if (state := qs.get('state')) is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing state")
-        href, params = None, None
+        state, href, params = state[0], None, None
         try:
             with wr.write_db as db:
-                if (data := db.oidc.state(state[0])) is None:
+                if (state := db.oidc.state(state)) is None:
                     raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
-                href = data['href']
-                params = self._handle_redirect(wr, qs, db, data)
+                href, cnonce = state['href'], state['cnonce']
+                handle = self._handle_local_redirect \
+                         if wr.local and 'login_as' in state \
+                         else self._handle_redirect
+                handle(wr, qs, db, state)
+                params = {'auth': cnonce}
         except wsgi.Error:
             raise
         except Exception as e:
@@ -723,9 +720,13 @@ class OidcAuthApi(wsgi.Dispatcher):
                       event='oidc:login:error')
         if href is None or params is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
-        parts = parse.urlparse(href)
-        parts = parts._replace(fragment='?' + parse.urlencode(params))
-        return wr.redirect(parse.urlunparse(parts))
+        return wr.redirect(wsgi.with_hash_params(href, params))
+
+    def _handle_local_redirect(self, wr, qs, db, state):
+        uid = db.users.uid(int(state['login_as']))
+        if (token := db.tokens.find(uid)) is None:
+            token, = db.tokens.create([uid])
+        wr.set_token_cookie(token)
 
     def _handle_redirect(self, wr, qs, db, state):
         if (err := self.get_error(qs)) is not None:
@@ -791,7 +792,6 @@ class OidcAuthApi(wsgi.Dispatcher):
         db.oidc.add_login(user, id_token)
         token, = db.tokens.create([user])
         wr.set_token_cookie(token)
-        return {'auth': state['cnonce']}
 
     def get_error(self, qs):
         if (err := qs.get('error')) is None: return

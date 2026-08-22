@@ -34,8 +34,6 @@ export async function call(path, opts) {
     });
 }
 
-// TODO: Force page reload on user change
-// TODO: Use sessionStorage for post-reload messages
 // TODO: Remove obsolete code related to tokens in local storage
 
 class Auth extends EventTarget {
@@ -82,14 +80,17 @@ class Auth extends EventTarget {
                         await this.showSettingsModal(
                             "The login has been added successfully.");
                     } else {
-                        await this.showSuccessAlert(await this.name());
+                        const user = await this.name();
+                        await showAlert(
+                            `You have logged in successfully as "${user}".`);
                     }
                 } else {
                     if (state?.modal === 'settings') {
                         await this.showSettingsModal(
-                            "The login could not be added.", 'danger');
+                            "The login could not be added.", {kind: 'danger'});
                     } else {
-                        await showAlert("Logging in has failed.", 'danger');
+                        await showAlert("Logging in has failed.",
+                                        {kind: 'danger'});
                     }
                 }
             })();  // Background
@@ -97,9 +98,9 @@ class Auth extends EventTarget {
         if (error) {
             (async () => {
                 if (state?.modal === 'settings') {
-                    await this.showSettingsModal(error, 'danger');
+                    await this.showSettingsModal(error, {kind: 'danger'});
                 } else {
-                    await showAlert(error, 'danger');
+                    await showAlert(error, {kind: 'danger'});
                 }
             })();  // Background
         }
@@ -189,32 +190,23 @@ class Auth extends EventTarget {
         return await this.call(`/auth/update`, {req});
     }
 
-    async login({issuer, user}) {
-        const req = issuer ? {
-            issuer, cnonce: (await toBase64(random(32))).replace('=', ''),
-            href: location.href,
-        } : {user};
+    async login(issuer) {
+        const req = {
+            issuer, href: location.href,
+            cnonce: (await toBase64(random(32))).replace('=', ''),
+        };
         const resp = await this.call(`/auth/login`, {req});
-        if (resp.redirect) {
-            this.state.update(v => { v.cnonce = req.cnonce; });
-            location.assign(resp.redirect);
-        } else {
-            if (!await this.updateUser(resp.token)) {
-                throw new Error(`Failed to log in as user "${user}".`);
-            }
-            await this.showSuccessAlert(await this.name());
-        }
+        this.state.update(v => { v.cnonce = req.cnonce; });
+        location.assign(resp.redirect);
     }
 
     async logout() {
         const token = await this.token();
         this.unsetUser();
         await this.call(`/auth/logout`, {token});
-        await showAlert("You have logged out successfully.", 'warning');
-    }
-
-    async showSuccessAlert(user) {
-        await showAlert(`You have logged in successfully as "${user}".`);
+        await showAlert("You have logged out successfully.",
+                        {kind: 'warning', load: true});
+        location.reload();
     }
 
     async showLoginModal() {
@@ -253,7 +245,7 @@ Log in</button>\
             e.preventDefault();
             if (!input.value) return;
             await toModalMessage(el, async () => {
-                await this.login({user: input.value});
+                await this.login(`local:${input.value}`);
                 modal.hide();
             });
         });
@@ -388,7 +380,7 @@ ${prefix} ${label}</button>\
 </div>`);
             on(btn).click(async () => {
                 await toModalMessage(modal, async () => {
-                    await this.login({issuer});
+                    await this.login(issuer);
                 });
             });
         }
