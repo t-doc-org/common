@@ -101,7 +101,7 @@ export class Runner {
 
     async init() {
         fixLineNos(this.node);
-        if (this.editable) await this.addEditor();
+        if (this.editable) this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
         this.addControls(controls);
         if (controls.children.length > 0) this.node.appendChild(controls);
@@ -134,7 +134,7 @@ export class Runner {
     get editable() { return this.editor !== undefined; }
 
     // Add an editor to the {exec} block.
-    async addEditor() {
+    addEditor() {
         this.origText = cmstate.Text.of(
             this.preText.trimEnd().split(/\r\n?|\n/));
         const runner = this;
@@ -161,9 +161,8 @@ export class Runner {
                     this.editorStatus.setAttribute('title', msg);
                 },
             };
-            // TODO: Determine "logged-in" status synchronously
             const store = this.editor.store;
-            if (store === 'cloud' && await api.auth.name() !== undefined) {
+            if (store === 'cloud' && api.auth.name !== undefined) {
                 config.extensions.push(collabStore(cfg));
             } else if (store) {
                 config.extensions.push(localStore(cfg));

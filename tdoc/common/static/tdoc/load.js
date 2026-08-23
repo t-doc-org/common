@@ -113,8 +113,8 @@ domLoaded.then(() => {
                     htmlData.tdocSolutionsState = data.show ?? 'hide';
                     updateSolutionsTooltip();
                 })]});  // Background
-            api.auth.onChange(async () => {
-                if (await api.auth.hasPerm('solutions:write')) {
+            api.auth.onChange(() => {
+                if (api.auth.hasPerm('solutions:write')) {
                     htmlData.tdocSolutionsCtrl = '';
                 } else {
                     delete htmlData.tdocSolutionsCtrl;

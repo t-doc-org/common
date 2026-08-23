@@ -663,7 +663,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         query = {'state': state_id}
         if wr.local and issuer.startswith('local:'):
             # Handle "log in as" in local mode.
-            if wr.user is not None or href_origin != wsgi.origin(redirect_uri):
+            if href_origin != wsgi.origin(redirect_uri):
                 raise wsgi.Error(HTTPStatus.BAD_REQUEST)
             with wr.read_db as db:
                 try:

@@ -4,10 +4,9 @@
 import {
     AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
     fetchJson, FifoBuffer, htmlData, localIso, on, onHashParams, page, qs,
-    qsa, showAlert, showModal, sleep, Stored, StoredJson, toBase64,
+    qsa, randomId, showAlert, showModal, sleep, Stored, StoredJson,
     toModalMessage,
 } from './core.js';
-import {random} from './crypto.js';
 
 const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
 onHashParams(['api'], api => {
@@ -26,15 +25,12 @@ const [url, bes] = (() => {
     }
     return ['/missing_api_url', ''];
 })();
-console.info(`[t-doc] API backend: ${url}`);
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, {
         ...opts, headers: {'X-Csrf': '0', ...opts?.headers},
     });
 }
-
-// TODO: Remove obsolete code related to tokens in local storage
 
 class Auth extends EventTarget {
     constructor() {
@@ -46,90 +42,87 @@ class Auth extends EventTarget {
     }
 
     async init() {
-        const updated = await onHashParams(
-            ['token', 'auth', 'auth_error'],
-            (...args) => this.onParams(...args));
-        if (!updated) {
+        const hasUser = this.user.get();
+        const state = this.state.get(), cnonce = state?.cnonce;
+        this.state.update(v => { delete v.cnonce; });
+        const [token, auth, error] = page.handleHashParams('token', 'auth',
+                                                           'auth_error');
+        if (token && !hasUser) {  // Initial login via token= URL
+            await this.postLogin(state, token);
+        } else if (auth && auth === cnonce) {  // Normal login flow
+            const done = this.postLogin(state);
+            if (!hasUser) await done;
+        } else {
+            // TODO: Get rid of domain storage, it's slow; use a cookie instead
             const domain = await this.domain.get();
-            await this.updateUser(undefined, domain.loggedIn ?? false);
+            const done = this.updateUser({force: domain.loggedIn ?? false});
+            if (!hasUser) await done;
         }
+        if (error) this.postLoginError(state, error);  // Background
 
         // Update the username shown in the user menu.
         domLoaded.then(async () => {
             await domLoaded;
             const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
             el.classList.add('disabled');
-            this.onChange(async () => {
-                const name = await this.name();
+            this.onChange(() => {
                 qs(el, '.btn__text-container').replaceChildren(
-                    name ?? "Not logged in");
+                    this.name ?? "Not logged in");
             });
         });
     }
 
-    async onParams(token, auth, error) {
-        const state = this.state.get(), cnonce = state?.cnonce;
-        this.state.update(v => { delete v.cnonce; });
-        let res = false;
-        if ((token && !this.user.get()) || (auth && auth === cnonce)) {
-            const updated = await this.updateUser(token);
-            res = true;
-            (async () => {
-                if (updated) {
-                    if (state?.modal === 'settings') {
-                        await this.showSettingsModal(
-                            "The login has been added successfully.");
-                    } else {
-                        const user = await this.name();
-                        await showAlert(
-                            `You have logged in successfully as "${user}".`);
-                    }
-                } else {
-                    if (state?.modal === 'settings') {
-                        await this.showSettingsModal(
-                            "The login could not be added.", {kind: 'danger'});
-                    } else {
-                        await showAlert("Logging in has failed.",
-                                        {kind: 'danger'});
-                    }
-                }
-            })();  // Background
-        }
-        if (error) {
-            (async () => {
+    async postLogin(state, token) {
+        const updated = await this.updateUser({token});
+        (async () => {
+            if (updated) {
                 if (state?.modal === 'settings') {
-                    await this.showSettingsModal(error, {kind: 'danger'});
+                    await this.showSettingsModal(
+                        "The login has been added successfully.");
                 } else {
-                    await showAlert(error, {kind: 'danger'});
+                    await showAlert(
+                        `You have logged in successfully as "${this.name}".`);
                 }
-            })();  // Background
-        }
-        return res;
+            } else {
+                if (state?.modal === 'settings') {
+                    await this.showSettingsModal(
+                        "The login could not be added.", {kind: 'danger'});
+                } else {
+                    await showAlert("Logging in has failed.", {kind: 'danger'});
+                }
+            }
+        })();  // Background
     }
 
-    async updateUser(token, force = true) {
-        let user = this.user.get(), res = true;
+    async postLoginError(state, error) {
+        if (state?.modal === 'settings') {
+            await this.showSettingsModal(error, {kind: 'danger'});
+        } else {
+            await showAlert(error, {kind: 'danger'});
+        }
+    }
+
+    async updateUser({token, force = true} = {}) {
+        let user = this.user.get(), res = true, loggedOut = false;
         if (force || user !== undefined) {
             try {
-                token ??= user?.token;
-                user = await call(`/user`, {
-                    credentials: 'include',
-                    headers: {...bearerAuthorization(token)},
-                });
-                if (token) user.token = token;
+                user = await this.call(`/user`, {token});
             } catch (e) {
-                if (e.cause?.status === 401) user = undefined;  // UNAUTHORIZED
                 res = false;
+                if (e.cause?.status === 401) {  // UNAUTHORIZED
+                    loggedOut = user !== undefined;
+                    user = undefined;
+                }
             }
         }
         this.set(user);
         this.domain.update(v => { v.loggedIn = user !== undefined; });  // BG
+        if (loggedOut) {
+            await showAlert("You have been logged out.",
+                            {kind: 'warning', load: true});
+            location.reload();
+        }
         return res;
-    }
-
-    unsetUser() {
-        this.set(undefined);
-        this.domain.update(v => { v.loggedIn = false; });  // Background
     }
 
     set(user) {
@@ -144,31 +137,18 @@ class Auth extends EventTarget {
         this.dispatchEvent(new CustomEvent('change'));
     }
 
-    async onChange(fn) {
-        await fn();
+    onChange(fn) {
+        fn();
         this.addEventListener('change', fn);
     }
 
-    async name() {
-        await this.ready;
-        return this.user.get()?.name;
-    }
+    get name() { return this.user.get()?.name; }
+    get tags() { return this.user.get()?.tags ?? []; }
 
-    async token() {
-        await this.ready;
-        return this.user.get()?.token;
-    }
-
-    async hasPerm(perm) {
-        await this.ready;
+    hasPerm(perm) {
         const user = this.user.get();
         const perms = user?.perms ?? [];
         return perms.includes(perm) || perms.includes('*');
-    }
-
-    async tags() {
-        await this.ready;
-        return this.user.get()?.tags ?? [];
     }
 
     async call(path, opts) {
@@ -176,7 +156,7 @@ class Auth extends EventTarget {
             ...opts,
             credentials: 'include',
             headers: {
-                ...bearerAuthorization(opts?.token ?? await this.token()),
+                ...bearerAuthorization(opts?.token),
                 ...opts?.headers,
             },
         });
@@ -193,7 +173,7 @@ class Auth extends EventTarget {
     async login(issuer) {
         const req = {
             issuer, href: location.href,
-            cnonce: (await toBase64(random(32))).replace('=', ''),
+            cnonce: await randomId(33),
         };
         const resp = await this.call(`/auth/login`, {req});
         this.state.update(v => { v.cnonce = req.cnonce; });
@@ -201,9 +181,9 @@ class Auth extends EventTarget {
     }
 
     async logout() {
-        const token = await this.token();
-        this.unsetUser();
-        await this.call(`/auth/logout`, {token});
+        await this.call(`/auth/logout`);
+        this.user.set(undefined);
+        await this.domain.update(v => { v.loggedIn = false; });
         await showAlert("You have logged out successfully.",
                         {kind: 'warning', load: true});
         location.reload();
@@ -388,8 +368,9 @@ ${prefix} ${label}</button>\
 }
 
 export const auth = new Auth();
-// TODO: Wait for user info to be available, either from localStorage or
-// request, then make user info getters synchronous
+await auth.ready;
+console.info(`[t-doc] API backend: ${url}, user: ${auth.name ?? '<none>'}`);
+
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
@@ -485,7 +466,6 @@ class EventsApi {
     }
 
     async stream(req, connected) {
-        const token = await auth.token();
         this.abort = new AbortController();
         try {
             const resp = await fetch(`${url}/events/watch`, {
@@ -495,7 +475,6 @@ class EventsApi {
                     'Cache-Control': 'no-store',
                     'Content-Type': 'application/json',
                     'X-Csrf': '0',
-                    ...bearerAuthorization(token),
                 },
                 body: JSON.stringify(req),
                 signal: this.abort.signal,
@@ -553,11 +532,6 @@ class EventsApi {
             if (w !== undefined && w.onFailed) w.onFailed();
         }
     }
-
-    restartOnUserChange() {
-        if (this.abort) this.abort.abort();
-    }
 }
 
 export const events = new EventsApi();
-auth.onChange(() => events.restartOnUserChange());

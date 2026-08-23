@@ -38,34 +38,36 @@ export const page = {
         history.replaceState(
             null, '',
             location.origin + location.pathname + location.search + hash);
-    }
-};
+    },
 
-function handleHashParams(names, fn) {
-    const params = page.hashParams
-    if (!params) return;
-    let found = false;
-    const vs = names.map(name => {
-        const v = params.get(name);
-        if (v !== null) {
-            found = true;
-            params.delete(name);
-        }
-        return v;
-    });
-    if (found) {
-        page.hashParams = params;
-        return fn(...vs);
-    }
-}
+    handleHashParams(...names) {
+        const params = this.hashParams
+        if (!params) return [];
+        let found = false;
+        const vs = names.map(name => {
+            const v = params.get(name);
+            if (v !== null) {
+                found = true;
+                params.delete(name);
+            }
+            return v ?? undefined;
+        });
+        if (found) this.hashParams = params;
+        return vs;
+    },
+};
 
 // Register a handler for the hash parameters with the given names. Calls the
 // handler immediately if any of the hash parameters are currently present, and
 // returns the result of the handler. Also call the handler if the page hash
 // changes and any of the parameters are present.
 export function onHashParams(names, fn) {
-    const res = handleHashParams(names, fn);
-    on(window).hashchange(() => handleHashParams(names, fn));
+    const handle = () => {
+        const vs = page.handleHashParams(names);
+        if (vs.some(v => v !== undefined)) return fn(...vs);
+    }
+    const res = handle();
+    on(window).hashchange(handle);
     return res;
 }
 
