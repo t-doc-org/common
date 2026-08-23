@@ -558,7 +558,7 @@ export async function fetchJson(url, opts) {
     const method = opts?.method ?? 'POST';
     const hasBody = method !== 'GET';
     const resp = await fetch(url, {
-        method, cache: 'no-store', referrer: '',
+        method, referrer: '',
         body: hasBody ? JSON.stringify(opts?.req ?? {}) : undefined,
         ...opts,
         headers: {
