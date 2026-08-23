@@ -53,6 +53,6 @@ def application(config_path, events_level=logs.NOTSET):
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie',
                  'X-Csrf'),
-        max_age=dep.get('access_control_max_age', 600),
+        max_age=dep.get('access_control_max_age'),
         credentials=True,
     )(app)
