@@ -210,7 +210,7 @@ class Request:
         max_age = 400 * 24 * 3600 if token else 0
         c = cookies.SimpleCookie()
         mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
-                    domain=domain, max_age=max_age)
+                    max_age=max_age)
         mf = cookie(c, f'__Secure-tdoc-token{suffix}', '1',
                     _token_flag_cookie_attrs, domain=domain, max_age=max_age)
         return [('Set-Cookie', mt), ('Set-Cookie', mf)]
