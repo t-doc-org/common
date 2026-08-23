@@ -152,5 +152,8 @@ tdoc_domain_storage = {
         'tdoc:api-dev:user',
         'tdoc:api-staging:user',
         'tdoc:clientId',
+        'tdoc:domain:api:auth',
+        'tdoc:domain:api-dev:auth',
+        'tdoc:domain:api-staging:auth',
     ],
 }

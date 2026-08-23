@@ -86,14 +86,31 @@ _token_cookie_attrs = {
     'samesite': 'Strict',
     'secure': True,
 }
+_token_flag_cookie = '__Secure-tdoc-token'
+_token_flag_cookie_attrs = {
+    'path': '/',
+    'samesite': 'Strict',
+    'secure': True,
+}
 
-def token_cookie_header(token):
+
+def token_cookie_headers(token, domain):
+    max_age = 400 * 24 * 3600 if token else 0
     c = cookies.SimpleCookie()
-    c[_token_cookie] = token or ''
-    m = c[_token_cookie]
-    m.update(_token_cookie_attrs)
-    m['max-age'] = 400 * 24 * 3600 if token else 0
-    return ('Set-Cookie', m.OutputString())
+    mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
+                domain=domain, max_age=max_age)
+    mf = cookie(c, _token_flag_cookie, '1', _token_flag_cookie_attrs,
+                domain=domain, max_age=max_age)
+    return [('Set-Cookie', mt), ('Set-Cookie', mf)]
+
+
+def cookie(c, name, value, attrs, *, domain=None, max_age=None):
+    c[name] = value
+    m = c[name]
+    m.update(attrs)
+    if domain is not None: m['domain'] = domain
+    if max_age is not None: m['max-age'] = max_age
+    return m.OutputString()
 
 
 def origin(url):
@@ -195,7 +212,7 @@ class Request:
         rh.extend(headers)
 
     def set_token_cookie(self, token):
-        self.add_response_headers(token_cookie_header(token))
+        self.add_response_headers(*token_cookie_headers(token, self.domain))
 
     def error(self, status, msg=None, exc_info=None, headers=()):
         if msg is None: msg = status.description
@@ -230,6 +247,7 @@ class Request:
 
 
 Request.attr('local')
+Request.attr('domain')
 Request.attr('response_headers')
 
 

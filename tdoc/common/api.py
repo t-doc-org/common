@@ -49,6 +49,7 @@ class Api(wsgi.Dispatcher):
         super().__init__()
         self.config = config
         self.store = store
+        self.domain = config.get('deployment.domain')
         self.cache = wsgi.HttpCache()
         self._read_db_pool = store.pool(mode='ro')
         self._write_db_lock = threading.Lock()
@@ -73,6 +74,7 @@ class Api(wsgi.Dispatcher):
         return db.users.has_perm(wr.required_origin, wr.user, perm)
 
     def pre_request(self, wr):
+        wr.domain = self.domain if not wr.local else None
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
                          fdel=self._read_db_pool.release)
         wr.attr_handlers('write_db', fget=self.write_db)
@@ -188,7 +190,7 @@ class Api(wsgi.Dispatcher):
         origin = wr.required_origin
         if wr.user is None:
             raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
-                             headers=[wsgi.token_cookie_header(None)])
+                             headers=wsgi.token_cookie_headers(None, wr.domain))
         with wr.read_db as db: info = db.users.info(origin, wr.user)
         if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
         return info
@@ -709,7 +711,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 handle = self._handle_local_redirect \
                          if wr.local and 'login_as' in state \
                          else self._handle_redirect
-                handle(wr, qs, db, state)
+                wr.set_token_cookie(handle(wr, qs, db, state))
                 params = {'auth': cnonce}
         except wsgi.Error:
             raise
@@ -725,8 +727,8 @@ class OidcAuthApi(wsgi.Dispatcher):
     def _handle_local_redirect(self, wr, qs, db, state):
         uid = db.users.uid(int(state['login_as']))
         if (token := db.tokens.find(uid)) is None:
-            token, = db.tokens.create([uid])
-        wr.set_token_cookie(token)
+            token = db.tokens.create([uid])[0]
+        return token
 
     def _handle_redirect(self, wr, qs, db, state):
         if (err := self.get_error(qs)) is not None:
@@ -790,8 +792,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         # generate a new token.
         if user is None: raise Exception("Not authorized")
         db.oidc.add_login(user, id_token)
-        token, = db.tokens.create([user])
-        wr.set_token_cookie(token)
+        return db.tokens.create([user])[0]
 
     def get_error(self, qs):
         if (err := qs.get('error')) is None: return

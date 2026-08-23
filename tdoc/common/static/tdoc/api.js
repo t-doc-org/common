@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import {
-    AsyncStoredJson, backoff, bearerAuthorization, dec, domLoaded, elmt, enable,
-    fetchJson, FifoBuffer, htmlData, localIso, on, onHashParams, page, qs,
-    qsa, randomId, showAlert, showModal, sleep, Stored, StoredJson,
-    toModalMessage,
+    backoff, bearerAuthorization, dec, domLoaded, elmt, enable, fetchJson,
+    FifoBuffer, htmlData, localIso, on, onHashParams, page, qs, qsa, randomId,
+    showAlert, showModal, sleep, Stored, StoredJson, toModalMessage,
 } from './core.js';
 
 const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
@@ -42,7 +41,6 @@ class Auth extends EventTarget {
     constructor() {
         super();
         this.user = new StoredJson(`tdoc:api${bes}:user-info`);
-        this.domain = new AsyncStoredJson(`tdoc:domain:api${bes}:auth`, {});
         this.state = new StoredJson('tdoc:api:state', {}, sessionStorage);
         this.ready = this.init();
     }
@@ -59,9 +57,9 @@ class Auth extends EventTarget {
             const done = this.postLogin(state);
             if (!hasUser) await done;
         } else {
-            // TODO: Get rid of domain storage, it's slow; use a cookie instead
-            const domain = await this.domain.get();
-            const done = this.updateUser({force: domain.loggedIn ?? false});
+            const hasToken = document.cookie.split(';').some(
+                c => c.trim().includes('__Host-tdoc-token=1'));
+            const done = this.updateUser({force: hasToken});
             if (!hasUser) await done;
         }
         if (error) this.postLoginError(state, error);  // Background
@@ -122,7 +120,6 @@ class Auth extends EventTarget {
             }
         }
         this.set(user);
-        this.domain.update(v => { v.loggedIn = user !== undefined; });  // BG
         if (loggedOut) {
             await showAlert("You have been logged out.",
                             {kind: 'warning', load: true});
@@ -178,7 +175,6 @@ class Auth extends EventTarget {
     async logout() {
         await call(`/auth/logout`);
         this.user.set(undefined);
-        await this.domain.update(v => { v.loggedIn = false; });
         await showAlert("You have logged out successfully.",
                         {kind: 'warning', load: true});
         location.reload();
