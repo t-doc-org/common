@@ -25,7 +25,7 @@ const [url, bes] = (() => {
     return ['/missing_api_url', ''];
 })();
 const tokenFlag = `\
-__Secure-tdoc-token${tdoc.local ? '' : new URL(url).hostname}=1`;
+__Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, {
