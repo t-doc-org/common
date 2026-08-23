@@ -190,7 +190,7 @@ class Api(wsgi.Dispatcher):
         origin = wr.required_origin
         if wr.user is None:
             raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
-                             headers=wsgi.token_cookie_headers(None, wr.domain))
+                             headers=wr.token_cookie_headers(None))
         with wr.read_db as db: info = db.users.info(origin, wr.user)
         if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
         return info
@@ -673,7 +673,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 except Exception as e:
                     raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
             state.update(login_as=str(uid))
-            url = parse.urlparse(redirect_uri)
+            url = parse.urlsplit(redirect_uri)
         else:
             # Handle OIDC login.
             icfg, disc = self.issuer(issuer)
@@ -686,7 +686,7 @@ class OidcAuthApi(wsgi.Dispatcher):
                 verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
             state.update(issuer=issuer, nonce=nonce, verifier=verifier,
                          user=wr.user, token=token)
-            url = parse.urlparse(disc['authorization_endpoint'])
+            url = parse.urlsplit(disc['authorization_endpoint'])
             query.update(client_id=icfg['client_id'], code_challenge=challenge,
                          code_challenge_method='S256', nonce=nonce,
                          prompt='select_account', redirect_uri=redirect_uri,
@@ -694,7 +694,7 @@ class OidcAuthApi(wsgi.Dispatcher):
         with wr.write_db as db:
             db.oidc.create_state(state_id, state)
         url = url._replace(query=parse.urlencode(query))
-        return {'redirect': parse.urlunparse(url)}
+        return {'redirect': parse.urlunsplit(url)}
 
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
                    log_query=False)

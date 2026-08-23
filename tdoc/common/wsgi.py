@@ -86,22 +86,11 @@ _token_cookie_attrs = {
     'samesite': 'Strict',
     'secure': True,
 }
-_token_flag_cookie = '__Secure-tdoc-token'
 _token_flag_cookie_attrs = {
     'path': '/',
     'samesite': 'Strict',
     'secure': True,
 }
-
-
-def token_cookie_headers(token, domain):
-    max_age = 400 * 24 * 3600 if token else 0
-    c = cookies.SimpleCookie()
-    mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
-                domain=domain, max_age=max_age)
-    mf = cookie(c, _token_flag_cookie, '1', _token_flag_cookie_attrs,
-                domain=domain, max_age=max_age)
-    return [('Set-Cookie', mt), ('Set-Cookie', mf)]
 
 
 def cookie(c, name, value, attrs, *, domain=None, max_age=None):
@@ -114,14 +103,14 @@ def cookie(c, name, value, attrs, *, domain=None, max_age=None):
 
 
 def origin(url):
-    return parse.urlunparse(parse.urlparse(url)._replace(
-            path='', params='', query='', fragment=''))
+    return parse.urlunsplit(parse.urlsplit(url)._replace(
+            path='', query='', fragment=''))
 
 
 def with_hash_params(url, params):
-    parts = parse.urlparse(url)
+    parts = parse.urlsplit(url)
     parts = parts._replace(fragment='?' + parse.urlencode(params))
-    return parse.urlunparse(parts)
+    return parse.urlunsplit(parts)
 
 
 class Request:
@@ -211,8 +200,23 @@ class Request:
             rh = self.response_headers = []
         rh.extend(headers)
 
+    def token_cookie_headers(self, token):
+        if self.local:
+            domain, suffix = None, ''
+        else:
+            domain = self.domain
+            url = parse.urlsplit(self.uri(include_query=False))
+            suffix = f'-{url.hostname}'
+        max_age = 400 * 24 * 3600 if token else 0
+        c = cookies.SimpleCookie()
+        mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
+                    domain=domain, max_age=max_age)
+        mf = cookie(c, f'__Secure-tdoc-token{suffix}', '1',
+                    _token_flag_cookie_attrs, domain=domain, max_age=max_age)
+        return [('Set-Cookie', mt), ('Set-Cookie', mf)]
+
     def set_token_cookie(self, token):
-        self.add_response_headers(*token_cookie_headers(token, self.domain))
+        self.add_response_headers(*self.token_cookie_headers(token))
 
     def error(self, status, msg=None, exc_info=None, headers=()):
         if msg is None: msg = status.description

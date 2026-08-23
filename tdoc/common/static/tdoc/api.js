@@ -24,6 +24,8 @@ const [url, bes] = (() => {
     }
     return ['/missing_api_url', ''];
 })();
+const tokenFlag = `\
+__Secure-tdoc-token${tdoc.local ? '' : new URL(url).hostname}=1`;
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, {
@@ -58,7 +60,7 @@ class Auth extends EventTarget {
             if (!hasUser) await done;
         } else {
             const hasToken = document.cookie.split(';').some(
-                c => c.trim().includes('__Host-tdoc-token=1'));
+                c => c.trim().includes(tokenFlag));
             const done = this.updateUser({force: hasToken});
             if (!hasUser) await done;
         }
