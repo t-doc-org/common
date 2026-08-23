@@ -4,7 +4,7 @@
 import {
     dec, elmt, focusIfInViewport, htmlFragment, on, qs, text,
 } from './core.js';
-import {cmview} from './editor.js';
+import {view as cmview} from './editor.js';
 import {Runner} from './exec.js';
 
 class Coords {
