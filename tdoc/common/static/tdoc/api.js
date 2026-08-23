@@ -28,7 +28,13 @@ const [url, bes] = (() => {
 
 export async function call(path, opts) {
     return await fetchJson(`${url}${path}`, {
-        ...opts, headers: {'X-Csrf': '0', ...opts?.headers},
+        credentials: 'include',
+        ...opts,
+        headers: {
+            'X-Csrf': '0',
+            ...bearerAuthorization(opts?.token),
+            ...opts?.headers,
+        },
     });
 }
 
@@ -106,7 +112,7 @@ class Auth extends EventTarget {
         let user = this.user.get(), res = true, loggedOut = false;
         if (force || user !== undefined) {
             try {
-                user = await this.call(`/user`, {token});
+                user = await call(`/user`, {token});
             } catch (e) {
                 res = false;
                 if (e.cause?.status === 401) {  // UNAUTHORIZED
@@ -151,23 +157,12 @@ class Auth extends EventTarget {
         return perms.includes(perm) || perms.includes('*');
     }
 
-    async call(path, opts) {
-        return await call(path, {
-            ...opts,
-            credentials: 'include',
-            headers: {
-                ...bearerAuthorization(opts?.token),
-                ...opts?.headers,
-            },
-        });
-    }
-
     async info() {
-        return await this.call(`/auth/info`);
+        return await call(`/auth/info`);
     }
 
     async update(req) {
-        return await this.call(`/auth/update`, {req});
+        return await call(`/auth/update`, {req});
     }
 
     async login(issuer) {
@@ -175,13 +170,13 @@ class Auth extends EventTarget {
             issuer, href: location.href,
             cnonce: await randomId(33),
         };
-        const resp = await this.call(`/auth/login`, {req});
+        const resp = await call(`/auth/login`, {req});
         this.state.update(v => { v.cnonce = req.cnonce; });
         location.assign(resp.redirect);
     }
 
     async logout() {
-        await this.call(`/auth/logout`);
+        await call(`/auth/logout`);
         this.user.set(undefined);
         await this.domain.update(v => { v.loggedIn = false; });
         await showAlert("You have logged out successfully.",
@@ -234,7 +229,7 @@ Log in</button>\
     async showSettingsModal(message, kind = 'success') {
         const [info, rauth] = await Promise.all([
             this.info(),
-            this.call(`/repo`, {req: {info: true}}),
+            call(`/repo`, {req: {info: true}}),
         ]);
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
@@ -333,7 +328,7 @@ You will need to set the new password in your Mercurial configuration.`)) {
                 return;
             }
             await toModalMessage(el, async () => {
-                const resp = await this.call(`/repo`, {req: {reset: true}});
+                const resp = await call(`/repo`, {req: {reset: true}});
                 user.textContent = resp.user;
                 pass.textContent = resp.password;
                 rauth.prefix = '';
@@ -375,15 +370,15 @@ tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
 export async function editor(req) {
-    return await auth.call(`/editor`, {req});
+    return await call(`/editor`, {req});
 }
 
 export async function poll(req) {
-    return await auth.call(`/poll`, {req});
+    return await call(`/poll`, {req});
 }
 
 export async function solutions(show) {
-    return await auth.call(`/solutions`, {req: {page: page.path, show}});
+    return await call(`/solutions`, {req: {page: page.path, show}});
 }
 
 export async function terminate(rc = 0) {
@@ -431,7 +426,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await auth.call(`/events/sub`, {req});
+            const resp = await call(`/events/sub`, {req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }
