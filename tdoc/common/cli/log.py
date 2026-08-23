@@ -111,7 +111,8 @@ def cmd_query(opts):
 
 @cli.disable_db_logs
 def cmd_upgrade(opts):
-    for c in opts.cfg.subs('logging.databases'):
+    for i, c in enumerate(opts.cfg.subs('logging.databases')):
+        if i > 0: opts.stdout.write('\n')
         lst = logs.LogStore(c)
         with contextlib.closing(lst.connect(mode='rw')) as db:
             with db: version, latest = lst.version(db)
