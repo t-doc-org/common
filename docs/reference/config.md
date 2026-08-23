@@ -299,6 +299,9 @@ relative paths as relative to the directory containing the config file.
 
 This table configures a multi-site t-doc deployment.
 
+- `access_control_max_age`: The value to use for the
+  [`Access-Control-Max-Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Max-Age)
+  header. If the key isn't defined, the header isn't sent.
 - `domain`: The apex domain of the deployment. The API server allows
   cross-origin requests from this domain and all direct subdomains.
 - `scheme` (default: `"https"`): The scheme over which the deployment is served.
