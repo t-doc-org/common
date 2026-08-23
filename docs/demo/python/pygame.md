@@ -96,7 +96,7 @@ Pygame programs require a few minor adjustments to run in the browser.
 The program below is a slightly modified version of the
 [`liquid.py`](https://github.com/pygame-community/pygame-ce/blob/main/examples/liquid.py)
 example in the `pygame-ce` repository, converted to an asynchronous main loop.
-Press {kbd}`Esc` or click the left mouse button to terminate.
+Press {kbd}`Q` or click a mouse button to terminate.
 
 ```{exec} python
 import pygame
@@ -122,7 +122,7 @@ async def main():
     while running:
         for e in pygame.event.get():
             if (e.type == pygame.MOUSEBUTTONDOWN
-                    or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)):
+                    or (e.type == pygame.KEYDOWN and e.key == pygame.K_q)):
                 running = False
 
         for x in xblocks:
@@ -144,7 +144,7 @@ finally:
 
 The example below demonstrates loading resources from files specified in the
 [`exec.python.files`](../../reference/exec.md#python) {rst:dir}`metadata`. Press
-{kbd}`Esc` to terminate the program.
+{kbd}`Q` to terminate the program.
 
 ```{exec} python
 import pygame
@@ -155,6 +155,8 @@ width, height = 600, 600
 async def main():
     pygame.init()
     window = pygame.display.set_mode((width, height))
+    pygame.event.set_grab(True)
+    pygame.mouse.set_visible(False)
 
     class Sprite(pygame.sprite.Sprite):
         def __init__(self, cx, cy):
@@ -194,7 +196,7 @@ async def main():
         sprites.draw(window)
 
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
                 running = False
             if event.type == pygame.MOUSEMOTION:
                 basket.rect.centerx = event.pos[0]
