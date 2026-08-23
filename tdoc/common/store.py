@@ -134,8 +134,9 @@ class Users(database.ConnNamespace):
                 """, {'user_re': user_re})]
 
     def create(self, names, unique=True):
-        if invalid := [n for n in names if uid_re.fullmatch(n)]:
-            raise database.Error(f"Invalid user names: {" ".join(invalid)}")
+        if invalid := [n for n in names if not n or uid_re.fullmatch(n)]:
+            raise database.Error(
+                f"Invalid user names: {" ".join(invalid or '<empty>')}")
         if unique:
             dupes = [d for d, in self.execute(f"""
                 select distinct name from users
