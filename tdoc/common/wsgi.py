@@ -41,19 +41,20 @@ class Error(Exception):
 
 
 def cors(origins=(), methods=(), headers=(), max_age=None, credentials=False):
+    achs = []
     if origins == '*':
         def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
     elif isinstance(origins, str):
+        achs.append(('Vary', 'Origin'))
         pat = re.compile(origins)
         def allow_origin(origin):
             return [('Access-Control-Allow-Origin', origin)] \
                    if pat.fullmatch(origin) else []
     else:
+        achs.append(('Vary', 'Origin'))
         def allow_origin(origin):
             return [('Access-Control-Allow-Origin', origin)] \
                    if origin in origins else []
-
-    achs = []
     if methods:
         achs.append(('Access-Control-Allow-Methods', ','.join(methods)))
     if headers:
