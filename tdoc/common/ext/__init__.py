@@ -206,6 +206,7 @@ def setup(app):
     app.connect('html-page-context', add_js, priority=499.9)
     app.connect('html-page-context', restore_mathjax, priority=500.1)
     if 'tdoc-local' in app.tags:
+        app.connect('html-page-context', add_build_status, priority=500.3)
         app.connect('html-page-context', add_terminate_button, priority=500.4)
     app.connect('html-page-context', add_draw_button, priority=500.6)
     app.connect('html-page-context', add_user_button, priority=500.7)
@@ -422,6 +423,16 @@ def tdoc_config(app, page=None, doctree=None, context=None):
     if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return tdoc
+
+
+def add_build_status(app, page, template, context, doctree):
+    context["header_buttons"].append({
+        'type': 'javascript',
+        'javascript': 'tdoc.buildStatus()',
+        'icon': 'fa-no-icon tfa',
+        'tooltip': _("Build status"),
+        'label': 'build-status',
+    })
 
 
 def add_terminate_button(app, page, template, context, doctree):

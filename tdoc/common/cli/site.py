@@ -274,8 +274,10 @@ class Application(wsgi.Dispatcher):
         self.opened = False
 
         self.build_mtime = None
-        self.build = api.ValueObservable('build', self.build_mtime)
+        self.build = api.ValueObservable('build', None)
         self.api.events.add_observable(self.build)
+        self.build_status = api.ValueObservable('build-status', '')
+        self.api.events.add_observable(self.build_status)
         self.builder = threading.Thread(target=self.watch_and_build,
                                         name='builder')
         self.builder.start()
@@ -333,6 +335,7 @@ class Application(wsgi.Dispatcher):
                     break
                 self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
+            self.build_status.set('building')
             prev_mtime = mtime
             if self.build_site(build_next, mtime):
                 build = self.build_dir(mtime)
@@ -341,11 +344,13 @@ class Application(wsgi.Dispatcher):
                     self.build_mtime = mtime
                     self.directory = build / 'html'
                 self.build.set(str(mtime))
+                self.build_status.set('success')
                 self.print_serving()
                 if build_mtime is not None:
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
+                self.build_status.set('failure')
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,

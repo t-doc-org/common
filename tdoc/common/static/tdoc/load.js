@@ -7,18 +7,35 @@ import {
     page, qs, qsa, rgb2hex, StoredJson,
 } from './core.js';
 
-// Handle auto-reload on source change.
+// Handle build status and auto-reload on source change.
 if (tdoc.local) {
-    let build;
-    api.events.sub({add: [new api.Watch({name: 'build'}, data => {
-        if (!data) return;
-        if (!build) {
-            build = data;
-            console.info(`[t-doc] Build: ${build}`);
-        } else if (data !== build) {
-            location.reload();
-        }
-    })]});  // Background
+    let build, statusBtn;
+    function updateTooltip() {
+        if (statusBtn === undefined) return;
+        const bs = htmlData.tdocBuildStatus ?? '';
+        bootstrap.Tooltip.getInstance(statusBtn)
+            ?.setContent?.({'.tooltip-inner': `Build status: ${bs}`});
+    }
+    domLoaded.then(() => {
+        statusBtn = qs(document, '.btn-build-status');
+        on(statusBtn)['show.bs.tooltip'](updateTooltip);
+    });
+    tdoc.buildStatus = () => undefined;
+    api.events.sub({add: [
+        new api.Watch({name: 'build'}, data => {
+            if (!data) return;
+            if (!build) {
+                build = data;
+                console.info(`[t-doc] Build: ${build}`);
+            } else if (data !== build) {
+                location.reload();
+            }
+        }),
+        new api.Watch({name: 'build-status'}, data => {
+            htmlData.tdocBuildStatus = data ?? '';
+            updateTooltip();
+        }),
+    ]});  // Background
 }
 
 // Show repositories with remote changes.
@@ -122,7 +139,6 @@ domLoaded.then(() => {
             });
         }
     }
-
 });
 
 // Handle the "draw" button.

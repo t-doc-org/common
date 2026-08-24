@@ -124,7 +124,25 @@ blockquote div > p:has(+ p.attribution) {
     margin-bottom: 0;
 }
 
-/* Server termination buttons */
+/* Build status */
+.article-header-buttons > button.btn-build-status {
+    display: none;
+}
+html[data-tdoc-build-status=building]
+        .article-header-buttons > button.btn-build-status {
+    display: flex;
+    --fa: '\f2f1';  /* rotate */
+    color: var(--pst-color-warning);
+    animation: spin 4s linear infinite;
+}
+html[data-tdoc-build-status=failure]
+        .article-header-buttons > button.btn-build-status {
+    display: flex;
+    --fa: '\f071';  /* triangle-exclamation */
+    color: var(--pst-color-danger);
+}
+
+/* Server termination */
 .article-header-buttons > button.btn-terminate:hover .fa-door-closed {
     --fa: '\f52b';  /* door-open */
 }
@@ -1035,7 +1053,6 @@ html[data-theme=dark] div.cm-editor {
     --fa: '\f0ed';  /* cloud-arrow-down */
 }
 .tdoc-editor-status.push {
-    --fa: '\f110';  /* spinner */
     --fa: '\f2f1';  /* rotate */
     animation: spin 4s linear infinite;
 }
