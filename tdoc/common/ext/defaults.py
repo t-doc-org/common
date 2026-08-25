@@ -59,8 +59,8 @@ def is_patched(cls):
 
 
 def patch_directive(cls):
-    # Monkey-patch the directive's run() method to set default option
-    # values before running the directive.
+    # Monkey-patch the directive's run() method to set default option values
+    # before running the directive.
     def run(self):
         env = self.state.document.settings.env
         for defs in [env.current_document.get('tdoc_defaults', {}),

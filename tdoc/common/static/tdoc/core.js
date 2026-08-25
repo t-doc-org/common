@@ -206,7 +206,7 @@ const emptyNodeList = document.createElement('template').querySelectorAll('p');
 
 // Query all matching elements below an element.
 export function qsa(el, selector) {
-    if (el === undefined || el === null) return emptyNodeList;
+    if (el == null) return emptyNodeList;
     return el.querySelectorAll(selector);
 }
 
@@ -770,7 +770,7 @@ export class Stored extends StoredBase {
     }
 
     store() {
-        if (this._value !== undefined && this._value !== null) {
+        if (this._value != null) {
             this._storage.setItem(this.key, this.encode(this._value));
         } else {
             this._storage.removeItem(this.key);
@@ -812,7 +812,7 @@ export class AsyncStored extends StoredBase {
 
     async store() {
         await this._ready;
-        if (this._value !== undefined && this._value !== null) {
+        if (this._value != null) {
             await this._storage.setItem(this.key, this.encode(this._value));
         } else {
             await this._storage.removeItem(this.key);

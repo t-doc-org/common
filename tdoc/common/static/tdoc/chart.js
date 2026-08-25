@@ -21,7 +21,7 @@ for (const [k, v] of Object.entries(tdoc.dyn?.chartjs?.plugins ?? {})) {
     if (v === false) {
         disabledPlugins.options.plugins[k] = v;
         delete tdoc.dyn.chartjs.plugins[k];
-    } else if (v !== undefined && v !== null) {
+    } else if (v != null) {
         delete disabledPlugins.options.plugins[k];
         if (v === true) delete tdoc.dyn.chartjs.plugins[k];
     }
@@ -98,18 +98,16 @@ function mergeTo(dst, src) {
         if (Array.isArray(sv)) {
             // Only merge into arrays of objects; overwrite otherwise.
             let dv = dst[k];
-            if (dv === undefined || dv === null || !Array.isArray(dv)
+            if (dv == null || !Array.isArray(dv)
                     || !dv.every(v => isObject(v))) {
                 dv = dst[k] = [];
             }
             mergeTo(dv, sv);
         } else if (isObject(sv) && typeof sv.valueOf() !== 'string') {
             let dv = dst[k];
-            if (dv === undefined || dv === null || !isObject(dv)) {
-                dv = dst[k] = {};
-            }
+            if (dv == null || !isObject(dv)) dv = dst[k] = {};
             mergeTo(dv, sv);
-        } else if (sv !== undefined && sv !== null) {
+        } else if (sv != null) {
             dst[k] = sv;
         }
     }
