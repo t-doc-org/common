@@ -95,7 +95,7 @@ class Serial {
                       }
                       if (done) break;
                       // Avoid blocking the UI if data is received continuously.
-                      await sleep(undefined);
+                      await sleep(0);
                     }
                 } finally {
                     this.reader.releaseLock();
