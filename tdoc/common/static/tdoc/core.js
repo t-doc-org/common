@@ -71,27 +71,6 @@ export function onHashParams(names, fn) {
     return res;
 }
 
-function asArray(v) {
-    v ??= [];
-    return Array.isArray(v) ? v : [v];
-}
-
-// Manage a set of debug tags.
-const _debug = new Set();
-onHashParams(['debug'], v => {
-    for (let tag of v.split(',')) {
-        tag = tag.trim();
-        if (tag !== '') _debug.add(tag);
-    }
-});
-
-// Enable a set of tags, and return true iff the given tag is enabled.
-export function debug(tag) {
-    if (typeof tag === 'string') return _debug.has(tag) || _debug.has('all');
-    for (const t of asArray(tag.disable)) _debug.remove(t);
-    for (const t of asArray(tag.enable)) _debug.add(t);
-}
-
 // Resolves when the DOM content has loaded and deferred scripts have executed.
 export const domLoaded = new Promise(resolve => {
     if (document.readyState !== 'loading') {
@@ -820,6 +799,32 @@ const JsonMixin = cls => class extends cls {
 // A value that is stored as JSON.
 export const StoredJson = JsonMixin(Stored);
 export const AsyncStoredJson = JsonMixin(AsyncStored);
+
+function asArray(v) {
+    v ??= [];
+    return Array.isArray(v) ? v : [v];
+}
+
+// Manage a set of debug tags.
+const debugStore = new StoredJson('tdoc:debug', undefined, sessionStorage);
+const _debug = new Set(debugStore.get() ?? []);
+onHashParams(['debug'], v => {
+    for (let tag of v.split(/\s+/)) {
+        if (tag.startsWith('-')) {
+            _debug.delete(tag.slice(1));
+        } else if (tag !== '') {
+            _debug.add(tag);
+        }
+    }
+    debugStore.set(_debug.size > 0 ? Array.from(_debug) : undefined);
+});
+
+// Enable a set of tags, and return true iff the given tag is enabled.
+export function debug(tag) {
+    if (typeof tag === 'string') return _debug.has(tag) || _debug.has('all');
+    for (const t of asArray(tag.disable)) _debug.remove(t);
+    for (const t of asArray(tag.enable)) _debug.add(t);
+}
 
 // Manage an immutable, globally-unique client ID in domain storage.
 export const clientId = (async () => {
