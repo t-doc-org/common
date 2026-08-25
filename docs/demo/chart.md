@@ -391,8 +391,7 @@ options: {
 ```
 
 <script type="module">
-const [core, {annotations, chart, plugins, render}] =
-  await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
+const [core, chart] = await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
                 '#ffcd56', '#c9cbcf'];
@@ -416,8 +415,8 @@ function xyrData(count, min, max, maxR) {
   return values;
 }
 
-render.vBar = el => {
-  return chart(el, {
+chart.render.vBar = el => {
+  return chart.chart(el, {
     type: 'bar',
     data: {
       labels: months.slice(0, 7),
@@ -430,8 +429,8 @@ render.vBar = el => {
     },
   });
 };
-render.hBar = el => {
-  return chart(el, {
+chart.render.hBar = el => {
+  return chart.chart(el, {
     type: 'bar',
     data: {
       labels: months.slice(0, 7),
@@ -445,8 +444,8 @@ render.hBar = el => {
   });
 };
 
-render.line = el => {
-  return chart(el, {
+chart.render.line = el => {
+  return chart.chart(el, {
     type: 'line',
     data: {
       labels: months.slice(0, 7),
@@ -475,8 +474,8 @@ render.line = el => {
   });
 };
 
-render.bubble = el => {
-  return chart(el, {
+chart.render.bubble = el => {
+  return chart.chart(el, {
     type: 'bubble',
     data: {
       datasets: [{data: xyrData(50, 0, 50, 15)}],
@@ -489,8 +488,8 @@ render.bubble = el => {
 };
 
 const pieIdx = cs => [1, 0, 5].map(i => cs[i]);
-render.pie = el => {
-  return chart(el, {
+chart.render.pie = el => {
+  return chart.chart(el, {
     type: 'pie',
     data: {
       labels: ["Red", "Blue", "Yellow"],
@@ -506,8 +505,8 @@ render.pie = el => {
     },
   });
 };
-render.doughnut = el => {
-  return chart(el, {
+chart.render.doughnut = el => {
+  return chart.chart(el, {
     type: 'doughnut',
     data: {
       labels: ["Red", "Blue", "Yellow"],
@@ -543,14 +542,14 @@ const boxViolin = {
     }],
   },
 };
-render.boxplot = el => {
-  return chart(el, {
+chart.render.boxplot = el => {
+  return chart.chart(el, {
     'type': 'boxplot', ...boxViolin,
     options: {barPercentage: 0.3},
   });
 };
-render.violin = el => {
-  return chart(el, {'type': 'violin', ...boxViolin});
+chart.render.violin = el => {
+  return chart.chart(el, {'type': 'violin', ...boxViolin});
 };
 
 const errorBar = {
@@ -563,8 +562,8 @@ const errorBar = {
     ]}],
   },
 };
-render.barErrorBars = el => {
-  return chart(el, {
+chart.render.barErrorBars = el => {
+  return chart.chart(el, {
     type: 'barWithErrorBars', ...errorBar,
     options: {
       borderWidth: 1, borderColor: colors, hoverBorderColor: colors,
@@ -572,8 +571,8 @@ render.barErrorBars = el => {
     },
   });
 };
-render.lineErrorBars = el => {
-  return chart(el, {
+chart.render.lineErrorBars = el => {
+  return chart.chart(el, {
     type: 'lineWithErrorBars', ...errorBar,
     options: {borderColor: colors[0], backgroundColor: colors[0]},
   });
@@ -604,8 +603,8 @@ const treeData = [
   {name: "13", parent: 0},
   {name: "131", parent: 21},
 ];
-render.tree = el => {
-  return chart(el, {
+chart.render.tree = el => {
+  return chart.chart(el, {
     type: 'tree',
     data: {
       labels: treeData.map(d => d.name),
@@ -625,8 +624,8 @@ render.tree = el => {
 
 const graphData = await core.fetchJson('/_static/miserables.json',
                                        {method: 'GET'});
-render.graph = el => {
-  return chart(el, {
+chart.render.graph = el => {
+  return chart.chart(el, {
     type: 'forceDirectedGraph',
     data: {
       labels: graphData.nodes.map(d => d.id),
@@ -645,13 +644,13 @@ render.graph = el => {
   });
 };
 
-render.randomBars = (el, {count, min, max}) => {
+chart.render.randomBars = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);
     data.push(core.randomInt(min, max));
   }
-  return chart(el, {
+  return chart.chart(el, {
     type: 'bar',
     data: {
       labels,
@@ -666,14 +665,14 @@ render.randomBars = (el, {count, min, max}) => {
   })
 };
 
-annotations.valueLabels = ({label}, config) => {
+chart.annotations.valueLabels = ({label}, config) => {
   return config.data.datasets[0].data.map((v, i) => ({
     type: 'label', content: `${label ?? ''}${v}`,
     xValue: i, yValue: v, yAdjust: -15,
   }));
 };
 
-plugins.backgroundGradient = {
+chart.plugins.backgroundGradient = {
     beforeDraw(chart, args, options) {
         if (options.stops === undefined) return;
         const {ctx} = chart;

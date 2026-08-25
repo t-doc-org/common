@@ -181,10 +181,10 @@ options: {
 ````
 
 <script type="module">
-const {initBoard, JXG, render} = await tdoc.import('tdoc/jsxgraph.js');
+const jsxgraph = await tdoc.import('tdoc/jsxgraph.js');
 
-render.sinCos = el => {
-  return initBoard(el, {
+jsxgraph.render.sinCos = el => {
+  return jsxgraph.initBoard(el, {
     boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false, axis: true,
     zoom: {factorY: 1},
     defaultAxes: {
@@ -225,8 +225,8 @@ render.sinCos = el => {
   });
 };
 
-render.centroid = el => {
-  return initBoard(el, {
+jsxgraph.render.centroid = el => {
+  return jsxgraph.initBoard(el, {
     boundingBox: [-3.2, 3.2, 3.2, -3.2],
     defaults: {
       point: {strokeWidth: 0},
@@ -248,8 +248,8 @@ render.centroid = el => {
   });
 };
 
-render.trigCircle = el => {
-  return initBoard(el, {
+jsxgraph.render.trigCircle = el => {
+  return jsxgraph.initBoard(el, {
     boundingBox: [-1.5, 6.5, 6.5, -1.5], axis: true,
     pan: {enabled: false}, zoom: {enabled: false},
     defaultAxes: {
@@ -377,8 +377,8 @@ render.trigCircle = el => {
   });
 };
 
-render.regularPolygon = (el, {sides}) => {
-  return initBoard(el, {
+jsxgraph.render.regularPolygon = (el, {sides}) => {
+  return jsxgraph.initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {
     const s1 = 1 / sides;

@@ -21,10 +21,10 @@ module, adding a rendering function to {js:data}`~jsxgraph.render`, and calling 
 ```
 
 <script type="module">
-const {initBoard, render} = await tdoc.import('tdoc/jsxgraph.js');
+const jsxgraph = await tdoc.import('tdoc/jsxgraph.js');
 
-render.sin = el => {
-  return initBoard(el, {
+jsxgraph.render.sin = el => {
+  return jsxgraph.initBoard(el, {
       boundingBox: [-7, 1.3, 7, -1.3], keepAspectRatio: false,
       axis: true, grid: true,
   }, board => {
@@ -196,10 +196,10 @@ sides: 5,
 ```
 
 <script type="module">
-const {initBoard, render} = await tdoc.import('tdoc/jsxgraph.js');
+const jsxgraph = await tdoc.import('tdoc/jsxgraph.js');
 
-render.regularPolygon = (el, {sides}) => {
-  return initBoard(el, {
+jsxgraph.render.regularPolygon = (el, {sides}) => {
+  return jsxgraph.initBoard(el, {
     boundingBox: [-1.3, 1.3, 1.3, -1.3],
   }, board => {
     const s1 = 1 / sides;

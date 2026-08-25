@@ -57,8 +57,9 @@ The following example adds a button to {rst:dir}`exec` blocks having the class
 ```
 
 <script type="module">
-const {elmt, on, qs, TdocElement} = await tdoc.import('tdoc/core.js');
-TdocElement.extend('tdoc-exec', {
+const core = await tdoc.import('tdoc/core.js');
+const {elmt, on, qs} = core;
+core.TdocElement.extend('tdoc-exec', {
   ready(el) {
     if (!el.classList.contains('extend-inspect')) return;
     const btn = qs(el, '.tdoc-exec-controls').appendChild(
@@ -88,8 +89,9 @@ The following example adds a button to {rst:dir}`exec` blocks having the class
 ```
 
 <script type="module">
-const {elmt, on, qs, qsaReady} = await tdoc.import('tdoc/core.js');
-for await (const el of qsaReady(document, `tdoc-exec.enum-inspect`)) {
+const core = await tdoc.import('tdoc/core.js');
+const {elmt, on, qs} = core;
+for await (const el of core.qsaReady(document, `tdoc-exec.enum-inspect`)) {
   const btn = qs(el, '.tdoc-exec-controls').appendChild(
     elmt`<button class="fa-magnifying-glass tdoc"></button>`);
   on(btn).click(() => alert(`The editor content is:\n\n${el.runner.text}`));

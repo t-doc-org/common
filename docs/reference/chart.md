@@ -53,12 +53,12 @@ function.
 ```
 
 <script type="module">
-const {chart, render} = await tdoc.import('tdoc/chart.js');
+const chart = await tdoc.import('tdoc/chart.js');
 
 const colors = ['#36a2eb', '#ff6384', '#4bc0c0', '#ff9f40', '#9966ff',
                 '#ffcd56', '#c9cbcf'];
-render.vBar = el => {
-  return chart(el, {
+chart.render.vBar = el => {
+  return chart.chart(el, {
     type: 'bar',
     data: {
       labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
@@ -338,9 +338,9 @@ annotations: {valueLabels: {label: 'Value: '}}
 ```
 
 <script type="module">
-const {annotations} = await tdoc.import('tdoc/chart.js');
+const chart = await tdoc.import('tdoc/chart.js');
 
-annotations.valueLabels = ({label}, config) => {
+chart.annotations.valueLabels = ({label}, config) => {
   return config.data.datasets[0].data.map((v, i) => ({
     type: 'label', content: `${label ?? ''}${v}`,
     xValue: i, yValue: v, yAdjust: -15,
@@ -392,9 +392,9 @@ options: {
 ```
 
 <script type="module">
-const {plugins} = await tdoc.import('tdoc/chart.js');
+const chart = await tdoc.import('tdoc/chart.js');
 
-plugins.backgroundGradient = {
+chart.plugins.backgroundGradient = {
     beforeDraw(chart, args, options) {
         if (options.stops === undefined) return;
         const {ctx} = chart;
@@ -439,15 +439,15 @@ count: 5, min: 100, max: 500,
 ```
 
 <script type="module">
-const [core, {chart, render}] = await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
+const [core, chart] = await tdoc.import('tdoc/core.js', 'tdoc/chart.js');
 
-render.randomBars = (el, {count, min, max}) => {
+chart.render.randomBars = (el, {count, min, max}) => {
   const labels = [], data = [];
   for (let i = 0; i < count; ++i) {
     labels.push(`L${i + 1}`);
     data.push(core.randomInt(min, max));
   }
-  return chart(el, {
+  return chart.chart(el, {
     type: 'bar',
     data: {
       labels,
