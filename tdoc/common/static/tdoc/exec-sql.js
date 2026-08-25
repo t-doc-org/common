@@ -1,8 +1,9 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dataUrl, elmt, on, qs, text} from './core.js';
-import {Runner, UserError} from './exec.js';
+import * as core from './core.js';
+import * as exec from './exec.js';
+const {elmt, on, qs} = core;
 
 let promiser;
 
@@ -33,7 +34,7 @@ class Database {
     }
 }
 
-class SqlRunner extends Runner {
+class SqlRunner extends exec.Runner {
     static name = 'sql';
 
     static async init(config) {
@@ -50,7 +51,7 @@ class SqlRunner extends Runner {
                 const url = import.meta.resolve(
                     `${tdoc.versions.sqlite}/dist/sqlite3-worker1.mjs`);
                 const mod = `import ${JSON.stringify(url)};`;
-                return new Worker(dataUrl('application/javascript', mod),
+                return new Worker(core.dataUrl('application/javascript', mod),
                                   {type: 'module'});
             },
             // debug: console.debug,
@@ -107,7 +108,7 @@ class SqlRunner extends Runner {
             }
         } catch (e) {
             if (e.dbId !== db.dbId) throw e;
-            throw new UserError(
+            throw new exec.UserError(
                 /^(SQLITE_[A-Z0-9_]+: sqlite3 result code \d+: )?(.*)$/
                     .exec(e.result.message)[2]);
         } finally {
@@ -135,7 +136,7 @@ class SqlRunner extends Runner {
         for (const val of row) {
             tr.appendChild(elmt`<td class="text-center"></td>`)
                 .appendChild(val === null ? elmt`<code>NULL</code>`
-                                          : text(val));
+                                          : core.text(val));
         }
         return tr;
     }
@@ -148,4 +149,4 @@ class SqlRunner extends Runner {
     }
 }
 
-Runner.register(SqlRunner);
+exec.Runner.register(SqlRunner);

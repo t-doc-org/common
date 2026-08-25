@@ -1,14 +1,11 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {
-    backoff, bearerAuthorization, dec, domLoaded, elmt, enable, fetchJson,
-    FifoBuffer, htmlData, localIso, on, onHashParams, page, qs, qsa, randomId,
-    showAlert, showModal, sleep, Stored, StoredJson, toModalMessage,
-} from './core.js';
+import * as core from './core.js';
+const {elmt, on, qs, qsa} = core;
 
-const backend = new Stored('tdoc:api:backend', undefined, sessionStorage);
-onHashParams(['api'], api => {
+const backend = new core.Stored('tdoc:api:backend', undefined, sessionStorage);
+core.onHashParams(['api'], api => {
     backend.set(api);
     location.reload();
 });
@@ -28,12 +25,12 @@ const tokenFlag = `\
 __Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;
 
 export async function call(path, opts) {
-    return await fetchJson(`${url}${path}`, {
+    return await core.fetchJson(`${url}${path}`, {
         credentials: 'include',
         ...opts,
         headers: {
             'X-Csrf': '0',
-            ...bearerAuthorization(opts?.token),
+            ...core.bearerAuthorization(opts?.token),
             ...opts?.headers,
         },
     });
@@ -42,8 +39,8 @@ export async function call(path, opts) {
 class Auth extends EventTarget {
     constructor() {
         super();
-        this.user = new StoredJson(`tdoc:api${bes}:user-info`);
-        this.state = new StoredJson('tdoc:api:state', {}, sessionStorage);
+        this.user = new core.StoredJson(`tdoc:api${bes}:user-info`);
+        this.state = new core.StoredJson('tdoc:api:state', {}, sessionStorage);
         this.ready = this.init();
     }
 
@@ -51,8 +48,8 @@ class Auth extends EventTarget {
         const hasUser = this.user.get();
         const state = this.state.get(), cnonce = state?.cnonce;
         this.state.update(v => { delete v.cnonce; });
-        const [token, auth, error] = page.handleHashParams('token', 'auth',
-                                                           'auth_error');
+        const [token, auth, error] =
+            core.page.handleHashParams('token', 'auth', 'auth_error');
         if (token && !hasUser) {  // Initial login via token= URL
             await this.postLogin(state, token);
         } else if (auth && auth === cnonce) {  // Normal login flow
@@ -67,8 +64,7 @@ class Auth extends EventTarget {
         if (error) this.postLoginError(state, error);  // Background
 
         // Update the username shown in the user menu.
-        domLoaded.then(async () => {
-            await domLoaded;
+        core.domLoaded.then(() => {
             const el = qs(document, '.dropdown-user .dropdown-item.btn-user');
             el.classList.add('disabled');
             this.onChange(() => {
@@ -86,7 +82,7 @@ class Auth extends EventTarget {
                     await this.showSettingsModal(
                         "The login has been added successfully.");
                 } else {
-                    await showAlert(
+                    await core.showAlert(
                         `You have logged in successfully as "${this.name}".`);
                 }
             } else {
@@ -94,7 +90,8 @@ class Auth extends EventTarget {
                     await this.showSettingsModal(
                         "The login could not be added.", {kind: 'danger'});
                 } else {
-                    await showAlert("Logging in has failed.", {kind: 'danger'});
+                    await core.showAlert(
+                        "Logging in has failed.", {kind: 'danger'});
                 }
             }
         })();  // Background
@@ -104,7 +101,7 @@ class Auth extends EventTarget {
         if (state?.modal === 'settings') {
             await this.showSettingsModal(error, {kind: 'danger'});
         } else {
-            await showAlert(error, {kind: 'danger'});
+            await core.showAlert(error, {kind: 'danger'});
         }
     }
 
@@ -123,8 +120,8 @@ class Auth extends EventTarget {
         }
         this.set(user);
         if (loggedOut) {
-            await showAlert("You have been logged out.",
-                            {kind: 'warning', load: true});
+            await core.showAlert("You have been logged out.",
+                                 {kind: 'warning', load: true});
             location.reload();
         }
         return res;
@@ -133,11 +130,11 @@ class Auth extends EventTarget {
     set(user) {
         this.user.set(user);
         if (user) {
-            htmlData.tdocUserPerms = (user.perms ?? []).join(' ');
-            htmlData.tdocUserTags = (user.tags ?? []).join(' ');
+            core.htmlData.tdocUserPerms = (user.perms ?? []).join(' ');
+            core.htmlData.tdocUserTags = (user.tags ?? []).join(' ');
         } else {
-            delete htmlData.tdocUserPerms;
-            delete htmlData.tdocUserTags;
+            delete core.htmlData.tdocUserPerms;
+            delete core.htmlData.tdocUserTags;
         }
         this.dispatchEvent(new CustomEvent('change'));
     }
@@ -167,7 +164,7 @@ class Auth extends EventTarget {
     async login(issuer) {
         const req = {
             issuer, href: location.href,
-            cnonce: await randomId(33),
+            cnonce: await core.randomId(33),
         };
         const resp = await call(`/auth/login`, {req});
         this.state.update(v => { v.cnonce = req.cnonce; });
@@ -177,8 +174,8 @@ class Auth extends EventTarget {
     async logout() {
         await call(`/auth/logout`);
         this.user.set(undefined);
-        await showAlert("You have logged out successfully.",
-                        {kind: 'warning', load: true});
+        await core.showAlert("You have logged out successfully.",
+                             {kind: 'warning', load: true});
         location.reload();
     }
 
@@ -209,15 +206,15 @@ Log in</button>\
         loginForm.classList.toggle('hidden', !tdoc.local);
         const input = qs(loginForm, 'input#tdoc-login-user');
         const loginBtn = qs(loginForm, 'button.login');
-        enable(input.value, loginBtn);
+        core.enable(input.value, loginBtn);
         this.addIssuerButtons(el, "Log in with", info.issuers);
 
-        const modal = showModal(el);
-        on(input).input(() => enable(input.value, loginBtn));
+        const modal = core.showModal(el);
+        on(input).input(() => core.enable(input.value, loginBtn));
         on(loginForm).submit(async e => {
             e.preventDefault();
             if (!input.value) return;
-            await toModalMessage(el, async () => {
+            await core.toModalMessage(el, async () => {
                 await this.login(`local:${input.value}`);
                 modal.hide();
             });
@@ -273,26 +270,26 @@ t-doc.password = <span class="pass user-select-all"></span>
 <tr><td class="px-2" colspan="4">No logins</td></tr>`);
         }
         for (const login of info.logins) {
-            const updated = localIso(new Date(login.updated * 1e3));
+            const updated = core.localIso(new Date(login.updated * 1e3));
             const row = logins.appendChild(elmt`\
 <tr><td class="px-2">${login.name}</td><td class="px-2 text-nowrap">\
 ${login.issuer}</td><td class="px-2 text-nowrap">${updated}</td>\
 <td><button type="button" class="btn btn-outline-danger">Remove</button></td>\
 </tr>`);
             const btn = qs(row, 'button');
-            if (info.logins.length < 2) enable(false, btn);
+            if (info.logins.length < 2) core.enable(false, btn);
             on(btn).click(async () => {
                 if (!confirm(`\
 Are you sure you want to remove the login ${login.name}?`)) {
                     return;
                 }
-                await toModalMessage(el, async () => {
+                await core.toModalMessage(el, async () => {
                     await this.update({
                         remove: {iss: login.iss, sub: login.sub},
                     });
                     row.remove();
                     const btns = qsa(logins, 'button');
-                    if (btns.length < 2) enable(false, ...btns);
+                    if (btns.length < 2) core.enable(false, ...btns);
                     return `\
 The login ${login.name} has been removed successfully.`;
                 });
@@ -313,7 +310,7 @@ The login ${login.name} has been removed successfully.`;
             repo.classList.remove('hidden');
         }
 
-        const modal = showModal(el);
+        const modal = core.showModal(el);
         this.state.update(v => { v.modal = 'settings'; });
         on(el)['hidden.bs.modal'](() => {
             this.state.update(v => { delete v.modal; });
@@ -325,7 +322,7 @@ Are you sure you want to reset the repository access password?
 You will need to set the new password in your Mercurial configuration.`)) {
                 return;
             }
-            await toModalMessage(el, async () => {
+            await core.toModalMessage(el, async () => {
                 const resp = await call(`/repo`, {req: {reset: true}});
                 user.textContent = resp.user;
                 pass.textContent = resp.password;
@@ -335,7 +332,7 @@ The password has been reset. Copy it now, as it won't be shown again.`;
             });
         });
         on(qs(el, '.logout')).click(async () => {
-            await toModalMessage(el, async () => {
+            await core.toModalMessage(el, async () => {
                 await this.logout();
                 modal.hide();
             });
@@ -352,7 +349,7 @@ The password has been reset. Copy it now, as it won't be shown again.`;
 ${prefix} ${label}</button>\
 </div>`);
             on(btn).click(async () => {
-                await toModalMessage(modal, async () => {
+                await core.toModalMessage(modal, async () => {
                     await this.login(issuer);
                 });
             });
@@ -376,7 +373,7 @@ export async function poll(req) {
 }
 
 export async function solutions(show) {
-    return await call(`/solutions`, {req: {page: page.path, show}});
+    return await call(`/solutions`, {req: {page: core.page.path, show}});
 }
 
 export async function terminate(rc = 0) {
@@ -450,7 +447,8 @@ class EventsApi {
                     delete this.sid;
                 }
                 if (performance.now() - start > 30000) retries = 0;
-                await sleep(backoff({min: 1000, max: 10000}, retries++));
+                await core.sleep(core.backoff({min: 1000, max: 10000},
+                                              retries++));
             }
         } finally {
             this.running = false;
@@ -474,7 +472,7 @@ class EventsApi {
             if (resp.status !== 200) return;
             const reader = resp.body.getReader();
             try {
-                const buffer = new FifoBuffer();
+                const buffer = new core.FifoBuffer();
                 for (;;) {
                   const {value, done} = await reader.read();
                   if (value) {
@@ -483,7 +481,7 @@ class EventsApi {
                       for (;;) {
                           const pos = buffer.findValue(10, start);
                           if (pos < 0) break;
-                          const msg = dec.decode(buffer.read(pos + 1));
+                          const msg = core.dec.decode(buffer.read(pos + 1));
                           start = 0;
                           if (connected) {
                             const data = JSON.parse(msg);

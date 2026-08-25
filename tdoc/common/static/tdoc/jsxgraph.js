@@ -1,12 +1,11 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {
-    asyncProps, dyn, htmle, mathJaxReady, mergeAttrs, qs, qsa,
-} from './core.js';
-import {clip, Distribution, gcd, Sample} from './math.js';
+import * as core from './core.js';
+import * as math from './math.js';
+const {htmle, qs, qsa} = core;
 
-export {clip, gcd};
+export {clip, gcd} from './math.js';
 
 // Import JSXGraph. Get the reference to the JXG namespace from globalThis
 // instead of using the module directly, as their content isn't identical,
@@ -106,17 +105,17 @@ JXG.merge(JXG.Options, {
 JXG.merge(JXG.Options, tdoc.dyn?.jsxgraph ?? {});
 
 // The renderer container.
-export const render = dyn.render.jsxgraph = asyncProps(
-    {[dyn.timeout]: 15000},
+export const render = core.dyn.render.jsxgraph = core.asyncProps(
+    {[core.dyn.timeout]: 15000},
     {ns: 'jsxgraph', container: 'render', callables: true});
 
 // A set of pre-defined attributes.
-export const attrs = asyncProps({}, {ns: 'jsxgraph', container: 'attrs'});
+export const attrs = core.asyncProps({}, {ns: 'jsxgraph', container: 'attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
-    return mergeAttrs((dst, src) => JXG.mergeAttr(dst, src, true),
-                      attrs, ...as);
+    return core.mergeAttrs((dst, src) => JXG.mergeAttr(dst, src, true),
+                           attrs, ...as);
 }
 
 // Mix-in board attributes to disable interactive features.
@@ -171,7 +170,7 @@ export async function initBoard(el, attrs, fn) {
             el.style.aspectRatio = `${xp - xn} / ${yp - yn}`;
         }
     }
-    await mathJaxReady;
+    await core.mathJaxReady;
     const board = JXG.JSXGraph.initBoard(el, attrs);
     JXG.merge(board.options, attrs.defaults ?? {});
     if (fn) fn(board);
@@ -227,7 +226,7 @@ render.cumulativeDistributionFunction = async (el, {
 }) => {
     let ds, cdf, f;
     if (sample !== undefined) {
-        ds = sample = new Sample(sample);
+        ds = sample = new math.Sample(sample);
         distribution = undefined;
         cdf = sample.cumulativeDistributionFunction(normalize);
         f = (x) => {
@@ -238,7 +237,7 @@ render.cumulativeDistributionFunction = async (el, {
             return cdf[cdf.length - 1][1];
         };
     } else if (distribution !== undefined) {
-        ds = distribution = Distribution.of(distribution);
+        ds = distribution = math.Distribution.of(distribution);
         cdf = distribution.cumulativeDistributionFunction(normalize);
         f = (x) => {
             if (x < cdf[0][0]) return 0;

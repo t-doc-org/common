@@ -1,7 +1,8 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {enc, on, sleep} from './core.js';
+import * as core from './core.js';
+const {on} = core;
 
 // A claim on a serial port.
 class Claim {
@@ -95,7 +96,7 @@ class Serial {
                       }
                       if (done) break;
                       // Avoid blocking the UI if data is received continuously.
-                      await sleep(0);
+                      await core.sleep(0);
                     }
                 } finally {
                     this.reader.releaseLock();
@@ -137,7 +138,7 @@ class Serial {
 }
 
 // Get a list of known serial ports matching the given filter.
-export function getSerials(filter) {
+export function enumerate(filter) {
     const matching = [];
     for (const s of serials.values()) {
         if (s.matches(filter)) matching.push(s);
@@ -146,7 +147,7 @@ export function getSerials(filter) {
 }
 
 // Request that the user select a serial port.
-export async function requestSerial(options) {
+export async function request(options) {
     if (!navigator.serial) {
         throw new Error("WebSerial is not supported on this browser");
     }
@@ -165,7 +166,7 @@ export async function requestSerial(options) {
 }
 
 // Register or unregister handlers for port connection and disconnection.
-export function onSerial(key, hs) {
+export function onConnect(key, hs) {
     if (hs) {
         handlers.set(key, hs);
     } else {

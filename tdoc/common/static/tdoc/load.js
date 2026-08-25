@@ -2,21 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {
-    addTooltip, domLoaded, dyn, elmt, htmlData, htmle, HtmlError, Mutex, on,
-    page, qs, qsa, rgb2hex, StoredJson,
-} from './core.js';
+import * as core from './core.js';
+const {elmt, htmle, on, qs, qsa} = core;
 
 // Handle build status and auto-reload on source change.
 if (tdoc.local) {
     let build, statusBtn;
     function updateTooltip() {
         if (![bootstrap, statusBtn].every(v => v)) return;
-        const bs = htmlData.tdocBuildStatus ?? '';
+        const bs = core.htmlData.tdocBuildStatus ?? '';
         bootstrap.Tooltip.getInstance(statusBtn)
             ?.setContent?.({'.tooltip-inner': `Build status: ${bs}`});
     }
-    domLoaded.then(() => {
+    core.domLoaded.then(() => {
         statusBtn = qs(document, '.btn-build-status');
         on(statusBtn)['show.bs.tooltip'](updateTooltip);
     });
@@ -32,7 +30,7 @@ if (tdoc.local) {
             }
         }),
         new api.Watch({name: 'build-status'}, data => {
-            htmlData.tdocBuildStatus = data ?? '';
+            core.htmlData.tdocBuildStatus = data ?? '';
             updateTooltip();
         }),
     ]});  // Background
@@ -40,7 +38,7 @@ if (tdoc.local) {
 
 // Show repositories with remote changes.
 if (tdoc.local) {
-    domLoaded.then(() => {
+    core.domLoaded.then(() => {
         const search = qs(document,
                       '.sidebar-primary-item:has(> .search-button-field)');
         const body = qs(search.parentNode.insertBefore(elmt`\
@@ -66,14 +64,14 @@ if (tdoc.local) {
 
 // Prevent doctools.js from capturing editor key events, in case keyboard
 // shortcuts are enabled.
-domLoaded.then(() => {
+core.domLoaded.then(() => {
     if (typeof BLACKLISTED_KEY_CONTROL_ELEMENTS !== 'undefined') {
         BLACKLISTED_KEY_CONTROL_ELEMENTS.add('DIV');
     }
 });
 
 // Handle admonition expansion. The button is needed to enable keyboard focus.
-domLoaded.then(() => {
+core.domLoaded.then(() => {
     for (const el of qsa(document, '.admonition.dropdown')) {
         const toggle = all => {
             const v = !el.classList.contains('expand');
@@ -102,39 +100,39 @@ let toggleSolutionsBtn;
 
 function updateSolutionsTooltip() {
     if (![bootstrap, toggleSolutionsBtn].every(v => v)) return;
-    const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
+    const title = (core.htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                   "Show solutions" : "Hide solutions";
     bootstrap.Tooltip.getInstance(toggleSolutionsBtn)
         ?.setContent?.({'.tooltip-inner': title});
 }
 
 tdoc.toggleSolutions = () => {
-    const show = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
+    const show = (core.htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                  'show' : 'hide';
-    if (htmlData.tdocSolutions === 'dynamic') {
-        if (htmlData.tdocSolutionsCtrl !== undefined) api.solutions(show);
+    if (core.htmlData.tdocSolutions === 'dynamic') {
+        if (core.htmlData.tdocSolutionsCtrl !== undefined) api.solutions(show);
     } else {
-        htmlData.tdocSolutionsState = show;
+        core.htmlData.tdocSolutionsState = show;
         updateSolutionsTooltip();
     }
 };
 
-domLoaded.then(() => {
+core.domLoaded.then(() => {
     toggleSolutionsBtn = qs(document, '.btn-toggle-solutions');
     if (toggleSolutionsBtn) {
         on(toggleSolutionsBtn)['show.bs.tooltip'](updateSolutionsTooltip);
-        if (htmlData.tdocSolutions === 'dynamic') {
+        if (core.htmlData.tdocSolutions === 'dynamic') {
             api.events.sub({add: [new api.Watch(
-                {name: 'solutions', page: page.path},
+                {name: 'solutions', page: core.page.path},
                 data => {
-                    htmlData.tdocSolutionsState = data.show ?? 'hide';
+                    core.htmlData.tdocSolutionsState = data.show ?? 'hide';
                     updateSolutionsTooltip();
                 })]});  // Background
             api.auth.onChange(() => {
                 if (api.auth.hasPerm('solutions:write')) {
-                    htmlData.tdocSolutionsCtrl = '';
+                    core.htmlData.tdocSolutionsCtrl = '';
                 } else {
-                    delete htmlData.tdocSolutionsCtrl;
+                    delete core.htmlData.tdocSolutionsCtrl;
                 }
             });
         }
@@ -143,15 +141,15 @@ domLoaded.then(() => {
 
 // Handle the "draw" button.
 let drawing, drawingSvg;
-const drawState = new StoredJson('tdoc:drawState', {});
+const drawState = new core.StoredJson('tdoc:drawState', {});
 drawState.get().eraser = false;
 tdoc.draw = async () => {
-    if (htmlData.tdocDraw !== undefined) {
+    if (core.htmlData.tdocDraw !== undefined) {
         drawing.unmount();
-        delete htmlData.tdocDraw;
+        delete core.htmlData.tdocDraw;
         return;
     }
-    htmlData.tdocDraw = '';
+    core.htmlData.tdocDraw = '';
     if (drawing) {
         drawing.mount(drawingSvg);
         return;
@@ -168,7 +166,7 @@ tdoc.draw = async () => {
     }
 
     const {createDrauu} = await import(`${tdoc.versions.drauu}/index.mjs`);
-    await domLoaded;
+    await core.domLoaded;
     drawingSvg = qs(document, '.bd-content').appendChild(elmt`\
 <svg id="tdoc-drawing" xmlns="http://www.w3.org/2000/svg"\
  xmlns:xlink="http://www.w3.org/1999/xlink"></svg>`);
@@ -219,8 +217,8 @@ ${ds.marker ? ' checked="checked"' : ''}>\
 </div>`);
 
     for (const el of qsa(toolbar, '[data-bs-toggle=tooltip]')) {
-        addTooltip(el, {placement: el.classList.contains('dropdown-item') ?
-                                   'right' : 'bottom'});
+        core.addTooltip(el, {placement: el.classList.contains('dropdown-item') ?
+                                        'right' : 'bottom'});
     }
 
     const toolBtn = qs(toolbar, '.tdoc-tool button');
@@ -257,7 +255,7 @@ ${ds.marker ? ' checked="checked"' : ''}>\
 
     const colorBtn = qs(toolbar, '.tdoc-color button');
     for (const el of qsa(toolbar, '.tdoc-color .dropdown-item')) {
-        const color = rgb2hex(el.style.color);
+        const color = core.rgb2hex(el.style.color);
         if (ds.color === color) colorBtn.style.color = color;
         el.addEventListener('click', () => {
             colorBtn.style.color = color;
@@ -284,12 +282,13 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
         ]);
         mermaid.registerLayoutLoaders(elk);
         mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
-        const mu = new Mutex();  // Mermaid rendering is non-reentrant
-        dyn.render.mermaid = async el => {
+        const mu = new core.Mutex();  // Mermaid rendering is non-reentrant
+        core.dyn.render.mermaid = async el => {
             try {
                 await mu.locked(() => mermaid.run({nodes: [el]}));
             } catch (e) {
-                el.replaceChildren(HtmlError.of('str' in e ? e.str : e).html);
+                el.replaceChildren(
+                    core.HtmlError.of('str' in e ? e.str : e).html);
                 throw htmle`\
 <code>{mermaid}</code>: A diagram failed to render.`;
             }
@@ -298,7 +297,7 @@ ${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
 }
 
 // Handle graphviz diagrams.
-domLoaded.then(() => {
+core.domLoaded.then(() => {
     // Replace <object> elements with their SVG content, so that they can be
     // styled.
     for (const el of qsa(document, 'object.graphviz')) {

@@ -1,7 +1,7 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, enc, FifoBuffer, sleep, timeout, toRadix} from './core.js';
+import * as core from './core.js';
 
 const options = [{
 //     // Raspberry Pi / MicroPython
@@ -29,9 +29,9 @@ function pyStr(s) {
         parts.push(c === `'` ? `\\'` :
                    c === `\\` ? `\\\\` :
                    cp >= 0x20 && cp <= 0x7e ? c :
-                   cp <= 0xff ? `\\x${toRadix(cp, 16, 2)}` :
-                   cp <= 0xffff ? `\\u${toRadix(cp, 16, 4)}` :
-                   `\\U${toRadix(cp, 16, 8)}`);
+                   cp <= 0xff ? `\\x${core.toRadix(cp, 16, 2)}` :
+                   cp <= 0xffff ? `\\u${core.toRadix(cp, 16, 4)}` :
+                   `\\U${core.toRadix(cp, 16, 8)}`);
 
     }
     parts.push(`'`);
@@ -44,7 +44,7 @@ function pyBytes(data) {
         parts.push(v === 0x27 ? `\\'` :
                    v === 0x5c ? `\\\\` :
                    v >= 0x20 && v <= 0x7e ? String.fromCharCode(v) :
-                   `\\x${toRadix(v, 16, 2)}`);
+                   `\\x${core.toRadix(v, 16, 2)}`);
 
     }
     parts.push(`'`);
@@ -105,7 +105,7 @@ export class MicroPython {
     }
 
     async send(data) {
-        if (typeof data === 'string') data = enc.encode(data);
+        if (typeof data === 'string') data = core.enc.encode(data);
         if (this.claim) await this.claim.send(data);
     }
 
@@ -113,7 +113,7 @@ export class MicroPython {
 
     startCapture() {
         if (this.capturing) return;
-        this.cap = new FifoBuffer();
+        this.cap = new core.FifoBuffer();
         this.notifyCapture();
     }
 
@@ -150,7 +150,7 @@ export class MicroPython {
             await fn();
         } finally {
             await this.exitRawRepl();
-            const prompt = enc.encode('\r\n>>> ');
+            const prompt = core.enc.encode('\r\n>>> ');
             const onRead = banner ? (...args) => this._onRead('', ...args)
                                   : undefined;
             await this.expect(prompt, {onRead});
@@ -166,7 +166,7 @@ export class MicroPython {
     }
 
     async exec(code) {
-        if (typeof code === 'string') code = enc.encode(code);
+        if (typeof code === 'string') code = core.enc.encode(code);
         if (!this.useRawPaste || !await this.sendRawPaste(code)) {
             this.useRawPaste = false;
             await this.sendChunked(code);
@@ -182,7 +182,7 @@ export class MicroPython {
 
     async sendRawPaste(data) {
         await this.startRawPaste();
-        switch (dec.decode(await this.recv(2))) {
+        switch (core.dec.decode(await this.recv(2))) {
         case 'R\x00': return false;  // Raw paste not supported
         case 'R\x01': break;  // Raw paste supported
         default:  // Device doesn't know about raw paste
@@ -202,7 +202,7 @@ export class MicroPython {
                     throw new Error("Code upload was aborted");
                 } else {
                     throw new Error(`\
-Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
+Unexpected response to code upload: 0x${core.toRadix(resp, 16, 2)}`);
                 }
             }
             const len = Math.min(win, data.length - i);
@@ -222,17 +222,17 @@ Unexpected response to code upload: 0x${toRadix(resp, 16, 2)}`);
             if (end > data.length) end = data.length;
             await this.send(data.subarray(i, end));
             i = end;
-            await sleep(10);
+            await core.sleep(10);
         }
         await this.eot();
-        const resp = dec.decode(await this.recv(2));
+        const resp = core.dec.decode(await this.recv(2));
         if (resp !== 'OK') throw new Error(`Code upload failed: ${resp}`);
     }
 
     async run(code, ms = 1000) {
         await this.exec(code);
         const {out, err} = await this.execWait({ms, record: true});
-        if (err.length > 0) throw new RemoteError(dec.decode(err));
+        if (err.length > 0) throw new RemoteError(core.dec.decode(err));
         return out;
     }
 
@@ -290,7 +290,7 @@ except OSError as e:
     startRawPaste() { return this.send('\x05A\x01'); }
 
     async recv(count, ms = 1000) {
-        const cancel = timeout(ms);
+        const cancel = core.timeout(ms);
         while (this.cap.length < count) {
             await Promise.race([this.pAvail, cancel, this.pAbort]);
         }
@@ -298,8 +298,8 @@ except OSError as e:
     }
 
     async expect(want, {ms = 1000, record = false, onRead} = {}) {
-        if (typeof want === 'string') want = enc.encode(want);
-        const cancel = timeout(ms);
+        if (typeof want === 'string') want = core.enc.encode(want);
+        const cancel = core.timeout(ms);
         let pos = 0;
         for (;;) {
             const i = this.cap.findData(want, pos);

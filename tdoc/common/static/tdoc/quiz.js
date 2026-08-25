@@ -1,10 +1,8 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {
-    asyncProps, dec, elmt, enable, fromBase64, on, qs, qsa, TdocElement,
-    typesetMath,
-} from './core.js';
+import * as core from './core.js';
+const {elmt, on, qs, qsa} = core;
 
 function hasChecked(field) {
     return field.type === 'checkbox' || field.type === 'radio';
@@ -100,7 +98,7 @@ class QuizBase {
             }
         }
         if (res) {
-            enable(false, ...this.fields, this.btn);
+            core.enable(false, ...this.fields, this.btn);
             this.onSuccess();
         } else {
             if (hasChecked(focus)) {
@@ -209,7 +207,7 @@ class TableQuiz extends QuizBase {
             }
         }
         this.table.appendChild(tbody);
-        typesetMath(tbody);
+        core.typesetMath(tbody);
         this.setupFields(tbody);
         if (focus) qs(tbody, '.tdoc-quiz-field')?.focus?.();
     }
@@ -224,7 +222,7 @@ class TableQuiz extends QuizBase {
     onSuccess() { this.addEntry(true); }
 }
 
-export const generators = asyncProps({}, {name: 'quiz.generators'});
+export const generators = core.asyncProps({}, {name: 'quiz.generators'});
 
 function prevField(fields, field) {
     let prev;
@@ -282,7 +280,7 @@ function checkFns(spec) {
 }
 
 async function checkArgs(field) {
-    const text = dec.decode(await fromBase64(field.dataset.text));
+    const text = core.dec.decode(await core.fromBase64(field.dataset.text));
     const group = field.closest('.tdoc-quiz-group');
     return {
         field,
@@ -328,7 +326,7 @@ async function checkArgs(field) {
 
 const types = {'static': StaticQuiz, 'table': TableQuiz};
 
-export class QuizElement extends TdocElement {
+export class QuizElement extends core.TdocElement {
     async onInit() {
         // Attributes must not be inspected in the constructor, so we
         // instantiate the class here.
@@ -338,4 +336,4 @@ export class QuizElement extends TdocElement {
 }
 
 customElements.define('tdoc-quiz', QuizElement);
-customElements.define('tdoc-quiz-ph', TdocElement);
+customElements.define('tdoc-quiz-ph', core.TdocElement);

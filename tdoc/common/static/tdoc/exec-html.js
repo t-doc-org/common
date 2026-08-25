@@ -1,12 +1,13 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {elmt, escape, on, onMessage, qs} from './core.js';
-import {Runner} from './exec.js';
+import * as core from './core.js';
+import * as exec from './exec.js';
+const {elmt, on, qs} = core;
 
 const parser = new DOMParser();
 
-class HtmlRunner extends Runner {
+class HtmlRunner extends exec.Runner {
     static name = 'html';
 
     constructor(node) {
@@ -77,7 +78,7 @@ class HtmlRunner extends Runner {
 </iframe>`;
         this.setOutputStyle(iframe);
         this.output.render('001', iframe);
-        onMessage(iframe.contentWindow, e => {
+        core.onMessage(iframe.contentWindow, e => {
             const data = e.data;
             if (data.unload !== undefined) {
                 title.textContent = '';
@@ -99,10 +100,10 @@ class HtmlRunner extends Runner {
         // In practice, browsers are smart enough to move the <script> tag to
         // the beginning of the <head> anyway, so this works.
         const inject = import.meta.resolve('./exec-html-iframe.js');
-        const blocks = [`<script src="${escape(inject)}"></script>`];
+        const blocks = [`<script src="${core.escape(inject)}"></script>`];
         for (const {code} of this.codeBlocks()) blocks.push(code);
         iframe.srcdoc = blocks.join('');
     }
 }
 
-Runner.register(HtmlRunner);
+exec.Runner.register(HtmlRunner);

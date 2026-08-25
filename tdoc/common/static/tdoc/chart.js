@@ -1,11 +1,9 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {
-    asyncProps, dyn, elmt, htmle, isPlainObject, isObject, mergeAttrs, on, qs,
-    qsa,
-} from './core.js';
-import {Bins, Distribution, Sample} from './math.js';
+import * as core from './core.js';
+import * as math from './math.js';
+const {elmt, htmle, on} = core;
 
 // Allow disabling plugins by default by setting their options to false in page
 // metadata. This doesn't work in Chart.defaults, but it does in per-chart
@@ -99,13 +97,13 @@ function mergeTo(dst, src) {
             // Only merge into arrays of objects; overwrite otherwise.
             let dv = dst[k];
             if (dv == null || !Array.isArray(dv)
-                    || !dv.every(v => isObject(v))) {
+                    || !dv.every(v => core.isObject(v))) {
                 dv = dst[k] = [];
             }
             mergeTo(dv, sv);
-        } else if (isObject(sv) && typeof sv.valueOf() !== 'string') {
+        } else if (core.isObject(sv) && typeof sv.valueOf() !== 'string') {
             let dv = dst[k];
-            if (dv == null || !isObject(dv)) dv = dst[k] = {};
+            if (dv == null || !core.isObject(dv)) dv = dst[k] = {};
             mergeTo(dv, sv);
         } else if (sv != null) {
             dst[k] = sv;
@@ -121,15 +119,15 @@ export async function extractSets(...args) {
 }
 
 // A set of pre-defined attributes.
-export const attrs = asyncProps({}, {ns: 'chartjs', container: 'attrs'});
+export const attrs = core.asyncProps({}, {ns: 'chartjs', container: 'attrs'});
 
 // Merge attribute sets, with later sets overriding earlier ones.
 function merge(...as) {
-    return mergeAttrs(mergeTo, attrs, ...as);
+    return core.mergeAttrs(mergeTo, attrs, ...as);
 }
 
 // Plugins that can be referenced by name.
-export const plugins = asyncProps({}, {
+export const plugins = core.asyncProps({}, {
     ns: 'chartjs', container: 'plugins',
     onSet: (p, v) => { v.id = p; return v; },
 });
@@ -154,8 +152,8 @@ function getAspectRatio(el) {
 }
 
 // The renderer container.
-export const render = dyn.render.chartjs = asyncProps(
-    {[dyn.timeout]: 15000},
+export const render = core.dyn.render.chartjs = core.asyncProps(
+    {[core.dyn.timeout]: 15000},
     {ns: 'chartjs', container: 'render', callables: true});
 
 // Initialize a chart for a {chartjs} directive. Returns the Chart instance.
@@ -205,7 +203,7 @@ render.venn = async (el, config) => {
 };
 
 // A container for annotation handlers.
-export const annotations = asyncProps({}, {
+export const annotations = core.asyncProps({}, {
     ns: 'chartjs', container: 'annotations', callables: true,
 });
 
@@ -440,13 +438,13 @@ render.histogram = async (el, {
 }) => {
     let bins;
     if (sample !== undefined) {
-        sample = new Sample(sample);
-        bins = custom !== undefined ? Bins.custom({bins: custom, sample}) :
-                                      Bins.uniform({...uniform, sample});
+        sample = new math.Sample(sample);
+        bins = custom !== undefined ? math.Bins.custom({bins: custom, sample}) :
+                                      math.Bins.uniform({...uniform, sample});
         distribution = sample.distribution(bins);
     } else if (distribution !== undefined) {
-        bins = Bins.custom({bins: distribution.map(it => it[0])});
-        distribution = Distribution.of(distribution);
+        bins = math.Bins.custom({bins: distribution.map(it => it[0])});
+        distribution = math.Distribution.of(distribution);
     } else {
         throw htmle`\
 <code>{chartjs} template:histogram</code>: Either <code>sample</code> or \
@@ -509,7 +507,7 @@ render.densityFunction = async (el, {
 <code>{chartjs} template:density-function</code>: <code>sample</code> \
 is required.`;
     }
-    sample = new Sample(sample);
+    sample = new math.Sample(sample);
     const data = sample.densityFunction(normalize)
                        .map(([v, c]) => ({x: v, y: c}));
 
@@ -547,14 +545,14 @@ render.cumulativeDistributionFunction = async (el, {
 }) => {
     let ds, data = [{x: -Number.MAX_VALUE, y: 0}];
     if (sample !== undefined) {
-        ds = sample = new Sample(sample);
+        ds = sample = new math.Sample(sample);
         distribution = undefined;
         const cdf = sample.cumulativeDistributionFunction(normalize);
         for (let [x, y] of cdf) {
             data.push({x, y: data[data.length - 1].y}, {}, {x, y});
         }
     } else if (distribution !== undefined) {
-        ds = distribution = Distribution.of(distribution);
+        ds = distribution = math.Distribution.of(distribution);
         const cdf = distribution.cumulativeDistributionFunction(normalize);
         for (let [x, y] of cdf) data.push({x, y});
     } else {

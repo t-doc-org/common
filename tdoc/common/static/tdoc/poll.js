@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {
-    clientId, htmlData, on, qs, qsa, qsaReady, TdocElement,
-} from './core.js';
+import * as core from './core.js';
+const {on, qs, qsa} = core;
 
 const polls = [];
 
@@ -108,7 +107,7 @@ class Poll {
         if (!this.open) return;
         const answer = this.answers.indexOf(tr);
         if (answer < 0) return;
-        await api.poll({id: this.id, voter: await clientId, answer,
+        await api.poll({id: this.id, voter: await core.clientId, answer,
                         vote: !tr.classList.contains('selected')});
     }
 
@@ -145,7 +144,7 @@ class Poll {
     }
 }
 
-export class PollElement extends TdocElement {
+export class PollElement extends core.TdocElement {
     constructor() {
         super();
         this.poll = new Poll(this);
@@ -160,10 +159,13 @@ export class PollElement extends TdocElement {
 customElements.define('tdoc-poll', PollElement);
 
 (async () => {
-    for await (const el of qsaReady(document, 'tdoc-poll')) polls.push(el.poll);
+    for await (const el of core.qsaReady(document, 'tdoc-poll')) {
+        polls.push(el.poll);
+    }
     if (polls.length === 0) return;
     const watch = new api.Watch(
-        {name: 'poll/votes', voter: await clientId, ids: polls.map(p => p.id)},
+        {name: 'poll/votes', voter: await core.clientId,
+         ids: polls.map(p => p.id)},
         data => {
             for (const poll of polls) {
                 poll.onVotesUpdate(data.votes[poll.id] ?? []);
@@ -172,9 +174,9 @@ customElements.define('tdoc-poll', PollElement);
     api.events.sub({add: [...polls.map(p => p.watch), watch]});  // Background
     api.auth.onChange(() => {
         if (api.auth.hasPerm('polls:control')) {
-            htmlData.tdocPollControl = '';
+            core.htmlData.tdocPollControl = '';
         } else {
-            delete htmlData.tdocPollControl;
+            delete core.htmlData.tdocPollControl;
         }
     });
 })();  // Background

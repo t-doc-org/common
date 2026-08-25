@@ -1,11 +1,10 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {
-    dec, elmt, focusIfInViewport, htmlFragment, on, qs, text,
-} from './core.js';
-import {view as cmview} from './editor.js';
-import {Runner} from './exec.js';
+import * as cm from './codemirror.js';
+import * as core from './core.js';
+import * as exec from './exec.js';
+const {elmt, on, qs} = core;
 
 class Coords {
     addHandlers(el, fn) {
@@ -230,7 +229,7 @@ async function create(cls, env, config) {
 
 let interps;
 
-class PythonRunner extends Runner {
+class PythonRunner extends exec.Runner {
     static name = 'python';
 
     static async init(config) {
@@ -263,7 +262,7 @@ class PythonRunner extends Runner {
     }
 
     get editorExtensions() {
-        return [cmview.keymap.of([
+        return [cm.view.keymap.of([
             {key: "Shift-Ctrl-x", run: () => this.pasteCoords()},
         ])];
     }
@@ -325,7 +324,7 @@ class PythonRunner extends Runner {
                 this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
-                setTimeout(() => { focusIfInViewport(input); });
+                setTimeout(() => { core.focusIfInViewport(input); });
                 break;
             }
             case 'text': {
@@ -334,7 +333,7 @@ class PythonRunner extends Runner {
                 this.input = div;
                 // Set the focus with a delay, as the "play" button is sometimes
                 // still active if the input is requested immediately on start.
-                setTimeout(() => { focusIfInViewport(input); });
+                setTimeout(() => { core.focusIfInViewport(input); });
                 break;
             }
             case 'buttons-right':
@@ -350,7 +349,7 @@ class PythonRunner extends Runner {
                     if (icon) {
                         btn.classList.add(`fa-${icon[1]}`);
                     } else {
-                        btn.appendChild(text(label));
+                        btn.appendChild(core.text(label));
                     }
                     on(btn).click(() => { resolve(index); });
                 }
@@ -370,7 +369,7 @@ class PythonRunner extends Runner {
 
     onRender(html, name) {
         const el = this.output.render(
-            name, htmlFragment(html).firstElementChild);
+            name, core.htmlFragment(html).firstElementChild);
         if (el instanceof SVGSVGElement) {
             coords.addHandlers(el, ev => {
                 if (this.node.classList.contains('no-coords')) return [];
@@ -400,4 +399,4 @@ class PythonRunner extends Runner {
     }
 }
 
-Runner.register(PythonRunner);
+exec.Runner.register(PythonRunner);

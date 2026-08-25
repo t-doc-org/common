@@ -1,20 +1,21 @@
 // Copyright 2025 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, elmt, enc, html, on, qs, qsa, text} from './core.js';
-import {Runner} from './exec.js';
-import {MicroPython} from './micropython.js';
-import {getSerials, onSerial, requestSerial} from './serial.js';
+import * as core from './core.js';
+import * as exec from './exec.js';
+import * as mp from './micropython.js';
+import * as serial from './serial.js';
+const {elmt, html, on, qs, qsa} = core;
 
-class MicroPythonRunner extends Runner {
+class MicroPythonRunner extends exec.Runner {
     static name = 'micropython';
 
     constructor(node) {
         super(node);
         this.output = this.sectionedOutput();
         this.console = this.output.consoleOut('990');
-        this.mp = new MicroPython((...args) => this.console.write(...args),
-                                  (...args) => this.onRelease(...args));
+        this.mp = new mp.MicroPython((...args) => this.console.write(...args),
+                                     (...args) => this.onRelease(...args));
     }
 
     addControls(controls) {
@@ -57,7 +58,7 @@ class MicroPythonRunner extends Runner {
 <span class="btn__icon-container tdoc fa-${icon}"></span>\
 <span class="btn__text-container"></span>\
 </a></li>`;
-        if (typeof label === 'string') label = text(label);
+        if (typeof label === 'string') label = core.text(label);
         qs(li, '.btn__text-container').appendChild(label);
         on(qs(li, 'a')).click(onClick);
         return li;
@@ -87,11 +88,11 @@ class MicroPythonRunner extends Runner {
         if (this.when.length === 0) return;
         this.enableInput(false);
         this.setSerial();
-        onSerial(this, {
+        serial.onConnect(this, {
             onConnect: s => { if (!this.mp.serial) this.setSerial(s); },
             onDisconnect: s => { if (this.mp.serial === s) this.setSerial(); }
         });
-        const serials = getSerials();
+        const serials = serial.enumerate();
         if (serials.length === 1) this.setSerial(serials[0]);
     }
 
@@ -102,12 +103,12 @@ class MicroPythonRunner extends Runner {
         }
     }
 
-    setSerial(serial) {
-        this.mp.setSerial(serial);
-        this.runCtrl.disabled = !serial;
+    setSerial(port) {
+        this.mp.setSerial(port);
+        this.runCtrl.disabled = !port;
         for (const el of qsa(this.node,
                 '.tdoc-exec-controls .dropdown-item.if-connected')) {
-            el.classList.toggle('disabled', !serial);
+            el.classList.toggle('disabled', !port);
         }
     }
 
@@ -115,7 +116,7 @@ class MicroPythonRunner extends Runner {
         this.setSerial();
         this.console.clear();
         try {
-            this.setSerial(await requestSerial());
+            this.setSerial(await serial.request());
             await this.mp.claimSerial(false);
             this.enableInput();
         } catch (e) {
@@ -190,7 +191,7 @@ class MicroPythonRunner extends Runner {
     async readMain() {
         await this.rawRepl(async () => {
             const data = await this.mp.readFile('main.py');
-            this.setEditorText(dec.decode(data));
+            this.setEditorText(core.dec.decode(data));
             this.console.write('', `Program read from main.py\n`);
         });
     }
@@ -198,7 +199,7 @@ class MicroPythonRunner extends Runner {
     async writeMain() {
         await this.rawRepl(async () => {
             await this.mp.writeFile('main.py',
-                                    enc.encode(this.getCode().join('\n')));
+                                    core.enc.encode(this.getCode().join('\n')));
             this.console.write('', `Program written to main.py\n`);
         });
     }
@@ -211,4 +212,4 @@ class MicroPythonRunner extends Runner {
     }
 }
 
-Runner.register(MicroPythonRunner);
+exec.Runner.register(MicroPythonRunner);

@@ -2,21 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {
-    autocomplete, collab, commands, language, languages, lint, oneDark, search,
-    state, view,
-} from './codemirror.js';
-import {
-    backoff, CondVar, debug, Mutex, on, randomId, RateLimited, Stored, toBase64,
-    withBackoff,
-} from './core.js';
-
-export {autocomplete, collab, commands, language, lint, search, state, view};
+import * as cm from './codemirror.js';
+import * as core from './core.js';
+const {on} = core;
 
 // React to theme changes and update all editor themes as well.
-const theme = new state.Compartment();
-const lightTheme = view.EditorView.theme({}, {dark: false});
-const darkTheme = oneDark;
+const theme = new cm.state.Compartment();
+const lightTheme = cm.view.EditorView.theme({}, {dark: false});
+const darkTheme = cm.oneDark;
 
 function currentTheme() {
     return document.documentElement.dataset.theme === 'dark' ?
@@ -26,74 +19,74 @@ function currentTheme() {
 document.addEventListener('themechange', e => {
     const curTheme = currentTheme();
     for (const div of document.querySelectorAll('div.cm-editor')) {
-        view.EditorView.findFromDOM(div).dispatch(
+        cm.view.EditorView.findFromDOM(div).dispatch(
             {effects: theme.reconfigure(curTheme)});
     }
 });
 
 // The default extensions appended to the user-provided ones.
 const defaultExtensions = [
-    autocomplete.autocompletion({defaultKeymap: false}),
-    autocomplete.closeBrackets(),
-    commands.history(),
-    language.bracketMatching(),
-    language.foldGutter(),
-    language.indentOnInput(),
-    language.indentUnit.of('  '),
-    language.syntaxHighlighting(language.defaultHighlightStyle,
-                                {fallback: true}),
-    search.highlightSelectionMatches(),
-    state.EditorState.allowMultipleSelections.of(true),
-    state.EditorState.tabSize.of(2),
-    view.crosshairCursor(),
-    view.drawSelection(),
-    view.dropCursor(),
-    view.highlightActiveLine(),
-    view.highlightActiveLineGutter(),
-    view.highlightSpecialChars(),
-    view.keymap.of([
-        {key: 'Mod-e', run: commands.deleteLine},
-        ...autocomplete.closeBracketsKeymap,
-        ...autocomplete.completionKeymap.map(
+    cm.autocomplete.autocompletion({defaultKeymap: false}),
+    cm.autocomplete.closeBrackets(),
+    cm.commands.history(),
+    cm.language.bracketMatching(),
+    cm.language.foldGutter(),
+    cm.language.indentOnInput(),
+    cm.language.indentUnit.of('  '),
+    cm.language.syntaxHighlighting(cm.language.defaultHighlightStyle,
+                                   {fallback: true}),
+    cm.search.highlightSelectionMatches(),
+    cm.state.EditorState.allowMultipleSelections.of(true),
+    cm.state.EditorState.tabSize.of(2),
+    cm.view.crosshairCursor(),
+    cm.view.drawSelection(),
+    cm.view.dropCursor(),
+    cm.view.highlightActiveLine(),
+    cm.view.highlightActiveLineGutter(),
+    cm.view.highlightSpecialChars(),
+    cm.view.keymap.of([
+        {key: 'Mod-e', run: cm.commands.deleteLine},
+        ...cm.autocomplete.closeBracketsKeymap,
+        ...cm.autocomplete.completionKeymap.map(
             k => k.key === 'Enter' ? {...k, key: 'Tab'} : k),
-        ...commands.defaultKeymap.map(
+        ...cm.commands.defaultKeymap.map(
             k => k.key === 'Home' ? {
                 ...k,
-                run: commands.cursorLineStart,
-                shift: commands.selectLineStart,
+                run: cm.commands.cursorLineStart,
+                shift: cm.commands.selectLineStart,
             } : k
         ),
-        ...commands.historyKeymap,
-        commands.indentWithTab,
-        ...language.foldKeymap,
-        ...lint.lintKeymap,
-        ...search.searchKeymap,
+        ...cm.commands.historyKeymap,
+        cm.commands.indentWithTab,
+        ...cm.language.foldKeymap,
+        ...cm.lint.lintKeymap,
+        ...cm.search.searchKeymap,
     ]),
-    view.lineNumbers(),
-    view.rectangularSelection(),
-    view.EditorView.lineWrapping,
+    cm.view.lineNumbers(),
+    cm.view.rectangularSelection(),
+    cm.view.EditorView.lineWrapping,
 ];
 
 // Create a new editor.
-export function newEditor(config) {
+export function create(config) {
     if (!config.extensions) config.extensions = [];
     config.extensions.push(
         theme.of(currentTheme()),
         ...defaultExtensions,
     );
     if (config.language) {
-        const lang = languages[config.language];
+        const lang = cm.languages[config.language];
         if (lang) config.extensions.push(lang());
         delete config.language;
     }
-    return new view.EditorView(config);
+    return new cm.view.EditorView(config);
 }
 
 // Find an editor in or below the given element. Returns null if no editor is
 // found.
-export function findEditor(el) {
+export function find(el) {
     const dom = el.querySelector('div.cm-editor');
-    return dom ? view.EditorView.findFromDOM(dom) : null;
+    return dom ? cm.view.EditorView.findFromDOM(dom) : null;
 }
 
 // An array of transactions. Each transaction must be based on the previous
@@ -116,15 +109,15 @@ export class Transactions extends Array {
 // A base class for an editor backend store.
 class Store {
     static instances = new Map();
-    static ro = new state.Compartment();
+    static ro = new cm.state.Compartment();
 
     static extensions(plugin) {
-        return [this.ro.of(state.EditorState.readOnly.of(true))];
+        return [this.ro.of(cm.state.EditorState.readOnly.of(true))];
     }
 
     static define(config) {
         const cls = this;
-        return view.ViewPlugin.fromClass(class extends cls {
+        return cm.view.ViewPlugin.fromClass(class extends cls {
             static config = config;
         }, {
             eventObservers: {
@@ -138,7 +131,7 @@ class Store {
 
     constructor(view) {
         this.view = view;
-        this.storer = new RateLimited({min: 1000, max: 5000});
+        this.storer = new core.RateLimited({min: 1000, max: 5000});
         Store.instances.set(this.config.id, this);
     }
 
@@ -150,7 +143,7 @@ class Store {
     update(update) {
         if (!update.docChanged) return;
         for (const tr of update.transactions) {
-            if (tr.annotation(state.Transaction.remote)) return;
+            if (tr.annotation(cm.state.Transaction.remote)) return;
         }
         this.onLocalChange(update.state.doc);
     }
@@ -162,15 +155,15 @@ class Store {
     setText(text, history = false) {
         return {
             changes: {from: 0, to: this.view.state.doc.length, insert: text},
-            annotations: [state.Transaction.remote.of(true),
-                          state.Transaction.addToHistory.of(history)],
+            annotations: [cm.state.Transaction.remote.of(true),
+                          cm.state.Transaction.addToHistory.of(history)],
         };
     }
 
     readOnly(value) {
         return {
             effects: this.constructor.ro.reconfigure(
-                state.EditorState.readOnly.of(value)),
+                cm.state.EditorState.readOnly.of(value)),
         };
     }
 }
@@ -189,7 +182,7 @@ class LocalStore extends Store {
 
     constructor(view) {
         super(view);
-        this.store = new Stored(LocalStore.prefix + this.config.id);
+        this.store = new core.Stored(LocalStore.prefix + this.config.id);
         this.status('local',
                     "The editor content is saved locally in this browser.");
         queueMicrotask(() => {  // State cannot be changed in constructor
@@ -223,7 +216,7 @@ const backoffCfg = {min: 1000, max: 10000};
 
 // A collaborative backend store using the API.
 class CollabStore extends Store {
-    static collab = new state.Compartment();
+    static collab = new cm.state.Compartment();
 
     static extensions(plugin) {
         return [super.extensions(plugin), this.collab.of([])];
@@ -231,7 +224,7 @@ class CollabStore extends Store {
 
     constructor(view) {
         super(view);
-        this.poke = new CondVar();
+        this.poke = new core.CondVar();
         this.status('init', "Loading...");
         this.sync();  // Background
     }
@@ -256,7 +249,7 @@ class CollabStore extends Store {
 
     async sync() {
         // Fetch the initial editor text.
-        const version = await withBackoff(
+        const version = await core.withBackoff(
             backoffCfg, () => this.init(),
             e => { this.status('error', e.toString()); });
         this.saved();
@@ -291,9 +284,9 @@ class CollabStore extends Store {
                     this._pull = false;
                     let pulled = false;
                     for (;;) {
-                        const v = collab.getSyncedVersion(this.view.state);
+                        const v = cm.collab.getSyncedVersion(this.view.state);
                         if (v === remoteVersion) break;
-                        if (debug('editor')) {
+                        if (core.debug('editor')) {
                             console.log(`Pulling ${v} => ${remoteVersion}`);
                         }
                         await this.pull();
@@ -303,12 +296,12 @@ class CollabStore extends Store {
                     // Push local updates if there are any.
                     const push = this._push;
                     this._push = false;
-                    if (collab.sendableUpdates(this.view.state).length > 0) {
+                    if (cm.collab.sendableUpdates(this.view.state).length > 0) {
                         if (pulled || push || pushing) {
-                            if (debug('editor')) {
+                            if (core.debug('editor')) {
                                 const st = this.view.state;
-                                const v = collab.getSyncedVersion(st);
-                                const u = collab.sendableUpdates(st).length;
+                                const v = cm.collab.getSyncedVersion(st);
+                                const u = cm.collab.sendableUpdates(st).length;
                                 console.log(`Pushing ${v} => ${v + u}`);
                             }
                             pushing = true;
@@ -320,8 +313,8 @@ class CollabStore extends Store {
                     }
                     retries = 0;
                 } catch (e) {
-                    if (debug('editor')) console.error(e)
-                    wargs = [wakeupErr, backoff(backoffCfg, retries++)];
+                    if (core.debug('editor')) console.error(e)
+                    wargs = [wakeupErr, core.backoff(backoffCfg, retries++)];
                     this.status('error', e.toString());
                 }
             }
@@ -335,10 +328,10 @@ class CollabStore extends Store {
         const trs = new Transactions(this.view.state);
         // This needs to be a separate transaction, otherwise the change is
         // reported to the collab plugin.
-        if (text !== null) trs.add(this.setText(state.Text.of(text)));
+        if (text !== null) trs.add(this.setText(cm.state.Text.of(text)));
         trs.add({
-            effects: this.constructor.collab.reconfigure(collab.collab({
-                startVersion: version, clientID: await randomId(6),
+            effects: this.constructor.collab.reconfigure(cm.collab.collab({
+                startVersion: version, clientID: await core.randomId(6),
             })),
         }, this.readOnly(false));
         this.view.dispatch(trs);
@@ -348,24 +341,24 @@ class CollabStore extends Store {
     async pull() {
         const {updates} = await api.editor({
             pull: this.config.id,
-            version: collab.getSyncedVersion(this.view.state),
+            version: cm.collab.getSyncedVersion(this.view.state),
         });
         if (this._stop) return;
         const up = [];
         for (const [c, us] of updates) {
             for (const u of us) {
-                up.push({clientID: c, changes: state.ChangeSet.fromJSON(u)});
+                up.push({clientID: c, changes: cm.state.ChangeSet.fromJSON(u)});
             }
         }
-        this.view.dispatch(collab.receiveUpdates(this.view.state, up));
+        this.view.dispatch(cm.collab.receiveUpdates(this.view.state, up));
     }
 
     async push() {
         const st = this.view.state;
         const {success} = await api.editor({
-            push: this.config.id, version: collab.getSyncedVersion(st),
-            client: collab.getClientID(st),
-            updates: collab.sendableUpdates(st).map(u => u.changes.toJSON()),
+            push: this.config.id, version: cm.collab.getSyncedVersion(st),
+            client: cm.collab.getClientID(st),
+            updates: cm.collab.sendableUpdates(st).map(u => u.changes.toJSON()),
             text: st.doc.toJSON(),
         });
         return success;

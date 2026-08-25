@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import * as api from './api.js';
-import {
-    asyncProps, elmt, isVisible, on, qs, qsa, showAlert, TdocElement, text,
-} from './core.js';
-import {
-    collabStore, findEditor, localStore, newEditor, state as cmstate,
-    view as cmview,
-} from './editor.js';
+import * as cm from './codemirror.js';
+import * as core from './core.js';
+import * as editor from './editor.js';
+const {elmt, on, qs, qsa} = core;
 
 // An error that is caused by the user, and that doesn't need to be logged.
 export class UserError extends Error {
@@ -59,9 +56,9 @@ function fixLineNos(node) {
     }
 }
 
-const runners = asyncProps({}, {name: 'exec.runners'});
+const runners = core.asyncProps({}, {name: 'exec.runners'});
 
-export class ExecElement extends TdocElement {
+export class ExecElement extends core.TdocElement {
     async onInit() {
         try {
             const cls = await runners[this.getAttribute('runner')];
@@ -73,7 +70,7 @@ export class ExecElement extends TdocElement {
             if (this.runner.when.includes('load')) this.runner.doRun();  // BG
         } catch (e) {
             console.error(e);
-            await showAlert(e);
+            await core.showAlert(e);
         }
     }
 }
@@ -135,7 +132,7 @@ export class Runner {
 
     // Add an editor to the {exec} block.
     addEditor() {
-        this.origText = cmstate.Text.of(
+        this.origText = cm.state.Text.of(
             this.preText.trimEnd().split(/\r\n?|\n/));
         const runner = this;
         const config = {
@@ -145,7 +142,7 @@ export class Runner {
             parent: qs(this.node, 'div.highlight'),
         };
         if (this.when.includes('click')) {
-            config.extensions.push(cmview.keymap.of([
+            config.extensions.push(cm.view.keymap.of([
                 {key: "Shift-Enter", run: () => this.doRun() || true },
             ]));
         }
@@ -163,21 +160,21 @@ export class Runner {
             };
             const store = this.editor.store;
             if (store === 'cloud' && api.auth.name !== undefined) {
-                config.extensions.push(collabStore(cfg));
+                config.extensions.push(editor.collabStore(cfg));
             } else if (store) {
-                config.extensions.push(localStore(cfg));
+                config.extensions.push(editor.localStore(cfg));
             }
         }
 
         // Set up the reset button.
         const reset = this.reset;
         if (reset === 'show' ||
-                (reset === 'auto' && !this.origText.eq(cmstate.Text.empty))) {
+                (reset === 'auto' && !this.origText.eq(cm.state.Text.empty))) {
             const btn = this.resetEditor = elmt`\
 <button class="fa-rotate-left tdoc-reset-editor"\
  title="Reset editor content"></button>`;
             on(btn).click(() => this.setEditorText(this.origText));
-            config.extensions.push(cmview.EditorView.updateListener.of(u => {
+            config.extensions.push(cm.view.EditorView.updateListener.of(u => {
                 if (!u.docChanged) return;
                 btn.disabled = u.state.doc.eq(this.origText);
             }));
@@ -185,7 +182,7 @@ export class Runner {
 
         // Create the editor.
         config.extensions.push(...this.editorExtensions);
-        const view = newEditor(config);
+        const view = editor.create(config);
         view.dom.setAttribute('style',
                               qs(this.node, 'pre').getAttribute('style'));
         if (this.resetEditor) {
@@ -196,7 +193,7 @@ export class Runner {
     get editorExtensions() { return []; }
 
     // Return the EditorView object.
-    get editorView() { return findEditor(this.node); }
+    get editorView() { return editor.find(this.node); }
 
     // Dispatch a transaction that updates the editor state.
     updateEditorState(fn) {
@@ -236,7 +233,7 @@ export class Runner {
         const el = qs(this.node, '.tdoc-run');
         // Check visibility of the parent, as the run control itself may be
         // temporarily hidden (e.g. replaced by the stop control).
-        return el && isVisible(el.parentNode);
+        return el && core.isVisible(el.parentNode);
     }
 
     // Create a "Stop" control.
@@ -297,7 +294,7 @@ export class Runner {
             }
         } catch (e) {
             if (!(e instanceof UserError)) console.error(e);
-            this.appendErrorOutput().appendChild(text(` ${e.toString()}`));
+            this.appendErrorOutput().appendChild(core.text(` ${e.toString()}`));
         } finally {
             delete this.run_id;
             resolve();
@@ -508,7 +505,7 @@ class ConsoleOut {
         const out = qs(this.out, 'pre');
 
         // Append the text and scroll if at the bottom.
-        let node = text(data);
+        let node = core.text(data);
         if (stream) {
             const el = elmt`<span class="${stream}"></span>`;
             el.appendChild(node);

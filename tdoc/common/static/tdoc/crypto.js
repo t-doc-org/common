@@ -1,7 +1,7 @@
 // Copyright 2024 Remy Blank <remy@c-space.org>
 // SPDX-License-Identifier: MIT
 
-import {dec, enc, fromBase64, toBase64} from './core.js';
+import * as core from './core.js';
 
 // Return an Uint8Array of the given size, filled with random data.
 export function random(size) {
@@ -12,10 +12,10 @@ export function random(size) {
 // a salt.
 export async function deriveKey(password, salt) {
     const pwdKey = await crypto.subtle.importKey(
-        'raw', enc.encode(password), 'PBKDF2', false,
+        'raw', core.enc.encode(password), 'PBKDF2', false,
         ['deriveBits', 'deriveKey']);
     return await crypto.subtle.deriveKey(
-        {name: 'PBKDF2', salt: enc.encode(salt), iterations: 600000,
+        {name: 'PBKDF2', salt: core.enc.encode(salt), iterations: 600000,
          hash: 'SHA-256'},
         pwdKey, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
 }
@@ -49,16 +49,16 @@ export async function pageKey(param, salt) {
 
 // Encrypt a string secret.
 export async function encryptSecret(key, secret) {
-    const {data, iv} = await encrypt(key, enc.encode(secret));
-    return {data: await toBase64(data), iv: await toBase64(iv)};
+    const {data, iv} = await encrypt(key, core.enc.encode(secret));
+    return {data: await core.toBase64(data), iv: await core.toBase64(iv)};
 }
 
 // Decrypt a string secret.
 export async function decryptSecret(key, msg) {
     if (!key) return null;
     try {
-        return dec.decode(await decrypt(key, await fromBase64(msg.iv),
-                                        await fromBase64(msg.data)));
+        return core.dec.decode(await decrypt(key, await core.fromBase64(msg.iv),
+                                             await core.fromBase64(msg.data)));
     } catch (e) {
         return null;
     }
