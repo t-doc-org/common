@@ -432,8 +432,7 @@ class EventsApi {
     async run() {
         this.running = true;
         try {
-            let retries = 0;
-            for (;;) {
+            for (let retries = 0;;) {
                 let start = performance.now(), resolve;
                 try {
                     const req = {};
@@ -451,7 +450,7 @@ class EventsApi {
                     delete this.sid;
                 }
                 if (performance.now() - start > 30000) retries = 0;
-                await sleep(backoff(1000, 10000, retries++));
+                await sleep(backoff({min: 1000, max: 10000}, retries++));
             }
         } finally {
             this.running = false;

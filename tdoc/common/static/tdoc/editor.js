@@ -7,12 +7,11 @@ import {
     state, view,
 } from './codemirror.js';
 import {
-    CondVar, debug, Mutex, on, randomId, RateLimited, Stored, toBase64,
+    backoff, CondVar, debug, Mutex, on, randomId, RateLimited, Stored, toBase64,
+    withBackoff,
 } from './core.js';
 
 export {autocomplete, collab, commands, language, lint, search, state, view};
-
-// debug({enable: 'editor'});
 
 // React to theme changes and update all editor themes as well.
 const theme = new state.Compartment();
@@ -220,6 +219,8 @@ on(window).storage(e => {
     }
 });
 
+const backoffCfg = {min: 1000, max: 10000};
+
 // A collaborative backend store using the API.
 class CollabStore extends Store {
     static collab = new state.Compartment();
@@ -255,8 +256,9 @@ class CollabStore extends Store {
 
     async sync() {
         // Fetch the initial editor text.
-        // TODO: Retry on failure
-        const version = await this.init();
+        const version = await withBackoff(
+            backoffCfg, () => this.init(),
+            e => { this.status('error', e.toString()); });
         this.saved();
 
         // TODO: Fix inconsistency if two clients have different origText and
@@ -274,43 +276,53 @@ class CollabStore extends Store {
         api.events.sub({add: [this.watch]});  // Background
 
         // Whenever poked, pull remote updates until synchronized, then push
-        // if requested. Pushes fail if there are remote updates, so pulling is
-        // prioritized.
+        // if requested. Pulling is prioritized because pushes fail if there are
+        // remote updates.
         try {
-            for (;;) {
-                await this.poke.wait(
-                    () => this._stop || this._pull || this._push);
+            const wakeup = () => this._stop || this._pull || this._push;
+            const wakeupErr = () => this._stop;
+            let wargs = [wakeup], pushing = false;
+            for (let retries = 0;;) {
+                await this.poke.wait(...wargs);
                 if (this._stop) break;
-
-                // Keep pulling as long as there are remote updates.
-                this._pull = false;
-                let pulled = false;
-                for (;;) {
-                    const v = collab.getSyncedVersion(this.view.state);
-                    if (v === remoteVersion) break;
-                    if (debug('editor')) {
-                        console.debug(`Pulling ${v} => ${remoteVersion}`);
-                    }
-                    // TODO: Retry on failure
-                    await this.pull();
-                    pulled = true;
-                }
-
-                // Push local updates if there are any.
-                if (collab.sendableUpdates(this.view.state).length > 0) {
-                    if (pulled || this._push) {
-                        this._push = false;
+                wargs = [wakeup];
+                try {
+                    // Keep pulling as long as there are remote updates.
+                    this._pull = false;
+                    let pulled = false;
+                    for (;;) {
+                        const v = collab.getSyncedVersion(this.view.state);
+                        if (v === remoteVersion) break;
                         if (debug('editor')) {
-                            const st = this.view.state;
-                            const v = collab.getSyncedVersion(st);
-                            const u = collab.sendableUpdates(st).length;
-                            console.log(`Pushing ${v} => ${v + u}`);
+                            console.log(`Pulling ${v} => ${remoteVersion}`);
                         }
-                        // TODO: Retry on failure
-                        await this.push();
+                        await this.pull();
+                        pulled = true;
                     }
-                } else {
-                    this.saved();
+
+                    // Push local updates if there are any.
+                    const push = this._push;
+                    this._push = false;
+                    if (collab.sendableUpdates(this.view.state).length > 0) {
+                        if (pulled || push || pushing) {
+                            if (debug('editor')) {
+                                const st = this.view.state;
+                                const v = collab.getSyncedVersion(st);
+                                const u = collab.sendableUpdates(st).length;
+                                console.log(`Pushing ${v} => ${v + u}`);
+                            }
+                            pushing = true;
+                            await this.push();
+                            pushing = false;
+                        }
+                    } else {
+                        this.saved();
+                    }
+                    retries = 0;
+                } catch (e) {
+                    if (debug('editor')) console.error(e)
+                    wargs = [wakeupErr, backoff(backoffCfg, retries++)];
+                    this.status('error', e.toString());
                 }
             }
         } finally {

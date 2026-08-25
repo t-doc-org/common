@@ -215,14 +215,16 @@ export class Mutex {
 
 // A conditional variable for asynchronous code.
 export class CondVar {
-    async wait(cond) {
+    async wait(cond, ms) {
+        const cancel = sleep(ms, true);
         while (!cond()) {
             if (!this.np) {
                 ({promise: this.np, resolve: this.nr} =
                     Promise.withResolvers());
             }
-            await this.np;
+            if (await Promise.race([this.np, cancel])) return false;
         }
+        return true;
     }
 
     notify() {
@@ -423,6 +425,11 @@ export function randomInt(min, max) {
     return Math.floor(min + Math.random() * (max - min + 1));
 }
 
+// Throw an exception with the given probability.
+export function randomThrow(p, err) {
+    if (Math.random() < p) throw err ?? new Error("Random injected error");
+}
+
 // Generate a base64-encoded random value with the given number of bytes of
 // entropy.
 export async function randomId(size) {
@@ -551,17 +558,22 @@ export function bearerAuthorization(token) {
     return token ? {'Authorization': `Bearer ${token}`} : {};
 }
 
-// Return a promise that resolves after the given number of milliseconds.
-export function sleep(ms) {
-    return new Promise(res => setTimeout(res, ms));
+// A promise that never resolves.
+export const never = new Promise(() => undefined);
+
+// Return a promise that resolves to the given value after a number of
+// milliseconds.
+export function sleep(ms, value) {
+    if (ms == null) return never;
+    return new Promise(res => setTimeout(() => res(value), ms));
 }
 
-// Return a promise that gets rejected after the given number of milliseconds.
-export function timeout(ms) {
+// Return a promise that gets rejected with the given error after a number of
+// milliseconds.
+export function timeout(ms, err) {
+    if (ms == null) return never;
     const p = new Promise(
-        ms !== undefined && ms !== null ?
-        ((res, rej) => setTimeout(() => rej(new Error("Timeout")), ms)) :
-        (() => undefined));
+        (res, rej) => setTimeout(() => rej(err ?? new Error("Timeout")), ms));
     p.catch(e => undefined);  // Prevent logging
     return p;
 }
@@ -838,11 +850,23 @@ export const clientId = (async () => {
 })();
 
 // Return an exponential backoff delay.
-export function backoff(min, max, retries) {
-    let delay = min * 1.3 ** retries;
+export function backoff({min, max, mult = 1.3, jitter = 0.4}, retries) {
+    let delay = min * mult ** retries;
     if (delay > max) delay = max;
-    delay -= delay * 0.4 * Math.random();
+    delay -= delay * jitter * Math.random();
     return delay >= min ? delay : min;
+}
+
+// Call a function repeatedly until it succeeds, with exponential backoff.
+export async function withBackoff(params, fn, err) {
+    for (let retries = 0;;) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (err && await err(e)) throw e;
+        }
+        await sleep(backoff(params, retries++));
+    }
 }
 
 // Rate-limit function calls. Scheduled functions must be droppable, i.e. all
