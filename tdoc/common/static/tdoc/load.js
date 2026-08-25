@@ -11,7 +11,7 @@ import {
 if (tdoc.local) {
     let build, statusBtn;
     function updateTooltip() {
-        if (statusBtn === undefined) return;
+        if (![bootstrap, statusBtn].every(v => v)) return;
         const bs = htmlData.tdocBuildStatus ?? '';
         bootstrap.Tooltip.getInstance(statusBtn)
             ?.setContent?.({'.tooltip-inner': `Build status: ${bs}`});
@@ -101,7 +101,7 @@ tdoc.terminateServer = async () => await api.terminate();
 let toggleSolutionsBtn;
 
 function updateSolutionsTooltip() {
-    if (toggleSolutionsBtn === undefined) return;
+    if (![bootstrap, toggleSolutionsBtn].every(v => v)) return;
     const title = (htmlData.tdocSolutionsState ?? 'hide') === 'hide' ?
                   "Show solutions" : "Hide solutions";
     bootstrap.Tooltip.getInstance(toggleSolutionsBtn)

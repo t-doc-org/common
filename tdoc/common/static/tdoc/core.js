@@ -380,14 +380,6 @@ export function isInViewport(el) {
            rect.right <= document.documentElement.clientWidth;
 }
 
-// Add a tooltip instance to an element.
-export function addTooltip(el, opts) {
-    return new bootstrap.Tooltip(el, {
-        delay: {show: 500, hide: 100},
-        trigger: 'hover',
-        ...opts,
-    });
-}
 // Return a <span> containing inline math. The element must be typeset after
 // being added to the DOM.
 // TODO: Typeset automatically using a web component
@@ -939,6 +931,18 @@ addEventListener('unhandledrejection', async e => {
         await showAlert(htmlFragment(html), {kind});
     }
 })();
+
+// Avoid ReferenceError if Bootstrap hasn't loaded yet.
+if (globalThis.bootstrap === undefined) globalThis.bootstrap = undefined;
+
+// Add a tooltip instance to an element.
+export function addTooltip(el, opts) {
+    return new bootstrap.Tooltip(el, {
+        delay: {show: 500, hide: 100},
+        trigger: 'hover',
+        ...opts,
+    });
+}
 
 // Show a modal dialog.
 export function showModal(el) {
