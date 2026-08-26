@@ -62,4 +62,4 @@ runs:
       shell: bash
       run: |
         sudo apt-get install --yes --no-install-recommends \
-            graphviz
+            graphviz xournalpp
