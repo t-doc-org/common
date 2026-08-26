@@ -158,7 +158,7 @@ def report_exceptions(fn):
             return fn(self, *args, **kwargs)
         except Exception as e:
             msgs = [self.reporter.error(e, line=self.lineno)]
-            if isinstance(self, Role): return [], msgs
+            if isinstance(self, RoleMixin): return [], msgs
             return msgs
     return wrapper
 
@@ -176,6 +176,13 @@ def meta(env, docname, key, default=None):
         except (KeyError, TypeError):
             return default
     return v
+
+
+def needs_build(src, dst):
+    src_st = src.stat()
+    try: dst_st = dst.stat()
+    except OSError: return True
+    return src_st.st_mtime_ns > dst_st.st_mtime_ns
 
 
 def setup(app):

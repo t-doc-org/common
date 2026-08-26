@@ -139,3 +139,8 @@ Inline code: `a <= b and b >= c and c != d`{l=py}
     print("Boom!")
   ```
 ````
+
+## Xournal++
+
+{xopp}`This PDF document <xournal.xopp>` ({xopp}`xournal.xopp`) is automatically
+rendered from a [Xournal++](https://xournalpp.github.io/) file.

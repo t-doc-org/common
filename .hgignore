@@ -1,4 +1,5 @@
 syntax: glob
+*.autosave.xopp
 *.local.*
 *.orig
 __pycache__

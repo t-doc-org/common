@@ -173,3 +173,20 @@ A space-separated list of CSS classes to add to the `<table>`{l=html}.
 A reference target for the table.
 ```
 `````
+
+## Xournal++
+
+```{rst:role} xopp
+This role references a [Xournal++](https://xournalpp.github.io/) file (with a
+`.xopp` extension). The file is exported as a PDF, and the role links to the
+exported file. On most browsers, the PDF opens directly in the browser.
+
+Similar to the {rst:role}`download` role, the text of the role is the path to
+the `.xopp` file. Relative paths (`dir/file.xopp`) are relative to the directory
+containing the document; absolute paths (`/dir/file.xopp`) are relative to the
+source directory.
+
+The text of the role can also contain an explicit link text, followed by the
+path between angle brackets (`` {xopp}`this file <file.xopp>` ``). If no link
+text is provided, the name of the file without extension is used.
+```
