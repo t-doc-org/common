@@ -69,15 +69,26 @@ release-notes
 t-doc requires the following software to be installed:
 
 - [Python](https://www.python.org/) 3.14
-- [Graphviz](https://graphviz.org/), for `graphviz` directives
 - [Mercurial](https://www.mercurial-scm.org/), for managing source files
+- (Optional) [Graphviz](https://graphviz.org/), when using the
+  {rst:dir}`graphviz` directive
+- (Optional) [Xournal++](https://xournalpp.github.io/), when using the
+  {rst:role}`xopp` role
 
 ### Windows
+
+- (Optional, Windows 10) Install
+  [Windows Terminal](https://github.com/microsoft/terminal) (it's already
+  installed on Windows 11 and later).
+
+  ```{code-block} shell-session
+  winget install --exact --id Microsoft.WindowsTerminal
+  ```
 
 - Install [Python](https://www.python.org/).
 
   ```{code-block} shell-session
-  winget install --id Python.Python.3.14
+  winget install --exact --id Python.Python.3.14
   ```
 
   - Check that Python can be launched from the command-line, by running:
@@ -95,54 +106,49 @@ t-doc requires the following software to be installed:
   option must be enabled.
 
   ```{code-block} shell-session
-  winget install --id Graphviz.Graphviz --interactive
+  winget install --exact --id Graphviz.Graphviz --interactive
   ```
 
-- Install [TortoiseHg](https://tortoisehg.bitbucket.io/).
+- Install the remaining packages. [TortoiseHg](https://tortoisehg.bitbucket.io/)
+  is used as a Mercurial client.
 
   ```{code-block} shell-session
-  winget install --id TortoiseHg.TortoiseHg
-  ```
-
-- (Optional, Windows 10) Install
-  [Windows Terminal](https://github.com/microsoft/terminal) (it's already
-  installed on Windows 11 and later).
-
-  ```{code-block} shell-session
-  winget install --id Microsoft.WindowsTerminal
+  winget install --exact --id TortoiseHg.TortoiseHg
+  winget install --exact --id Xournal++.Xournal++
   ```
 
 #### Upgrades
 
-- If a new minor version of Python is recommended (e.g. 3.13.5 is installed and
-  3.14 is recommended), install the new version.
+- Upgrade Python.
 
-  ```{code-block} shell-session
-  winget install --id Python.Python.3.14
-  ```
+  - If a new minor version of Python is recommended (e.g. 3.13.5 is installed
+    and 3.14 is recommended), install the new version.
 
-- Otherwise, upgrade the installed minor version.
+    ```{code-block} shell-session
+    winget install --exact --id Python.Python.3.14
+    ```
 
-  ```{code-block} shell-session
-  winget upgrade --id Python.Python.3.14
-  ```
+  - Otherwise, upgrade the installed minor version.
+
+    ```{code-block} shell-session
+    winget upgrade --exact --id Python.Python.3.14
+    ```
 
 - Upgrade the other packages.
 
   ```{code-block} shell-session
-  winget upgrade --id Graphviz.Graphviz
-  winget upgrade --id TortoiseHg.TortoiseHg
-  winget upgrade --id Microsoft.WindowsTerminal
+  winget upgrade --exact --id Microsoft.WindowsTerminal
+  winget upgrade --exact --id TortoiseHg.TortoiseHg
+  winget upgrade --exact --id Graphviz.Graphviz
+  winget upgrade --exact --id Xournal++.Xournal++
   ```
 
 ### macOS
 
-- Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
-  and [Mercurial](https://www.mercurial-scm.org/) manually or via a package
+- Install the [required packages](#requirements) manually or via a package
   manager like [Homebrew](https://brew.sh/).
 
 ### Linux
 
-- Install [Python](https://www.python.org/), [Graphviz](https://graphviz.org/)
-  and [Mercurial](https://www.mercurial-scm.org/) via your system's package
+- Install the [required packages](#requirements) via your system's package
   manager.
