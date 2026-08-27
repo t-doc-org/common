@@ -90,7 +90,7 @@ def render_xopp(app, builder):
             if ext.needs_build(src, d := builder.outdir / dst):
                 stale.append((src, d))
         except OSError as e:
-            _log.error("{xopp}: %s: %s", src, e, location=next(iter(docnames)))
+            _log.error("{xopp}: %s", e, location=next(iter(docnames)))
     if not stale: return
 
     # Render xopp files to pdf.
