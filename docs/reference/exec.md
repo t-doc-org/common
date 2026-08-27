@@ -455,8 +455,13 @@ Pyodide can be configured via the `exec.python` {rst:dir}`metadata`. This
 enables the following functionality:
 
 - **[Load packages](https://docs.pyscript.net/latest/user-guide/configuration/#packages):**
-  The `packages` key is a list of package references, either package names or
-  URLs referencing wheels.
+  Packages outside of the
+  [standard library](https://docs.python.org/3/library/index.html) need to be
+  loaded explicitly by listing them in the `packages` key. Each entry is either
+  a package name or a URL referencing a wheel (a `.whl` file). The packages in
+  [this list](https://pyodide.org/en/stable/usage/packages-in-pyodide.html) can
+  be loaded by name; others must be loaded by URL or
+  [with `micropip`](#load-packages-with-micropip).
 - **[Copy files](https://docs.pyscript.net/latest/user-guide/configuration/#files)
   to the filesystem:** The `files` key is a mapping of URL to target path.
   Relative URLs are resolved relative to the `_static` directory. Relative
@@ -485,8 +490,35 @@ The following `conf.py` options enable site-wide customization of Pyodide.
 :type: {py}`list`
 :default: {py}`[]`
 A list of directories, relative to the directory containing `conf.py`,
-containing Python modules to be exposed to Pyodide. A `_python` entry is added
+containing Python files to be loaded into Pyodide. A `_python` entry is added
 automatically if such a directory exists next to `conf.py`.
+```
+
+#### Load packages with `micropip`
+
+Packages can be installed directly from [PyPI](https://pypi.org/) or other
+package registries using [`micropip`](https://micropip.pyodide.org/) (which must
+itself be added to the `exec.python.packages` {rst:dir}`metadata`). The
+installation should be performed only once per interpreter, e.g. by making it
+conditional on a {py:func}`~tdoc.core.once` call.
+
+```{exec} python
+:when:
+if once('install-snowballstemmer'):  # Install only once per interpreter
+  import micropip
+  await micropip.install(['snowballstemmer'])
+import snowballstemmer
+# ...
+```
+
+```{admonition} Note
+:class: caution
+Installing from PyPI **introduces a serving dependency on PyPI servers**. This
+can reduce the availability of the site. It's also not very nice to the
+operators of PyPI to drive traffic their way (though browser caching should
+alleviate the issue). For high-traffic pages, the `.whl` files should be
+included in the site's `_static` and installed via the `exec.python.packages`
+{rst:dir}`metadata`.
 ```
 
 {#run-sync}

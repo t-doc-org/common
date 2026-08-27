@@ -375,7 +375,7 @@ package. Note how the installation is only performed once per interpreter, using
 {py:func}`~tdoc.core.once`.
 
 ```{exec} python
-if once('snowballstemmer'):  # Install only once per interpreter
+if once('install-snowballstemmer'):  # Install only once per interpreter
   import micropip
   await micropip.install(['snowballstemmer'])
 
@@ -387,16 +387,6 @@ for word in ['running', 'runs', 'ran',
              'fairly', 'unfairly',
              'singing', 'singer', 'song']:
   print(f"{word:12} => {stemmer.stemWord(word)}")
-```
-
-```{admonition} Note
-:class: caution
-Installing from PyPI **introduces a serving dependency on PyPI servers**. This
-can reduce the availability of the site. It's also not very nice to the
-operators of PyPI to drive traffic their way (though browser caching should
-alleviate the issue). For high-traffic pages, the `.whl` packages should be
-included in the site's `_static` and installed via the `exec.python.packages`
-{rst:dir}`metadata`.
 ```
 
 ## Filesystem
