@@ -61,6 +61,8 @@ runs:
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash
       run: |
+        echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" \
+            | sudo debconf-set-selections
         sudo apt-get install --yes --no-install-recommends \
             fonts-dejavu \
             fonts-freefont-otf \
