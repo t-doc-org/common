@@ -105,10 +105,11 @@ def xournalpp_path(app):
     if not (path := app.config.xournalpp_path):
         path = 'xournalpp'
         if sys.platform == 'win32':
-            if (lad := os.environ.get('LOCALAPPDATA')) is not None:
-                p = pathlib.Path(lad) / 'Programs' / 'Xournal++' / 'bin' \
-                    / 'xournalpp.exe'
-                if p.exists(): path = p
+            for d in [pathlib.Path(os.environ['LOCALAPPDATA']) / 'Programs',
+                      pathlib.Path(os.environ['PROGRAMFILES'])]:
+                if (p := d / 'Xournal++' / 'bin' / 'xournalpp.exe').exists():
+                    path = p
+                    break
     try:
         subprocess.run([path, '--version'], stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, check=True, text=True)
