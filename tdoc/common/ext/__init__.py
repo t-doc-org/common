@@ -181,7 +181,7 @@ def meta(env, docname, key, default=None):
     return v
 
 
-def needs_build(src, dst):
+def needs_build(dst, src):
     src_st = src.stat()
     try: dst_st = dst.stat()
     except OSError: return True

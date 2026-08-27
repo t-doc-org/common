@@ -53,28 +53,31 @@ class XoppCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
         if not hasattr(app.env, 'tdoc_xopp'):
-            # TODO: Index by dst instead of src
-            app.env.tdoc_xopp = {}  # src => ({docnames}, dst)
+            app.env.tdoc_xopp = {}  # dst => ({docnames}, src)
 
     def clear_doc(self, app, env, docname):
-        for src, (docnames, dst) in list(env.tdoc_xopp.items()):
+        for dst, (docnames, src) in list(env.tdoc_xopp.items()):
             docnames.discard(docname)
             if not docnames: del env.tdoc_xopp[src]
 
     def merge_other(self, app, env, docnames, other):
-        for src, (docs, dst) in other.tdoc_xopp.items():
-            docnames = self.entry(env, src, dst)
+        for dst, (docs, src) in other.tdoc_xopp.items():
+            docnames = self.entry(env, dst, src)
             docnames.update(docs)
 
     def process_doc(self, app, doctree):
         env = app.env
         docname = env.docname
         for node in doctree.findall(xopp):
-            docnames = self.entry(env, node['src'], node['dst'])
+            docnames = self.entry(env, node['dst'], node['src'])
             docnames.add(docname)
 
-    def entry(self, env, src, dst):
-        return env.tdoc_xopp.setdefault(src, (set(), dst))[0]
+    def entry(self, env, dst, src):
+        docnames, esrc = env.tdoc_xopp.setdefault(dst, (set(), src))
+        if src != esrc:
+            _log.error("{xopp}: Source mismatch: %s\n  %s\n  %s", dst, esrc,
+                       src)
+        return docnames
 
 
 def render_xopp(app, builder):
@@ -85,19 +88,19 @@ def render_xopp(app, builder):
 
     # Find files whose destination is older than the source.
     stale = []
-    for src, (docnames, dst) in app.env.tdoc_xopp.items():
+    for dst, (docnames, src) in app.env.tdoc_xopp.items():
         try:
-            if ext.needs_build(src, d := builder.outdir / dst):
-                stale.append((src, d))
+            if ext.needs_build(d := builder.outdir / dst, src):
+                stale.append((d, src))
         except OSError as e:
             _log.error("{xopp}: %s", e, location=next(iter(docnames)))
     if not stale: return
 
     # Render xopp files to pdf.
-    for src, dst in display.status_iterator(
+    for dst, src in display.status_iterator(
             stale, "rendering xopp files... ", 'brown', len(stale),
             app.config.verbosity,
-            lambda it: osutil._relative_path(it[0], builder.srcdir).as_posix()):
+            lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()):
         render(exe, src, dst)
 
 
