@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-91)=
+## 0.91 *(2026-08-27)*
+
+- Added cloud-based editor storage for logged-in users.
+- Added the {rst:role}`xopp` role to integrate Xournal++ documents.
+- Added a build status indicator in the navbar when serving locally.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.90...0.91)
+
 (release-0-90)=
 ## 0.90 *(2026-08-13)*
 
