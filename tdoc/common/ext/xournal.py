@@ -90,7 +90,7 @@ def render_xopp(app, builder):
             if ext.needs_build(src, d := builder.outdir / dst):
                 stale.append((src, d))
         except OSError as e:
-            _log.error("{xopp}: %s", e, location=next(iter(docnames)))
+            _log.error("{xopp}: %s: %s", src, e, location=next(iter(docnames)))
     if not stale: return
 
     # Render xopp files to pdf.
@@ -114,7 +114,7 @@ def xournalpp_path(app):
                        stderr=subprocess.STDOUT, check=True, text=True)
         return path
     except OSError as e:
-        _log.error("{xopp}: %s", e)
+        _log.error("{xopp}: Unable to run xournalpp: %s", e)
     except subprocess.CalledProcessError as e:
         _log.error("{xopp}: Unable to run xournalpp:\n%s", e.stdout)
 
@@ -126,6 +126,6 @@ def render(exe, src, dst):
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        check=True, text=True)
     except OSError as e:
-        _log.error("{xopp}: %s", e)
+        _log.error("{xopp}: Unable to run xournalpp: %s", e)
     except subprocess.CalledProcessError as e:
         _log.error("{xopp}: Export failed for %s:\n%s", src, e.stdout)
