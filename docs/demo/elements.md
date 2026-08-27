@@ -97,7 +97,7 @@ embedded stylesheet. Note that the CSS rules for the `reset` class have
 [specificity](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Specificity)
 (0, 2, x), so **the overrides need to have specificity (0, 3, x)**. This can be
 achieved e.g. by adding a custom class to identify the table (`table-example`
-here), then specify all three classes in the override rules
+here), then specifying all three classes in the override rules
 (`.table.reset.table-example`).
 
 {.reset .table-example}

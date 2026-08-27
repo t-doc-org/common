@@ -1,6 +1,7 @@
 # Copyright 2026 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -52,6 +53,7 @@ class XoppCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
         if not hasattr(app.env, 'tdoc_xopp'):
+            # TODO: Index by dst instead of src
             app.env.tdoc_xopp = {}  # src => ({docnames}, dst)
 
     def clear_doc(self, app, env, docname):
@@ -99,11 +101,12 @@ def render_xopp(app, builder):
 
 def xournalpp_path(app):
     if not (path := app.config.xournalpp_path):
+        path = 'xournalpp'
         if sys.platform == 'win32':
-            # TODO: Add support for Windows
-            path = 'xournalpp'
-        else:
-            path = 'xournalpp'
+            if (lad := os.environ.get('LOCALAPPDATA')) is not None:
+                p = pathlib.Path(lad) / 'Programs' / 'Xournal++' / 'bin' \
+                    / 'xournalpp.exe'
+                if p.exists(): path = p
     try:
         subprocess.run([path, '--version'], stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, check=True, text=True)
