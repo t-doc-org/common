@@ -62,4 +62,18 @@ runs:
       shell: bash
       run: |
         sudo apt-get install --yes --no-install-recommends \
-            graphviz xournalpp
+            fonts-dejavu \
+            fonts-freefont-otf \
+            fonts-freefont-ttf \
+            fonts-inconsolata \
+            fonts-liberation \
+            fonts-liberation-sans-narrow \
+            fonts-noto \
+            fonts-roboto \
+            fonts-ubuntu \
+            graphviz \
+            gsfonts \
+            texlive-fonts-recommended \
+            ttf-bitstream-vera \
+            ttf-mscorefonts-installer \
+            xournalpp
