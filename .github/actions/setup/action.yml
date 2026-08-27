@@ -73,7 +73,6 @@ runs:
             fonts-ubuntu \
             graphviz \
             gsfonts \
-            texlive-fonts-recommended \
             ttf-bitstream-vera \
             ttf-mscorefonts-installer \
             xournalpp
