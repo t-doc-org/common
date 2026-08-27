@@ -668,6 +668,7 @@ export class FifoBuffer {
 // An async implementation of the subset of Storage used by AsyncStored that
 // manages the data in localStorage at the domain level, with the data shared
 // across all sites.
+// TODO: Remove DomainStorage if it keeps being unused
 class DomainStorage {
     constructor() {
         this.id = 0;
@@ -718,8 +719,29 @@ class DomainStorage {
     }
 }
 
-export const domainStorage = tdoc.local || tdoc.domain_storage.origin ?
-                             new DomainStorage() : localStorage;
+let _domainStorage;
+
+export function domainStorage() {
+    if (_domainStorage === undefined) {
+        _domainStorage = tdoc.local || tdoc.domain_storage.origin ?
+                         new DomainStorage() : localStorage;
+    }
+    return _domainStorage;
+}
+
+// Remove obsolete keys from localStorage.
+for (const k of [
+    // TODO(2026-10-01): Remove the keys below
+    'tdoc:api:user',
+    'tdoc:api-dev:user',
+    'tdoc:api-staging:user',
+    'tdoc:domain:api:auth',
+    'tdoc:domain:api-dev:auth',
+    'tdoc:domain:api-staging:auth',
+    'tdoc:domain:clientId',
+]) {
+    localStorage.removeItem(k);
+}
 
 // A base class for stored values.
 class StoredBase {
@@ -763,7 +785,7 @@ export class Stored extends StoredBase {
 
 // A value that is stored as a string in an async storage.
 export class AsyncStored extends StoredBase {
-    constructor(key, def, storage = domainStorage) {
+    constructor(key, def, storage = domainStorage()) {
         super(key, def, storage);
         this._ready = this.init();  // Background
     }
@@ -838,13 +860,13 @@ export function debug(tag) {
     for (const t of asArray(tag.enable)) _debug.add(t);
 }
 
-// Manage an immutable, globally-unique client ID in domain storage.
+// Manage an immutable, globally-unique client ID in local storage.
 export const clientId = (async () => {
-    const stored = new AsyncStored('tdoc:domain:clientId');
-    let id = await stored.get();
+    const stored = new Stored('tdoc:clientId');
+    let id = stored.get();
     if (id === undefined) {
         id = await randomId(33);
-        stored.set(id);  // Background
+        stored.set(id);
     }
     return id;
 })();
