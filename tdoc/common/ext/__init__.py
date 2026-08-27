@@ -23,6 +23,8 @@ from sphinx.util import display, docutils, fileutil, logging
 from . import patch
 from .. import __version__, deps, util
 
+if sys.platform == 'win32': import winreg
+
 _log = logging.getLogger(__name__)
 _messages = 'tdoc'
 _ = locale.get_translation(_messages)
@@ -183,6 +185,23 @@ def needs_build(src, dst):
     try: dst_st = dst.stat()
     except OSError: return True
     return src_st.st_mtime_ns > dst_st.st_mtime_ns
+
+
+app_paths_key = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'
+
+def find_app_path(name):
+    for k in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
+        try:
+            with winreg.OpenKey(k, f'{app_paths_key}\\{name}') as key:
+                v, t = winreg.QueryValueEx(key, '')
+        except FileNotFoundError:
+            continue
+        if t == winreg.REG_EXPAND_SZ:
+            v = winreg.ExpandEnvironmnentStrings(v)
+        elif t != winreg.REG_SZ:
+            continue
+        if len(v) >= 2 and v[0] == v[-1] == '"': v = v[1:-1]
+        if (p := pathlib.Path(v)).exists(): return p
 
 
 def setup(app):

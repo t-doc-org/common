@@ -104,12 +104,8 @@ def render_xopp(app, builder):
 def xournalpp_path(app):
     if not (path := app.config.xournalpp_path):
         path = 'xournalpp'
-        if sys.platform == 'win32':
-            for d in [pathlib.Path(os.environ['LOCALAPPDATA']) / 'Programs',
-                      pathlib.Path(os.environ['PROGRAMFILES'])]:
-                if (p := d / 'Xournal++' / 'bin' / 'xournalpp.exe').exists():
-                    path = p
-                    break
+        if sys.platform == 'win32' and (p := ext.find_app_path(f'{path}.exe')):
+            path = p.with_stem(p.stem.replace('-wrapper', ''))
     try:
         subprocess.run([path, '--version'], stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, check=True, text=True)
