@@ -92,9 +92,6 @@ core.domLoaded.then(() => {
     }
 });
 
-// Handle the "terminate server" button.
-tdoc.terminateServer = async () => await api.terminate();
-
 // Handle the "toggle solutions" button.
 let toggleSolutionsBtn;
 

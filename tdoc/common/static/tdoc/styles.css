@@ -142,11 +142,6 @@ html[data-tdoc-build-status=failure]
     color: var(--pst-color-danger);
 }
 
-/* Server termination */
-.article-header-buttons > button.btn-terminate:hover .fa-door-closed {
-    --fa: '\f52b';  /* door-open */
-}
-
 /* TOC */
 .bd-sidebar-primary li:is(.toctree-l1, .toctree-l2, .toctree-l3) > a {
     padding-left: 1.25rem;  /* The original padding is 0.65rem */
