@@ -79,7 +79,9 @@ class XoppCollector(collectors.EnvironmentCollector):
 
 def render_xopp(app, builder):
     if builder.format != 'html' or not app.env.tdoc_xopp: return
-    exe = xournalpp_path(app)  # Check binary even if there's nothing to build
+
+    # Check the binary even if there's nothing to (re-)build.
+    if (exe := xournalpp_path(app)) is None: return
 
     # Find files whose destination is older than the source.
     stale = []
@@ -110,11 +112,11 @@ def xournalpp_path(app):
     try:
         subprocess.run([path, '--version'], stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, check=True, text=True)
+        return path
     except OSError as e:
         _log.error("{xopp}: %s", e)
     except subprocess.CalledProcessError as e:
         _log.error("{xopp}: Unable to run xournalpp:\n%s", e.stdout)
-    return path
 
 
 def render(exe, src, dst):
@@ -124,6 +126,6 @@ def render(exe, src, dst):
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        check=True, text=True)
     except OSError as e:
-        _log.error("%s", e)
+        _log.error("{xopp}: %s", e)
     except subprocess.CalledProcessError as e:
         _log.error("{xopp}: Export failed for %s:\n%s", src, e.stdout)
