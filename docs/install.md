@@ -101,19 +101,12 @@ t-doc requires the following software to be installed:
     execution aliases", and disable the "App Installer" entries for `python.exe`
     and `python3.exe`.
 
-- Install [Graphviz](https://graphviz.org/). The installer must be run
-  interactively and the **"Add Graphviz to the system PATH for all users"**
-  option must be enabled.
-
-  ```{code-block} shell-session
-  winget install --exact --id Graphviz.Graphviz --interactive
-  ```
-
 - Install the remaining packages. [TortoiseHg](https://tortoisehg.bitbucket.io/)
   is used as a Mercurial client.
 
   ```{code-block} shell-session
   winget install --exact --id TortoiseHg.TortoiseHg
+  winget install --exact --id Graphviz.Graphviz
   winget install --exact --id Xournal++.Xournal++
   ```
 
