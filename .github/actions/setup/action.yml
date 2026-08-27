@@ -72,7 +72,6 @@ runs:
             fonts-liberation-sans-narrow \
             fonts-noto \
             fonts-roboto \
-            fonts-ubuntu \
             graphviz \
             gsfonts \
             ttf-bitstream-vera \
