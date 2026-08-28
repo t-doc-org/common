@@ -58,7 +58,7 @@ class XoppCollector(collectors.EnvironmentCollector):
     def clear_doc(self, app, env, docname):
         for dst, (docnames, src) in list(env.tdoc_xopp.items()):
             docnames.discard(docname)
-            if not docnames: del env.tdoc_xopp[src]
+            if not docnames: del env.tdoc_xopp[dst]
 
     def merge_other(self, app, env, docnames, other):
         for dst, (docs, src) in other.tdoc_xopp.items():
