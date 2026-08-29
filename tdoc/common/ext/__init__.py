@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import base64
+from concurrent import futures
 import contextlib
 import copy
 import functools
@@ -203,6 +204,21 @@ def find_app_path(name):
             continue
         if len(v) >= 2 and v[0] == v[-1] == '"': v = v[1:-1]
         if (p := pathlib.Path(v)).exists(): return p
+
+
+def map_parallel(app, fn, items, summary=None, color='brown', stringify=str):
+    with futures.ThreadPoolExecutor(max_workers=app.parallel) as ex:
+        tasks = [(ex.submit(lambda it=it: fn(it)), it) for it in items]
+        its = tasks if summary is None \
+              else display.status_iterator(
+                  tasks, summary, color=color, length=len(tasks),
+                  verbosity=app.config.verbosity,
+                  stringify_func=lambda a: stringify(a[1]))
+        for task, it in its: yield task.result()
+
+
+def sink(items):
+    for it in items: pass
 
 
 def setup(app):

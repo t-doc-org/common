@@ -91,17 +91,16 @@ def render_xopp(app, builder):
     for dst, (docnames, src) in app.env.tdoc_xopp.items():
         try:
             if ext.needs_build(d := builder.outdir / dst, src):
-                stale.append((d, src))
+                stale.append((src, d))
         except OSError as e:
             _log.error("{xopp}: %s", e, location=next(iter(docnames)))
     if not stale: return
 
     # Render xopp files to pdf.
-    for dst, src in display.status_iterator(
-            stale, "rendering xopp files... ", 'brown', len(stale),
-            app.config.verbosity,
-            lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()):
-        render(exe, src, dst)
+    ext.sink(ext.map_parallel(
+        app, lambda args: render(exe, *args), stale,
+        "rendering xopp files... ", 'brown',
+        lambda it: osutil._relative_path(it[0], builder.srcdir).as_posix()))
 
 
 def xournalpp_path(app):
