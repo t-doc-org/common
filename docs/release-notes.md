@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-92)=
+## 0.92 *(2026-08-29)*
+
+- Indicate the presence of unknown files in the repository status panel when
+  serving locally.
+- Parallelized the rendering of {rst:role}`xopp` targets.
+- Fixed an issue with the {rst:role}`xopp` role during incremental builds.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.91...0.92)
+
 (release-0-91)=
 ## 0.91 *(2026-08-27)*
 
