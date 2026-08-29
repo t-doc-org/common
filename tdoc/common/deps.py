@@ -101,14 +101,12 @@ info = {
     'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
         'name': 'jsxgraph',
-        # BUG(jsxgraph-1.13.1): SVG rendering may break for functions with
-        # large values (e.g. tan(x), 1/x)
-        # <https://github.com/jsxgraph/jsxgraph/issues/824>.
-        'version': '1.12.2',
+        'version': '1.13.2',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
     },
+    'idna': {'version_tag': lambda v: f'v{v}'},
     'mathjax': {
         'name': 'mathjax',
         'version': '4.1.3',
@@ -146,14 +144,14 @@ info = {
     ]},
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.16.1',
+        'version': '11.17.2',
         'tag': 'latest',
         'version_tag': lambda v: f'mermaid@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '0.2.2',
+        'version': '0.2.3',
         'tag': 'latest',
         'version_tag': lambda v: f'@mermaid-js/layout-elk@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -163,7 +161,7 @@ info = {
     'myst-parser': {'version_tag': lambda v: f'v{v}'},
     'polyscript': {
         'name': 'polyscript',
-        'version': '0.20.18',
+        'version': '0.20.20',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -174,7 +172,7 @@ info = {
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
         'name': 'pyodide',
-        'version': '314.0.3',
+        'version': '314.0.6',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [
