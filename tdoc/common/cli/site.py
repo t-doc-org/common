@@ -282,11 +282,11 @@ class Application(wsgi.Dispatcher):
                                         name='builder')
         self.builder.start()
 
-        self.repo_incoming = api.ValueObservable('repo_incoming', {})
-        self.api.events.add_observable(self.repo_incoming)
-        self.repo_incoming_checker = threading.Thread(
-            target=self.check_repo_incoming, name='repo_incoming')
-        self.repo_incoming_checker.start()
+        self.repo_status = api.ValueObservable('repo_status', {})
+        self.api.events.add_observable(self.repo_status)
+        self.repo_checker = threading.Thread(
+            target=self.check_repo_status, name='repo_status')
+        self.repo_checker.start()
 
     def __enter__(self): return self
 
@@ -500,18 +500,17 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
 
-    def check_repo_incoming(self):
+    def check_repo_status(self):
         while True:
             data = {}
             for repo in self.list_repos():
                 if (url := self.hg_path(repo, 'default')) is None: continue
                 if not url.startswith(('https://', 'file://')): continue
-                proc = self.hg(f'--repository={repo}', 'incoming',
-                               '--template=@tdoc-incoming\n', success=None)
-                if proc.returncode not in (0, 1): continue
-                data[url.rsplit('/', 1)[-1]] = \
-                    proc.stdout.count('@tdoc-incoming\n')
-            self.repo_incoming.set(data)
+                name, info = url.rsplit('/', 1)[-1], {}
+                self.hg_incoming(repo, info)
+                self.hg_status(repo, info)
+                if info: data[name] = info
+            self.repo_status.set(data)
             if self.sleep(15 * 60): break
 
     def list_repos(self):
@@ -523,6 +522,19 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         if (path / '.hg').is_dir(): return path
         for p in path.parents:
             if (p / '.hg').is_dir(): return p
+
+    def hg_incoming(self, repo, info):
+        proc = self.hg(f'--repository={repo}', 'incoming',
+                       '--template=@tdoc@\n', success=None)
+        if proc.returncode in (0, 1) \
+                and (v := proc.stdout.count('@tdoc@\n')) > 0:
+            info['incoming'] = v
+
+    def hg_status(self, repo, info):
+        proc = self.hg(f'--repository={repo}', 'status', '--unknown',
+                       '--template=@tdoc@\n', success=None)
+        if proc.returncode == 0 and (v := proc.stdout.count('@tdoc@\n')) > 0:
+            info['unknown'] = v
 
     def hg(self, *args, **kwargs):
         return util.run('hg', *args, capture_output=True, text=True, **kwargs)
