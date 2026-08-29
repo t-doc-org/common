@@ -172,16 +172,20 @@ class Package:
         for url in urls:
             for pat, fns in forges.items():
                 if (m := pat.search(url)) is not None:
-                    return {
-                        'releases': fns['releases'](m),
-                        'diff': fns['diff'](m, cur, want),
-                    }
+                    res = {'releases': fns['releases'](m)}
+                    if self.current is not None:
+                        res['diff'] = fns['diff'](m, cur, want)
+                    return res
 
     def report(self, o, open, cooldown):
         o.write(f"{o.LCYAN}{self.name}{o.NORM}\n")
-        w = max(len(self.current), len(self.wanted))
-        o.write(f"  current: {o.LGREEN}{self.current:{w}}{o.NORM}"
-                f" ({format_date(self.time(self.current))})\n")
+        if self.current is None:
+            w = 0
+            o.write("  current: -\n")
+        else:
+            w = max(len(self.current), len(self.wanted))
+            o.write(f"  current: {o.LGREEN}{self.current:{w}}{o.NORM}"
+                    f" ({format_date(self.time(self.current))})\n")
         t = self.time(self.wanted)
         color = o.LRED if t > cooldown else o.LMAGENTA
         o.write(f"  wanted : {o.LYELLOW}{self.wanted:{w}}{o.NORM} "
@@ -214,10 +218,11 @@ class NpmPackage(Package):
         for pi in (self.info, self.info.versions.get(self.wanted, ''),
                    self.info.versions.get(self.current, '')):
             if 'repository' not in pi: continue
-            if (furls := self.forge_urls([pi.repository.url])) is not None:
+            if (furls := self.forge_urls([pi.repository.url])) is not None \
+                     and key in furls:
                 self.urls[furls[key]] = None
                 return
-        if (furls := self.forge_urls(self.urls)) is not None:
+        if (furls := self.forge_urls(self.urls)) is not None and key in furls:
             self.urls[furls[key]] = None
 
     def time(self, version):
@@ -259,7 +264,7 @@ class PythonPackage(Package):
     def _add_forge_url(self, key):
         urls = list(self.info.info.get('project_urls', {}).values())
         if u := self.info.info.get('home_page'): urls.append(u)
-        if (furls := self.forge_urls(urls)) is not None:
+        if (furls := self.forge_urls(urls)) is not None and key in furls:
             self.urls[furls[key]] = None
             return True
 
