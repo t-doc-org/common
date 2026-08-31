@@ -159,9 +159,7 @@ def stop_containers(*, filter=()):
 def start_container(opts, base):
     mounts = [f'--mount=type=bind,src={base},dst=/t-doc,ro=true']
     for repo in sorted(base.iterdir()):
-        if not (repo / 'run.py').is_file() \
-                and (repo / 'docs' / 'conf.py').is_file():
-            continue
+        if not util.is_site_repo(repo): continue
         mounts.extend([
             tmpfs(repo, '_build'),
             tmpfs(repo, '_cache'),

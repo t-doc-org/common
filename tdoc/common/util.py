@@ -119,6 +119,10 @@ def write_atomic(path, *args, **kwargs):
         replace_file(pathlib.Path(f.name), path)
 
 
+def is_site_repo(path):
+    return (path / 'run.py').is_file() and (path / 'docs' / 'conf.py').is_file()
+
+
 try:
     import msvcrt
 except ModuleNotFoundError:
