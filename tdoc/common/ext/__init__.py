@@ -222,27 +222,6 @@ def sink(items):
     for it in items: pass
 
 
-class WarningHandler(logging.WarningStreamHandler):
-    terminator = '\0'
-
-    def __init__(self, fd):
-        super().__init__(open(fd, 'w', encoding='utf-8', errors='replace'))
-
-    def emit_(self, rec):
-        self.stream.write(f'{self.format(rec).strip()}\0')
-
-
-class WarningSuppressor(logging.WarningSuppressor):
-    def __init__(self, app):
-        # The base class uses app.config and app._warncount. We don't want it to
-        # count warnings, because that's already done by a separate instance. So
-        # we pass self as app, provide access to config and provide a dummy
-        # _warncount.
-        self.config = app.config
-        self._warncount = 0
-        super().__init__(self)
-
-
 def setup(app):
     for tag in app.tags:
         if not tag.startswith('tdoc-errors-fd-'): continue
@@ -254,6 +233,8 @@ def setup(app):
         h.setLevel(_logging.WARNING)
         logger = _logging.getLogger(logging.NAMESPACE)
         logger.addHandler(h)
+        _log_exc.addHandler(h)
+        app.connect('build-finished', on_build_finished)
         break
 
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
@@ -296,6 +277,38 @@ def setup(app):
         'parallel_read_safe': True,
         'parallel_write_safe': True,
     }
+
+
+class WarningHandler(logging.WarningStreamHandler):
+    terminator = '\0'
+
+    def __init__(self, fd):
+        super().__init__(open(fd, 'w', encoding='utf-8', errors='replace'))
+
+    def emit_(self, rec):
+        self.stream.write(f'{self.format(rec).strip()}\0')
+
+
+class WarningSuppressor(logging.WarningSuppressor):
+    def __init__(self, app):
+        # The base class uses app.config and app._warncount. We don't want it to
+        # count warnings, because that's already done by a separate instance. So
+        # we pass self as app, provide access to config and provide a dummy
+        # _warncount.
+        self.config = app.config
+        self._warncount = 0
+        super().__init__(self)
+
+
+_log_exc = _logging.getLogger('tdoc-sphinx-exception')
+_log_exc.propagate = False
+
+
+def on_build_finished(app, exc):
+    if exc is None: return
+    import bdb
+    if isinstance(exc, (KeyboardInterrupt, bdb.BdbQuit)): return
+    _log_exc.error(f"{exc.__class__.__name__}: {exc}", exc_info=exc)
 
 
 def on_config_inited(app, config):
