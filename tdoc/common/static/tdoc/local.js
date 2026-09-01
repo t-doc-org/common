@@ -25,21 +25,29 @@ core.domLoaded.then(() => {
 });
 
 let buildStatus, modal, pre;
-const locationRe = /^(.+?\.(?:md|rst))(:\d+)?: /;
+const logPrefix = /^(?:(.+?)(?::(\d+))?: )?(WARNING|ERROR|CRITICAL): /;
 
 function renderBuildErrors(el) {
     const entries = [];
     for (let w of buildStatus.errors) {
         const div = elmt`<div></div>`;
-        let m = w.match(locationRe);
+        let m = w.match(logPrefix);
         if (m) {
-            div.appendChild(elmt`<span class="loc-p">${m[1]}</span>`);
-            if (m[2]) {
-                div.appendChild(core.text(m[2].substring(0, 1)));
-                div.appendChild(
-                    elmt`<span class="loc-l">${m[2].substring(1)}</span>`);
+            const [m0, m1, m2, m3] = m;
+            if (m1) {
+                div.appendChild(elmt`<span class="loc-p">${m1}</span>`);
+                div.appendChild(core.text(":"));
+                if (m2) {
+                    div.appendChild(elmt`<span class="loc-l">${m2}</span>`);
+                    div.appendChild(core.text(":"));
+                }
+                div.appendChild(core.text(" "));
             }
-            w = w.substring(m[1].length + (m[2]?.length ?? 0));
+            if (m3) {
+                div.appendChild(elmt`<span class="lvl-${m3[0]}">${m3}</span>`);
+                div.appendChild(core.text(": "));
+            }
+            w = w.substring(m0.length);
         }
         if (w !== "") div.appendChild(core.text(w));
         entries.push(div);

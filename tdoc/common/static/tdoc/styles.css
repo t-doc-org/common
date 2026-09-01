@@ -1577,7 +1577,16 @@ div.admonition.instructor > .admonition-title:after {
     color: var(--pst-color-info);
 }
 .tdoc-build-errors .errors .loc-l {
+    color: var(--pst-color-danger-highlight);
+}
+.tdoc-build-errors .errors .lvl-W {
+    color: var(--pst-color-warning);
+}
+.tdoc-build-errors .errors .lvl-E {
     color: var(--pst-color-danger);
+}
+.tdoc-build-errors .errors .lvl-C {
+    color: var(--pst-color-accent);
 }
 
 /* Badges in the primary sidebar */
