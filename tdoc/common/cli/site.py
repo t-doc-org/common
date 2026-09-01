@@ -428,7 +428,7 @@ class Application(wsgi.Dispatcher):
             if res.returncode == 0: return True, errors
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
-            errors.append(str(e))
+            errors.append(str(e).strip())
         if self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()

@@ -305,7 +305,7 @@ _log_exc.propagate = False
 
 
 def on_build_finished(app, exc):
-    if exc is None: return
+    if exc is None or not _log_exc.handlers: return
     import bdb
     if isinstance(exc, (KeyboardInterrupt, bdb.BdbQuit)): return
     _log_exc.error(f"{exc.__class__.__name__}: {exc}", exc_info=exc)
