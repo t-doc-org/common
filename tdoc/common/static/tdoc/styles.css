@@ -1549,29 +1549,35 @@ div.admonition.instructor > .admonition-title:after {
 .tdoc-build-errors .modal-dialog {
     --bs-modal-margin: var(--pst-header-article-height);
 }
-.tdoc-build-errors .no-errors:has(+ pre.errors:not(:empty)) {
+.tdoc-build-errors .no-errors:has(+ .errors:not(:empty)) {
     display: none;
 }
-.tdoc-build-errors pre.errors {
+.tdoc-build-errors .errors {
     display: flex;
     flex-direction: column;
     white-space: pre-wrap;
 }
-.tdoc-build-errors pre.errors:empty {
+.tdoc-build-errors .errors:empty {
     display: none;
 }
-.tdoc-build-errors pre.errors > div {
+.tdoc-build-errors .errors > div {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
     border-top: 1px solid var(--pst-color-border);
     text-indent: 1rem hanging;
 }
-.tdoc-build-errors pre.errors > div:first-child {
+.tdoc-build-errors .errors > div:first-child {
     padding-top: 0;
     border-top: none;
 }
-.tdoc-build-errors pre.errors > div:last-child {
+.tdoc-build-errors .errors > div:last-child {
     padding-bottom: 0;
+}
+.tdoc-build-errors .errors .loc-p {
+    color: var(--pst-color-info);
+}
+.tdoc-build-errors .errors .loc-l {
+    color: var(--pst-color-danger);
 }
 
 /* Badges in the primary sidebar */

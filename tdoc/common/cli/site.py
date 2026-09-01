@@ -202,14 +202,14 @@ def sphinx_build(opts, target, *, build, tags=(), errors=None, **kwargs):
     if opts.debug: argv += ['--show-traceback']
     argv += [f'--tag={tag}' for tag in tags]
     if errors is not None:
-        kwargs['monitor'], fd = read_errors(errors)
+        kwargs['monitor'], fd = read_errors(opts, errors)
         argv += [f'--tag=tdoc-errors-fd-{fd}']
         kwargs.setdefault('pass_fds', []).append(fd)
     argv += opts.sphinx_opts
     return util.run(*argv, success=None, **kwargs)
 
 
-def read_errors(errors):
+def read_errors(opts, errors):
     rfd, wfd = os.pipe()
     rf, wf = open(rfd, encoding='utf-8'), open(wfd, 'w')
 
@@ -217,8 +217,8 @@ def read_errors(errors):
         buf = io.StringIO()
         with rf:
             while data := rf.read(): buf.write(data)
-        errors.extend(r for rec in buf.getvalue().split('\0')
-                        if (r := rec.strip()))
+        data = buf.getvalue().replace(str(opts.source.parent) + os.sep, '')
+        errors.extend(r for rec in data.split('\0') if (r := rec.strip()))
 
     @contextlib.contextmanager
     def monitor(proc):

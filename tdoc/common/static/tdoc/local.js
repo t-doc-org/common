@@ -11,24 +11,38 @@ if (!tdoc.local) {
 
 // Handle build status and auto-reload on source change.
 let build, statusBtn;
+
 function updateBuildStatusTooltip() {
     if (![bootstrap, statusBtn].every(v => v)) return;
     const bs = core.htmlData.tdocBuildStatus ?? '';
     bootstrap.Tooltip.getInstance(statusBtn)
         ?.setContent?.({'.tooltip-inner': `Build status: ${bs}`});
 }
+
 core.domLoaded.then(() => {
     statusBtn = qs(document, '.btn-build-status');
     on(statusBtn)['show.bs.tooltip'](updateBuildStatusTooltip);
 });
 
 let buildStatus, modal, pre;
+const locationRe = /^(.+?\.(?:md|rst))(:\d+)?: /;
 
 function renderBuildErrors(el) {
-    // TODO: Colorize entries
     const entries = [];
-    for (const w of buildStatus.errors) {
-        entries.push(elmt`<div>${w}</div>`);
+    for (let w of buildStatus.errors) {
+        const div = elmt`<div></div>`;
+        let m = w.match(locationRe);
+        if (m) {
+            div.appendChild(elmt`<span class="loc-p">${m[1]}</span>`);
+            if (m[2]) {
+                div.appendChild(core.text(m[2].substring(0, 1)));
+                div.appendChild(
+                    elmt`<span class="loc-l">${m[2].substring(1)}</span>`);
+            }
+            w = w.substring(m[1].length + (m[2]?.length ?? 0));
+        }
+        if (w !== "") div.appendChild(core.text(w));
+        entries.push(div);
     }
     el.replaceChildren(...entries);
 }
