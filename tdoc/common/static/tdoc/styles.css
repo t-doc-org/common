@@ -132,13 +132,20 @@ html[data-tdoc-build-status=building]
         .article-header-buttons > button.btn-build-status {
     display: flex;
     --fa: '\f2f1';  /* rotate */
-    color: var(--pst-color-warning);
+    color: var(--pst-color-info);
     animation: spin 4s linear infinite;
+}
+html[data-tdoc-build-status=warning]
+        .article-header-buttons > button.btn-build-status {
+    display: flex;
+    --fa: '\f071';  /* triangle-exclamation */
+    color: var(--pst-color-attention);
 }
 html[data-tdoc-build-status=failure]
         .article-header-buttons > button.btn-build-status {
     display: flex;
-    --fa: '\f071';  /* triangle-exclamation */
+    --tdoc-fa-font: var(--fa-font-regular);
+    --fa: '\f057';  /* circle-xmark */
     color: var(--pst-color-danger);
 }
 
@@ -1536,6 +1543,23 @@ div.admonition.instructor > .admonition-title:after {
 .modal .table tbody tr,
 .modal .table tbody tr:hover {
     background-color: initial;
+}
+
+/* Build error modal */
+.tdoc-build-errors .no-warnings:has(+ pre.warnings:not(:empty)) {
+    display: none;
+}
+.tdoc-build-errors pre.warnings {
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5rem;
+    white-space: pre-wrap;
+}
+.tdoc-build-errors pre.warnings:empty {
+    display: none;
+}
+.tdoc-build-errors pre.warnings > div {
+    text-indent: 1rem hanging;
 }
 
 /* Badges in the primary sidebar */

@@ -18,7 +18,46 @@ if (tdoc.local) {
         statusBtn = qs(document, '.btn-build-status');
         on(statusBtn)['show.bs.tooltip'](updateTooltip);
     });
-    tdoc.buildStatus = () => undefined;
+
+    let buildStatus, modal, pre;
+
+    function renderWarnings(el) {
+        // TODO: Colorize entries
+        const entries = [];
+        for (const w of buildStatus.warnings) {
+            entries.push(elmt`<div>${w}</div>`);
+        }
+        el.replaceChildren(...entries);
+    }
+
+    function showWarnings() {
+        const el = elmt`\
+<div class="tdoc-build-errors modal fade" tabindex="-1" aria-hidden="true"\
+ aria-labelledby="tdoc-modal-title">\
+<div class="modal-dialog modal-xl modal-dialog-scrollable">\
+<div class="modal-content">\
+<div class="modal-header">\
+<h1 class="modal-title fs-5" id="tdoc-modal-title">Build errors</h1>\
+<button type="button" class="btn-close" data-bs-dismiss="modal"\
+ aria-label="Close"></button>\
+</div><div class="modal-body vstack gap-3">\
+<div class="no-warnings">Please check the terminal output.</div>\
+<pre class="warnings m-0 border-1 p-2"></pre>\
+</div><div class="modal-footer flex-nowrap">\
+<div class="flex-fill message"></div>\
+<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
+</button>\
+</div></div></div>`;
+        pre = qs(el, 'pre');
+        renderWarnings(pre);
+        modal = core.showModal(el);
+        on(el)['hide.bs.modal'](() => { modal = pre = undefined; });
+    }
+
+    tdoc.buildStatus = () => {
+        if (buildStatus.status === 'failure') showWarnings();
+    };
+
     api.events.sub({add: [
         new api.Watch({name: 'build'}, data => {
             if (!data) return;
@@ -30,8 +69,18 @@ if (tdoc.local) {
             }
         }),
         new api.Watch({name: 'build-status'}, data => {
-            core.htmlData.tdocBuildStatus = data ?? '';
+            buildStatus = data;
+            core.htmlData.tdocBuildStatus = buildStatus.status ?? '';
             updateTooltip();
+            if (buildStatus.status === 'failure') {
+                if (modal) {
+                    renderWarnings(pre);
+                } else if (buildStatus.warnings.length > 0) {
+                    showWarnings();
+                }
+            } else if (buildStatus.status === 'success') {
+                if (modal) modal.hide();
+            }
         }),
     ]});  // Background
 }

@@ -4,6 +4,7 @@
 import contextlib
 import errno
 from http import HTTPMethod, HTTPStatus
+import io
 import itertools
 import mimetypes
 import os
@@ -186,7 +187,7 @@ def cmd_setup(opts):
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
-def sphinx_build(opts, target, *, build, tags=(), **kwargs):
+def sphinx_build(opts, target, *, build, tags=(), warnings=None, **kwargs):
     # Prevent building untrusted sites outside of a sandbox.
     if 'TDOC_SANDBOX' not in os.environ \
             and not opts.cfg.get('site.trusted', False) \
@@ -198,10 +199,36 @@ def sphinx_build(opts, target, *, build, tags=(), **kwargs):
     # Run sphinx.
     argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
             opts.source, build, '--fail-on-warning', '--jobs=auto']
-    argv += [f'--tag={tag}' for tag in tags]
     if opts.debug: argv += ['--show-traceback']
+    argv += [f'--tag={tag}' for tag in tags]
+    if warnings is not None:
+        kwargs['monitor'], fd = read_warnings(warnings)
+        argv += [f'--tag=tdoc-warnings-fd-{fd}']
+        kwargs.setdefault('pass_fds', []).append(fd)
     argv += opts.sphinx_opts
     return util.run(*argv, success=None, **kwargs)
+
+
+def read_warnings(warnings):
+    rfd, wfd = os.pipe()
+    rf, wf = open(rfd, encoding='utf-8'), open(wfd, 'w')
+
+    def read():
+        buf = io.StringIO()
+        with rf:
+            while data := rf.read(): buf.write(data)
+        warnings.extend(r for rec in buf.getvalue().split('\0')
+                        if (r := rec.strip()))
+
+    @contextlib.contextmanager
+    def monitor(proc):
+        wf.close()
+        reader = threading.Thread(target=read, name='warning-reader')
+        reader.start()
+        try: yield
+        finally: reader.join()
+
+    return monitor, wfd
 
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
@@ -276,7 +303,7 @@ class Application(wsgi.Dispatcher):
         self.build_mtime = None
         self.build = api.ValueObservable('build', None)
         self.api.events.add_observable(self.build)
-        self.build_status = api.ValueObservable('build-status', '')
+        self.build_status = api.ValueObservable('build-status', {})
         self.api.events.add_observable(self.build_status)
         self.builder = threading.Thread(target=self.watch_and_build,
                                         name='builder')
@@ -335,22 +362,24 @@ class Application(wsgi.Dispatcher):
                     break
                 self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
-            self.build_status.set('building')
+            self.build_status.set({'status': 'building'})
             prev_mtime = mtime
-            if self.build_site(build_next, mtime):
+            ok, warnings = self.build_site(build_next, mtime)
+            if ok:
                 build = self.build_dir(mtime)
                 os.rename(build_next, build)
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
+                self.build_status.set({'status': 'success'})
                 self.build.set(str(mtime))
-                self.build_status.set('success')
                 self.print_serving()
                 if build_mtime is not None:
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                self.build_status.set('failure')
+                self.build_status.set(
+                    {'status': 'failure', 'warnings': warnings})
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
@@ -391,17 +420,19 @@ class Application(wsgi.Dispatcher):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
     def build_site(self, build, mtime):
+        warnings = []
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
-                               tags=['tdoc-local'])
-            if res.returncode == 0: return True
+                               tags=['tdoc-local'], warnings=warnings)
+            if res.returncode == 0: return True, warnings
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
+            warnings.append(str(e))
         if self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()
-        return False
+        return False, warnings
 
     _import = '_import'
     _import_glob = f'{_import}/**'

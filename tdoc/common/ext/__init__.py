@@ -6,6 +6,7 @@ from concurrent import futures
 import contextlib
 import copy
 import functools
+import logging as _logging
 import pathlib
 import posixpath
 import re
@@ -221,7 +222,40 @@ def sink(items):
     for it in items: pass
 
 
+class WarningHandler(logging.WarningStreamHandler):
+    terminator = '\0'
+
+    def __init__(self, fd):
+        super().__init__(open(fd, 'w', encoding='utf-8', errors='replace'))
+
+    def emit_(self, rec):
+        self.stream.write(f'{self.format(rec).strip()}\0')
+
+
+class WarningSuppressor(logging.WarningSuppressor):
+    def __init__(self, app):
+        # The base class uses app.config and app._warncount. We don't want it to
+        # count warnings, because that's already done by a separate instance. So
+        # we pass self as app, provide access to config and provide a dummy
+        # _warncount.
+        self.config = app.config
+        self._warncount = 0
+        super().__init__(self)
+
+
 def setup(app):
+    # If requested, set up a logging handler to capture warnings and above and
+    # serialize them over a file descriptor.
+    for tag in app.tags:
+        if not tag.startswith('tdoc-warnings-fd-'): continue
+        h = WarningHandler(int(tag[17:]))
+        h.addFilter(WarningSuppressor(app))
+        h.addFilter(logging.OnceFilter())
+        h.setLevel(_logging.WARNING)
+        logger = _logging.getLogger(logging.NAMESPACE)
+        logger.addHandler(h)
+        break
+
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
 

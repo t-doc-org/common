@@ -190,7 +190,7 @@ class Auth extends EventTarget {
 <button type="button" class="btn-close" data-bs-dismiss="modal"\
  aria-label="Close"></button>\
 </div><div class="modal-body vstack gap-3">\
-<form class="hstack gap-2 login hidden">
+<form class="hstack gap-2 login hidden">\
 <label for="tdoc-login-user" class="col-form-label">User:</label>\
 <input type="text" class="form-control" id="tdoc-login-user" value="admin">\
 <button type="submit" class="btn btn-primary text-nowrap login" disabled>\
@@ -255,7 +255,7 @@ t-doc.username = <span class="user user-select-all"></span>
 t-doc.password = <span class="pass user-select-all"></span>
 </pre>\
 <button type="button" class="reset btn btn-danger"\
- style="position: absolute; top: 0.5rem; right: 0.5rem;">Reset</button>
+ style="position: absolute; top: 0.5rem; right: 0.5rem;">Reset</button>\
 </div></div></div>\
 </div><div class="modal-footer flex-nowrap">\
 <button type="button" class="btn btn-danger text-nowrap logout">Log out\
