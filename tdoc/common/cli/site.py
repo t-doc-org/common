@@ -187,7 +187,7 @@ def cmd_setup(opts):
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
-def sphinx_build(opts, target, *, build, tags=(), warnings=None, **kwargs):
+def sphinx_build(opts, target, *, build, tags=(), errors=None, **kwargs):
     # Prevent building untrusted sites outside of a sandbox.
     if 'TDOC_SANDBOX' not in os.environ \
             and not opts.cfg.get('site.trusted', False) \
@@ -201,15 +201,15 @@ def sphinx_build(opts, target, *, build, tags=(), warnings=None, **kwargs):
             opts.source, build, '--fail-on-warning', '--jobs=auto']
     if opts.debug: argv += ['--show-traceback']
     argv += [f'--tag={tag}' for tag in tags]
-    if warnings is not None:
-        kwargs['monitor'], fd = read_warnings(warnings)
-        argv += [f'--tag=tdoc-warnings-fd-{fd}']
+    if errors is not None:
+        kwargs['monitor'], fd = read_errors(errors)
+        argv += [f'--tag=tdoc-errors-fd-{fd}']
         kwargs.setdefault('pass_fds', []).append(fd)
     argv += opts.sphinx_opts
     return util.run(*argv, success=None, **kwargs)
 
 
-def read_warnings(warnings):
+def read_errors(errors):
     rfd, wfd = os.pipe()
     rf, wf = open(rfd, encoding='utf-8'), open(wfd, 'w')
 
@@ -217,7 +217,7 @@ def read_warnings(warnings):
         buf = io.StringIO()
         with rf:
             while data := rf.read(): buf.write(data)
-        warnings.extend(r for rec in buf.getvalue().split('\0')
+        errors.extend(r for rec in buf.getvalue().split('\0')
                         if (r := rec.strip()))
 
     @contextlib.contextmanager
@@ -364,7 +364,7 @@ class Application(wsgi.Dispatcher):
                     "\nSource change detected, rebuilding\n")
             self.build_status.set({'status': 'building'})
             prev_mtime = mtime
-            ok, warnings = self.build_site(build_next, mtime)
+            ok, errors = self.build_site(build_next, mtime)
             if ok:
                 build = self.build_dir(mtime)
                 os.rename(build_next, build)
@@ -379,7 +379,7 @@ class Application(wsgi.Dispatcher):
                 build_mtime = mtime
             else:
                 self.build_status.set(
-                    {'status': 'failure', 'warnings': warnings})
+                    {'status': 'failure', 'errors': errors})
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
@@ -420,19 +420,19 @@ class Application(wsgi.Dispatcher):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
     def build_site(self, build, mtime):
-        warnings = []
+        errors = []
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
-                               tags=['tdoc-local'], warnings=warnings)
-            if res.returncode == 0: return True, warnings
+                               tags=['tdoc-local'], errors=errors)
+            if res.returncode == 0: return True, errors
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
-            warnings.append(str(e))
+            errors.append(str(e))
         if self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()
-        return False, warnings
+        return False, errors
 
     _import = '_import'
     _import_glob = f'{_import}/**'

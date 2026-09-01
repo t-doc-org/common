@@ -1546,19 +1546,19 @@ div.admonition.instructor > .admonition-title:after {
 }
 
 /* Build error modal */
-.tdoc-build-errors .no-warnings:has(+ pre.warnings:not(:empty)) {
+.tdoc-build-errors .no-errors:has(+ pre.errors:not(:empty)) {
     display: none;
 }
-.tdoc-build-errors pre.warnings {
+.tdoc-build-errors pre.errors {
     display: flex;
     flex-direction: column;
     row-gap: 0.5rem;
     white-space: pre-wrap;
 }
-.tdoc-build-errors pre.warnings:empty {
+.tdoc-build-errors pre.errors:empty {
     display: none;
 }
-.tdoc-build-errors pre.warnings > div {
+.tdoc-build-errors pre.errors > div {
     text-indent: 1rem hanging;
 }
 

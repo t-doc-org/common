@@ -244,11 +244,11 @@ class WarningSuppressor(logging.WarningSuppressor):
 
 
 def setup(app):
-    # If requested, set up a logging handler to capture warnings and above and
-    # serialize them over a file descriptor.
     for tag in app.tags:
-        if not tag.startswith('tdoc-warnings-fd-'): continue
-        h = WarningHandler(int(tag[17:]))
+        if not tag.startswith('tdoc-errors-fd-'): continue
+        # Set up a logging handler to capture warnings and above and serialize
+        # them over the given file descriptor.
+        h = WarningHandler(int(tag[15:]))
         h.addFilter(WarningSuppressor(app))
         h.addFilter(logging.OnceFilter())
         h.setLevel(_logging.WARNING)
@@ -474,6 +474,8 @@ def add_js(app, page, template, context, doctree):
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
+    if 'tdoc-local' in app.tags:
+        app.add_js_file('tdoc/local.js', type='module')
 
 
 def restore_mathjax(app, page, template, context, doctree):
