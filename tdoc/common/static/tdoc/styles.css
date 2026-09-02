@@ -135,6 +135,12 @@ html[data-tdoc-build-status=building]
     color: var(--pst-color-info);
     animation: spin 4s linear infinite;
 }
+html[data-tdoc-build-status=info]
+        .article-header-buttons > button.btn-build-status {
+    display: flex;
+    --fa: '\f05a';  /* circle-info */
+    color: var(--pst-color-info);
+}
 html[data-tdoc-build-status=warning]
         .article-header-buttons > button.btn-build-status {
     display: flex;
