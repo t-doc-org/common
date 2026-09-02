@@ -3,7 +3,7 @@
 
 import * as api from './api.js';
 import * as core from './core.js';
-const {elmt, on, qs} = core;
+const {elmt, html, on, qs} = core;
 
 if (!tdoc.local) {
     console.warn("[t-doc] Imported local.js but not serving locally");
@@ -24,13 +24,50 @@ core.domLoaded.then(() => {
     on(statusBtn)['show.bs.tooltip'](updateBuildStatusTooltip);
 });
 
-let buildStatus, modal, pre;
+let buildStatus, modal, modalEl;
 const logPrefix = /^(?:(.+?)(?::(\d+))?: )?(WARNING|ERROR|CRITICAL): /;
 
-function renderBuildErrors(el) {
-    const entries = [];
+function showStatusModal() {
+    const el = elmt`\
+<div class="tdoc-build-status modal fade" tabindex="-1"
+ aria-hidden="true" aria-labelledby="tdoc-modal-title">\
+<div class="modal-dialog modal-xl modal-dialog-scrollable">\
+<div class="modal-content">\
+<div class="modal-header">\
+<h1 class="modal-title fs-5" id="tdoc-modal-title"></h1>\
+<button type="button" class="btn-close" data-bs-dismiss="modal"\
+ aria-label="Close"></button>\
+</div><div class="modal-body vstack gap-2">\
+</div><div class="modal-footer flex-nowrap">\
+<div class="flex-fill message"></div>\
+<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
+</button>\
+</div></div></div>`;
+    renderStatusModal(el)
+    modal = core.showModal(el);
+    modalEl = el;
+    on(el)['hide.bs.modal'](() => { modal = modalEl = undefined; });
+}
+
+function renderStatusModal(el) {
+    const title = qs(el, '.modal-title');
+    const body = qs(el, '.modal-body');
+    const {status, messages} = buildStatus;
+    if (status === 'error') {
+        renderBuildErrors(title, body);
+    } else if ((messages ?? []).length > 0) {
+        renderBuildMessages(title, body);
+    }
+}
+
+function renderBuildErrors(title, body) {
+    const els = html`\
+<div class="no-errors">Please check the terminal output.</div>\
+<pre class="errors m-0 border-1 p-2"></pre>\
+`;
+    const pre = qs(els, 'pre');
     for (let w of buildStatus.errors) {
-        const div = elmt`<div></div>`;
+        const div = pre.appendChild(elmt`<div></div>`);
         let m = w.match(logPrefix);
         if (m) {
             const [m0, m1, m2, m3] = m;
@@ -50,37 +87,24 @@ function renderBuildErrors(el) {
             w = w.substring(m0.length);
         }
         if (w !== "") div.appendChild(core.text(w));
-        entries.push(div);
     }
-    el.replaceChildren(...entries);
+    title.textContent = "Build errors";
+    body.replaceChildren(els);
 }
 
-function showBuildErrors() {
-    const el = elmt`\
-<div class="tdoc-build-errors modal fade" tabindex="-1" aria-hidden="true"\
- aria-labelledby="tdoc-modal-title">\
-<div class="modal-dialog modal-xl modal-dialog-scrollable">\
-<div class="modal-content">\
-<div class="modal-header">\
-<h1 class="modal-title fs-5" id="tdoc-modal-title">Build errors</h1>\
-<button type="button" class="btn-close" data-bs-dismiss="modal"\
- aria-label="Close"></button>\
-</div><div class="modal-body vstack gap-3">\
-<div class="no-errors">Please check the terminal output.</div>\
-<pre class="errors m-0 border-1 p-2"></pre>\
-</div><div class="modal-footer flex-nowrap">\
-<div class="flex-fill message"></div>\
-<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
-</button>\
-</div></div></div>`;
-    pre = qs(el, 'pre');
-    renderBuildErrors(pre);
-    modal = core.showModal(el);
-    on(el)['hide.bs.modal'](() => { modal = pre = undefined; });
+function renderBuildMessages(title, body) {
+    const els = html``;
+    for (const msg of buildStatus.messages) {
+        const div = els.appendChild(elmt`<div class="${msg.level}"></div>`);
+        div.appendChild(core.htmlFragment(msg.html))
+    }
+    title.textContent = "Build messages";
+    body.replaceChildren(els);
 }
 
 tdoc.buildStatus = () => {
-    if (buildStatus.status === 'failure') showBuildErrors();
+    const {status, messages} = buildStatus;
+    if (status === 'error' || (messages ?? []).length > 0) showStatusModal();
 };
 
 api.events.sub({add: [
@@ -94,17 +118,15 @@ api.events.sub({add: [
         }
     }),
     new api.Watch({name: 'build-status'}, data => {
-        buildStatus = data;
-        core.htmlData.tdocBuildStatus = buildStatus.status ?? '';
+        const {status} = buildStatus = data;
+        core.htmlData.tdocBuildStatus = status ?? '';
         updateBuildStatusTooltip();
-        if (buildStatus.status === 'failure') {
-            if (modal) {
-                renderBuildErrors(pre);
-            } else {
-                showBuildErrors();
-            }
-        } else if (buildStatus.status === 'success') {
+        if (status === 'success') {
             if (modal) modal.hide();
+        } else if (modal) {
+            renderStatusModal(modalEl);
+        } else if (status === 'error') {
+            showStatusModal();
         }
     }),
 ]});  // Background

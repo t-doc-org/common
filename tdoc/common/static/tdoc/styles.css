@@ -18,6 +18,14 @@ html:not(#¶) {
     /* Use the same color for "high-contrast" links as for normal ones. */
     --pst-color-link-higher-contrast: var(--pst-color-link);
 }
+.modal {
+    /* Use less whitespace in modals. */
+    --bs-modal-padding: 0.8rem;
+    --bs-modal-header-padding-x: var(--bs-modal-padding);
+    --bs-modal-header-padding-y: var(--bs-modal-padding);
+    --bs-modal-header-padding: var(--bs-modal-header-padding-y)
+        var(--bs-modal-header-padding-x);
+}
 
 /* Utility classes */
 .hidden:not(#¶) {
@@ -132,7 +140,6 @@ html[data-tdoc-build-status=building]
         .article-header-buttons > button.btn-build-status {
     display: flex;
     --fa: '\f2f1';  /* rotate */
-    color: var(--pst-color-info);
     animation: spin 4s linear infinite;
 }
 html[data-tdoc-build-status=info]
@@ -147,11 +154,78 @@ html[data-tdoc-build-status=warning]
     --fa: '\f071';  /* triangle-exclamation */
     color: var(--pst-color-attention);
 }
-html[data-tdoc-build-status=failure]
+html[data-tdoc-build-status=error]
         .article-header-buttons > button.btn-build-status {
     display: flex;
     --fa: '\f057';  /* circle-xmark */
     color: var(--pst-color-danger);
+}
+
+/* Build status modal */
+.tdoc-build-status .modal-dialog {
+    --bs-modal-margin: var(--pst-header-article-height);
+}
+.tdoc-build-status p {
+    margin-bottom: 0.8rem;
+}
+.tdoc-build-status p:last-child {
+    margin-bottom: 0;
+}
+.tdoc-build-status .version {
+    color: var(--pst-color-danger);
+}
+.tdoc-build-status :is(.info, .warning) {
+    padding: 0.5rem;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    background-color: var(--pst-color-surface);
+}
+.tdoc-build-status .info {
+    border-color: var(--pst-color-info);
+    background-color: var(--pst-color-info-bg);
+}
+.tdoc-build-status .warning {
+    border-color: var(--pst-color-warning);
+    background-color: var(--pst-color-warning-bg);
+}
+.tdoc-build-status .no-errors:has(+ .errors:not(:empty)) {
+    display: none;
+}
+.tdoc-build-status .errors {
+    display: flex;
+    flex-direction: column;
+    white-space: pre-wrap;
+}
+.tdoc-build-status .errors:empty {
+    display: none;
+}
+.tdoc-build-status .errors > div {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    border-top: 1px solid var(--pst-color-border);
+    text-indent: 1rem hanging;
+}
+.tdoc-build-status .errors > div:first-child {
+    padding-top: 0;
+    border-top: none;
+}
+.tdoc-build-status .errors > div:last-child {
+    padding-bottom: 0;
+}
+.tdoc-build-status .errors .loc-p {
+    color: var(--pst-color-info);
+}
+.tdoc-build-status .errors .loc-l {
+    color: var(--pst-color-danger-highlight);
+}
+.tdoc-build-status .errors .lvl-W {
+    color: var(--pst-color-warning);
+}
+.tdoc-build-status .errors .lvl-E {
+    color: var(--pst-color-danger);
+}
+.tdoc-build-status .errors .lvl-C {
+    color: var(--pst-color-accent);
 }
 
 /* TOC */
@@ -1548,50 +1622,6 @@ div.admonition.instructor > .admonition-title:after {
 .modal .table tbody tr,
 .modal .table tbody tr:hover {
     background-color: initial;
-}
-
-/* Build error modal */
-.tdoc-build-errors .modal-dialog {
-    --bs-modal-margin: var(--pst-header-article-height);
-}
-.tdoc-build-errors .no-errors:has(+ .errors:not(:empty)) {
-    display: none;
-}
-.tdoc-build-errors .errors {
-    display: flex;
-    flex-direction: column;
-    white-space: pre-wrap;
-}
-.tdoc-build-errors .errors:empty {
-    display: none;
-}
-.tdoc-build-errors .errors > div {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
-    border-top: 1px solid var(--pst-color-border);
-    text-indent: 1rem hanging;
-}
-.tdoc-build-errors .errors > div:first-child {
-    padding-top: 0;
-    border-top: none;
-}
-.tdoc-build-errors .errors > div:last-child {
-    padding-bottom: 0;
-}
-.tdoc-build-errors .errors .loc-p {
-    color: var(--pst-color-info);
-}
-.tdoc-build-errors .errors .loc-l {
-    color: var(--pst-color-danger-highlight);
-}
-.tdoc-build-errors .errors .lvl-W {
-    color: var(--pst-color-warning);
-}
-.tdoc-build-errors .errors .lvl-E {
-    color: var(--pst-color-danger);
-}
-.tdoc-build-errors .errors .lvl-C {
-    color: var(--pst-color-accent);
 }
 
 /* Badges in the primary sidebar */

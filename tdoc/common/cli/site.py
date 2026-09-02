@@ -3,6 +3,7 @@
 
 import contextlib
 import errno
+import html
 from http import HTTPMethod, HTTPStatus
 import itertools
 import mimetypes
@@ -337,7 +338,7 @@ class Application(wsgi.Dispatcher):
                 self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
             self.build_status.set({'status': 'building'})
-            prev_mtime = mtime
+            prev_mtime, status = mtime, {'status': 'success', 'messages': []}
             ok, errors = self.build_site(build_next, mtime)
             if ok:
                 build = self.build_dir(mtime)
@@ -345,20 +346,20 @@ class Application(wsgi.Dispatcher):
                 with self.lock:
                     self.build_mtime = mtime
                     self.directory = build / 'html'
-                self.build_status.set({'status': 'success'})
                 self.build.set(str(mtime))
                 self.print_serving()
                 if build_mtime is not None:
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                self.build_status.set(
-                    {'status': 'failure', 'errors': errors})
+                status.update(status='error', errors=errors)
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
-            self.print_upgrade()
+            self.handle_upgrade(status)
+            self.fix_status(status)
+            self.build_status.set(status)
             prev = time.time_ns()
         if build_mtime is not None: self.remove(self.build_dir(build_mtime))
         self.remove(build_next)
@@ -496,21 +497,36 @@ class Application(wsgi.Dispatcher):
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
-    def print_upgrade(self):
+    def handle_upgrade(self, status):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
-        o = self.opts.stderr
-        with contextlib.suppress(Exception):
+        try:
             reqs = prefix_read('requirements.txt')
             reqs_up = prefix_read('requirements-upgrade.txt')
             if reqs_up == reqs: return
             cur, new = project_version(reqs), project_version(reqs_up)
-            o.write(f"""\
-{o.LYELLOW}An upgrade is available:{o.NORM} {__project__}\
- {o.CYAN}{cur}{o.NORM} => {o.CYAN}{new}{o.NORM}
+        except Exception:
+            return
+        o = self.opts.stderr
+        o.write(f"""\
+{o.LYELLOW}An upgrade is available:{o.NORM}\
+ {o.CYAN}{cur}{o.NORM}{f" => {o.CYAN}{new}{o.NORM}" if new != cur else ""}
 Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}{o.NORM}>
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
+        status['messages'].append({'level': 'info', 'html': f"""\
+<p>An upgrade is available: <span class="version">{html.escape(cur)}</span>\
+{f""" &rarr; <span class="version">{html.escape(new)}</span>"""
+if new != cur else ""}</p>\
+<p>Please check the <a href="https://common.t-doc.org/release-notes.html\
+#release-{html.escape(new.replace('.', '-'))}">release notes</a> and restart \
+the server to upgrade.</p>\
+"""})
+
+    def fix_status(self, status):
+        if (st := status['status']) != 'success': return
+        status['status'] = max((m['level'] for m in status['messages']),
+                               default=st)
 
     def check_repo_status(self):
         while True:
