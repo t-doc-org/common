@@ -4,7 +4,6 @@
 import contextlib
 import errno
 from http import HTTPMethod, HTTPStatus
-import io
 import itertools
 import mimetypes
 import os
@@ -17,7 +16,6 @@ import socket
 import socketserver
 import stat
 import sys
-import tempfile
 import threading
 import time
 from urllib import parse
@@ -187,7 +185,7 @@ def cmd_setup(opts):
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
-def sphinx_build(opts, target, *, build, tags=(), errors=None, **kwargs):
+def sphinx_build(opts, target, *, build, tags=(), **kwargs):
     # Prevent building untrusted sites outside of a sandbox.
     if 'TDOC_SANDBOX' not in os.environ \
             and not opts.cfg.get('site.trusted', False) \
@@ -197,38 +195,14 @@ def sphinx_build(opts, target, *, build, tags=(), errors=None, **kwargs):
             "Refusing to build an untrusted site outside of a sandbox")
 
     # Run sphinx.
+    # TODO: Load own module that patches logging.setup() then imports
+    # sphinx.__main__
     argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
             opts.source, build, '--fail-on-warning', '--jobs=auto']
     if opts.debug: argv += ['--show-traceback']
     argv += [f'--tag={tag}' for tag in tags]
-    if errors is not None:
-        kwargs['monitor'], fd = read_errors(opts, errors)
-        argv += [f'--tag=tdoc-errors-fd-{fd}']
-        kwargs.setdefault('pass_fds', []).append(fd)
     argv += opts.sphinx_opts
     return util.run(*argv, success=None, **kwargs)
-
-
-def read_errors(opts, errors):
-    rfd, wfd = os.pipe()
-    rf, wf = open(rfd, encoding='utf-8'), open(wfd, 'w')
-
-    def read():
-        buf = io.StringIO()
-        with rf:
-            while data := rf.read(): buf.write(data)
-        data = buf.getvalue().replace(str(opts.source.parent) + os.sep, '')
-        errors.extend(r for rec in data.split('\0') if (r := rec.strip()))
-
-    @contextlib.contextmanager
-    def monitor(proc):
-        wf.close()
-        reader = threading.Thread(target=read, name='warning-reader')
-        reader.start()
-        try: yield
-        finally: reader.join()
-
-    return monitor, wfd
 
 
 class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
@@ -424,11 +398,18 @@ class Application(wsgi.Dispatcher):
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
-                               tags=['tdoc-local'], errors=errors)
+                               tags=['tdoc-local'])
             if res.returncode == 0: return True, errors
+
+            # Read build errors.
+            if (be := build / util.build_errors).is_file():
+                data = be.read_text(encoding='utf-8', errors='replace') \
+                         .replace(str(self.opts.source.parent) + os.sep, '')
+                errors.extend(r for e in data.split('\0') if (r := e.strip()))
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
             errors.append(str(e).strip())
+
         if self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()

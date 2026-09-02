@@ -23,6 +23,7 @@ from urllib import request
 import certifi
 
 usec = datetime.timedelta(microseconds=1)
+build_errors = 'tdoc-build-errors.log'
 
 
 def local_time(dt, sep=' ', timespec='seconds'):

@@ -239,8 +239,9 @@ def _errors_handle_exception(orig, exc, /, *args, **kwargs):
 class WarningHandler(logging.WarningStreamHandler):
     terminator = '\0'
 
-    def __init__(self, fd):
-        super().__init__(open(fd, 'w', encoding='utf-8', errors='replace'))
+    def __init__(self, path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        super().__init__(open(path, 'w', encoding='utf-8', errors='replace'))
 
     def emit_(self, rec):
         self.stream.write(f'{self.format(rec).strip()}\0')
@@ -258,18 +259,16 @@ class WarningSuppressor(logging.WarningSuppressor):
 
 
 def setup(app):
-    for tag in app.tags:
-        if not tag.startswith('tdoc-errors-fd-'): continue
-        # Set up a logging handler to capture warnings and above and serialize
-        # them over the given file descriptor.
-        h = WarningHandler(int(tag[15:]))
+    if 'tdoc-local' in app.tags:
+        # Set up a logging handler to capture warnings and above and write them
+        # to a file.
+        h = WarningHandler(app.outdir.parent / util.build_errors)
         h.addFilter(WarningSuppressor(app))
         h.addFilter(logging.OnceFilter())
         h.setLevel(_logging.WARNING)
         _log_exc.addHandler(h)
         logger = _logging.getLogger(logging.NAMESPACE)
         logger.addHandler(h)
-        break
 
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
