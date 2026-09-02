@@ -100,10 +100,19 @@ located below the `docs` directory.
 - **Create and edit documents** in the `docs` directory. This can be done with
   any plain text editor.
   - The local server watches the source files and **automatically rebulids the
-  HTML** when a file changes.
-  - When the build is successful, the browser **automatically reloads** all open
-    pages.
-  - If a build fails, the errors can be viewed in the terminal.
+    HTML** when a file changes.
+    - When the build succeeds, the browser **automatically reloads** all open
+      pages.
+    - Failing builds are reported with a
+      <i class="fa-circle-xmark tfa"
+         style="color: var(--pst-color-danger);"></i> icon in the navbar, and
+      **a popup displays the errors**. They can also be viewed in the terminal.
+    - Relevant messages generated during the build are reported with an icon in
+      the navbar
+      (<i class="fa-triangle-exclamation tfa"
+          style="color: var(--pst-color-warning);"></i> for warnings,
+      <i class="fa-circle-info tfa" style="color: var(--pst-color-info);"></i>
+      for informational messages). Click the icon to view the messages.
   - After the initial full build of all pages, the server **rebuilds only pages
     that change**. This is much faster, but can sometimes cause artifacts or
     failures. If this happens, restart the local server to trigger a full
