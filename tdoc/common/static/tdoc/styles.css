@@ -150,7 +150,6 @@ html[data-tdoc-build-status=warning]
 html[data-tdoc-build-status=failure]
         .article-header-buttons > button.btn-build-status {
     display: flex;
-    --tdoc-fa-font: var(--fa-font-regular);
     --fa: '\f057';  /* circle-xmark */
     color: var(--pst-color-danger);
 }
