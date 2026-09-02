@@ -185,7 +185,8 @@ def cmd_setup(opts):
                 f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
 
 
-def sphinx_build(opts, target, *, build, tags=(), **kwargs):
+def sphinx_build(opts, target, *, build, tags=(), capture_build_errors=False,
+                 **kwargs):
     # Prevent building untrusted sites outside of a sandbox.
     if 'TDOC_SANDBOX' not in os.environ \
             and not opts.cfg.get('site.trusted', False) \
@@ -195,10 +196,9 @@ def sphinx_build(opts, target, *, build, tags=(), **kwargs):
             "Refusing to build an untrusted site outside of a sandbox")
 
     # Run sphinx.
-    # TODO: Load own module that patches logging.setup() then imports
-    # sphinx.__main__
-    argv = [sys.executable, '-P', '-m', 'sphinx', 'build', '-M', target,
-            opts.source, build, '--fail-on-warning', '--jobs=auto']
+    mod = 'tdoc.common.ext.build' if capture_build_errors else 'sphinx'
+    argv = [sys.executable, '-P', '-m', mod, 'build', '-M', target, opts.source,
+            build, '--fail-on-warning', '--jobs=auto']
     if opts.debug: argv += ['--show-traceback']
     argv += [f'--tag={tag}' for tag in tags]
     argv += opts.sphinx_opts
@@ -398,7 +398,7 @@ class Application(wsgi.Dispatcher):
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
-                               tags=['tdoc-local'])
+                               tags=['tdoc-local'], capture_build_errors=True)
             if res.returncode == 0: return True, errors
 
             # Read build errors.

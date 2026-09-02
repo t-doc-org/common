@@ -6,7 +6,6 @@ from concurrent import futures
 import contextlib
 import copy
 import functools
-import logging as _logging
 import pathlib
 import posixpath
 import re
@@ -17,7 +16,6 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 import pyjson5
 from sphinx import addnodes, config, errors, locale
-from sphinx._cli.util import errors as cli_errors
 from sphinx.builders import html
 from sphinx.domains import rst
 from sphinx.environment import collectors
@@ -223,53 +221,7 @@ def sink(items):
     for it in items: pass
 
 
-_log_exc = _logging.getLogger('tdoc-sphinx-exception')
-_log_exc.propagate = False
-
-
-@patch.patch(cli_errors, 'handle_exception')
-def _errors_handle_exception(orig, exc, /, *args, **kwargs):
-    import bdb
-    if _log_exc.handlers \
-            and not isinstance(exc, (KeyboardInterrupt, bdb.BdbQuit)):
-        _log_exc.error(f"{exc.__class__.__name__}: {exc}", exc_info=exc)
-    return orig(exc, *args, **kwargs)
-
-
-class WarningHandler(logging.WarningStreamHandler):
-    terminator = '\0'
-
-    def __init__(self, path):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        super().__init__(open(path, 'w', encoding='utf-8', errors='replace'))
-
-    def emit_(self, rec):
-        self.stream.write(f'{self.format(rec).strip()}\0')
-
-
-class WarningSuppressor(logging.WarningSuppressor):
-    def __init__(self, app):
-        # The base class uses app.config and app._warncount. We don't want it to
-        # count warnings, because that's already done by a separate instance. So
-        # we pass self as app, provide access to config and provide a dummy
-        # _warncount.
-        self.config = app.config
-        self._warncount = 0
-        super().__init__(self)
-
-
 def setup(app):
-    if 'tdoc-local' in app.tags:
-        # Set up a logging handler to capture warnings and above and write them
-        # to a file.
-        h = WarningHandler(app.outdir.parent / util.build_errors)
-        h.addFilter(WarningSuppressor(app))
-        h.addFilter(logging.OnceFilter())
-        h.setLevel(_logging.WARNING)
-        _log_exc.addHandler(h)
-        logger = _logging.getLogger(logging.NAMESPACE)
-        logger.addHandler(h)
-
     app.set_html_assets_policy('always')  # Ensure MathJax is always available
     app.add_event('tdoc-html-page-config')
 
