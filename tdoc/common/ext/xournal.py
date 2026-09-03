@@ -1,6 +1,7 @@
 # Copyright 2026 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import collections
 import os
 import pathlib
 import subprocess
@@ -53,31 +54,24 @@ class XoppCollector(collectors.EnvironmentCollector):
     @staticmethod
     def init(app):
         if not hasattr(app.env, 'tdoc_xopp'):
-            app.env.tdoc_xopp = {}  # dst => ({docnames}, src)
+            # {docname: {dst: src}}
+            app.env.tdoc_xopp = collections.defaultdict(dict)
 
     def clear_doc(self, app, env, docname):
-        for dst, (docnames, src) in list(env.tdoc_xopp.items()):
-            docnames.discard(docname)
-            if not docnames: del env.tdoc_xopp[dst]
+        app.env.tdoc_xopp.pop(docname, None)
 
     def merge_other(self, app, env, docnames, other):
-        for dst, (docs, src) in other.tdoc_xopp.items():
-            docnames = self.entry(env, dst, src)
-            docnames.update(docs)
+        for docname in docnames:
+            if (fs := other.tdoc_xopp.get(docname)) is not None:
+                env.tdoc_xopp[docname] = fs
+            else:
+                env.tdoc_xopp.pop(docname, None)
 
     def process_doc(self, app, doctree):
-        env = app.env
-        docname = env.docname
+        env, xopps = app.env, None
         for node in doctree.findall(xopp):
-            docnames = self.entry(env, node['dst'], node['src'])
-            docnames.add(docname)
-
-    def entry(self, env, dst, src):
-        docnames, esrc = env.tdoc_xopp.setdefault(dst, (set(), src))
-        if src != esrc:
-            _log.error("{xopp}: Source mismatch: %s\n  %s\n  %s", dst, esrc,
-                       src)
-        return docnames
+            if xopps is None: xopps = env.tdoc_xopp[env.docname]
+            xopps[node['dst']] = node['src']
 
 
 def render_xopp(app, builder):
@@ -87,20 +81,21 @@ def render_xopp(app, builder):
     if (exe := xournalpp_path(app)) is None: return
 
     # Find files whose destination is older than the source.
-    stale = []
-    for dst, (docnames, src) in app.env.tdoc_xopp.items():
-        try:
-            if ext.needs_build(d := builder.outdir / dst, src):
-                stale.append((src, d))
-        except OSError as e:
-            _log.error("{xopp}: %s", e, location=next(iter(docnames)))
+    stale = {}
+    for docname, xopps in app.env.tdoc_xopp.items():
+        for dst, src in xopps.items():
+            try:
+                if ext.needs_build(d := builder.outdir / dst, src):
+                    stale[d] = src
+            except OSError as e:
+                _log.error("{xopp}: %s", e, location=docname)
     if not stale: return
 
     # Render xopp files to pdf.
     ext.sink(ext.map_parallel(
-        app, lambda args: render(exe, *args), stale,
+        app, lambda args: render(exe, *args), stale.items(),
         "rendering xopp files... ", 'brown',
-        lambda it: osutil._relative_path(it[0], builder.srcdir).as_posix()))
+        lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()))
 
 
 def xournalpp_path(app):
@@ -118,7 +113,7 @@ def xournalpp_path(app):
         _log.error("{xopp}: Unable to run xournalpp:\n%s", e.stdout)
 
 
-def render(exe, src, dst):
+def render(exe, dst, src):
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([exe, f'--create-pdf={dst}', src],
