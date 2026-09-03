@@ -5,7 +5,9 @@ import contextlib
 import errno
 import html
 from http import HTTPMethod, HTTPStatus
+import io
 import itertools
+import json
 import mimetypes
 import os
 import pathlib
@@ -23,7 +25,7 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server
 
-from .. import __project__, api, cli, deps, logs, util, wsgi
+from .. import __project__, api, cli, deps, fixes, logs, util, wsgi
 
 _log = logs.logger(__name__)
 rc_build_failure = 1
@@ -339,7 +341,7 @@ class Application(wsgi.Dispatcher):
                     "\nSource change detected, rebuilding\n")
             self.build_status.set({'status': 'building'})
             prev_mtime, status = mtime, {'status': 'success', 'messages': []}
-            ok, errors = self.build_site(build_next, mtime)
+            ok, errors, fixes = self.build_site(build_next, mtime)
             if ok:
                 build = self.build_dir(mtime)
                 os.rename(build_next, build)
@@ -357,7 +359,8 @@ class Application(wsgi.Dispatcher):
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
-            self.handle_upgrade(status)
+            self.render_fixes(fixes, status)
+            self.render_upgrade(status)
             self.fix_status(status)
             self.build_status.set(status)
             prev = time.time_ns()
@@ -395,26 +398,30 @@ class Application(wsgi.Dispatcher):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
     def build_site(self, build, mtime):
-        errors = []
+        ok, errors, fixes = False, [], {}
         try:
             self.update_imports(mtime)
             res = sphinx_build(self.opts, 'html', build=build,
                                tags=['tdoc-local'], capture_build_errors=True)
-            if res.returncode == 0: return True, errors
-
-            # Read build errors.
-            if (be := build / util.build_errors).is_file():
-                data = be.read_text(encoding='utf-8', errors='replace') \
-                         .replace(str(self.opts.source.parent) + os.sep, '')
-                errors.extend(r for e in data.split('\0') if (r := e.strip()))
+            ok = res.returncode == 0
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
             errors.append(str(e).strip())
 
-        if self.opts.exit_on_failure:
+        # Read build errors.
+        if (be := build / util.build_errors).is_file():
+            data = be.read_text('utf-8', errors='replace') \
+                     .replace(str(self.opts.source.parent) + os.sep, '')
+            errors.extend(r for e in data.split('\0') if (r := e.strip()))
+
+        # Read fixes.
+        if (p := build / util.fixes).is_file():
+            with open(p, 'rb') as f: fixes = json.load(f)
+
+        if not ok and self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()
-        return False, errors
+        return ok, errors, fixes
 
     _import = '_import'
     _import_glob = f'{_import}/**'
@@ -497,7 +504,34 @@ class Application(wsgi.Dispatcher):
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
-    def handle_upgrade(self, status):
+    def render_fixes(self, fxs, status):
+        if not fxs: return
+        out = io.StringIO()
+        e = html.escape
+        out.write("""\
+<p>The following <a href="https://common.t-doc.org/fixes.html">fixes</a> need \
+to be performed:</p> <ul class="m-0">""")
+        for name, locs in sorted(fxs.items()):
+            deadline, title = fixes.get(name, 'deadline', 'title')
+            out.write(f"""\
+<li><a class="mono" href="https://common.t-doc.org/fixes.html#{e(name)}">\
+{e(name)}</a>""")
+            if deadline is not None:
+                out.write(f"""\
+ [until <span class="deadline">{e(deadline)}</span>]""")
+            if locs: out.write(f' ({len(locs)} locations)')
+            if title is not None: out.write(f": {title}")
+            if not locs: continue
+            out.write(f'<ul class="mono pt-1">')
+            for src, line in sorted(locs):
+                out.write(f'<li><code class="path">{e(src)}</code>')
+                if line: out.write(f':<code class="line">{e(str(line))}</code>')
+                out.write('</code></li>')
+            out.write('</ul>')
+        out.write('</ul>')
+        status['messages'].append({'level': 'warning', 'html': out.getvalue()})
+
+    def render_upgrade(self, status):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
         try:
             reqs = prefix_read('requirements.txt')
@@ -514,14 +548,14 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}{o.NORM}>
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
+        e = html.escape
         status['messages'].append({'level': 'info', 'html': f"""\
-<p>An upgrade is available: <span class="version">{html.escape(cur)}</span>\
-{f""" &rarr; <span class="version">{html.escape(new)}</span>"""
+<p>An upgrade is available: <span class="version">{e(cur)}</span>\
+{f""" &rarr; <span class="version">{e(new)}</span>"""
 if new != cur else ""}</p>\
 <p>Please check the <a href="https://common.t-doc.org/release-notes.html\
-#release-{html.escape(new.replace('.', '-'))}">release notes</a> and restart \
-the server to upgrade.</p>\
-"""})
+#release-{e(new.replace('.', '-'))}">release notes</a> and restart \
+the server to upgrade.</p>"""})
 
     def fix_status(self, status):
         if (st := status['status']) != 'success': return

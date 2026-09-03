@@ -24,6 +24,7 @@ import certifi
 
 usec = datetime.timedelta(microseconds=1)
 build_errors = 'tdoc-build-errors.log'
+fixes = 'tdoc-fixes.json'
 
 
 def local_time(dt, sep=' ', timespec='seconds'):
@@ -194,8 +195,18 @@ def terminate_on(*sigs):
     return on_started
 
 
-to_json = json.JSONEncoder(separators=(',', ':')).encode
-to_json_sorted = json.JSONEncoder(separators=(',', ':'), sort_keys=True).encode
+_set_types = (set, frozenset)
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, _set_types): return tuple(obj)
+        if isinstance(obj, os.PathLike): return str(obj)
+        return super().default(obj)
+
+
+to_json = JSONEncoder(separators=(',', ':')).encode
+to_json_sorted = JSONEncoder(separators=(',', ':'), sort_keys=True).encode
 
 
 class Namespace(dict):

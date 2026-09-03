@@ -53,9 +53,9 @@ def _copy_asset_file(orig, /, source, destination, *args, **kwargs):
     dstr = str(destination)
     for dest, fn in _asset_file_patches:
         if dstr.endswith(dest):
-            old = destination.read_text(encoding='utf-8')
+            old = destination.read_text('utf-8')
             new = fn(old)
-            if new != old: destination.write_text(new, encoding='utf-8')
+            if new != old: destination.write_text(new, 'utf-8')
 
 
 _template_patches = {}

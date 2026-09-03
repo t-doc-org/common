@@ -72,10 +72,10 @@ function renderBuildErrors(title, body) {
         if (m) {
             const [m0, m1, m2, m3] = m;
             if (m1) {
-                div.appendChild(elmt`<span class="loc-p">${m1}</span>`);
+                div.appendChild(elmt`<span class="path">${m1}</span>`);
                 div.appendChild(core.text(":"));
                 if (m2) {
-                    div.appendChild(elmt`<span class="loc-l">${m2}</span>`);
+                    div.appendChild(elmt`<span class="line">${m2}</span>`);
                     div.appendChild(core.text(":"));
                 }
                 div.appendChild(core.text(" "));

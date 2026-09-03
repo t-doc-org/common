@@ -171,6 +171,19 @@ html[data-tdoc-build-status=error]
 .tdoc-build-status p:last-child {
     margin-bottom: 0;
 }
+.tdoc-build-status .mono {
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.875em;
+}
+.tdoc-build-status .deadline {
+    color: var(--pst-color-danger-highlight);
+}
+.tdoc-build-status .path {
+    color: var(--pst-color-info);
+}
+.tdoc-build-status .line {
+    color: var(--pst-color-danger-highlight);
+}
 .tdoc-build-status .version {
     color: var(--pst-color-danger);
 }
@@ -211,12 +224,6 @@ html[data-tdoc-build-status=error]
 }
 .tdoc-build-status .errors > div:last-child {
     padding-bottom: 0;
-}
-.tdoc-build-status .errors .loc-p {
-    color: var(--pst-color-info);
-}
-.tdoc-build-status .errors .loc-l {
-    color: var(--pst-color-danger-highlight);
 }
 .tdoc-build-status .errors .lvl-W {
     color: var(--pst-color-warning);

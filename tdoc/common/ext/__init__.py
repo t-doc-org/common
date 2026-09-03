@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import base64
+import collections
 from concurrent import futures
 import contextlib
 import copy
@@ -22,7 +23,7 @@ from sphinx.environment import collectors
 from sphinx.ext.intersphinx import _load
 from sphinx.util import display, docutils, fileutil, logging
 
-from . import patch
+from . import fixes, patch
 from .. import __version__, deps, util
 
 if sys.platform == 'win32': import winreg
@@ -42,6 +43,10 @@ _license_urls = {
     'CC-BY-ND-4.0': 'https://creativecommons.org/licenses/by-nd/4.0/',
     'MIT': 'https://opensource.org/license/mit',
 }
+
+
+def dict_of_dict(): return collections.defaultdict(dict)
+def dict_of_set(): return collections.defaultdict(set)
 
 
 @patch.asset_file('/_static/styles/pydata-sphinx-theme.css')
@@ -182,6 +187,13 @@ def meta(env, docname, key, default=None):
     return v
 
 
+def repo_relative(env, path):
+    path = pathlib.Path(path).resolve()
+    with contextlib.suppress(ValueError):
+        return path.relative_to(env.srcdir.parent)
+    return path
+
+
 def needs_build(dst, src):
     src_st = src.stat()
     try: dst_st = dst.stat()
@@ -219,6 +231,10 @@ def map_parallel(app, fn, items, summary=None, color='brown', stringify=str):
 
 def sink(items):
     for it in items: pass
+
+
+def add_fix(*args, **kwargs):
+    return fixes.add(*args, **kwargs)
 
 
 def setup(app):
