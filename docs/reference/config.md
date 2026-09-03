@@ -463,7 +463,8 @@ This table configures options related to site repositories.
 - `trusted` (default: `false`): When `true`, the site repository is trusted.
   Untrusted sites can only be built via their own `run.py` script; building
   via a local clone of the `common` repository
-  ([development workflow](../development.md#run)) must be done in a sandbox.
+  ([development workflow](/manual/development.md#run)) must be done in a
+  sandbox.
 
 ### `[store]`
 

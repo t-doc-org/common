@@ -152,16 +152,16 @@ into `_venv`.
 
 - To make the local server **trigger a rebuild whenever code within `common`
   changes**, add the following line to the
-  [`[defaults]`](reference/config.md#defaults) section of `run.local.toml`. This
-  is useful when working on code related to building sites or on client-side
-  code.
+  [`[defaults]`](/reference/config.md#defaults) section of `run.local.toml`.
+  This is useful when working on code related to building sites or on
+  client-side code.
 
   ```{code-block}
   command-dev_20 = ["--watch=../common/tdoc"]
   ```
 
 - To make the local server **restart for each rebuild**, add the following line
-  to the [`[defaults]`](reference/config.md#defaults) section of
+  to the [`[defaults]`](/reference/config.md#defaults) section of
   `run.local.toml`. This is useful when working on the local server itself or on
   API code.
 
@@ -171,7 +171,7 @@ into `_venv`.
 
 - **Create a persistent database for the local server.** This requires
   configuring the path to the database in the
-  [`[store]`](reference/config.md#store) section of `tdoc.local.toml`.
+  [`[store]`](/reference/config.md#store) section of `tdoc.local.toml`.
 
   ```{code-block}
   [store]

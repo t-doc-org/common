@@ -3,11 +3,6 @@
 
 # Install & upgrade
 
-```{toctree}
-:hidden:
-release-notes
-```
-
 ## Install
 
 - **Install the [required packages](#requirements).** Everything else will be
@@ -59,7 +54,7 @@ release-notes
 - The [local server](edit.md#edit-documents) indicates when upgrades are
   available.
   - Check the changes introduced in new t-doc versions in the
-    [release notes](release-notes.md).
+    [release notes](/release-notes.md).
   - Restart the local server. When prompted, accept the upgrade.
 - Check for upgrades to the [required packages](#requirements) and install them
   when available.

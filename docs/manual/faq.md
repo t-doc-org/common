@@ -33,7 +33,7 @@ version of the package can be used until a fix is released.
 (faq-specific-version)=
 ### How can I use a specific version of t-doc?
 
-- Check the [release notes](release-notes.md) and find the version of the
+- Check the [release notes](/release-notes.md) and find the version of the
   `t-doc-common` package to install, e.g. `0.62`.
 
 - Create a text file `run.local.toml` at the root of the site repository, and

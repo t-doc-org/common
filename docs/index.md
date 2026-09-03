@@ -5,10 +5,7 @@
 
 ```{toctree}
 :hidden:
-install
-edit
-faq
-development
+manual/index
 reference/index
 demo/index
 ```
@@ -23,11 +20,11 @@ components:
   [Sphinx Book Theme](https://sphinx-book-theme.readthedocs.io/).
 - A **Sphinx extension** that adds functionality through
   [roles and directives](reference/elements.md).
-- A **[local server](edit.md#edit-documents)** that automatically rebuilds
-  documents when their sources change.
-- An **[automatic deployment system](edit.md#deploy-documents)** that builds
-  sites and deploys them to [GitHub Pages](https://pages.github.com/) on every
-  version control push.
+- A **[local server](manual/edit.md#edit-documents)** that automatically
+  rebuilds documents when their sources change.
+- An **[automatic deployment system](manual/edit.md#deploy-documents)** that
+  builds sites and deploys them to [GitHub Pages](https://pages.github.com/) on
+  every version control push.
 
 t-doc builds on top of the following open-source software, among others:
 

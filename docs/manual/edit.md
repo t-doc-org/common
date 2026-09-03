@@ -21,9 +21,9 @@ Each site is tracked as a Mercurial repository.
   If the command asks for a username and password, ensure you have set up the
   Mercurial configuration as described in "[Install](install.md#install)".
 
-- Configure the site via [`conf.py`](reference/config.md#sphinx-configuration),
+- Configure the site via [`conf.py`](/reference/config.md#sphinx-configuration),
   and optionally via
-  [`tdoc.local.toml`](reference/config.md#cli-and-api-configuration).
+  [`tdoc.local.toml`](/reference/config.md#cli-and-api-configuration).
 
 The typical structure of a site repository is shown below. The source files are
 located below the `docs` directory.
@@ -118,13 +118,6 @@ located below the `docs` directory.
     failures. If this happens, restart the local server to trigger a full
     rebuild, and [report the issue](#faq-report-issue) to the t-doc authors.
   - Don't forget to **commit changes frequently**.
-
-  ```{important}
-  Please use only
-  [printable ASCII](https://en.wikipedia.org/wiki/ASCII#Printable_character_table)
-  characters in file names. While accented characters may seem to work, they
-  cause issues across platforms (e.g. Windows vs. Linux).
-  ```
 
 - **Stop the local server** by typing {kbd}`Ctrl+C` in the terminal, or by
   closing the terminal window.
