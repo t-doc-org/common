@@ -367,7 +367,7 @@ class Application(wsgi.Dispatcher):
                                 symlinks=True)
             self.render_fix_messages(fixes, status)
             self.render_upgrade(status)
-            self.fix_status(status)
+            self.normalize_status(status)
             self.build_status.set(status)
             prev = time.time_ns()
         if build_mtime is not None: self.remove(self.build_dir(build_mtime))
@@ -570,10 +570,11 @@ if new != cur else ""}</p>\
 #release-{e(new.replace('.', '-'))}">release notes</a> and restart \
 the server to upgrade.</p>"""})
 
-    def fix_status(self, status):
+    def normalize_status(self, status):
         if (st := status['status']) != 'success': return
-        status['status'] = max((m['level'] for m in status['messages']),
-                               default=st)
+        status['status'] = min((m['level'] for m in status['messages']),
+                               key=level_key, default=st)
+        status['messages'].sort(key=lambda m: level_key(m['level']))
 
     def check_repo_status(self):
         while True:

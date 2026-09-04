@@ -13,7 +13,7 @@ from sphinx._cli.util import colour
 from sphinx.environment import collectors
 from sphinx.util import logging
 
-from .. import ext, util
+from .. import ext, fixes, util
 
 _log = logging.getLogger(__name__)
 
@@ -96,8 +96,8 @@ class FixCollector(collectors.EnvironmentCollector):
 def store(app, exc):
     # Merge the per-document fix dicts.
     data = ext.dict_of_set()
-    for docname, fixes in app.env.tdoc_fixes.items():
-        for name, locations in fixes.items():
+    for docname, fxs in app.env.tdoc_fixes.items():
+        for name, locations in fxs.items():
             data[name].update(locations)
 
     # Write the merged fixes to the build directory.
@@ -107,11 +107,10 @@ def store(app, exc):
     if not data: return
     _log.info(colour.bold("Fixes required:"))
     for name, locs in sorted(data.items()):
-        name = colour.yellow(name)
-        if not locs:
-            _log.info(f"  {name}")
-            continue
-        _log.info(f"  {name} ({len(locs)} locations)")
+        dl, = fixes.attrs(name, 'deadline')
+        deadline = f" [until {dl}]" if dl is not None else ""
+        loc_cnt = f" ({len(locs)} locations)" if locs else ""
+        _log.info(f"  {colour.yellow(name)}{deadline}{loc_cnt}")
         for src, line in sorted(locs):
             _log.info(f"    {src}{f":{line}" if line else ""}")
 
