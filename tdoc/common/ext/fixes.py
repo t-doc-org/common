@@ -34,7 +34,7 @@ def setup(app):
 
 
 def add(env, name, *, docname=None, location=None):
-    if docname is None: docname = env.docname
+    if docname is None and env.docname: docname = env.docname
     if location is None and docname is not None:
         location = (ext.repo_relative(env, env.doc2path(docname)), None)
     elif isinstance(location, tuple):

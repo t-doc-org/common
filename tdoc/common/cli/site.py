@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import collections
 import contextlib
 import errno
 import html
@@ -263,6 +264,11 @@ def project_version(reqs):
     return 'unknown'
 
 
+_levels = {'error': 0, 'warning': 1, 'info': 2}
+
+def level_key(level): return _levels.get(level, 3)
+
+
 class Application(wsgi.Dispatcher):
     def __init__(self, opts, server, api_):
         super().__init__()
@@ -359,7 +365,7 @@ class Application(wsgi.Dispatcher):
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
-            self.render_fixes(fixes, status)
+            self.render_fix_messages(fixes, status)
             self.render_upgrade(status)
             self.fix_status(status)
             self.build_status.set(status)
@@ -504,15 +510,22 @@ class Application(wsgi.Dispatcher):
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
-    def render_fixes(self, fxs, status):
+    def render_fix_messages(self, fxs, status):
         if not fxs: return
+        groups = collections.defaultdict(dict)
+        for name, locs in fxs.items():
+            groups[fixes.level(name)][name] = locs
+        for lvl, fs in sorted(groups.items(), key=lambda it: level_key(it[0])):
+            self.render_fix_message(lvl, fs, status)
+
+    def render_fix_message(self, level, fxs, status):
         out = io.StringIO()
         e = html.escape
         out.write("""\
 <p>The following <a href="https://common.t-doc.org/fixes.html">fixes</a> need \
-to be performed:</p> <ul class="m-0">""")
+to be applied:</p> <ul class="m-0">""")
         for name, locs in sorted(fxs.items()):
-            deadline, title = fixes.get(name, 'deadline', 'title')
+            deadline, title = fixes.attrs(name, 'deadline', 'title')
             out.write(f"""\
 <li><a class="mono" href="https://common.t-doc.org/fixes.html#{e(name)}">\
 {e(name)}</a>""")
@@ -529,7 +542,7 @@ to be performed:</p> <ul class="m-0">""")
                 out.write('</code></li>')
             out.write('</ul>')
         out.write('</ul>')
-        status['messages'].append({'level': 'warning', 'html': out.getvalue()})
+        status['messages'].append({'level': level, 'html': out.getvalue()})
 
     def render_upgrade(self, status):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
