@@ -367,7 +367,7 @@ def configure_templates(app):
             })
         badges.append({
             'href': 'https://common.t-doc.org/fixes.html',
-            'img': '/fixes-badge.svg',
+            'img': f'/{util.fixes_badge}',
         })
     badges = [eb for b in badges
               if (eb := expand_badge(b, repo_url)) is not None]

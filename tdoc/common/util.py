@@ -25,6 +25,7 @@ import certifi
 usec = datetime.timedelta(microseconds=1)
 build_errors = 'tdoc-build-errors.log'
 fixes = 'tdoc-fixes.json'
+fixes_badge = 'tdoc-fixes.svg'
 _levels = {'error': 0, 'warning': 1, 'info': 2}
 
 

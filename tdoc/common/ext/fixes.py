@@ -105,7 +105,7 @@ def store(app, exc):
     (app.outdir.parent / util.fixes).write_text(util.to_json(data), 'utf-8')
 
     # Render a shield describing the fix status.
-    (app.outdir / 'fixes-badge.svg').write_text(badge(data), 'utf-8')
+    (app.outdir / util.fixes_badge).write_text(badge(data), 'utf-8')
 
     # List the fixes.
     if not data: return
