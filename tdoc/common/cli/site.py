@@ -26,6 +26,9 @@ from urllib import parse
 import webbrowser
 from wsgiref import simple_server
 
+import pygments
+from pygments import formatters, lexers
+
 from .. import __project__, api, cli, deps, fixes, logs, util, wsgi
 
 _log = logs.logger(__name__)
@@ -507,7 +510,6 @@ class Application(wsgi.Dispatcher):
 
     def render_build_errors(self, errors, status):
         out = io.StringIO()
-        e = html.escape
         if not errors:
             out.write("""
 <p>The build has failed. Please check the terminal output.</p>""")
@@ -520,6 +522,9 @@ class Application(wsgi.Dispatcher):
 
     _log_prefix_re = re.compile(
         r'^(?:(.+?)(?::(\d+))?: )?(WARNING|ERROR|CRITICAL): ')
+    _exc_prefix_re = re.compile(r'^([A-Z][A-Za-z0-9_]+): ')
+    _tb_lexer = lexers.PythonTracebackLexer(encoding='utf-8')
+    _html_formatter = formatters.HtmlFormatter(nowrap=True)
 
     def render_log_record(self, err, out):
         e = html.escape
@@ -532,6 +537,15 @@ class Application(wsgi.Dispatcher):
             if v := m[3]:
                 out.write(f'<span class="lvl-{e(v[0])}">{e(v)}</span>: ')
             err = err[len(m[0]):]
+        elif m := self._exc_prefix_re.search(err):
+            out.write(f'<span class="exc">{e(m[1])}</span>: ')
+            err = err[len(m[0]):]
+        if (i := err.find('\nTraceback (most recent call last):\n')) >= 0:
+            out.write(e(err[:i + 1]))
+            hl = pygments.highlight(err[i + 1:], self._tb_lexer,
+                                    self._html_formatter)
+            out.write(f'<div class="highlight">{hl}</div>')
+            err = ''
         if err: out.write(e(err))
         out.write('</div>')
 

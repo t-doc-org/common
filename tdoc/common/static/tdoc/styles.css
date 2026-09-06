@@ -202,6 +202,9 @@ html[data-tdoc-build-status=error]
 .tdoc-build-status .line {
     color: var(--pst-color-danger-highlight);
 }
+.tdoc-build-status .exc {
+    color: var(--pst-color-info);
+}
 .tdoc-build-status .version {
     color: var(--pst-color-danger);
 }
@@ -213,8 +216,12 @@ html[data-tdoc-build-status=error]
 .tdoc-build-status .log > div {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
+    padding-left: 1rem;
     border-top: 1px solid var(--pst-color-border);
-    text-indent: 1rem hanging;
+    text-indent: -1rem;
+}
+.tdoc-build-status .log > div > * {
+    text-indent: 0;
 }
 .tdoc-build-status .log > div:first-child {
     padding-top: 0;
@@ -231,6 +238,9 @@ html[data-tdoc-build-status=error]
 }
 .tdoc-build-status .log .lvl-C {
     color: var(--pst-color-accent);
+}
+.tdoc-build-status .log .highlight {
+    display: block;
 }
 
 /* TOC */
