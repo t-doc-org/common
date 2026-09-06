@@ -264,11 +264,6 @@ def project_version(reqs):
     return 'unknown'
 
 
-_levels = {'error': 0, 'warning': 1, 'info': 2}
-
-def level_key(level): return _levels.get(level, 3)
-
-
 class Application(wsgi.Dispatcher):
     def __init__(self, opts, server, api_):
         super().__init__()
@@ -360,7 +355,7 @@ class Application(wsgi.Dispatcher):
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                status.update(status='error', errors=errors)
+                self.render_build_errors(errors, status)
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
@@ -510,20 +505,51 @@ class Application(wsgi.Dispatcher):
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
+    def render_build_errors(self, errors, status):
+        out = io.StringIO()
+        e = html.escape
+        if not errors:
+            out.write("""
+<p>The build has failed. Please check the terminal output.</p>""")
+        else:
+            out.write('<p>The build has failed.</p>')
+            out.write('<pre class="log m-0 border-1 p-2">')
+        for err in errors: self.render_log_record(err, out)
+        if errors: out.write('</pre>')
+        status['messages'].append({'level': 'error', 'html': out.getvalue()})
+
+    _log_prefix_re = re.compile(
+        r'^(?:(.+?)(?::(\d+))?: )?(WARNING|ERROR|CRITICAL): ')
+
+    def render_log_record(self, err, out):
+        e = html.escape
+        out.write('<div>')
+        if m := self._log_prefix_re.search(err):
+            if v := m[1]:
+                out.write(f'<span class="path">{e(v)}</span>')
+                if v := m[2]: out.write(f':<span class="line">{e(v)}</span>')
+                out.write(': ')
+            if v := m[3]:
+                out.write(f'<span class="lvl-{e(v[0])}">{e(v)}</span>: ')
+            err = err[len(m[0]):]
+        if err: out.write(e(err))
+        out.write('</div>')
+
     def render_fix_messages(self, fxs, status):
         if not fxs: return
         groups = collections.defaultdict(dict)
         for name, locs in fxs.items():
             groups[fixes.level(name)][name] = locs
-        for lvl, fs in sorted(groups.items(), key=lambda it: level_key(it[0])):
-            self.render_fix_message(lvl, fs, status)
+        for level, fs in sorted(groups.items(),
+                                key=lambda it: util.level_key(it[0])):
+            self.render_fix_message(level, fs, status)
 
     def render_fix_message(self, level, fxs, status):
         out = io.StringIO()
         e = html.escape
         out.write("""\
 <p>The following <a href="https://common.t-doc.org/fixes.html">fixes</a> need \
-to be applied:</p> <ul class="m-0">""")
+to be applied to this site:</p> <ul class="m-0">""")
         for name, locs in sorted(fxs.items()):
             deadline, title = fixes.attrs(name, 'deadline', 'title')
             out.write(f"""\
@@ -531,7 +557,7 @@ to be applied:</p> <ul class="m-0">""")
 {e(name)}</a>""")
             if deadline is not None:
                 out.write(f"""\
- [until <span class="deadline">{e(deadline)}</span>]""")
+ [deadline: <span class="deadline">{e(deadline)}</span>]""")
             if locs: out.write(f' ({len(locs)} locations)')
             if title is not None: out.write(f": {title}")
             if not locs: continue
@@ -573,8 +599,8 @@ the server to upgrade.</p>"""})
     def normalize_status(self, status):
         if (st := status['status']) != 'success': return
         status['status'] = min((m['level'] for m in status['messages']),
-                               key=level_key, default=st)
-        status['messages'].sort(key=lambda m: level_key(m['level']))
+                               key=util.level_key, default=st)
+        status['messages'].sort(key=lambda m: util.level_key(m['level']))
 
     def check_repo_status(self):
         while True:

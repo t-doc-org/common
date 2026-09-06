@@ -25,6 +25,10 @@ import certifi
 usec = datetime.timedelta(microseconds=1)
 build_errors = 'tdoc-build-errors.log'
 fixes = 'tdoc-fixes.json'
+_levels = {'error': 0, 'warning': 1, 'info': 2}
+
+
+def level_key(level): return _levels.get(level, 3)
 
 
 def local_time(dt, sep=' ', timespec='seconds'):

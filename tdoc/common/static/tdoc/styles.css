@@ -165,6 +165,24 @@ html[data-tdoc-build-status=error]
 .tdoc-build-status .modal-dialog {
     --bs-modal-margin: var(--pst-header-article-height);
 }
+.tdoc-build-status :is(.info, .warning, .error) {
+    padding: 0.5rem;
+    border: 1px solid var(--pst-color-border);
+    border-radius: 0.25rem;
+    background-color: var(--pst-color-surface);
+}
+.tdoc-build-status .info {
+    border-color: var(--pst-color-info);
+    background-color: var(--pst-color-info-bg);
+}
+.tdoc-build-status .warning {
+    border-color: var(--pst-color-warning);
+    background-color: var(--pst-color-warning-bg);
+}
+.tdoc-build-status .error {
+    border-color: var(--pst-color-danger);
+    background-color: var(--pst-color-danger-bg);
+}
 .tdoc-build-status p {
     margin-bottom: 0.8rem;
 }
@@ -187,51 +205,31 @@ html[data-tdoc-build-status=error]
 .tdoc-build-status .version {
     color: var(--pst-color-danger);
 }
-.tdoc-build-status :is(.info, .warning) {
-    padding: 0.5rem;
-    border: 1px solid var(--pst-color-border);
-    border-radius: 0.25rem;
-    background-color: var(--pst-color-surface);
-}
-.tdoc-build-status .info {
-    border-color: var(--pst-color-info);
-    background-color: var(--pst-color-info-bg);
-}
-.tdoc-build-status .warning {
-    border-color: var(--pst-color-warning);
-    background-color: var(--pst-color-warning-bg);
-}
-.tdoc-build-status .no-errors:has(+ .errors:not(:empty)) {
-    display: none;
-}
-.tdoc-build-status .errors {
+.tdoc-build-status .log {
     display: flex;
     flex-direction: column;
     white-space: pre-wrap;
 }
-.tdoc-build-status .errors:empty {
-    display: none;
-}
-.tdoc-build-status .errors > div {
+.tdoc-build-status .log > div {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
     border-top: 1px solid var(--pst-color-border);
     text-indent: 1rem hanging;
 }
-.tdoc-build-status .errors > div:first-child {
+.tdoc-build-status .log > div:first-child {
     padding-top: 0;
     border-top: none;
 }
-.tdoc-build-status .errors > div:last-child {
+.tdoc-build-status .log > div:last-child {
     padding-bottom: 0;
 }
-.tdoc-build-status .errors .lvl-W {
+.tdoc-build-status .log .lvl-W {
     color: var(--pst-color-warning);
 }
-.tdoc-build-status .errors .lvl-E {
+.tdoc-build-status .log .lvl-E {
     color: var(--pst-color-danger);
 }
-.tdoc-build-status .errors .lvl-C {
+.tdoc-build-status .log .lvl-C {
     color: var(--pst-color-accent);
 }
 

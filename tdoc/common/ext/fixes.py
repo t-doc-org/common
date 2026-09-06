@@ -108,7 +108,7 @@ def store(app, exc):
     _log.info(colour.bold("Fixes required:"))
     for name, locs in sorted(data.items()):
         dl, = fixes.attrs(name, 'deadline')
-        deadline = f" [until {dl}]" if dl is not None else ""
+        deadline = f" [deadline: {dl}]" if dl is not None else ""
         loc_cnt = f" ({len(locs)} locations)" if locs else ""
         _log.info(f"  {colour.yellow(name)}{deadline}{loc_cnt}")
         for src, line in sorted(locs):
