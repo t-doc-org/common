@@ -361,8 +361,14 @@ def configure_templates(app):
     if (badges := opts.get('tdoc_badges')) is None:
         badges = []
         if repo_url.startswith('https://github.com/'):
-            badges.append({'href': '/actions/workflows/publish.yml',
-                           'img': '/actions/workflows/publish.yml/badge.svg'})
+            badges.append({
+                'href': '@REPO/actions/workflows/publish.yml',
+                'img': '@REPO/actions/workflows/publish.yml/badge.svg',
+            })
+        badges.append({
+            'href': 'https://common.t-doc.org/fixes.html',
+            'img': '/fixes-badge.svg',
+        })
     badges = [eb for b in badges
               if (eb := expand_badge(b, repo_url)) is not None]
     if badges:
@@ -377,12 +383,10 @@ def configure_templates(app):
 
 def expand_badge(badge, repo_url):
     href, img = badge['href'], badge['img']
-    if '://' not in href:
-        if not repo_url: return
-        href = repo_url + href
-    if '://' not in img:
-        if not repo_url: return
-        img = repo_url + img
+    if href.startswith('@REPO') and repo_url:
+        href = repo_url + href[5:]
+    if img.startswith('@REPO') and repo_url:
+        img = repo_url + img[5:]
     return {'href': href, 'img': img}
 
 

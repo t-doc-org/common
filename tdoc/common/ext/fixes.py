@@ -4,6 +4,7 @@
 import collections
 import contextlib
 import functools
+import math
 import os
 import pathlib
 import re
@@ -103,6 +104,9 @@ def store(app, exc):
     # Write the merged fixes to the build directory.
     (app.outdir.parent / util.fixes).write_text(util.to_json(data), 'utf-8')
 
+    # Render a shield describing the fix status.
+    (app.outdir / 'fixes-badge.svg').write_text(badge(data), 'utf-8')
+
     # List the fixes.
     if not data: return
     _log.info(colour.bold("Fixes required:"))
@@ -113,6 +117,55 @@ def store(app, exc):
         _log.info(f"  {colour.yellow(name)}{deadline}{loc_cnt}")
         for src, line in sorted(locs):
             _log.info(f"    {src}{f":{line}" if line else ""}")
+
+
+_colors = {'error': '#d72d47', 'warning': '#f66a0a', 'info': '#276be9',
+           '': '#34D058'}
+
+
+def badge(data):
+    count = len(data)
+    digits = 1 + math.floor(math.log10(count)) if count > 0 else 1
+    dw = 6 * digits
+    tx = 43.5 + dw // 2
+    level = min((fixes.level(n) for n in data), key=util.level_key, default='')
+    color = _colors.get(level, _colors['warning'])
+    return f"""\
+<svg xmlns="http://www.w3.org/2000/svg" width="{50 + dw}" height="20"\
+ role="img" aria-label="Fixes: {count}">\
+<title>Fixes: {count}</title>\
+<filter id="blur"><feGaussianBlur stdDeviation="16"/></filter>\
+<linearGradient id="s" x2="0" y2="100%">\
+<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>\
+<stop offset="1" stop-opacity=".1"/>\
+</linearGradient>\
+<clipPath id="r"><rect width="{50 + dw}" height="20" rx="3"/></clipPath>\
+<g clip-path="url(#r)">\
+<rect width="39" height="20" fill="#555"/>\
+<rect x="39" width="{11 + dw}" height="20" fill="{color}"/>\
+<rect width="{50 + dw}" height="20" fill="url(#s)"/>\
+</g>\
+<g fill="#fff" text-anchor="middle"\
+ font-family="Verdana,Geneva,DejaVu Sans,sans-serif"\
+ text-rendering="geometricPrecision" font-size="11">\
+<g>\
+<g aria-hidden="true" fill="#010101">\
+<text x="20.5" y="15" fill-opacity=".8" filter="url(#blur)"\
+ textLength="25">Fixes</text>\
+<text x="20.5" y="15" fill-opacity=".3" textLength="29">Fixes</text>\
+</g>\
+<text x="20.5" y="14" textLength="29">Fixes</text>\
+</g>\
+<g>\
+<g aria-hidden="true" fill="#010101">\
+<text x="{tx}" y="15" fill-opacity=".8" filter="url(#blur)"\
+ textLength="{1 + dw}">{count}</text>\
+<text x="{tx}" y="15" fill-opacity=".3" textLength="{1 + dw}">{count}</text>\
+</g>\
+<text x="{tx}" y="14" textLength="{1 + dw}">{count}</text>\
+</g>\
+</g>\
+</svg>"""
 
 
 # https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions

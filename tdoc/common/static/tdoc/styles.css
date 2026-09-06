@@ -152,7 +152,7 @@ html[data-tdoc-build-status=warning]
         .article-header-buttons > button.btn-build-status {
     display: flex;
     --fa: '\f071';  /* triangle-exclamation */
-    color: var(--pst-color-attention);
+    color: var(--pst-color-warning);
 }
 html[data-tdoc-build-status=error]
         .article-header-buttons > button.btn-build-status {
