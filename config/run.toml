@@ -13,5 +13,5 @@ recommend = "3.14"
 [defaults]
 command = ["tdoc", "site", "serve"]
 command_10 = ["--open"]
-command-dev = ["tdoc", "site", "serve", "--debug"]
-command-dev_10 = ["--full-builds"]
+command-dev = ["tdoc", "site", "serve"]
+command-dev_10 = ["--debug", "--full-builds"]
