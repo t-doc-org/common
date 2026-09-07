@@ -12,7 +12,7 @@ import re
 from docutils import nodes, utils
 from sphinx._cli.util import colour
 from sphinx.environment import collectors
-from sphinx.util import logging
+from sphinx.util import build_phase, logging
 
 from .. import ext, fixes, util
 
@@ -29,10 +29,11 @@ def setup(app):
     return ext.setup_result
 
 
-def add(env, name, *, docname=None, location=None):
-    if docname is None and env.docname: docname = env.docname
-    if location is None and docname is not None:
-        location = (ext.repo_relative(env, env.doc2path(docname)), None)
+def add(env, name, *, location=None):
+    if env.app.builder.phase >= build_phase.BuildPhase.RESOLVING:
+        raise Exception(f"Adding fix '{name}' in or after phase RESOLVING")
+    if location is None and env.docname:
+        location = (ext.repo_relative(env, env.doc2path(env.docname)), None)
     elif isinstance(location, tuple):
         src, line = location
         location = (ext.repo_relative(env, src), line)
@@ -41,7 +42,7 @@ def add(env, name, *, docname=None, location=None):
     elif isinstance(location, nodes.Node):
         src, line = utils.get_source_line(location)
         if src: location = (ext.repo_relative(env, src), line)
-    ls = env.tdoc_fixes[docname][name]
+    ls = env.tdoc_fixes[env.docname or None][name]
     if location is not None: ls.add(location)
 
 
@@ -75,6 +76,8 @@ class FixCollector(collectors.EnvironmentCollector):
         if not hasattr(app.env, 'tdoc_fixes'):
             # {docname: {name: {(path, line)}}}
             app.env.tdoc_fixes = collections.defaultdict(ext.dict_of_set)
+        else:
+            app.env.tdoc_fixes.pop(None, None)
 
     def clear_doc(self, app, env, docname):
         app.env.tdoc_fixes.pop(docname, None)
