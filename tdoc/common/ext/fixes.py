@@ -12,7 +12,7 @@ import re
 from docutils import nodes, utils
 from sphinx._cli.util import colour
 from sphinx.environment import collectors
-from sphinx.util import build_phase, logging
+from sphinx.util import build_phase, display, logging
 
 from .. import ext, fixes, util
 
@@ -20,12 +20,12 @@ _log = logging.getLogger(__name__)
 
 
 def setup(app):
-    app.add_event('tdoc-check-file-for-fixes')
+    app.add_event('tdoc-list-sources')
     app.connect('builder-inited', FixCollector.init, priority=0)
     app.add_env_collector(FixCollector)
-    app.connect('build-finished', check_files_for_fixes)
+    app.connect('builder-inited', check_sources_for_fixes)
     app.connect('build-finished', store, priority=999)
-    app.connect('tdoc-check-file-for-fixes', _fix_bad_filename)
+    app.connect('tdoc-list-sources', _fix_bad_filename)
     return ext.setup_result
 
 
@@ -61,13 +61,14 @@ class SourceFile:
         add(self.env, name, location=(self.path, line))
 
 
-def check_files_for_fixes(app, exc):
-    if not app.events.listeners.get('tdoc-check-file-for-fixes'): return
-    def on_error(e): raise e
-    for parent, dirs, files in app.srcdir.walk(on_error=on_error):
-        for f in files:
-            app.emit('tdoc-check-file-for-fixes',
-                     SourceFile(app.env, parent / f))
+def check_sources_for_fixes(app):
+    if not app.events.listeners.get('tdoc-list-sources'): return
+    with display.progress_message("listing source files"):
+        files = []
+        def on_error(e): pass
+        for parent, ds, fs in app.srcdir.walk(on_error=on_error):
+            files.extend(SourceFile(app.env, parent / f) for f in fs)
+        app.emit('tdoc-list-sources', files)
 
 
 class FixCollector(collectors.EnvironmentCollector):
@@ -170,8 +171,8 @@ def badge(data):
 _bad_filename_re = re.compile(r'[\x00-\x20"*/:<>?\\|\x7f-\U0010ffff]')
 
 
-def _fix_bad_filename(app, file):
-    for part in str(file.rel_path).split(os.sep):
-        if not _bad_filename_re.search(part): continue
-        file.add_fix('bad-filename')
-        break
+def _fix_bad_filename(app, files):
+    for file in files:
+        if any(_bad_filename_re.search(p)
+               for p in str(file.rel_path).split(os.sep)):
+            file.add_fix('bad-filename')
