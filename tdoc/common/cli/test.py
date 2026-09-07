@@ -4,6 +4,7 @@
 from concurrent import futures
 from http import HTTPStatus
 import io
+import json
 import os
 import re
 import shlex
@@ -14,7 +15,7 @@ import sys
 import threading
 from urllib import request
 
-from .. import cli, util
+from .. import cli, fixes, util
 
 # TODO: Handle SIGTERM
 
@@ -103,8 +104,8 @@ def cmd_site(opts):
             for repo in opts.repo:
                 def test(repo=repo):
                     prefix = label(repo)
-                    run_tests(tests, repo, wheel, lambda t: write(prefix + t),
-                              opts)
+                    return run_tests(tests, repo, wheel,
+                                     lambda t: write(prefix + t), opts)
                 tasks[repo] = ex.submit(test)
 
         # Display output of failures.
@@ -120,9 +121,14 @@ def cmd_site(opts):
         write("\n")
         for repo in opts.repo:
             t = tasks[repo]
-            e = t.exception()
-            result = f'{o.LGREEN}PASS{o.NORM}' if e is None \
-                     else f'{o.LRED}FAIL{o.NORM}'
+            if (e := t.exception()) is None:
+                result = f"{o.LGREEN}PASS{o.NORM}"
+                fxd = ", ".join(f"{level}: {len(fs)}" for level, fs in sorted(
+                    fixes.group(t.result()).items(),
+                    key=lambda it: util.level_key(it[0])))
+                if fxd: result = f"{result} ({o.LYELLOW}fixes:{o.NORM} {fxd})"
+            else:
+                result = f"{o.LRED}FAIL{o.NORM}"
             write(f"{label(repo)}{result}\n")
     finally:
         shutil.rmtree(tests, onexc=on_error)
@@ -187,7 +193,7 @@ def run_tests(tests, repo, wheel, write, opts):
         return p.stdout
 
     # Run CLI tests.
-    exercise_cli(repo_dir, write, opts, vrun)
+    fxs = exercise_cli(repo_dir, write, opts, vrun)
 
     # Run the local server, wait for it to serve or exit.
     write("Running local server\n")
@@ -243,6 +249,7 @@ def run_tests(tests, repo, wheel, write, opts):
             raise Exception(
                 f"{o.BOLD}Server failed:{o.NORM} exit status: {rc}{output}")
         if error is not None: raise error
+    return fxs
 
 
 def exercise_cli(repo_dir, write, opts, vrun):
@@ -255,6 +262,7 @@ def exercise_cli(repo_dir, write, opts, vrun):
     # Build the HTML.
     write("Building HTML\n")
     vrun('tdoc', 'site', 'build', '--debug', 'html')
+    with open(repo_dir / '_build' / util.fixes, 'rb') as f: fxs = json.load(f)
 
     # Clean the HTML output.
     write("Cleaning HTML output\n")
@@ -391,6 +399,7 @@ path = "tmp/store.sqlite"
         r'^Backing up to: .*log\.sqlite'
             r'\.\d{4}-\d{2}-\d{2}\.\d{2}-\d{2}-\d{2}\.\d{6}$',
     ])
+    return fxs
 
 
 def exercise_server(write, opts, urlopen):

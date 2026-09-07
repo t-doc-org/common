@@ -1,7 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import collections
 import contextlib
 import errno
 import html
@@ -551,10 +550,7 @@ class Application(wsgi.Dispatcher):
 
     def render_fix_messages(self, fxs, status):
         if not fxs: return
-        groups = collections.defaultdict(dict)
-        for name, locs in fxs.items():
-            groups[fixes.level(name)][name] = locs
-        for level, fs in sorted(groups.items(),
+        for level, fs in sorted(fixes.group(fxs).items(),
                                 key=lambda it: util.level_key(it[0])):
             self.render_fix_message(level, fs, status)
 

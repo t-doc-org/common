@@ -1,6 +1,7 @@
 # Copyright 2026 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import collections
 import datetime
 
 _warning_lead = datetime.timedelta(days=14)
@@ -18,6 +19,13 @@ def level(name, default='warning'):
 def attrs(name, *attrs):
     if (f := _fixes.get(name)) is None: return (None,) * len(attrs)
     return tuple(f.get(a) for a in attrs)
+
+
+def group(fxs):
+    groups = collections.defaultdict(dict)
+    for name, locs in fxs.items():
+        groups[level(name)][name] = locs
+    return groups
 
 
 _fixes = {
