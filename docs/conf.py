@@ -26,6 +26,7 @@ html_theme_options = {
          'img': 'https://img.shields.io/pypi/v/t-doc-common.svg?color=blue'},
         {'href': '@REPO/actions/workflows/publish.yml',
          'img': '@REPO/actions/workflows/publish.yml/badge.svg'},
+        {'href': '/fixes.html', 'img': '/tdoc-fixes.svg'},
         {'href': '@REPO/actions/workflows/test.yml',
          'img': '@REPO/actions/workflows/test.yml/badge.svg'},
     ],

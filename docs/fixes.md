@@ -5,9 +5,8 @@
 
 ## What is a fix?
 
-A fix is **an action that needs to be performed by a site owner**, optionally
-with a deadline, to avoid that their site breaks. The fixes that affect a site
-are listed in the build status
+A fix is **an action that needs to be performed by a site owner** to avoid that
+their site breaks. The fixes that affect a site are listed in the build status
 <span style="white-space: nowrap;">
 (<i class="fa-circle-info tfa" style="color: var(--pst-color-info);"></i> /
 <i class="fa-triangle-exclamation tfa"
@@ -22,6 +21,10 @@ owners, about:
 - [Latent issues](#latent-issues) that may become visible only later.
 - [Backward-incompatible changes](#backward-incompatible-changes) that require
   timely changes in sites.
+
+Some fixes have a deadline, which indicates the earliest date when some
+backward-incompatible change will be made. It is important to **apply the fixes
+before their deadline**; failing to do so may cause the site to break.
 
 ```{admonition} Thank you!
 :class: tip
