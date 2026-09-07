@@ -43,7 +43,7 @@ runs:
           f.write(f"version={config["python"]["recommend"]}\n")
     - name: Install Python
       id: python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ steps.version.outputs.version }}
     - name: Install development packages
