@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-93)=
+## 0.93 *(2026-09-07)*
+
+- Added build status information to the site when serving locally.
+- Added [fixes](/fixes.md), a notification channel for actions that need to be
+  performed by site owners.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.92...0.93)
+
 (release-0-92)=
 ## 0.92 *(2026-08-29)*
 
