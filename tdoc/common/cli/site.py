@@ -510,10 +510,12 @@ class Application(wsgi.Dispatcher):
     def render_build_errors(self, errors, status):
         out = io.StringIO()
         if not errors:
-            out.write("""
-<p>The build has failed. Please check the terminal output.</p>""")
+            out.write("""\
+<p><b>The build has failed.</b> Please check the terminal output.</p>""")
         else:
-            out.write('<p>The build has failed.</p>')
+            out.write("""\
+<p><b>The build has failed.</b> Additional information and context may be \
+available in the terminal output.</p>""")
             out.write('<pre class="log m-0 border-1 p-2">')
         for err in errors: self.render_log_record(err, out)
         if errors: out.write('</pre>')
@@ -600,8 +602,7 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
         e = html.escape
         status['messages'].append({'level': 'info', 'html': f"""\
 <p>An upgrade is available: <span class="version">{e(cur)}</span>\
-{f""" &rarr; <span class="version">{e(new)}</span>"""
-if new != cur else ""}</p>\
+{f' &rarr; <span class="version">{e(new)}</span>' if new != cur else ""}</p>\
 <p>Please check the <a href="https://common.t-doc.org/release-notes.html\
 #release-{e(new.replace('.', '-'))}">release notes</a> and restart \
 the server to upgrade.</p>"""})

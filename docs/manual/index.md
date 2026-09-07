@@ -13,6 +13,6 @@ install
 edit
 development
 faq
-/fixes
 /release-notes
+/fixes
 ```

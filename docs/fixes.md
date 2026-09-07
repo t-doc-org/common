@@ -15,7 +15,7 @@ their site breaks. The fixes that affect a site are listed in the build status
 </span>
 in the navbar), as well as in the terminal running the local server.
 
-Fixes constitute a **communication channel** from t-doc developers to site
+Fixes constitute a **notification channel** from t-doc developers to site
 owners, about:
 
 - [Latent issues](#latent-issues) that may become visible only later.
