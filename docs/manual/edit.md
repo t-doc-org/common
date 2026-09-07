@@ -103,10 +103,10 @@ located below the `docs` directory.
     HTML** when a file changes.
     - When the build succeeds, the browser **automatically reloads** all open
       pages.
-    - Failing builds are reported with a
-      <i class="fa-circle-xmark tfa"
-         style="color: var(--pst-color-danger);"></i> icon in the navbar, and
-      **a popup displays the errors**. They can also be viewed in the terminal.
+    - When the build fails, a cross icon
+      (<i class="fa-circle-xmark tfa"
+         style="color: var(--pst-color-danger);"></i>) appears in the navbar,
+      and **a popup displays the errors**.
     - Relevant messages generated during the build are reported with an icon in
       the navbar
       (<i class="fa-triangle-exclamation tfa"
