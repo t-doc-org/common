@@ -16,11 +16,7 @@ def setup(app):
     app.add_directive('solution', Solution)
     app.add_node(solution, html=(visit_solution, depart_solution))
     app.connect('html-page-context', add_header_button, priority=500.5)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class solution(nodes.Admonition, nodes.Element): pass

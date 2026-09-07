@@ -21,11 +21,7 @@ def setup(app):
     app.connect('doctree-read', set_base_metadata, priority=499)
     app.connect('env-updated', extract_metadata)
     app.connect('html-page-context', add_head_elements)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class metadata(nodes.Element): pass

@@ -44,6 +44,12 @@ _license_urls = {
     'MIT': 'https://opensource.org/license/mit',
 }
 
+setup_result = {
+    'version': __version__,
+    'parallel_read_safe': True,
+    'parallel_write_safe': True,
+}
+
 
 def dict_of_dict(): return collections.defaultdict(dict)
 def dict_of_set(): return collections.defaultdict(set)
@@ -272,12 +278,7 @@ def setup(app):
 
     app.add_node(dyn, html=(visit_dyn, depart_dyn))
     app.connect('tdoc-html-page-config', add_dyn_config)
-
-    return {
-        'version': __version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return setup_result
 
 
 def on_config_inited(app, config):

@@ -18,11 +18,7 @@ _log = logging.getLogger(__name__)
 def setup(app):
     if sys.platform == 'win32':
         app.connect('config-inited', find_graphviz_binaries)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 reg_key = 'SOFTWARE\\Graphviz\\Graphviz'

@@ -16,11 +16,7 @@ def setup(app):
     app.add_node(flex_table, html=(visit_flex_table, depart_flex_table))
     app.add_node(flex_row, html=(visit_flex_row, depart_flex_row))
     app.add_node(flex_cell, html=(visit_flex_cell, depart_flex_cell))
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class FlexTable(docutils.SphinxDirective):

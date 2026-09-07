@@ -14,11 +14,7 @@ def setup(app):
     app.add_node(iframe, html=(visit_iframe, None))
     app.add_directive('iframe', IFrame)
     app.add_directive('youtube', YouTube)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class iframe(nodes.Body, nodes.Element): pass

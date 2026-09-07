@@ -27,11 +27,7 @@ def setup(app):
     app.add_node(quiz_group, html=(visit_quiz_group, depart_quiz_group))
     app.add_node(quiz_check, html=(visit_quiz_check, depart_quiz_check))
     app.connect('html-page-context', add_js)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 def add_js(app, page, template, context, doctree):

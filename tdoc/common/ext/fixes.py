@@ -26,12 +26,7 @@ def setup(app):
     app.connect('build-finished', check_files_for_fixes)
     app.connect('build-finished', store, priority=999)
     app.connect('tdoc-check-file-for-fixes', _fix_bad_filename)
-
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 def add(env, name, *, docname=None, location=None):

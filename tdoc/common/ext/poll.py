@@ -21,11 +21,7 @@ def setup(app):
         lambda doctree: ((n, n['id']) for n in doctree.findall(poll)),
         lambda v: f"{{poll}}: Duplicate poll ID: {v}"))
     app.connect('html-page-context', add_js)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class Poll(docutils.SphinxDirective):

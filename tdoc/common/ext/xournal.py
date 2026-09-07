@@ -23,12 +23,7 @@ def setup(app):
     app.connect('builder-inited', XoppCollector.init)
     app.add_env_collector(XoppCollector)
     app.connect('write-started', render_xopp)
-
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class xopp(nodes.reference): pass

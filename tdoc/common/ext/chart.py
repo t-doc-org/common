@@ -11,11 +11,7 @@ _log = logging.getLogger(__name__)
 def setup(app):
     app.add_directive('chartjs', ChartJs)
     app.connect('html-page-context', add_css_js)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class ChartJs(ext.Dyn):

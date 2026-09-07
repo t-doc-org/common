@@ -32,12 +32,7 @@ def setup(app):
     app.add_role('points', Points)
     app.add_node(points)
     app.connect('doctree-resolved', handle_points, priority=499)
-
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class NoNum:

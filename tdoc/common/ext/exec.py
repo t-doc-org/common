@@ -30,11 +30,7 @@ def setup(app):
     app.connect('config-inited', set_default_metadata)
     app.connect('config-inited', set_python_modules)
     app.connect('write-started', write_static_files)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class Exec(code.CodeBlock):

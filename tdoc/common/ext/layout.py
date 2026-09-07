@@ -29,11 +29,7 @@ def setup(app):
     # Move blocks before TOC extraction in TocTreeCollector.process_doc().
     app.connect('doctree-read', move_blocks, priority=499)
     app.connect('html-page-context', set_html_context)
-    return {
-        'version': ext.__version__,
-        'parallel_read_safe': True,
-        'parallel_write_safe': True,
-    }
+    return ext.setup_result
 
 
 class Space(ext.Role):
