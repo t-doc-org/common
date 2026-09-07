@@ -101,7 +101,7 @@ info = {
     'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
         'name': 'jsxgraph',
-        'version': '1.13.2',
+        'version': '1.13.3',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
