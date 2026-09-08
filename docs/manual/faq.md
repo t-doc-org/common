@@ -114,3 +114,55 @@ relevant information as possible, including:
   `--debug`)
 - The site repository
 - The operating system running on your computer
+
+## Licensing
+
+(faq-adapted-material)=
+### Can I copy documents from other t-doc sites?
+
+Documents copied from other sites to your own site and modified are called
+"adapted material" and are explicitly allowed by the license
+([CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/)), as long as
+all the clauses of the license are respected.
+
+Note in particular the section about attribution
+([3.a.](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en#s3a))
+(and see the FAQ about [document headers](#faq-document-header)) and ShareAlike
+([3.b.](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en#s3b)).
+
+(faq-document-header)=
+### Should I update the header of documents copied from other t-doc sites?
+
+Documents normally start with a header of the form:
+
+```
+% Copyright 2025 John Doe <john.doe@example.com>
+% SPDX-License-Identifier: CC-BY-NC-SA-4.0
+```
+
+The first line is a copyright notice; the second is a license notice. The
+[CC-BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/) license
+requires both of them to be retained
+([3.a.1.A.](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en#s3a1A)
+and [3.b.](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en#s3b)).
+In practice, this means:
+
+- When copying documents from another site, **the header must remain
+  unchanged**.
+
+- When later modifying such a copied document, you can add your own copyright
+  notice, but **the existing copyright and license notices must remain
+  unchanged**. For example, if the document above is modified, the header can
+  be changed to:
+
+  ```
+  % Copyright 2025 John Doe <john.doe@example.com>
+  % Copyright 2026 Robert Smith <robert.smith@example.com>
+  % SPDX-License-Identifier: CC-BY-NC-SA-4.0
+  ```
+
+- It isn't necessary to explicitly track which parts of a document are
+  copyrighted to whom. This information is already available in the site
+  repository history.
+
+- **The license notice must never be changed.**
