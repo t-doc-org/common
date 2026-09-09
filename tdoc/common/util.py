@@ -1,8 +1,11 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from concurrent import futures
 import contextlib
 import datetime
+import functools
+import heapq
 from http import client
 import itertools
 import json
@@ -16,6 +19,7 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
+import threading
 import time
 import tomllib
 from urllib import request
@@ -84,6 +88,85 @@ def datetime_to_nsec(dt):
 
 def timedelta_to_nsec(td):
     return (td // usec) * 1000
+
+
+class Timers:
+    def __init__(self, executor, log):
+        self.exec, self.log = executor, log
+        self.lock = threading.Condition(threading.Lock())
+        self.timers, self.stop = [], False
+        self.runner = threading.Thread(target=self.run, name='Timers.run')
+        self.runner.start()
+
+    def shutdown(self):
+        with self.lock:
+            self.stop = True
+            self.lock.notify()
+        self.runner.join()
+
+    def __enter__(self): return self
+    def __exit__(self, typ, value, tb): self.shutdown()
+
+    def at(self, t, fn, period=None):
+        def run():
+            nonlocal t
+            try:
+                fn()
+            except Exception as e:
+                self.log.exception("Exception")
+            finally:
+                if period is not None:
+                    t += period
+                    self.at(max(t, time.monotonic()), run)
+        with self.lock:
+            heapq.heappush(self.timers, (t, run))
+            self.lock.notify()
+
+    def after(self, delay, fn, period=None):
+        self.at(time.monotonic() + delay, fn)
+
+    def repeat(self, period, fn, delay=0):
+        self.after(delay, fn, period)
+
+    def run(self):
+        with self.lock:
+            while True:
+                now = time.monotonic()
+                d = None
+                while self.timers:
+                    t, fn = self.timers[0]
+                    if t > now:
+                        d = t - now
+                        break
+                    heapq.heappop(self.timers)
+                    self.exec.submit(fn)
+                self.lock.wait(d)
+                if self.stop: return
+
+
+def task(fn):
+    @functools.wraps(fn)
+    def wrapper(self, /, *args, **kwargs):
+        return self.exec.submit(lambda: fn(self, *args, **kwargs)).result
+    return wrapper
+
+
+def tasks(fn):
+    res = lambda self, rs: rs
+
+    @functools.wraps(fn)
+    def wrapper(self, /, *args, **kwargs):
+        fs = [self.exec.submit(t) for t in fn(self, *args, **kwargs)]
+        return lambda timeout=None: \
+            res(self, (f.result() for f in futures.as_completed(fs, timeout)))
+
+    def result(rfn):
+        nonlocal res
+        res = rfn
+        return wrapper
+
+    wrapper.result = result
+    return wrapper
 
 
 def read_stable(path):

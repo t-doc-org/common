@@ -71,7 +71,7 @@ api.events.sub({add: [
             location.reload();
         }
     }),
-    new api.Watch({name: 'build-status'}, data => {
+    new api.Watch({name: 'build_status'}, data => {
         const {status, messages} = buildStatus = data;
         core.htmlData.tdocBuildStatus = status ?? '';
         updateBuildStatusTooltip();
@@ -85,30 +85,3 @@ api.events.sub({add: [
         }
     }),
 ]});  // Background
-
-// Show repository status.
-core.domLoaded.then(() => {
-    const search = qs(document,
-                  '.sidebar-primary-item:has(> .search-button-field)');
-    const body = qs(search.parentNode.insertBefore(elmt`\
-<div class="sidebar-primary-item"><table class="tdoc-repo-status"><thead>\
-<tr><th title="These repositories need action.">Repository status:</th>\
-<th title="Remote changes">C</th><th title="Unknown files">U</th></tr></thead>\
-<tbody></tbody></table></div>`, search), 'tbody');
-    api.events.sub({add: [new api.Watch({name: 'repo_status'}, data => {
-        const repos = Object.entries(data);
-        repos.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
-        const rows = [];
-        for (const [repo, {incoming, unknown}] of repos) {
-            const it = incoming ? `\
-${incoming} remote changes are available. Please pull, update and merge as soon\
- as possible.` : "";
-            const ut = unknown ? `\
-${unknown} unknown files found. Do you need to add them?` : "";
-            rows.push(elmt`\
-<tr><td>${repo}</td><td title="${it}">${incoming ?? ''}</td>\
-<td title="${ut}">${unknown ?? ''}</td></tr>`);
-        }
-        body.replaceChildren(...rows);
-    })]});  // Background
-});

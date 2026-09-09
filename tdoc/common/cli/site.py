@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from concurrent import futures
 import contextlib
 import errno
 import html
@@ -33,6 +34,7 @@ from .. import __project__, api, cli, deps, fixes, logs, util, wsgi
 _log = logs.logger(__name__)
 rc_build_failure = 1
 rc_source_change = 123
+e = html.escape
 
 
 def add_commands(parser):
@@ -279,21 +281,20 @@ class Application(wsgi.Dispatcher):
         self.api = self.add_endpoint('_api', api_)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
+        self.exec = futures.ThreadPoolExecutor()
+        self.timers = util.Timers(self.exec, _log)
 
         self.build_mtime = None
         self.build = api.ValueObservable('build', None)
         self.api.events.add_observable(self.build)
-        self.build_status = api.ValueObservable('build-status', {})
+        self.build_status = api.ValueObservable('build_status', {})
         self.api.events.add_observable(self.build_status)
         self.builder = threading.Thread(target=self.watch_and_build,
                                         name='builder')
         self.builder.start()
 
-        self.repo_status = api.ValueObservable('repo_status', {})
-        self.api.events.add_observable(self.repo_status)
-        self.repo_checker = threading.Thread(
-            target=self.check_repo_status, name='repo_status')
-        self.repo_checker.start()
+        self.incoming = None
+        self.timers.repeat(15 * 60, self.poll_incoming)
 
     def __enter__(self): return self
 
@@ -302,6 +303,8 @@ class Application(wsgi.Dispatcher):
             self.stop = True
             self.lock.notify_all()
         self.builder.join()
+        self.timers.shutdown()
+        self.exec.shutdown()
 
     def sleep(self, duration):
         with self.lock:
@@ -342,8 +345,11 @@ class Application(wsgi.Dispatcher):
                     break
                 self.opts.stderr.write(
                     "\nSource change detected, rebuilding\n")
+            prev_mtime = mtime
             self.build_status.set({'status': 'building'})
-            prev_mtime, status = mtime, {'status': 'success', 'messages': []}
+            incoming = self.check_incoming()
+            unknown = self.check_unknown()
+            status = {'status': 'success', 'messages': []}
             ok, errors, fixes = self.build_site(build_next, mtime)
             if ok:
                 build = self.build_dir(mtime)
@@ -357,12 +363,14 @@ class Application(wsgi.Dispatcher):
                     self.remove(self.build_dir(build_mtime))
                 build_mtime = mtime
             else:
-                self.render_build_errors(errors, status)
+                self.render_build_errors(status, errors)
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
                 shutil.copytree(self.build_dir(build_mtime), build_next,
                                 symlinks=True)
-            self.render_fix_messages(fixes, status)
+            self.render_fix_messages(status, fixes)
+            self.render_incoming(status, incoming())
+            self.render_unknown(status, unknown())
             self.render_upgrade(status)
             self.normalize_status(status)
             self.build_status.set(status)
@@ -507,7 +515,7 @@ class Application(wsgi.Dispatcher):
             self.opened = True
             webbrowser.open_new_tab(f'http://{host}:{port}/')
 
-    def render_build_errors(self, errors, status):
+    def render_build_errors(self, status, errors):
         out = io.StringIO()
         if not errors:
             out.write("""\
@@ -528,7 +536,6 @@ available in the terminal output.</p>""")
     _html_formatter = formatters.HtmlFormatter(nowrap=True)
 
     def render_log_record(self, err, out):
-        e = html.escape
         out.write('<div>')
         if m := self._log_prefix_re.search(err):
             if v := m[1]:
@@ -550,18 +557,19 @@ available in the terminal output.</p>""")
         if err: out.write(e(err))
         out.write('</div>')
 
-    def render_fix_messages(self, fxs, status):
+    def render_fix_messages(self, status, fxs):
         if not fxs: return
         for level, fs in sorted(fixes.group(fxs).items(),
                                 key=lambda it: util.level_key(it[0])):
-            self.render_fix_message(level, fs, status)
+            self.render_fix_message(status, level, fs)
 
-    def render_fix_message(self, level, fxs, status):
+    def render_fix_message(self, status, level, fxs):
         out = io.StringIO()
-        e = html.escape
         out.write("""\
-<p>The following <a href="https://common.t-doc.org/fixes.html">fixes</a> need \
-to be applied to this site:</p> <ul class="m-0">""")
+<p><b><a href="https://common.t-doc.org/fixes.html">Fixes</a> need to be \
+applied.</b> Please check the documentation for each fix and apply them to \
+the site.</p>\
+<ul class="m-0">""")
         for name, locs in sorted(fxs.items()):
             deadline, title = fixes.attrs(name, 'deadline', 'title')
             out.write(f"""\
@@ -582,6 +590,88 @@ to be applied to this site:</p> <ul class="m-0">""")
         out.write('</ul>')
         status['messages'].append({'level': level, 'html': out.getvalue()})
 
+    def poll_incoming(self):
+        incoming = {}
+        for repo, name in self.list_remote_repos():
+            incoming[name] = set(self.hg_incoming(repo))
+        with self.lock: self.incoming = incoming
+
+    @util.tasks
+    def check_incoming(self):
+        for repo, name in self.list_remote_repos():
+            def task(repo=repo, name=name):
+                # Get local revs only if poll_incoming() has never completed yet
+                # or if there are incoming revs.
+                with self.lock:
+                    if (i := self.incoming) is not None and not i.get(name):
+                        return name, set()
+                # Delay the set difference computation to the result function,
+                # in the hope that the first round of poll_incoming() completes
+                # until then.
+                return name, self.hg_log(repo)
+            yield task
+
+    @check_incoming.result
+    def check_incoming(self, results):
+        revs, res = dict(results), {}
+        with self.lock:
+            for name, rs in revs.items():
+                if inc := self.incoming.get(name):
+                    inc.difference_update(rs)
+                    if inc: res[name] = inc.copy()
+        return res
+
+    def hg_incoming(self, repo):
+        proc = self.hg(f'--repository={repo}', 'incoming',
+                       '--template=@tdoc@{node}\n', success=None)
+        if proc.returncode not in (0, 1): return []
+        return [r[6:] for r in proc.stdout.splitlines(False)
+                if r.startswith('@tdoc@')]
+
+    def hg_log(self, repo, *args):
+        proc = self.hg(f'--repository={repo}', 'log', '--template={node}\n',
+                       *args, success=None)
+        return proc.stdout.splitlines(False) if proc.returncode == 0 else []
+
+    def render_incoming(self, status, incoming):
+        if not incoming: return
+        out = io.StringIO()
+        out.write("""\
+<p><b>Remote changes are available.</b> Please pull, update and merge the \
+following repositories as soon as possible.</p>\
+<ul class="m-0">""")
+        for repo, revs in sorted(incoming.items()):
+            out.write(f"""\
+<li><code class="path">{e(repo)}</code>: {len(revs)} changes</li>""")
+        out.write('</ul>')
+        status['messages'].append({'level': 'warning', 'html': out.getvalue()})
+
+    @util.task
+    def check_unknown(self):
+        for repo in self.list_repos(imports=False):
+            return self.hg_status(repo, '--unknown')
+        return []
+
+    def hg_status(self, repo, *args):
+        proc = self.hg(f'--repository={repo}', 'status', '--template={path}\n',
+                       *args, success=None)
+        return proc.stdout.splitlines(False) if proc.returncode == 0 else []
+
+    def render_unknown(self, status, unknown):
+        if not unknown: return
+        out = io.StringIO()
+        out.write(f"""\
+<p><b>The working directory contains {len(unknown)} unknown files.</b> If they \
+are needed to build the site, add them to version control (<code>hg \
+add</code>). Otherwise, move them to an ignored directory (see \
+<code class="path">.hgignore</code>, e.g. <code class="path">tmp</code>), or \
+add patterns to ignore them.</p>\
+<ul class="m-0">""")
+        for path in sorted(unknown):
+            out.write(f"""<li><code class="path">{e(path)}</code></li>""")
+        out.write('</ul>')
+        status['messages'].append({'level': 'info', 'html': out.getvalue()})
+
     def render_upgrade(self, status):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
         try:
@@ -599,11 +689,10 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}{o.NORM}>
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
-        e = html.escape
         status['messages'].append({'level': 'info', 'html': f"""\
-<p>An upgrade is available: <span class="version">{e(cur)}</span>\
-{f' &rarr; <span class="version">{e(new)}</span>' if new != cur else ""}</p>\
-<p>Please check the <a href="https://common.t-doc.org/release-notes.html\
+<p><b>An upgrade is available:</b> <span class="version">{e(cur)}</span>\
+{f' &rarr; <span class="version">{e(new)}</span>' if new != cur else ""}. \
+Please check the <a href="https://common.t-doc.org/release-notes.html\
 #release-{e(new.replace('.', '-'))}">release notes</a> and restart \
 the server to upgrade.</p>"""})
 
@@ -613,44 +702,23 @@ the server to upgrade.</p>"""})
                                key=util.level_key, default=st)
         status['messages'].sort(key=lambda m: util.level_key(m['level']))
 
-    def check_repo_status(self):
-        while True:
-            data = {}
-            for repo in self.list_repos():
-                if (url := self.hg_path(repo, 'default')) is None: continue
-                if not url.startswith(('https://', 'file://')): continue
-                name, info = url.rsplit('/', 1)[-1], {}
-                self.hg_incoming(repo, info)
-                self.hg_status(repo, info)
-                if info: data[name] = info
-            self.repo_status.set(data)
-            if self.sleep(15 * 60): break
+    def list_remote_repos(self):
+        for repo in self.list_repos():
+            if (url := self.hg_path(repo, 'default')) is None: continue
+            if not url.startswith(('https://', 'file://')): continue
+            name = url.rsplit('/', 1)[-1]
+            yield repo, name
 
-    def list_repos(self):
-        if (p := self.find_repo(self.opts.source)) is not None: yield p
-        for src, *_ in self.list_imports():
-            if (p := self.find_repo(src)) is not None: yield p
+    def list_repos(self, site=True, imports=True):
+        if site and (p := self.find_repo(self.opts.source)) is not None: yield p
+        if imports:
+            for src, *_ in self.list_imports():
+                if (p := self.find_repo(src)) is not None: yield p
 
     def find_repo(self, path):
         if (path / '.hg').is_dir(): return path
         for p in path.parents:
             if (p / '.hg').is_dir(): return p
-
-    def hg_incoming(self, repo, info):
-        proc = self.hg(f'--repository={repo}', 'incoming',
-                       '--template=@tdoc@\n', success=None)
-        if proc.returncode in (0, 1) \
-                and (v := proc.stdout.count('@tdoc@\n')) > 0:
-            info['incoming'] = v
-
-    def hg_status(self, repo, info):
-        proc = self.hg(f'--repository={repo}', 'status', '--unknown',
-                       '--template=@tdoc@\n', success=None)
-        if proc.returncode == 0 and (v := proc.stdout.count('@tdoc@\n')) > 0:
-            info['unknown'] = v
-
-    def hg(self, *args, **kwargs):
-        return util.run('hg', *args, capture_output=True, text=True, **kwargs)
 
     hg_paths_re = re.compile(r'^paths\.([^=]+)=(.*)$')
 
@@ -665,6 +733,9 @@ the server to upgrade.</p>"""})
             if (p := paths.get(name)) is None: return
             if (n := p.removeprefix('path://')) == p: return p
             name = n
+
+    def hg(self, *args, **kwargs):
+        return util.run('hg', *args, capture_output=True, text=True, **kwargs)
 
     def handle_request(self, handler, wr):
         wr.env['wsgi.multithread'] = True
