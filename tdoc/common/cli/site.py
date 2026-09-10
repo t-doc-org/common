@@ -628,15 +628,14 @@ the site.</p>\
 
     def hg_incoming(self, repo):
         proc = self.hg(f'--repository={repo}', 'incoming',
-                       '--template=@tdoc@{node}\n', success=None)
+                       '--template=\\0{node}', success=None)
         if proc.returncode not in (0, 1): return []
-        return [r[6:] for r in proc.stdout.splitlines(False)
-                if r.startswith('@tdoc@')]
+        return proc.stdout.split('\0')[1:]
 
     def hg_log(self, repo, *args):
-        proc = self.hg(f'--repository={repo}', 'log', '--template={node}\n',
+        proc = self.hg(f'--repository={repo}', 'log', '--template=\\0{node}',
                        *args, success=None)
-        return proc.stdout.splitlines(False) if proc.returncode == 0 else []
+        return proc.stdout.split('\0')[1:] if proc.returncode != 0 else []
 
     def render_incoming(self, status, incoming):
         if not incoming: return
@@ -659,9 +658,9 @@ following repositories as soon as possible.</p>\
         return []
 
     def hg_status(self, repo, *args):
-        proc = self.hg(f'--repository={repo}', 'status', '--template={path}\n',
+        proc = self.hg(f'--repository={repo}', 'status', '--template=\\0{path}',
                        *args, success=None)
-        return proc.stdout.splitlines(False) if proc.returncode == 0 else []
+        return proc.stdout.split('\0')[1:] if proc.returncode != 0 else []
 
     def render_unknown(self, status, unknown):
         if not unknown: return
