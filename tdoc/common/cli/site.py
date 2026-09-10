@@ -703,9 +703,10 @@ the server to upgrade.</p>"""})
 
     def normalize_status(self, status):
         if (st := status['status']) != 'success': return
-        status['status'] = min((m['level'] for m in status['messages']),
-                               key=util.level_key, default=st)
-        status['messages'].sort(key=lambda m: util.level_key(m['level']))
+        ms = status['messages']
+        status['status'] = min((m['level'] for m in ms), key=util.level_key,
+                               default=st)
+        ms.sort(key=lambda m: util.level_key(m['level']))
 
     def list_remote_repos(self):
         for repo in self.list_repos():

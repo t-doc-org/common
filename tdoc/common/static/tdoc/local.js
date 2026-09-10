@@ -75,6 +75,7 @@ api.events.sub({add: [
         const {status, messages} = buildStatus = data;
         core.htmlData.tdocBuildStatus = status ?? '';
         updateBuildStatusTooltip();
+        if (statusBtn) statusBtn.disabled = (messages ?? []).length === 0;
         if (messages === undefined) return;
         if (messages.length === 0) {
             if (modal) modal.hide();

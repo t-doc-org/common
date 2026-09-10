@@ -135,6 +135,7 @@ blockquote div > p:has(+ p.attribution) {
 /* Build status */
 .article-header-buttons > button.btn-build-status {
     display: none;
+    --bs-btn-disabled-opacity: 1;
 }
 html[data-tdoc-build-status=building]
         .article-header-buttons > button.btn-build-status {
