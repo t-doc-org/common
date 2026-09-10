@@ -38,6 +38,16 @@ _levels = {'error': 0, 'warning': 1, 'info': 2}
 def level_key(level): return _levels.get(level, 3)
 
 
+def version_tuple(version):
+    if not version: return None
+    return tuple(try_int(v) for v in version.split('.'))
+
+
+def try_int(v):
+    try: return int(v)
+    except ValueError: return v
+
+
 def local_time(dt, sep=' ', timespec='seconds'):
     return dt.astimezone().replace(tzinfo=None).isoformat(sep, timespec)
 
@@ -156,7 +166,7 @@ class Partialer:
         return functools.partial(functools.partial, getattr(self.inst, name))
 
 
-def suppress(result, *, exc=Exception, log=None):
+def suppress(result=None, *, exc=Exception, log=None):
     def decorator(fn):
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
@@ -164,7 +174,7 @@ def suppress(result, *, exc=Exception, log=None):
                 return fn(*args, **kwargs)
             except exc:
                 if log is not None: log()
-                return result()
+                return result() if result is not None else None
         return wrapper
     return decorator
 
@@ -207,8 +217,12 @@ def read_stable(path):
 
 
 def read_toml(path):
-    with path.open('rb') as f:
+    with open(path, 'rb') as f:
         return tomllib.load(f)
+
+
+def read_run_toml():
+    return read_toml(pathlib.Path(sys.prefix).parent / 'run.toml')
 
 
 if sys.platform == 'win32':

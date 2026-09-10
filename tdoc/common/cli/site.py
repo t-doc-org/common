@@ -372,6 +372,7 @@ class Application(wsgi.Dispatcher):
             self.render_incoming(status, incoming())
             self.render_unknown(status, unknown())
             self.render_upgrade(status)
+            self.render_python_upgrade(status)
             self.normalize_status(status)
             self.build_status.set(status)
             prev = time.time_ns()
@@ -700,6 +701,25 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 Please check the <a href="https://common.t-doc.org/release-notes.html\
 #release-{e(new.replace('.', '-'))}">release notes</a> and restart \
 the server to upgrade.</p>"""})
+
+    @util.suppress(log=_log.p.exception("Python upgrade check", debug=True))
+    def render_python_upgrade(self, status):
+        config = util.read_run_toml()
+        vr = config.get('python', {}).get('recommend')
+        if not vr or sys.version_info >= (vrt := util.version_tuple(vr)): return
+        out = io.StringIO()
+        out.write(f"""\
+<p><b>Python >=<span class="version">{e(vr)}</span> is recommended.</b> \
+You are currently using Python <span class="version">\
+{e('.'.join(str(v) for v in sys.version_info[:3]))}</span>. \
+Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
+        if sys.version_info[:2] == vrt[:2]:
+            level = 'info'
+            out.write("upgrade</a> to a more recent version.</p>")
+        else:
+            level = 'warning'
+            out.write("install</a> a more recent version.</p>")
+        status['messages'].append({'level': level, 'html': out.getvalue()})
 
     def normalize_status(self, status):
         if (st := status['status']) != 'success': return

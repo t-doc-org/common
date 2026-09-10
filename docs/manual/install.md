@@ -110,7 +110,7 @@ t-doc requires the following software to be installed:
 - Upgrade Python.
 
   - If a new minor version of Python is recommended (e.g. 3.13.5 is installed
-    and 3.14 is recommended), install the new version.
+    and 3.14.x is recommended), install the new version.
 
     ```{code-block} shell-session
     winget install --exact --id Python.Python.3.14
@@ -133,10 +133,10 @@ t-doc requires the following software to be installed:
 
 ### macOS
 
-- Install the [required packages](#requirements) manually or via a package
-  manager like [Homebrew](https://brew.sh/).
+- Install and upgrade the [required packages](#requirements) manually or via a
+  package manager like [Homebrew](https://brew.sh/).
 
 ### Linux
 
-- Install the [required packages](#requirements) via your system's package
-  manager.
+- Install and upgrade the [required packages](#requirements) via your system's
+  package manager.
