@@ -10,6 +10,8 @@ get = ctx.get
 
 
 class replace:
+    __slots__ = ('value',)
+
     def __init__(self, value):
         self.value = value
 
@@ -45,13 +47,15 @@ class replace:
 
 
 class set:
-    token = None
+    __slots__ = ('value', 'token')
 
     def __init__(self, value):
         self.value = value
 
     def __enter__(self):
-        if get() is not None: return
+        if get() is not None:
+            self.token = None
+            return
         if callable(v := self.value): v = v()
         self.token = ctx.set(v)
         return self

@@ -29,7 +29,7 @@ from wsgiref import simple_server
 import pygments
 from pygments import formatters, lexers
 
-from .. import __project__, api, cli, deps, fixes, logs, util, wsgi
+from .. import __project__, api, cli, context, deps, fixes, logs, util, wsgi
 
 _log = logs.logger(__name__)
 rc_build_failure = 1
@@ -599,6 +599,11 @@ the site.</p>\
     @util.tasks
     def check_incoming(self):
         for repo, name in self.list_remote_repos():
+            @context.set(f'incoming:{name}')
+            @util.suppress(
+                lambda name=name: (name, []),
+                log=_log.p.exception("Incoming check on %(repo)s", repo=name,
+                                     debug=True))
             def task(repo=repo, name=name):
                 # Get local revs only if poll_incoming() has never completed yet
                 # or if there are incoming revs.
@@ -647,6 +652,7 @@ following repositories as soon as possible.</p>\
         status['messages'].append({'level': 'warning', 'html': out.getvalue()})
 
     @util.task
+    @util.suppress(list, log=_log.p.exception("Unknown file check", debug=True))
     def check_unknown(self):
         for repo in self.list_repos(imports=False):
             return self.hg_status(repo, '--unknown')

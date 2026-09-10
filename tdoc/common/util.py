@@ -26,6 +26,8 @@ from urllib import request
 
 import certifi
 
+from . import context
+
 usec = datetime.timedelta(microseconds=1)
 build_errors = 'tdoc-build-errors.log'
 fixes = 'tdoc-fixes.json'
@@ -144,10 +146,35 @@ class Timers:
                 if self.stop: return
 
 
+class Partialer:
+    __slots__ = ('inst',)
+
+    def __init__(self, inst):
+        self.inst = inst
+
+    def __getattr__(self, name):
+        return functools.partial(functools.partial, getattr(self.inst, name))
+
+
+def suppress(result, *, exc=Exception, log=None):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except exc:
+                if log is not None: log()
+                return result()
+        return wrapper
+    return decorator
+
+
 def task(fn):
     @functools.wraps(fn)
     def wrapper(self, /, *args, **kwargs):
-        return self.exec.submit(lambda: fn(self, *args, **kwargs)).result
+        @context.set(fn.__name__)
+        def run(): return fn(self, *args, **kwargs)
+        return self.exec.submit(run).result
     return wrapper
 
 

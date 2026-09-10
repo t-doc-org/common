@@ -40,6 +40,10 @@ class Logger(logging.Logger):
         super()._log(level, msg, args, exc_info=exc_info, extra=extra,
                      stack_info=stack_info, stacklevel=stacklevel + 1)
 
+    @property
+    def p(self): return util.Partialer(self)
+
+
 logging.setLoggerClass(Logger)
 logger = logging.getLogger
 log = logger(__name__)
