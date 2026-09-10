@@ -118,21 +118,11 @@ def run(argv, stdin, stdout, stderr, base, ssl_ctx=None, **kwargs):
 
 
 def check_python(builder, stderr):
-    py = builder.config.get('python', {})
-    if (v := version_tuple(py.get('minimum'))) and sys.version_info < v:
+    vm = builder.config.get('python', {}).get('minimum')
+    if vm and sys.version_info < version_tuple(vm):
         raise Exception(f"""\
-Python >={version_str(v)} is required \
-(currently used: {version_str(sys.version_info[:3])}).
-See <https://common.t-doc.org/install.html>.""")
-    if (v := version_tuple(py.get('recommend'))) and sys.version_info < v:
-        stderr.write(f"""\
-Python >={version_str(v)} is recommended \
-(currently used: {version_str(sys.version_info[:3])}).
-Please abort (Ctrl+C) and install or select a more recent version (see
-<https://common.t-doc.org/install.html>), or press ENTER to continue with the
-current version.
-""")
-        input()
+Python >={vm} is required (currently used: {version_str(sys.version_info[:3])}).
+See <https://common.t-doc.org/manual/install.html#requirements>.""")
 
 
 def handle_upgrades(builder, env, stderr):
