@@ -4,7 +4,6 @@
 import binascii
 from collections import abc
 import contextlib
-import contextvars
 import datetime
 import functools
 import gzip
@@ -18,24 +17,25 @@ import threading
 import time
 import traceback
 
-from . import database, config as _config, console, util
+from . import context, database, config as _config, console, util
 
 globals().update(logging.getLevelNamesMapping())
 
 # The default format strings.
 default_stream_format = \
     '{levelc}{leveli}{NORM}' \
-    ' {LBLACK}[{NORM}{ctxc}{ctx:20}{NORM}{LBLACK}]{NORM} {message}'
-default_file_format = '{asctime} {leveli} [{ctx:20}] [{name}] {message}'
+    ' {LBLACK}[{NORM}{ctxc}{ctxs:20}{NORM}{LBLACK}]{NORM} {message}'
+default_file_format = '{asctime} {leveli} [{ctxs:20}] [{name}] {message}'
 default_query_format = \
     '{asctime} {levelc}{leveli}{NORM}' \
-    ' {LBLACK}[{NORM}{ctxc}{ctx:20}{NORM}{LBLACK}]{NORM}' \
+    ' {LBLACK}[{NORM}{ctxc}{ctxs:20}{NORM}{LBLACK}]{NORM}' \
     ' {LBLACK}[{NORM}{LBLUE}{name}{NORM}{LBLACK}]{NORM} {message}'
 
 
 class Logger(logging.Logger):
     def _log(self, level, msg, args, exc_info=None, extra=None,
-             stack_info=False, stacklevel=1, **kwargs):
+             stack_info=False, stacklevel=1, debug=False, **kwargs):
+        if debug and not self.root._debug: return
         if kwargs: args = (kwargs,)
         super()._log(level, msg, args, exc_info=exc_info, extra=extra,
                      stack_info=stack_info, stacklevel=stacklevel + 1)
@@ -44,22 +44,12 @@ logging.setLoggerClass(Logger)
 logger = logging.getLogger
 log = logger(__name__)
 
-ctx = contextvars.ContextVar('ctx', default=None)
-
-def push_ctx(fn, replace=False):
-    if not replace and ctx.get() is not None: return
-    return ctx.set(fn())
-
-
-def pop_ctx(token):
-    if token is not None: ctx.reset(token)
-
 
 class CtxFilter(logging.Filter):
     def filter(self, rec):
         if not hasattr(rec, 'ctx'):
-            if (v := ctx.get()) is None: v = threading.current_thread().name
-            rec.ctx = v[:20]
+            if (v := context.get()) is None: v = threading.current_thread().name
+            rec.ctx = v
         return True
 
 
@@ -154,16 +144,13 @@ def _levelc(rec, attrs):
     return attrs[color]
 
 
-def _leveli(rec, attrs):
-    return rec.get('levelname', '?')[:1]
-
-
 class SafeRecFormat(SafeFormat):
     __slots__ = ('__a',)
     __f = {
         'ctxc': _ctxc,
+        'ctxs': lambda rec, attrs: rec.get('ctx', '')[:20],
         'levelc': _levelc,
-        'leveli': _leveli,
+        'leveli': lambda rec, attrs: rec.get('levelname', '?')[:1],
     }
 
     def __init__(self, v, a):
@@ -210,14 +197,15 @@ def compress(src, dst):
 
 @contextlib.contextmanager
 def configure(config=None, stderr=None, level=WARNING, stream=False,
-              raise_exc=False, on_upgrade=None, db_logs=True):
+              debug=False, on_upgrade=None, db_logs=True):
     if config is None: config = _config.Config({})
     transport = config.get('transport', 'queue')
 
-    logging.raiseExceptions = raise_exc
+    logging.raiseExceptions = debug
     logging.lastResort = logging.NullHandler()
 
     root = logging.getLogger()
+    root._debug = debug
     root.setLevel(config.get('level', level))
     ctx_filter = CtxFilter()
 

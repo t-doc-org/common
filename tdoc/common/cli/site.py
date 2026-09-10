@@ -281,7 +281,7 @@ class Application(wsgi.Dispatcher):
         self.api = self.add_endpoint('_api', api_)
         self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
-        self.exec = futures.ThreadPoolExecutor()
+        self.exec = futures.ThreadPoolExecutor(thread_name_prefix='app')
         self.timers = util.Timers(self.exec, _log)
 
         self.build_mtime = None
@@ -604,7 +604,7 @@ the site.</p>\
                 # or if there are incoming revs.
                 with self.lock:
                     if (i := self.incoming) is not None and not i.get(name):
-                        return name, set()
+                        return name, []
                 # Delay the set difference computation to the result function,
                 # in the hope that the first round of poll_incoming() completes
                 # until then.

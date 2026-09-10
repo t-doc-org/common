@@ -50,7 +50,7 @@ def main(argv, stdin, stdout, stderr):
     if (fn := getattr(opts.handler, '_pre_run', None)) is not None:
         if (res := fn(opts)) is not None: return res
     with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
-                        level=logs.WARNING, stream=True, raise_exc=opts.debug,
+                        level=logs.WARNING, stream=True, debug=opts.debug,
                         on_upgrade=functools.partial(on_upgrade, opts),
                         db_logs=not getattr(opts.handler, '_disable_db_logs',
                                             False)):

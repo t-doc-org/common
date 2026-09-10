@@ -14,7 +14,7 @@ import time
 from urllib import parse
 from wsgiref import util as wsgiutil
 
-from . import logs, util
+from . import context, logs, util
 
 _log = logs.logger(__name__)
 _missing = object()
@@ -278,9 +278,9 @@ class Dispatcher:
         if (h := self._endpoints.get('/')) is not None: return h
         raise Error(HTTPStatus.NOT_FOUND)
 
+    @context.set(lambda: 'req:' + secrets.token_hex(8))
     def __call__(self, env, respond, wr=None):
         if wr is None: wr = Request(env, respond)
-        ctoken = logs.push_ctx(lambda: 'req:' + secrets.token_hex(8))
         log_level, log_query = logs.NOTSET, False
         log_args, log_status = None, '<unknown>'
         try:
@@ -318,7 +318,6 @@ class Dispatcher:
                 if log_args is None: log_args = self._log_args(wr, log_query)
                 _log.log(log_level, "%(status)s", event='req:end',
                          status=log_status, **log_args)
-            logs.pop_ctx(ctoken)
 
     @staticmethod
     def _log_args(wr, include_query):
