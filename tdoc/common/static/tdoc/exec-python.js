@@ -231,6 +231,7 @@ let interps;
 
 class PythonRunner extends exec.Runner {
     static name = 'python';
+    static highlight = 'python';
 
     static async init(config) {
         if (config._envs === undefined) return;

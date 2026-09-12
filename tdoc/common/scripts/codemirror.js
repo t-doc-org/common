@@ -122,6 +122,7 @@ import {yaml} from '@codemirror/lang-yaml';
 // <https://github.com/codemirror/language-data/blob/main/src/language-data.ts>
 let cm5_langs = [
     // @codemirror/legacy-modes/mode/*
+    // Pygments lexers.
     ['apl', apl],
     ['asc', 'pem', asciiArmor],
     ['asn1', asn1],
@@ -210,6 +211,7 @@ let cm5_langs = [
 ];
 let cm6_langs = [
     // @codemirror/lang-*
+    // Pygments lexers.
     ['ng2', 'html+ng2', angular],
     ['c', 'c++', 'cpp', cpp],
     ['css', css],
@@ -242,14 +244,15 @@ let cm6_langs = [
     ['rust', 'rs', rust],
     ['sass', () => sass({indented: true})],
     ['scss', sass],
-    ['sql', () => sql.sql({dialect: sql.SQLite})],
-    ['googlesql', 'zetasql', sql.sql],
+    ['sql', 'googlesql', 'zetasql', sql.sql],
     ['mysql', () => sql.sql({dialect: sql.MySQL})],
     ['postgresql', 'postgres', () => sql.sql({dialect: sql.PostgreSQL})],
     ['vue', vue],
     ['wast', 'wat', wast],
     ['xml', 'xslt', 'genshi', 'kid', 'xml+genshi', 'xml+kid', xml],
     ['yaml', yaml],
+    // Additional entries not supported by Pygments.
+    ['sqlite', () => sql.sql({dialect: sql.SQLite})],
 ];
 export const languages = {};
 for (const entries of cm5_langs) {

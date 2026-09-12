@@ -143,6 +143,7 @@ def opt_set(*values):
 editor_options = {
     'editor': directives.unchanged,
     'editor-config': directives.unchanged,
+    'linenos': opt_bool,
 }
 
 
@@ -153,6 +154,7 @@ def parse_editor_options(options, node):
         if v := options.get('editor-config'):
             cfg.update(pyjson5.decode(f'{{{v}}}'))
         node['editor'] = util.to_json(cfg) if cfg else ''
+    node['linenos'] = options.get('linenos', 'editor' in node)
 
 
 def log_exception(fn):

@@ -9,6 +9,7 @@ const parser = new DOMParser();
 
 class HtmlRunner extends exec.Runner {
     static name = 'html';
+    static highlight = 'html';
 
     constructor(node) {
         super(node);

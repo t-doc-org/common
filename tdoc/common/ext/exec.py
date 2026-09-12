@@ -76,10 +76,9 @@ class Exec(code.CodeBlock):
 
     def _update_node(self, node, name):
         node = node.next_node(nodes.literal_block, include_self=True)
-        runner = node['language']
-        node['runner'] = runner
+        node['runner'] = node['language']
+        node['language'] = 'text'
         node['env'] = self.options.get('env', '').strip()
-        node['language'] = '<pending>'
         node.__class__ = exec
         node.tagname = node.__class__.__name__
         if name is not None: node['name'] = name
@@ -108,14 +107,10 @@ def check_nodes(app, doctree, docname):
             check_refs(node, names, runner, 'then', doctree)
 
         # Check runner.
-        hl = 'text'
-        if (cfg := md.get(runner)) is not None:
-            hl = cfg.get('highlight', hl)
-        else:
+        if (cfg := md.get(runner)) is None:
             for node in nodes:
                 doctree.reporter.error(
-                    f"{{exec}}: Unsupported runner: {runner}", base_node=node)
-        for node in nodes: node['language'] = hl
+                    f"{{exec}}: Unknown runner: {runner}", base_node=node)
 
 
 def check_refs(node, names, runner, typ, doctree):
@@ -145,10 +140,10 @@ def add_js(app, docname, template, context, doctree):
 
 _default_metadata = {
     'exec': {
-        'html': {'highlight': 'html'},
-        'micropython': {'highlight': 'python'},
-        'python': {'highlight': 'python'},
-        'sql': {'highlight': 'sql'},
+        'html': {},
+        'micropython': {},
+        'python': {},
+        'sql': {},
     },
 }
 
@@ -210,6 +205,7 @@ def visit_exec(self, node):
             console_style=node.get('console-style'),
             editor=node.get('editor'),
             env=node['env'] if node['when'] else None,
+            linenos='' if node.get('linenos') else None,
             name=node.get('name'),
             output_style=node.get('output-style'),
             reset=node.get('reset'),

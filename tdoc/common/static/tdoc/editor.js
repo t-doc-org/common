@@ -30,7 +30,6 @@ const defaultExtensions = [
     cm.autocomplete.closeBrackets(),
     cm.commands.history(),
     cm.language.bracketMatching(),
-    cm.language.foldGutter(),
     cm.language.indentOnInput(),
     cm.language.indentUnit.of('  '),
     cm.language.syntaxHighlighting(cm.language.defaultHighlightStyle,
@@ -41,8 +40,6 @@ const defaultExtensions = [
     cm.view.crosshairCursor(),
     cm.view.drawSelection(),
     cm.view.dropCursor(),
-    cm.view.highlightActiveLine(),
-    cm.view.highlightActiveLineGutter(),
     cm.view.highlightSpecialChars(),
     cm.view.keymap.of([
         {key: 'Mod-e', run: cm.commands.deleteLine},
@@ -62,9 +59,21 @@ const defaultExtensions = [
         ...cm.lint.lintKeymap,
         ...cm.search.searchKeymap,
     ]),
-    cm.view.lineNumbers(),
     cm.view.rectangularSelection(),
     cm.view.EditorView.lineWrapping,
+];
+
+const readOnly = [
+    cm.state.EditorState.readOnly.of(true),
+    cm.view.EditorView.editorAttributes.of({class: 'read-only'}),
+];
+const highlightActiveLine = [
+    cm.view.highlightActiveLine(),
+    cm.view.highlightActiveLineGutter(),
+];
+const lineNos = [
+    cm.language.foldGutter(),
+    cm.view.lineNumbers(),
 ];
 
 // Create a new editor.
@@ -72,12 +81,13 @@ export function create(config) {
     if (!config.extensions) config.extensions = [];
     config.extensions.push(
         theme.of(currentTheme()),
-        ...defaultExtensions,
+        config.readOnly ? readOnly : highlightActiveLine,
+        config.lineNos ? lineNos : [],
+        defaultExtensions,
     );
     if (config.language) {
         const lang = cm.languages[config.language];
         if (lang) config.extensions.push(lang());
-        delete config.language;
     }
     return new cm.view.EditorView(config);
 }
@@ -112,7 +122,7 @@ class Store {
     static ro = new cm.state.Compartment();
 
     static extensions(plugin) {
-        return [this.ro.of(cm.state.EditorState.readOnly.of(true))];
+        return [this.ro.of(readOnly)];
     }
 
     static define(config) {
@@ -162,8 +172,7 @@ class Store {
 
     readOnly(value) {
         return {
-            effects: this.constructor.ro.reconfigure(
-                cm.state.EditorState.readOnly.of(value)),
+            effects: this.constructor.ro.reconfigure(value ? readOnly : []),
         };
     }
 }

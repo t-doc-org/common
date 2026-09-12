@@ -36,6 +36,7 @@ class Database {
 
 class SqlRunner extends exec.Runner {
     static name = 'sql';
+    static highlight = 'sqlite';
 
     static async init(config) {
         if (config._envs === undefined) return;

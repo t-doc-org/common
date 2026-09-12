@@ -98,7 +98,7 @@ export class Runner {
 
     async init() {
         fixLineNos(this.node);
-        if (this.editable) this.addEditor();
+        this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
         this.addControls(controls);
         if (controls.children.length > 0) this.node.appendChild(controls);
@@ -115,6 +115,7 @@ export class Runner {
     get after() { return this.attr('after'); }
     get consoleStyle() { return this.attr('console-style'); }
     get env() { return this.attr('env'); }
+    get linenos() { return this.attr('linenos'); }
     get outputStyle() { return this.attr('output-style'); }
     get reset() { return this.attr('reset'); }
     get then() { return this.attr('then'); }
@@ -137,9 +138,11 @@ export class Runner {
         const runner = this;
         const config = {
             extensions: [],
-            doc: this.origText,
-            language: this.config?.highlight,
+            readOnly: !this.editable,
+            lineNos: this.linenos != null,
+            language: this.constructor.highlight,
             parent: qs(this.node, 'div.highlight'),
+            doc: this.origText,
         };
         if (this.when.includes('click')) {
             config.extensions.push(cm.view.keymap.of([
@@ -221,9 +224,7 @@ export class Runner {
     // Create a "Run" control.
     runControl() {
         const ctrl = elmt`\
-<button class="fa-play tdoc-run"\
- title="Run${this.editable ? ' (Shift+Enter)' : ''}">\
-</button>`;
+<button class="fa-play tdoc-run" title="Run (Shift+Enter)"></button>`;
         on(ctrl).click(() => this.doRun());
         return ctrl;
     }

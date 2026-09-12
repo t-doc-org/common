@@ -1195,17 +1195,31 @@ div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
     margin-bottom: 0.3rem;
     margin-right: 0.3rem;
 }
-tdoc-exec[editor] div.highlight:has(> .cm-editor) :is(pre, button.copybtn) {
+tdoc-exec .highlight pre:not(.¶) {
+    /* Match the layout of the editor. */
+    padding-top: 4px;
+    padding-bottom: 4px;
+    line-height: 1.4;
+}
+tdoc-exec .highlight pre:not(.¶) span.linenos {
+    /* Match the layout of the editor. */
+    margin-right: 6px;
+    padding-right: 3px;
+}
+tdoc-exec .highlight:has(> .cm-editor) :is(pre, button.copybtn) {
     display: none;
 }
-tdoc-exec[editor] div.cm-editor {
+tdoc-exec div.cm-editor {
     height: 100%;
     max-height: 80vh;
     border: 1px solid var(--pst-color-border);
     border-radius: 0.25rem;
     overflow: hidden;
 }
-div.literal-block-wrapper > tdoc-exec[editor] div.cm-editor {
+tdoc-exec div.cm-editor.read-only {
+    background-color: var(--pst-color-surface);
+}
+div.literal-block-wrapper > tdoc-exec div.cm-editor {
     border-top: none;
     border-bottom: none;
     border-left: none;

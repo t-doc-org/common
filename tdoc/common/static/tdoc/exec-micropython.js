@@ -9,6 +9,7 @@ const {elmt, html, on, qs, qsa} = core;
 
 class MicroPythonRunner extends exec.Runner {
     static name = 'micropython';
+    static highlight = 'python';
 
     constructor(node) {
         super(node);

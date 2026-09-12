@@ -21,6 +21,7 @@ blocks.
 ```{exec} sql
 :name: sql_countries
 :when:
+:linenos:
 create table countries (
   country text not null,
   country_code text not null,
