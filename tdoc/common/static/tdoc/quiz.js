@@ -15,10 +15,7 @@ class QuizBase {
         this.hint = qs(this.node, '.tdoc-quiz-hint');
     }
 
-    attr(name) {
-        const v = this.node.getAttribute(name);
-        return v !== null ? v : undefined;
-    }
+    attr(name) { return this.node.getAttribute(name); }
 
     showHint(field, text, invalid = false) {
         const anchor = field.closest('.tdoc-quiz-group') ?? field;

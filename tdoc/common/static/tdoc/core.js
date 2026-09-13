@@ -1124,9 +1124,9 @@ export class DynElement extends TdocElement {
             const ms = render[dyn.timeout];
             if (ms !== undefined) this.#handleTimeout(ms);  // Background
             const name = this.name;
-            if (name !== undefined) render = render[name];
+            if (name != null) render = render[name];
             const args = this.args;
-            this.controller = await render(this, args !== undefined ?
+            this.controller = await render(this, args != null ?
                                            JSON.parse(args) : {});
             this.classList.add('rendered');
             qs(this, '& > .error')?.remove?.();
@@ -1137,10 +1137,7 @@ export class DynElement extends TdocElement {
         }
     }
 
-    attr(name) {
-        const v = this.getAttribute(name);
-        return v !== null ? v : undefined;
-    }
+    attr(name) { return this.getAttribute(name); }
 
     // Attribute accessors.
     get type() { return this.attr('type'); }

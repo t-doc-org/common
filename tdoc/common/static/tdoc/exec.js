@@ -94,7 +94,7 @@ export class Runner {
         this.node = node;
         this.pre = qs(this.node, 'pre');
         const e = this.attr('editor');
-        if (e !== undefined) this.editor = e !== '' ? JSON.parse(e) : {};
+        if (e != null) this.editor = e !== '' ? JSON.parse(e) : {};
     }
 
     async init() {
@@ -107,10 +107,7 @@ export class Runner {
         this.onReady();
     }
 
-    attr(name) {
-        const v = this.node.getAttribute(name);
-        return v !== null ? v : undefined;
-    }
+    attr(name) { return this.node.getAttribute(name); }
 
     // Attribute accessors.
     get after() { return this.attr('after'); }
