@@ -563,7 +563,7 @@ interrupting running code via the <button class="tdoc fa-stop"></button> button.
 
 The {rst:dir}`{exec} sql <exec>` runner uses a WebAssembly build of
 [SQLite](https://sqlite.org/). Each block execution is performed against a new,
-empty database.
+empty database. Foreign key constraint enforcement is enabled by default.
 
 ### Custom runners
 

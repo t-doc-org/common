@@ -86,6 +86,13 @@ class SqlRunner extends exec.Runner {
         try {
             this.replaceOutputs();
             db = await Database.open(`file:db-${run_id}?vfs=memdb`);
+            await db.exec(`\
+pragma journal_mode = memory;
+pragma foreign_keys = on;
+pragma synchronous = normal;
+pragma cache_size = -2000;
+pragma temp_store = memory;
+`);
             let output, tbody;
             for (const {code} of this.codeBlocks()) {
                 await db.exec(code, res => {

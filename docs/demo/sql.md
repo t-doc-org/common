@@ -133,3 +133,12 @@ select * from countries where country_code = 'FR';
 :when: load
 select * from unknown_table;
 ```
+
+Foreign key constraint enforcement is enabled by default.
+
+```{exec} sql
+:when: load
+create table users (id integer primary key);
+create table orders (user integer, foreign key (user) references users (id));
+insert into orders (user) values (1);
+```
