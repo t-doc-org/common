@@ -75,8 +75,8 @@ class DefaultsOpts(dict):
 
 class Defaults(docutils.SphinxDirective):
     required_arguments = 1
-    option_spec = DefaultsOpts()
     has_content = False
+    option_spec = DefaultsOpts()
 
     @ext.report_exceptions
     def run(self):

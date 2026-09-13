@@ -50,6 +50,7 @@ suppress_warnings = [
 # Extension options.
 graphviz_output_format = 'svg'
 todo_include_todos = True
+copybutton_selector = ':not(tdoc-exec) > div.highlight > pre'
 
 # MyST options.
 myst_enable_extensions = {

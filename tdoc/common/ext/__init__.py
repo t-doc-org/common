@@ -118,6 +118,11 @@ def opt_names(arg):
     return [nodes.fully_normalize_name(n) for n in arg.split()]
 
 
+def opt_words(arg):
+    if arg is None: raise ValueError('no argument provided')
+    return arg.split()
+
+
 def opt_classes(arg):
     # TODO: Monkey-patch all directives to use this instead of class_option
     if arg is None: return []
@@ -180,9 +185,12 @@ def report_exceptions(fn):
     return wrapper
 
 
-def format_attrs(translator, /, **kwargs):
-    return ' '.join(f'{k.replace('_', '-')}="{translator.attval(v)}"'
-                    for k, v in sorted(kwargs.items()) if v is not None)
+def kwfilter(**kwargs):
+    return {k: v for k, v in kwargs.items() if v is not None}
+
+
+def tag_attrs(**kwargs):
+    return {k.replace('_', '-'): v for k, v in kwargs.items() if v is not None}
 
 
 def meta(env, docname, key, default=None):

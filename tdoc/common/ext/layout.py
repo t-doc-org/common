@@ -149,12 +149,12 @@ def closest_section(node):
 
 
 class ListGrid(docutils.SphinxDirective):
+    has_content = True
     option_spec = {
         'cell-style': directives.unchanged,
         'class': ext.opt_classes,
         'style': directives.unchanged,
     }
-    has_content = True
 
     @ext.report_exceptions
     def run(self):

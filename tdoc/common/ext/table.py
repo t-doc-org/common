@@ -20,11 +20,11 @@ def setup(app):
 
 
 class FlexTable(docutils.SphinxDirective):
+    has_content = True
     option_spec = {
         'class': ext.opt_classes,
         'name': directives.unchanged,
     }
-    has_content = True
 
     @ext.report_exceptions
     def run(self):

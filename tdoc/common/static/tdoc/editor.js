@@ -83,6 +83,8 @@ export function create(config) {
         theme.of(currentTheme()),
         config.readOnly ? readOnly : highlightActiveLine,
         config.lineNos ? lineNos : [],
+        config.style ?
+            cm.view.EditorView.editorAttributes.of({style: config.style}) : [],
         defaultExtensions,
     );
     if (config.language) {

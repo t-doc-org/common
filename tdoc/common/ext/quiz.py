@@ -51,11 +51,11 @@ named_types = (quiz_ph,) + field_types
 
 class Quiz(docutils.SphinxDirective):
     optional_arguments = 2
+    has_content = True
     option_spec = {
         'class': ext.opt_classes,
         'style': directives.unchanged,
     }
-    has_content = True
 
     @ext.report_exceptions
     def run(self):

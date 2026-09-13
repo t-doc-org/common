@@ -767,7 +767,7 @@ div.literal-block-wrapper div.code-block-caption {
 div.literal-block-wrapper div.highlight {
     border-radius: 0;
 }
-div.literal-block-wrapper div.highlight pre {
+div.literal-block-wrapper div.highlight :is(pre, div.cm-editor) {
     border: none;
     border-radius: 0;
 }
@@ -1187,7 +1187,8 @@ tdoc-exec > div.tdoc-exec-controls {
 div.literal-block-wrapper > tdoc-exec {
     margin: 0;
 }
-div.literal-block-wrapper > tdoc-exec:has(.tdoc-exec-controls) pre {
+div.literal-block-wrapper > tdoc-exec:has(.tdoc-exec-controls)
+        :is(pre, div.cm-editor) {
     border-right: 1px solid var(--pst-color-border);
 }
 div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
@@ -1195,18 +1196,18 @@ div.literal-block-wrapper > tdoc-exec > div.tdoc-exec-controls {
     margin-bottom: 0.3rem;
     margin-right: 0.3rem;
 }
-tdoc-exec .highlight pre:not(.¶) {
+tdoc-exec div.highlight pre:not(.¶) {
     /* Match the layout of the editor. */
     padding-top: 4px;
     padding-bottom: 4px;
     line-height: 1.4;
 }
-tdoc-exec .highlight pre:not(.¶) span.linenos {
+tdoc-exec div.highlight pre:not(.¶) span.linenos {
     /* Match the layout of the editor. */
     margin-right: 6px;
     padding-right: 3px;
 }
-tdoc-exec .highlight:has(> .cm-editor) :is(pre, button.copybtn) {
+tdoc-exec div.highlight:has(> .cm-editor) :is(pre, button.copybtn) {
     display: none;
 }
 tdoc-exec div.cm-editor {

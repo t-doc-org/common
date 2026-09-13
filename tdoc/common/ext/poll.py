@@ -26,6 +26,7 @@ def setup(app):
 
 class Poll(docutils.SphinxDirective):
     required_arguments = 1
+    has_content = True
     option_spec = {
         'mode': lambda c: directives.choice(c, ('single', 'multi')),
         'number': lambda c: directives.choice(c,
@@ -33,7 +34,6 @@ class Poll(docutils.SphinxDirective):
         'close-after': directives.unchanged,
         'class': ext.opt_classes,
     }
-    has_content = True
 
     @ext.report_exceptions
     def run(self):

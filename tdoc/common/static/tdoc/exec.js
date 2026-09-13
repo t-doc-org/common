@@ -92,13 +92,14 @@ export class Runner {
 
     constructor(node) {
         this.node = node;
+        this.pre = qs(this.node, 'pre');
         const e = this.attr('editor');
         if (e !== undefined) this.editor = e !== '' ? JSON.parse(e) : {};
     }
 
     async init() {
         fixLineNos(this.node);
-        this.addEditor();
+        this.view = this.addEditor();
         const controls = elmt`<div class="tdoc-exec-controls"></div>`;
         this.addControls(controls);
         if (controls.children.length > 0) this.node.appendChild(controls);
@@ -134,12 +135,13 @@ export class Runner {
     // Add an editor to the {exec} block.
     addEditor() {
         this.origText = cm.state.Text.of(
-            this.preText.trimEnd().split(/\r\n?|\n/));
+            this.pre.textContent.trimEnd().split(/\r\n?|\n/));
         const runner = this;
         const config = {
             extensions: [],
             readOnly: !this.editable,
             lineNos: this.linenos != null,
+            style: this.pre.getAttribute('style'),
             language: this.constructor.highlight,
             parent: qs(this.node, 'div.highlight'),
             doc: this.origText,
@@ -186,24 +188,20 @@ export class Runner {
         // Create the editor.
         config.extensions.push(...this.editorExtensions);
         const view = editor.create(config);
-        view.dom.setAttribute('style',
-                              qs(this.node, 'pre').getAttribute('style'));
         if (this.resetEditor) {
             this.resetEditor.disabled = view.state.doc.eq(this.origText);
         }
+        return view;
     }
 
     get editorExtensions() { return []; }
 
-    // Return the EditorView object.
-    get editorView() { return editor.find(this.node); }
-
     // Dispatch a transaction that updates the editor state.
     updateEditorState(fn) {
-        const view = this.editorView, state = view.state;
+        const state = this.view.state;
         let specs = fn(state);
         if (!Array.isArray(specs)) specs = [specs];
-        view.dispatch(state.update(...specs));
+        this.view.dispatch(state.update(...specs));
     }
 
     // Replace the text of the editor, attaching the given annotations to the
@@ -254,15 +252,8 @@ export class Runner {
     // Called just after run().
     postRun() {}
 
-    // Return the text content of the <pre> tag.
-    get preText() { return qs(this.node, 'pre').textContent; }
-
-    // Return the text content of the editor if an editor was added, or the
-    // content of the <pre> tag.
-    get text() {
-        const view = this.editorView;
-        return view ? view.state.doc.toString() : this.preText;
-    }
+    // Return the text content of the editor.
+    get text() { return this.view.state.doc.toString(); }
 
     // Yield the code from the nodes in the :after: and :then: chain of the
     // {exec} block.

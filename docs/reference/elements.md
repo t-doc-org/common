@@ -76,22 +76,27 @@ autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture;
 :type: IDs
 A space-separated list of CSS classes to add to the `<iframe>`{l=html}.
 ```
+
 ```{rst:directive:option} credentialful
 Indicate that the `<iframe>`{l=html} should **not** be loaded in
 [credentialless](https://developer.mozilla.org/en-US/docs/Web/Security/IFrame_credentialless) mode. The default is credentialless mode.
 ```
+
 ```{rst:directive:option} referrerpolicy: value
 Indicate the referrer to send when fetching the `<iframe>`{l=html} source
 ([supported values](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#referrerpolicy)).
 ```
+
 ```{rst:directive:option} sandbox: token [token ...]
 Control the restrictions applied to the content embedded in the
 `<iframe>`{l=html}
 ([supported tokens](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#sandbox)).
 ```
+
 ```{rst:directive:option} style: property: value; [property: value; ...]
 CSS styles to apply to the `<iframe>`{l=html}, e.g. `width: 80%;`.
 ```
+
 ```{rst:directive:option} title: text
 A concise description of the content of the `<iframe>`{l=html}, typically used
 by assistive technologies.
