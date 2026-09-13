@@ -3,6 +3,19 @@
 
 # Release notes
 
+(release-0-94)=
+## 0.94 *(2026-09-13)*
+
+- Enabled foreign key constraint enforcement in {rst:dir}`{exec} sql <exec>`
+  blocks.
+- Changed non-editable {rst:dir}`exec` blocks to display code with a read-only
+  editor.
+- Fixed the layout of quizzes with {rst:dir}`exec` blocks and right-aligned
+  fields.
+- Moved the repository status reporting from the left sidebar to build messages.
+- Added a notification about Python upgrades.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.93...0.94)
+
 (release-0-93)=
 ## 0.93 *(2026-09-07)*
 
