@@ -118,21 +118,47 @@ They can also be laid out as lists, usually with right-aligned fields.
     ````{quiz-check}
     :randomize:
     :class: grid-2
+    - :
+      ```{exec} python
+      for i in range(1, 6):
+        print(i)
+      ```
     - ```{exec} python
-      :linenos:
+      for i in range(1, 5):
+        print(i)
+      ```
+    - ```{exec} python
       for i in range(5):
         print(i)
       ```
-    - :
-      ```{exec} python
-      :linenos:
-      i = 0
-      while i < 5:
-        i += 1
+    - ```{exec} python
+      for i in range(6):
         print(i)
       ```
     ````
 `````
+
+For each of the following code blocks, indicate whether they succeed or fail,
+and what they print.
+
+```{role} success(quiz-select)
+:right: width: 8rem;
+:options: |
+: succeeds
+: fails
+```
+
+````{quiz}
+{.lower-alpha-paren}
+1.  {success}`succeeds`{quiz-hint}`Try running it.`{input}`Hello, world!`
+    ```{exec} python
+    print("Hello, world!")
+    ```
+2.  {success}`fails`{quiz-hint}`Try running it.`{input}`Value:`
+    ```{exec} python
+    print(input("Value: ") + 1)
+    ```
+````
 
 ## Table
 

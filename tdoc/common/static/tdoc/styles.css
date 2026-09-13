@@ -405,7 +405,7 @@ html:is([data-tdoc-hide~=navigation], [data-tdoc-hide~=footer])
 
 /* Grids */
 .tdoc-grid {
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     display: grid;
     gap: 1rem;
 }
@@ -568,7 +568,7 @@ ul.contains-task-list > li.task-list-item
 
 /* Grid tables */
 table.grid {
-    margin: 1rem auto;
+    margin: 0 auto 1rem;
     text-align: center;
 }
 table.grid > :is(thead, tbody) > tr > :is(th, td) {
@@ -584,7 +584,7 @@ table.grid > :is(thead, tbody) > tr > :is(th, td).r {
 
 /* Function tables */
 table.function-table {
-    margin: 1rem 0;
+    margin: 0 0 1rem;
     text-align: center;
 }
 table.function-table > :is(thead, tbody) > tr:not(:last-child) {
@@ -714,7 +714,7 @@ iframe.tdoc {
     display: block;
     width: 100%;
     aspect-ratio: 16/9;
-    margin: 1rem auto;
+    margin: 0 auto 1rem;
 }
 
 /* Solutions */
@@ -950,8 +950,11 @@ tdoc-quiz ul.tdoc-quiz-group.right {
     clear: right;
     margin-left: 1rem;
 }
-tdoc-quiz .tdoc-quiz-field.right + .tdoc-quiz-field.right {
-    margin-top: 0.25rem;
+tdoc-quiz .tdoc-quiz-field.right {
+    margin-bottom: 0.25rem;
+}
+tdoc-quiz p > .tdoc-quiz-field.right:not(:has(+ .tdoc-quiz-field.right)) {
+    margin-bottom: 0;
 }
 tdoc-quiz ul.tdoc-quiz-group.right + p {
     margin-top: 0.25rem;
@@ -1004,7 +1007,7 @@ tdoc-quiz .tdoc-quiz-entry > tr > td:last-child {
 /* Polls */
 tdoc-poll {
     display: block;
-    margin: 1rem auto;
+    margin: 0 auto 1rem;
     border: 1px solid var(--pst-color-border);
     border-left: 0.3rem solid var(--pst-color-border);
     border-radius: 0.25rem;
@@ -1167,7 +1170,7 @@ html[data-theme=dark] div.cm-editor {
 
 /* Exec blocks */
 tdoc-exec {
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     border-radius: 0.25rem;
     display: flex;
     flex-direction: row;
@@ -1251,7 +1254,7 @@ div.literal-block-wrapper > tdoc-exec div.cm-editor {
 /* Exec outputs */
 div.tdoc-exec-output {
     position: relative;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
 }
 div.tdoc-exec-output :has(> button.tdoc-remove) {
     timeline-scope: --scroll-y;
@@ -1409,19 +1412,10 @@ div.tdoc-exec-output .table > tbody > tr:nth-child(odd).tdoc-no-results {
     background-size: 28.28px 28.28px;
 }
 
-/* Exec blocks within quizzes */
-tdoc-quiz ul.tdoc-quiz-group li > label tdoc-exec:first-child {
-    margin-top: 0;
-}
-tdoc-quiz ul.tdoc-quiz-group li > label
-        tdoc-exec.hidden:first-child + div.tdoc-exec-output {
-    margin-top: 0;
-}
-
 /* Dynamically-rendered blocks */
 tdoc-dyn:not(.¶) {
     display: block;
-    margin: 1rem auto;
+    margin: 0 auto 1rem;
     border-radius: 0.25rem;
     text-align: center;
 }

@@ -1,6 +1,7 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import collections
 import html
 
 from docutils import nodes
@@ -95,6 +96,19 @@ class Quiz(docutils.SphinxDirective):
                 _log.error("{quiz-hint}: must immediately follow a field",
                            location=n)
                 n.parent.remove(n)
+
+        # Remove paragraph wrappers in list items when the paragraph contains
+        # only right-aligned fields. The fields are floating and therefore not
+        # part of the normal flow of the page, and the paragraph would take
+        # unnecessary space.
+        for child in children:
+            for li in child.findall(nodes.list_item):
+                for p in li.children:
+                    if isinstance(p, nodes.paragraph) and p.children \
+                            and all(isinstance(n, field_roles)
+                                    and 'right' in n['classes']
+                                    for n in p.children):
+                        p.replace_self(p.children)
 
         node = quiz('', *children)
         self.set_source_info(node)
