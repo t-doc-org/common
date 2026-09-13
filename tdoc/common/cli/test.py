@@ -261,7 +261,7 @@ def exercise_cli(repo_dir, write, opts, vrun):
 
     # Build the HTML.
     write("Building HTML\n")
-    vrun('tdoc', 'site', 'build', '--debug', 'html')
+    vrun('tdoc', 'site', 'build', '--debug', '--sphinx-opt=--jobs=1', 'html')
     with open(repo_dir / '_build' / util.fixes, 'rb') as f: fxs = json.load(f)
 
     # Clean the HTML output.
