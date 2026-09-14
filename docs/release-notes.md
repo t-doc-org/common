@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-0-95)=
+## 0.95 *(2026-09-15)*
+
+- Fixed an issue in the detection of duplicate {rst:dir}`exec` editor IDs.
+- Fixed an issue in the computation of remote changes.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.94...0.95)
+
 (release-0-94)=
 ## 0.94 *(2026-09-13)*
 
