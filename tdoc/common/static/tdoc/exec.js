@@ -160,10 +160,9 @@ export class Runner {
                     this.editorStatus.setAttribute('title', msg);
                 },
             };
-            const store = this.editor.store;
-            if (store === 'cloud' && api.auth.name !== undefined) {
+            if (this.editor.store === 'cloud' && api.auth.name !== undefined) {
                 config.extensions.push(editor.collabStore(cfg));
-            } else if (store) {
+            } else {
                 config.extensions.push(editor.localStore(cfg));
             }
         }

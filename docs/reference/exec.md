@@ -192,9 +192,8 @@ The option takes an optional editor ID. If provided, the content of the editor
 is saved, and restored on page reload. Using the value `none` as the editor ID
 disables the editor.
 
-By default, the editor content is saved in browser local storage.
-This works for
-both anonymous and logged-in users.
+By default, the editor content is saved in browser local storage. This works for
+anonymous and logged-in users.
 
 ```{exec} sql
 :after: sql-countries
@@ -206,8 +205,8 @@ select * from countries where country_code = 'LI';
 Editor content can also be saved in remote storage, by adding `store: 'cloud'`
 to {rst:dir}`:editor-config: <exec:editor-config>`. This makes editors fully
 collaborative, i.e. the same text can be edited simultaneously from multiple
-clients (and eventually by multiple users). This only works for logged-in users,
-and requires a permanent internet connection.
+clients. This only works for logged-in users, and requires a permanent internet
+connection.
 
 ```{exec} sql
 :after: sql-countries

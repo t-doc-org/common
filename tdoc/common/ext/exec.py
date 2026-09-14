@@ -6,11 +6,10 @@ import zipfile
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import directives
-import pyjson5
 from sphinx.directives import code
 from sphinx.util import display, docutils, logging, osutil
 
-from .. import ext
+from .. import ext, util
 
 _log = logging.getLogger(__name__)
 _base = pathlib.Path(__file__).parent.resolve().parent
@@ -20,7 +19,8 @@ def setup(app):
     app.add_directive('exec', Exec)
     app.add_node(exec, html=(visit_exec, None))
     app.add_env_collector(ext.UniqueChecker('exec-editor',
-        lambda doctree: ((n, n.get('editor')) for n in doctree.findall(exec)),
+        lambda doctree: ((n, n.get('editor', {}).get('id'))
+                         for n in doctree.findall(exec)),
         lambda v: f"{{exec}}: Duplicate :editor: ID: {v}"))
     app.connect('doctree-resolved', check_nodes)
     app.connect('tdoc-html-page-config', set_html_page_config)
@@ -195,7 +195,8 @@ def visit_exec(self, node):
         **ext.tag_attrs(
             after=' '.join(node.get('after', ())) or None,
             console_style=node.get('console-style'),
-            editor=node.get('editor'),
+            editor=util.to_json(c) if (c := node.get('editor'))
+                   else '' if c is not None else None,
             env=node['env'] if node['when'] else None,
             linenos='' if linenos else None,
             name=node.get('cname'),

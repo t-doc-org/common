@@ -134,6 +134,10 @@ def opt_classes(arg):
     return classes
 
 
+def opt_json5(arg):
+    return pyjson5.decode(f'{{{arg}}}') if arg is not None else {}
+
+
 def opt_set(*values):
     if values: values = frozenset(values)
     def parse(arg):
@@ -147,18 +151,20 @@ def opt_set(*values):
 
 editor_options = {
     'editor': directives.unchanged,
-    'editor-config': directives.unchanged,
+    'editor-config': opt_json5,
     'linenos': opt_bool,
 }
 
 
 def parse_editor_options(options, node):
-    if (v := options.get('editor')) not in (None, 'none'):
-        cfg = {}
-        if v: cfg.update(id=v, store='local')
-        if v := options.get('editor-config'):
-            cfg.update(pyjson5.decode(f'{{{v}}}'))
-        node['editor'] = util.to_json(cfg) if cfg else ''
+    if (eid := options.get('editor')) not in (None, 'none'):
+        node['editor'] = cfg = options.get('editor-config', {}).copy()
+        if eid:
+            cfg['id'] = eid
+        else:
+            cfg.pop('id', None)
+        if (v := cfg.get('store')) not in (None, 'local', 'cloud'):
+            _log.error(f"editor-config: Invalid store: {v}", location=node)
     node['linenos'] = options.get('linenos', 'editor' in node)
 
 
