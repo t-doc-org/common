@@ -90,7 +90,13 @@ artifacts = [
 ]
 
 [tool.uv]
-# When installing into a new .venv with uv but without using run.py, sync dev
-# dependencies first (uv sync --only-group=dev). After that, sync as usual
-# (uv sync).
+# If installation into a new .venv with uv but without using run.py fails with
+# "ModuleNotFoundError: No module named 'hatchling'", sync dev dependencies
+# first (uv sync --only-group=dev). After that, sync as usual (uv sync). The
+# error message says to include 'hatchling' in 'build-system.requires', but we
+# have that already. The extra-build-dependencies entry below should work around
+# the issue, but I'm keeping this comment anyway just in case.
 no-build-isolation = true
+
+[tool.uv.extra-build-dependencies]
+t-doc-common = ["hatchling"]
