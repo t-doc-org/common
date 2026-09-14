@@ -636,7 +636,7 @@ the site.</p>\
     def hg_log(self, repo, *args):
         proc = self.hg(f'--repository={repo}', 'log', '--template=\\0{node}',
                        *args, success=None)
-        return proc.stdout.split('\0')[1:] if proc.returncode != 0 else []
+        return proc.stdout.split('\0')[1:] if proc.returncode == 0 else []
 
     def render_incoming(self, status, incoming):
         if not incoming: return
