@@ -157,12 +157,9 @@ editor_options = {
 
 
 def parse_editor_options(options, node):
-    if (eid := options.get('editor')) not in (None, 'none'):
-        node['editor'] = cfg = options.get('editor-config', {}).copy()
-        if eid:
-            cfg['id'] = eid
-        else:
-            cfg.pop('id', None)
+    if (v := options.get('editor')) not in (None, 'none'): node['editor'] = v
+    if cfg := options.get('editor-config'):
+        node['editor-config'] = cfg
         if (v := cfg.get('store')) not in (None, 'local', 'cloud'):
             _log.error(f"editor-config: Invalid store: {v}", location=node)
     node['linenos'] = options.get('linenos', 'editor' in node)

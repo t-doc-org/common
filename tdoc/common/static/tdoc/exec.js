@@ -93,8 +93,6 @@ export class Runner {
     constructor(node) {
         this.node = node;
         this.pre = qs(this.node, 'pre');
-        const e = this.attr('editor');
-        if (e != null) this.editor = e !== '' ? JSON.parse(e) : {};
     }
 
     async init() {
@@ -112,6 +110,13 @@ export class Runner {
     // Attribute accessors.
     get after() { return this.attr('after'); }
     get consoleStyle() { return this.attr('console-style'); }
+    get editor() { return this.attr('editor'); }
+
+    get editorConfig() {
+        const e = this.attr('editor-config');
+        return e != null ? JSON.parse(e) : {};
+    }
+
     get env() { return this.attr('env'); }
     get linenos() { return this.attr('linenos'); }
     get outputStyle() { return this.attr('output-style'); }
@@ -126,8 +131,8 @@ export class Runner {
     // The configuration for the runner.
     get config() { return tdoc.exec?.[this.constructor.name] ?? {}; }
 
-    // True iff the {exec} block has an editor.
-    get editable() { return this.editor !== undefined; }
+    // True iff the {exec} block has a (non read-only) editor.
+    get editable() { return this.editor != null; }
 
     // Add an editor to the {exec} block.
     addEditor() {
@@ -150,17 +155,18 @@ export class Runner {
         }
 
         // Set up the editor store.
-        if (this.editor?.id) {
+        if (this.editor) {
             this.editorStatus = elmt`<i></i>`;
             const cfg = {
-                id: this.editor.id, initial: this.origText,
+                id: this.editor, initial: this.origText,
                 onStatus: (status, msg) => {
                     this.editorStatus.className =
                         `tfa tdoc-editor-status ${status}`;
                     this.editorStatus.setAttribute('title', msg);
                 },
             };
-            if (this.editor.store === 'cloud' && api.auth.name !== undefined) {
+            if (this.editorConfig?.store === 'cloud'
+                    && api.auth.name !== undefined) {
                 config.extensions.push(editor.collabStore(cfg));
             } else {
                 config.extensions.push(editor.localStore(cfg));
