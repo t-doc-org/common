@@ -365,7 +365,8 @@ def update_intersphinx(app):
 def set_base_html_context(app):
     # The config is used in domain.html.jinja.
     tdoc = tdoc_config(app)
-    app.config.html_context['tdoc'] = util.to_json(tdoc).replace('<', '\\x3c')
+    app.config.html_context['tdoc'] = util.to_json_sorted(tdoc) \
+        .replace('<', '\\x3c')
 
 
 def configure_templates(app):
@@ -470,7 +471,7 @@ def add_js(app, page, template, context, doctree):
         loader.setdefault('paths', {}).setdefault('fonts', '/_cache')
 
     # Set up early and on-load JavaScript.
-    tdoc = util.to_json(tdoc).replace('<', '\\x3c')
+    tdoc = util.to_json_sorted(tdoc).replace('<', '\\x3c')
     app.add_js_file(None, priority=0, body=f'const tdoc = {tdoc};')
     app.add_js_file('tdoc/early.js', priority=1)
     app.add_js_file('tdoc/load.js', type='module')
@@ -639,7 +640,7 @@ class Dyn(docutils.SphinxDirective):
     def json_content(self):
         v = ''.join(f'{line}\n' for line in self.content)
         data = pyjson5.decode(f'{{{v}}}')
-        return util.to_json(data) if data else None
+        return util.to_json_sorted(data) if data else None
 
     def populate(self, node): pass
 

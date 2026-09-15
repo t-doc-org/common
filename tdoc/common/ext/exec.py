@@ -195,8 +195,8 @@ def visit_exec(self, node):
             after=' '.join(node.get('after', ())) or None,
             console_style=node.get('console-style'),
             editor=node.get('editor'),
-            editor_config=util.to_json(c) if (c := node.get('editor-config'))
-                          else None,
+            editor_config=util.to_json_sorted(c)
+                          if (c := node.get('editor-config')) else None,
             env=node['env'] if node['when'] else None,
             linenos='' if linenos else None,
             name=node.get('cname'),
