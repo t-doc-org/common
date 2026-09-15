@@ -343,7 +343,9 @@ def endpoint(name, methods=None, final=True, require_authn=False,
         def dfn(self, /, env, respond, wr):
             if final and wr.path: raise Error(HTTPStatus.NOT_FOUND)
             if wr.method not in methods:
-                raise Error(HTTPStatus.METHOD_NOT_ALLOWED)
+                raise Error(HTTPStatus.METHOD_NOT_ALLOWED, headers=[
+                    ('Allow', ','.join(methods)),
+                ])
             if require_authn and wr.user is None:
                 raise Error(HTTPStatus.UNAUTHORIZED)
             if csrf and (wr.sec_fetch_site not in ('same-origin', 'same-site')
