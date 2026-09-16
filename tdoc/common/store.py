@@ -195,10 +195,12 @@ class Tokens(database.ConnNamespace):
                         and (:expired or expires is null or :now < expires)
                 """, {'user_re': user_re, 'expired': expired, 'now': now})]
 
-    def create(self, uids, expires=None):
+    def create(self, uids, expires=None, tokens=None):
         now = time.time_ns()
         expires = database.to_nsec(expires)
-        tokens = [secrets.token_urlsafe() for _ in uids]
+        tokens = list(tokens) if tokens is not None else []
+        tokens.extend(secrets.token_urlsafe()
+                      for _ in range(len(uids) - len(tokens)))
         self.executemany("""
             insert into user_tokens (token, user, created, expires)
                 values (?, ?, ?, ?)

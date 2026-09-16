@@ -107,6 +107,8 @@ def add_commands(parser):
         arg(f'--{name}', metavar="GROUP,...", dest='groups',
             help="A comma-separated list of groups to add newly-created users "
                  "to.")
+    arg('--no-token', action='store_false', dest='token', default=True,
+        help="Don't create tokens for the new users.")
     arg('--origin', metavar='URL', dest='origin', default=None,
         help="The origin of the site to set up.")
     for name in ('user', 'users'):
@@ -180,7 +182,7 @@ def cmd_setup(opts):
         uids, tokens = [], []
         if (users := cli.comma_separated(opts.users)):
             uids = db.users.create(users)
-            tokens = db.tokens.create(uids)
+            tokens = db.tokens.create(uids) if opts.token else []
             for uid in uids: db.repo.enable_auth(uid, True)
             if groups := cli.comma_separated(opts.groups):
                 if opts.origin is None: raise Exception('No origin specified')
@@ -188,9 +190,10 @@ def cmd_setup(opts):
     wuser = max((len(u) for u in users), default=0)
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
-    for uid, user, token in zip(uids, users, tokens):
-        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
-                f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
+    for uid, user, token in itertools.zip_longest(uids, users, tokens):
+        t = f"  {o.LBLUE}{origin}#?token={token}{o.NORM}" if token is not None \
+            else ""
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}{t}\n")
 
 
 def sphinx_build(opts, target, *, build, tags=(), capture_build_errors=False,

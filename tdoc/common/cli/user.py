@@ -1,6 +1,8 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import itertools
+
 from .. import cli, util
 
 
@@ -16,6 +18,8 @@ def add_commands(parser):
     p = sp.add_parser('create', help="Create users.")
     p.set_defaults(handler=cmd_create)
     arg = p.add_argument
+    arg('--no-token', action='store_false', dest='token', default=True,
+        help="Don't create tokens for the new users.")
     arg('--token-expire', metavar='TIME', dest='token_expire',
         type='opt_rel_timestamp',
         help="Expire the users' token at the given relative or absolute time.")
@@ -42,13 +46,14 @@ def add_commands(parser):
 def cmd_create(opts):
     with cli.write_db(opts) as db:
         uids = db.users.create(opts.user)
-        tokens = db.tokens.create(uids, opts.token_expire)
+        tokens = db.tokens.create(uids, opts.token_expire) if opts.token else []
     wuser = max((len(u) for u in opts.user), default=0)
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
-    for uid, user, token in zip(uids, opts.user, tokens):
-        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}  "
-                f"{o.LBLUE}{origin}#?token={token}{o.NORM}\n")
+    for uid, user, token in itertools.zip_longest(uids, opts.user, tokens):
+        t = f"  {o.LBLUE}{origin}#?token={token}{o.NORM}" if token is not None \
+            else ""
+        o.write(f"{o.CYAN}{user:{wuser}}{o.NORM}  0x{uid:016x}{t}\n")
 
 
 def cmd_list(opts):

@@ -16,6 +16,10 @@ def add_commands(parser):
     arg = p.add_argument
     arg('--expire', metavar='TIME', dest='expire', type='opt_rel_timestamp',
         help="Expire the token at the given relative or absolute time.")
+    arg('--token', metavar='TOKEN', action='append', dest='token', default=[],
+        help="Use the given value as the token instead of generating it. "
+             "Multiple values are assigned to users in order. If there are "
+             "fewer values than users, the remaining tokens are generated.")
     arg('user', metavar='USER', nargs='+',
         help="The users for whom to create tokens.")
     cli.add_common_options(p)
@@ -46,7 +50,7 @@ def add_commands(parser):
 def cmd_create(opts):
     with cli.write_db(opts) as db:
         uids = [db.users.uid(u) for u in opts.user]
-        tokens = db.tokens.create(uids, opts.expire)
+        tokens = db.tokens.create(uids, opts.expire, tokens=opts.token)
     wuser = max((len(u) for u in opts.user), default=0)
     origin = cli.root_origin(opts.cfg)
     o = opts.stdout
