@@ -122,10 +122,14 @@ class Request:
         self.respond = respond
 
     method = property(lambda self: self.env['REQUEST_METHOD'])
+    script = property(lambda self: self.env['SCRIPT_NAME'])
     path = property(lambda self: self.env['PATH_INFO'])
     query = property(lambda self: self.env['QUERY_STRING'])
     content_type = property(lambda self: self.env.get('CONTENT_TYPE'))
     origin = property(lambda self: self.env.get('HTTP_ORIGIN'))
+    accept = property(lambda self: self.env.get('HTTP_ACCEPT'))
+    accept_encoding = property(
+        lambda self: self.env.get('HTTP_ACCEPT_ENCODING'))
     remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       wsgiutil.FileWrapper))

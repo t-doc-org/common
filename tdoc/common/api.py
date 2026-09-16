@@ -4,6 +4,7 @@
 import base64
 import contextlib
 import functools
+import gzip
 import hashlib
 from http import HTTPMethod, HTTPStatus
 import json
@@ -16,11 +17,18 @@ import traceback
 from urllib import parse, request
 
 import jwt
+import prometheus_client as pc
+from prometheus_client import exposition as pce
 
 from . import database, logs, store, util, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
+
+api_server_startups = pc.Counter(
+    namespace='tdoc', subsystem='api', name='server_startups',
+    documentation="The count of API server startups.",
+)
 
 
 def arg(data, name, validate=None):
@@ -58,7 +66,9 @@ class Api(wsgi.Dispatcher):
         self.auth = self.add_endpoint(
             'auth', OidcAuthApi(self, config.sub('oidc')))
 
-    def __enter__(self): return self
+    def __enter__(self):
+        api_server_startups.inc()
+        return self
 
     def __exit__(self, typ, value, tb):
         _log.debug("Api: stopping")
@@ -70,8 +80,9 @@ class Api(wsgi.Dispatcher):
         with self._write_db_lock, self._write_db as db:
             yield db
 
-    def has_perm(self, wr, db, perm):
-        return db.users.has_perm(wr.required_origin, wr.user, perm)
+    def has_perm(self, wr, db, perm, *, origin=None):
+        if origin is None: origin = wr.required_origin
+        return db.users.has_perm(origin, wr.user, perm)
 
     def pre_request(self, wr):
         wr.domain = self.domain if not wr.local else None
@@ -106,6 +117,31 @@ class Api(wsgi.Dispatcher):
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def handle_health(self, wr, req):
         return {}
+
+    @wsgi.endpoint('metrics', methods=(HTTPMethod.GET, HTTPMethod.OPTIONS),
+                   require_authn=True, csrf=False)
+    def handle_metrics(self, wr):
+        origin = '' if wr.local else o if (o := wr.origin) is not None \
+                 else wsgi.origin(wr.uri(include_query=False))
+        with wr.read_db as db:
+            check(self.has_perm(wr, db, 'metrics:read', origin=origin))
+        if wr.method == HTTPMethod.OPTIONS:
+            wr.respond(wsgi.http_status(HTTPStatus.OK),
+                       [('Allow', 'OPTIONS,GET')])
+            return [b'']
+        qs = parse.parse_qs(wr.query)
+        registry = pc.REGISTRY
+        if (v := qs.get('name[]')) is not None:
+            registry = registry.restricted_registry(v)
+        encode, content_type = pce.choose_encoder(wr.accept)
+        headers = [('Cache-Control', 'no-store'),
+                   ('Content-Type', content_type)]
+        out = encode(registry)
+        if pce.gzip_accepted(wr.accept_encoding):
+            headers.append(('Content-Encoding', 'gzip'))
+            out = gzip.compress(out)
+        wr.respond(wsgi.http_status(HTTPStatus.OK), headers)
+        return [out]
 
     @wsgi.json_endpoint('editor', require_authn=True)
     def handle_editor(self, wr, req):
