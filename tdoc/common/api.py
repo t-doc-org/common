@@ -25,6 +25,19 @@ from . import database, logs, store, util, wsgi
 _log = logs.logger(__name__)
 missing = object()
 
+http_request_duration = pc.Histogram(
+    subsystem='http', name='request_duration', unit='seconds',
+    labelnames=('method', 'endpoint', 'status'),
+    buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
+             1.0, 2.0, 5.0, 10.0],
+    documentation="The duration of HTTP requests.",
+)
+http_active_requests = pc.Gauge(
+    subsystem='http', name='active_requests',
+    labelnames=('method', 'endpoint'),
+    documentation="The number of active HTTP requests.",
+)
+
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
@@ -86,16 +99,24 @@ class Api:
     @wsgi.wrap_endpoints(handle_db_errors)
     def endpoints(self, disp):
         disp.pre(self.pre_request)
-        disp.post(self.post_request)
         yield from wsgi.endpoints(self)
         yield from wsgi.sub_endpoints('events', self.events.endpoints(disp))
         yield from wsgi.sub_endpoints('auth', self.auth.endpoints(disp))
 
     def pre_request(self, wr):
+        start = time.monotonic()
+        @wr.post
+        def record_duration():
+            http_request_duration.labels(wr.method, wr.script, wr.status_code) \
+                                 .observe(time.monotonic() - start)
+        http_active_requests.labels(wr.method, wr.script).inc()
+        wr.post(http_active_requests.labels(wr.method, wr.script).dec)
         wr.domain = self.domain if not wr.local else None
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
                          fdel=self._read_db_pool.release)
         wr.attr_handlers('write_db', fget=self.write_db)
+        @wr.post
+        def release_read_db(): del wr.read_db
         if token := wr.token:
             try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
@@ -104,9 +125,6 @@ class Api:
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
-
-    def post_request(self, wr):
-        del wr.read_db
 
     @contextlib.contextmanager
     def write_db(self):

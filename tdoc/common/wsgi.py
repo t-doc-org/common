@@ -116,11 +116,13 @@ def with_hash_params(url, params):
 
 
 class Request:
-    __slots__ = ('env', 'respond')
+    __slots__ = ('env', '_respond', '_post', 'status')
 
     def __init__(self, env, respond):
         self.env = env
-        self.respond = respond
+        self._respond = respond
+        self._post = []
+        self.status = None
 
     method = property(lambda self: self.env['REQUEST_METHOD'])
     script = property(lambda self: self.env['SCRIPT_NAME'])
@@ -164,6 +166,24 @@ class Request:
     def has_content(self):
         return self.env['REQUEST_METHOD'] in self._content_methods \
                and self.env.get('CONTENT_TYPE') is not None
+
+    def respond(self, status, headers, exc_info=None):
+        if self.status is None: self.status = status
+        self._respond(status, headers, exc_info)
+
+    @property
+    def status_code(self):
+        return s.split(None, 1)[0] if (s := self.status) is not None else None
+
+    def post(self, fn): self._post.append(fn)
+
+    def run_post(self):
+        post = self._post
+        while post:
+            try: post.pop()()
+            except Exception: pass
+
+    # TODO: Simplify the attr system
 
     @classmethod
     def attr(cls, name, *, default=None, cache=True):
@@ -278,7 +298,6 @@ class Dispatcher:
         self._update_endpoints_re()
 
     def pre(self, fn): self._pre.append(fn)
-    def post(self, fn): self._post.append(fn)
 
     def add(self, endpoints):
         self._endpoints.update(endpoints)
@@ -294,37 +313,28 @@ class Dispatcher:
     def get_handler(self, env):
         if (p := env.get('PATH_INFO')) \
                 and (m := self._endpoints_re.fullmatch(p)) \
-                and (h := self._endpoints[(s := m[1])]) is not None:
-            env['SCRIPT_NAME'], env['PATH_INFO'] = s, m[2]
+                and (h := self._endpoints[(ep := m[1])]) is not None:
+            env['SCRIPT_NAME'] += ep
+            env['PATH_INFO'] = m[2]
             return h
-        raise Error(HTTPStatus.NOT_FOUND)
 
     def __call__(self, env, respond):
         wr = Request(env, respond)
-        log_level, log_query = logs.NOTSET, False
-        log_args, log_status = None, '<unknown>'
+        log_level, log_query, log_args = logs.NOTSET, False, None
         token = context.ctx.set('req:' + secrets.token_hex(8))
         try:
             handler = self.get_handler(wr.env)
-            try:
-                for fn in self._pre: fn(wr)
-                log_level = getattr(handler, '_log_level', logs.NOTSET)
-                log_query = getattr(handler, '_log_query', True)
-                if log_level != logs.NOTSET:
-                    log_args = self._log_args(wr, log_query)
-                    msg = "%(method)s %(uri)s\n" \
-                          "origin=%(origin)s remote=%(remote)s"
-                    if 'user' in log_args: msg += " user=0x%(user)016x"
-                    _log.log(log_level, msg, event='req:start', **log_args)
-                    chained_respond = wr.respond
-                    def respond_log(status, headers, exc_info=None):
-                        nonlocal log_status
-                        log_status = status
-                        return chained_respond(status, headers, exc_info)
-                    wr.respond = respond_log
-                yield from handler(wr)
-            finally:
-                for fn in reversed(self._post): fn(wr)
+            for fn in self._pre: fn(wr)
+            if handler is None: raise Error(HTTPStatus.NOT_FOUND)
+            log_level = getattr(handler, '_log_level', logs.NOTSET)
+            log_query = getattr(handler, '_log_query', True)
+            if log_level != logs.NOTSET:
+                log_args = self._log_args(wr, log_query)
+                msg = "%(method)s %(uri)s\n" \
+                      "origin=%(origin)s remote=%(remote)s"
+                if 'user' in log_args: msg += " user=0x%(user)016x"
+                _log.log(log_level, msg, event='req:start', **log_args)
+            yield from handler(wr)
         except Error as e:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
@@ -338,7 +348,8 @@ class Dispatcher:
             if log_level != logs.NOTSET:
                 if log_args is None: log_args = self._log_args(wr, log_query)
                 _log.log(log_level, "%(status)s", event='req:end',
-                         status=log_status, **log_args)
+                         status=wr.status or '<unknown>', **log_args)
+            wr.run_post()
             context.ctx.reset(token)
 
     @staticmethod
