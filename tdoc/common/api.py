@@ -105,12 +105,14 @@ class Api:
 
     def pre_request(self, wr):
         start = time.monotonic()
+        endpoint = wr.script or '/'
         @wr.post
         def record_duration():
-            http_request_duration.labels(wr.method, wr.script, wr.status_code) \
+            http_request_duration.labels(wr.method, endpoint, wr.status_code) \
                                  .observe(time.monotonic() - start)
-        http_active_requests.labels(wr.method, wr.script).inc()
-        wr.post(http_active_requests.labels(wr.method, wr.script).dec)
+        active = http_active_requests.labels(wr.method, endpoint)
+        active.inc()
+        wr.post(active.dec)
         wr.domain = self.domain if not wr.local else None
         wr.attr_handlers('read_db', fget=self._read_db_pool.get,
                          fdel=self._read_db_pool.release)
