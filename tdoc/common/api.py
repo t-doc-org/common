@@ -25,11 +25,6 @@ from . import database, logs, store, util, wsgi
 _log = logs.logger(__name__)
 missing = object()
 
-api_server_startups = pc.Counter(
-    namespace='tdoc', subsystem='api', name='server_startups',
-    documentation="The count of API server startups.",
-)
-
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
@@ -81,9 +76,7 @@ class Api:
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'))
 
-    def __enter__(self):
-        api_server_startups.inc()
-        return self
+    def __enter__(self): return self
 
     def __exit__(self, typ, value, tb):
         _log.debug("Api: stopping")
