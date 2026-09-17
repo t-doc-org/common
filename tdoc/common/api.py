@@ -108,8 +108,9 @@ class Api:
         endpoint = wr.script or '/'
         @wr.post
         def record_duration():
-            http_request_duration.labels(wr.method, endpoint, wr.status_code) \
-                                 .observe(time.monotonic() - start)
+            http_request_duration \
+                .labels(wr.method, endpoint, wr.status_code or '<unknown>') \
+                .observe(time.monotonic() - start)
         active = http_active_requests.labels(wr.method, endpoint)
         active.inc()
         wr.post(active.dec)

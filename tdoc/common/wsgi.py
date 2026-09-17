@@ -23,6 +23,9 @@ _missing = object()
 # A regexp matching a hostname component.
 hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
 
+# A regexp matching the status code part of an HTTP status.
+status_code_re = re.compile(r'^(\d{3}) ')
+
 
 def http_status(status):
     return f'{status} {status.phrase}'
@@ -173,7 +176,8 @@ class Request:
 
     @property
     def status_code(self):
-        return s.split(None, 1)[0] if (s := self.status) is not None else None
+        return m[1] if (s := self.status) and (m := status_code_re.search(s)) \
+               else None
 
     def post(self, fn): self._post.append(fn)
 
