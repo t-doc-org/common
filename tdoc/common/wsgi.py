@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import collections
 import contextlib
 from email import utils
 import functools
@@ -260,37 +261,53 @@ Request.attr('domain')
 Request.attr('response_headers')
 
 
-class Dispatcher:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._endpoints = {}
-        for cls in self.__class__.__mro__:
-            for k, v in cls.__dict__.items():
-                if (ep := getattr(v, '_endpoint', False)) is False: continue
-                if ep in self._endpoints: continue
-                self._endpoints[ep] = getattr(self, k)
+Trie = lambda: collections.defaultdict(Trie)
 
-    def add_endpoint(self, name, fn):
-        self._endpoints[name] = fn
-        return fn
+def longest_prefix(trie):
+    def sub(subs):
+        return '|'.join(
+            (f'/{re.escape(n)}' if n else '') + (f'(?:{sub(s)})' if s else '')
+            for n, s in sorted(subs.items(), key=lambda v: (-len(v[0]), v[0])))
+    return f'^({sub(trie) if trie else r'^\b$'})(/.*|)$'
+
+
+class Dispatcher:
+    def __init__(self):
+        self._pre, self._post = [], []
+        self._endpoints = {}
+        self._update_endpoints_re()
+
+    def pre(self, fn): self._pre.append(fn)
+    def post(self, fn): self._post.append(fn)
+
+    def add(self, endpoints):
+        self._endpoints.update(endpoints)
+        self._update_endpoints_re()
+
+    def _update_endpoints_re(self):
+        trie = Trie()
+        for n in self._endpoints:
+            node = trie
+            for p in n.lstrip('/').split('/'): node = node[p]
+        self._endpoints_re = re.compile(longest_prefix(trie))
 
     def get_handler(self, env):
-        script_name, path_info = env['SCRIPT_NAME'], env['PATH_INFO']
-        if (name := wsgiutil.shift_path_info(env)) is not None:
-            if (h := self._endpoints.get(name)) is not None: return h
-            env['SCRIPT_NAME'], env['PATH_INFO'] = script_name, path_info
-        if (h := self._endpoints.get('/')) is not None: return h
+        if (p := env.get('PATH_INFO')) \
+                and (m := self._endpoints_re.fullmatch(p)) \
+                and (h := self._endpoints[(s := m[1])]) is not None:
+            env['SCRIPT_NAME'], env['PATH_INFO'] = s, m[2]
+            return h
         raise Error(HTTPStatus.NOT_FOUND)
 
-    @context.set(lambda: 'req:' + secrets.token_hex(8))
-    def __call__(self, env, respond, wr=None):
-        if wr is None: wr = Request(env, respond)
+    def __call__(self, env, respond):
+        wr = Request(env, respond)
         log_level, log_query = logs.NOTSET, False
         log_args, log_status = None, '<unknown>'
+        token = context.ctx.set('req:' + secrets.token_hex(8))
         try:
             handler = self.get_handler(wr.env)
             try:
-                self.pre_request(wr)
+                for fn in self._pre: fn(wr)
                 log_level = getattr(handler, '_log_level', logs.NOTSET)
                 log_query = getattr(handler, '_log_query', True)
                 if log_level != logs.NOTSET:
@@ -305,9 +322,9 @@ class Dispatcher:
                         log_status = status
                         return chained_respond(status, headers, exc_info)
                     wr.respond = respond_log
-                yield from self.handle_request(handler, wr)
+                yield from handler(wr)
             finally:
-                self.post_request(wr)
+                for fn in reversed(self._post): fn(wr)
         except Error as e:
             yield from wr.error(e.status, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
@@ -322,6 +339,7 @@ class Dispatcher:
                 if log_args is None: log_args = self._log_args(wr, log_query)
                 _log.log(log_level, "%(status)s", event='req:end',
                          status=log_status, **log_args)
+            context.ctx.reset(token)
 
     @staticmethod
     def _log_args(wr, include_query):
@@ -331,12 +349,27 @@ class Dispatcher:
         if (v := wr.user) is not None: kwargs['user'] = v
         return kwargs
 
-    def pre_request(self, wr): pass
 
-    def handle_request(self, handler, wr):
-        return handler(wr.env, wr.respond, wr)
+def endpoints(obj):
+    for cls in reversed(obj.__class__.__mro__):
+        for k, v in cls.__dict__.items():
+            if (ep := getattr(v, '_endpoint', False)) is False: continue
+            yield (f'/{ep}' if ep else ''), getattr(obj, k)
 
-    def post_request(self, wr): pass
+
+def sub_endpoints(parent, endpoints):
+    for name, fn in endpoints:
+        yield f'/{parent}{name}', fn
+
+
+def wrap_endpoints(wrap):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def dfn(self, /, reg):
+            for name, hfn in fn(self, reg):
+                yield name, wrap(hfn)
+        return dfn
+    return decorator
 
 
 def endpoint(name, methods=None, final=True, require_authn=False,
@@ -344,7 +377,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
     if methods is None: raise TypeError("Missing methods")
     def decorator(fn):
         @functools.wraps(fn)
-        def dfn(self, /, env, respond, wr):
+        def dfn(self, /, wr):
             if final and wr.path: raise Error(HTTPStatus.NOT_FOUND)
             if wr.method not in methods:
                 raise Error(HTTPStatus.METHOD_NOT_ALLOWED, headers=[

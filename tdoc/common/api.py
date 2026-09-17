@@ -52,9 +52,25 @@ wsgi.Request.attr('read_db')
 wsgi.Request.attr('write_db', cache=False)
 
 
-class Api(wsgi.Dispatcher):
+def handle_db_errors(fn):
+    @functools.wraps(fn)
+    def dfn(wr):
+        try:
+            yield from fn(wr)
+        except database.client_errors:
+            _log.exception("Store client error", exc_limit=-1, exc_chain=False,
+                           event='store:error:client')
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        except database.Error as e:
+            _log.exception("Store error", exc_limit=-1, exc_chain=False,
+                           event='store:error')
+            raise wsgi.Error(HTTPStatus.BAD_REQUEST,
+                             e.args[0] if e.args else None)
+    return dfn
+
+
+class Api:
     def __init__(self, *, config, store):
-        super().__init__()
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
@@ -62,9 +78,8 @@ class Api(wsgi.Dispatcher):
         self._read_db_pool = store.pool(mode='ro')
         self._write_db_lock = threading.Lock()
         self._write_db = store.connect(mode='rw')
-        self.events = self.add_endpoint('events', EventsApi(self))
-        self.auth = self.add_endpoint(
-            'auth', OidcAuthApi(self, config.sub('oidc')))
+        self.events = EventsApi(self)
+        self.auth = OidcAuthApi(self, config.sub('oidc'))
 
     def __enter__(self):
         api_server_startups.inc()
@@ -75,14 +90,13 @@ class Api(wsgi.Dispatcher):
         self.events.stop()
         _log.debug("Api: done")
 
-    @contextlib.contextmanager
-    def write_db(self):
-        with self._write_db_lock, self._write_db as db:
-            yield db
-
-    def has_perm(self, wr, db, perm, *, origin=None):
-        if origin is None: origin = wr.required_origin
-        return db.users.has_perm(origin, wr.user, perm)
+    @wsgi.wrap_endpoints(handle_db_errors)
+    def endpoints(self, disp):
+        disp.pre(self.pre_request)
+        disp.post(self.post_request)
+        yield from wsgi.endpoints(self)
+        yield from wsgi.sub_endpoints('events', self.events.endpoints(disp))
+        yield from wsgi.sub_endpoints('auth', self.auth.endpoints(disp))
 
     def pre_request(self, wr):
         wr.domain = self.domain if not wr.local else None
@@ -98,21 +112,17 @@ class Api(wsgi.Dispatcher):
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
 
-    def handle_request(self, handler, wr):
-        try:
-            yield from handler(wr.env, wr.respond, wr)
-        except database.client_errors:
-            _log.exception("Store client error", exc_limit=-1, exc_chain=False,
-                           event='store:error:client')
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
-        except database.Error as e:
-            _log.exception("Store error", exc_limit=-1, exc_chain=False,
-                           event='store:error')
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST,
-                             e.args[0] if e.args else None)
-
     def post_request(self, wr):
         del wr.read_db
+
+    @contextlib.contextmanager
+    def write_db(self):
+        with self._write_db_lock, self._write_db as db:
+            yield db
+
+    def has_perm(self, wr, db, perm, *, origin=None):
+        if origin is None: origin = wr.required_origin
+        return db.users.has_perm(origin, wr.user, perm)
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def handle_health(self, wr, req):
@@ -232,15 +242,17 @@ class Api(wsgi.Dispatcher):
         return info
 
 
-class EventsApi(wsgi.Dispatcher):
+class EventsApi:
     def __init__(self, api):
-        super().__init__()
         self.api = api
         self.lock = threading.Lock()
         self.observables = {}
         self.watchers = {}
         self._stop_watchers = False
         self._last_watcher = None
+
+    def endpoints(self, disp):
+        yield from wsgi.endpoints(self)
 
     def stop(self):
         with self.lock:
@@ -577,11 +589,13 @@ class EditorObservable(DbObservable, name='editor'):
                                               self._instance)}, None
 
 
-class OidcAuthApi(wsgi.Dispatcher):
+class OidcAuthApi:
     def __init__(self, api, config):
-        super().__init__()
         self.api = api
         self.config = config
+
+    def endpoints(self, disp):
+        yield from wsgi.endpoints(self)
 
     @functools.cached_property
     def issuers(self):

@@ -45,6 +45,10 @@ def application(config_path, events_level=logs.NOTSET):
     stack.enter_context(st)
     app = stack.enter_context(api.Api(config=cfg, store=st))
 
+    # Set up the request dispatcher.
+    disp = wsgi.Dispatcher()
+    disp.add(app.endpoints(disp))
+
     dep = cfg.sub('deployment')
     return wsgi.cors(
         origins=rf'{re.escape(dep.get('scheme', 'https'))}://'
@@ -55,4 +59,4 @@ def application(config_path, events_level=logs.NOTSET):
                  'X-Csrf'),
         max_age=dep.get('access_control_max_age'),
         credentials=True,
-    )(app)
+    )(disp)

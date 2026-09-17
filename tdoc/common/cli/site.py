@@ -166,7 +166,9 @@ def cmd_serve(opts):
             cli.get_store(opts, allow_mem=True) as st, \
             api.Api(config=opts.cfg, store=st) as api_, \
             Application(opts, srv, api_) as app:
-        srv.set_app(app)
+        disp = wsgi.Dispatcher()
+        disp.add(app.endpoints(disp))
+        srv.set_app(disp)
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
@@ -271,18 +273,16 @@ def project_version(reqs):
     return 'unknown'
 
 
-class Application(wsgi.Dispatcher):
+class Application:
     def __init__(self, opts, server, api_):
-        super().__init__()
         self.opts = opts
         self.server = server
+        self.api = api_
         self.lock = threading.Condition(threading.Lock())
         self.directory = self.build_dir(0) / 'html'
         self.stop = False
         self.min_mtime = time.time_ns()
         self.returncode = 0
-        self.api = self.add_endpoint('_api', api_)
-        self.api.add_endpoint('terminate', self.handle_terminate)
         self.opened = False
         self.exec = futures.ThreadPoolExecutor(thread_name_prefix='app')
         self.timers = util.Timers(self.exec, _log)
@@ -298,6 +298,14 @@ class Application(wsgi.Dispatcher):
 
         self.incoming = None
         self.timers.repeat(15 * 60, self.poll_incoming)
+
+    def endpoints(self, disp):
+        @disp.pre
+        def pre_request(wr):
+            wr.env['wsgi.multithread'] = True
+            wr.local = True
+        yield from wsgi.endpoints(self)
+        yield from wsgi.sub_endpoints('_api', self.api.endpoints(disp))
 
     def __enter__(self): return self
 
@@ -766,11 +774,6 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
     def hg(self, *args, **kwargs):
         return util.run('hg', *args, capture_output=True, text=True, **kwargs)
 
-    def handle_request(self, handler, wr):
-        wr.env['wsgi.multithread'] = True
-        wr.local = True
-        return handler(wr.env, wr.respond, wr)
-
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
                    final=False, csrf=False, log_level=logs.DEBUG)
     def handle_cache(self, wr):
@@ -805,7 +808,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         except Exception as e:
             _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
-    @wsgi.endpoint('/', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
+    @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
                    csrf=False, log_level=logs.DEBUG)
     def handle_default(self, wr):
         with self.lock: base = self.directory
@@ -860,7 +863,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             res = res / part
         return res / '' if trailing else res
 
-    @wsgi.endpoint(None, methods=(HTTPMethod.POST,), csrf=False)
+    @wsgi.endpoint('_api/terminate', methods=(HTTPMethod.POST,), csrf=False)
     def handle_terminate(self, wr):
         rc = wr.json.get('rc', 0)
         yield from wr.respond_json({})
