@@ -672,7 +672,7 @@ following repositories as soon as possible.</p>\
     def hg_status(self, repo, *args):
         proc = self.hg(f'--repository={repo}', 'status', '--template=\\0{path}',
                        *args, success=None)
-        return proc.stdout.split('\0')[1:] if proc.returncode != 0 else []
+        return proc.stdout.split('\0')[1:] if proc.returncode == 0 else []
 
     def render_unknown(self, status, unknown):
         if not unknown: return
@@ -682,7 +682,7 @@ following repositories as soon as possible.</p>\
 are needed to build the site, add them to version control (<code>hg \
 add</code>). Otherwise, move them to an ignored directory (see \
 <code class="path">.hgignore</code>, e.g. <code class="path">tmp</code>), or \
-add patterns to ignore them.</p>\
+add patterns to <code class="path">.hgignore</code> to ignore them.</p>\
 <ul class="m-0">""")
         for path in sorted(unknown):
             out.write(f"""<li><code class="path">{e(path)}</code></li>""")
