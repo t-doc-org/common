@@ -213,7 +213,7 @@ if sys.platform == 'win32':
         while True:
             try:
                 return path.replace(target)
-            except PermissionError as e:
+            except PermissionError:
                 if tries <= 1: raise
                 time.sleep(0.1)
                 tries -= 1

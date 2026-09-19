@@ -179,6 +179,20 @@ def suppress(result=None, *, exc=Exception, log=None):
     return decorator
 
 
+if sys.platform == 'win32':
+    def retry_on_win(fn, duration=1, interval=0.1, exc=PermissionError):
+        start = time.monotonic()
+        while True:
+            try:
+                return fn()
+            except exc:
+                if time.monotonic() - start >= duration: raise
+                time.sleep(interval)
+else:
+    def retry_on_win(fn, duration=1, interval=0.1, exc=PermissionError):
+        return fn()
+
+
 def task(fn):
     @functools.wraps(fn)
     def wrapper(self, /, *args, **kwargs):

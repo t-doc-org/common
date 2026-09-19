@@ -34,7 +34,7 @@ from .. import __project__, api, cli, context, deps, fixes, logs, util, wsgi
 _log = logs.logger(__name__)
 rc_build_failure = 1
 rc_source_change = 123
-e = html.escape
+esc = html.escape
 
 
 def add_commands(parser):
@@ -273,6 +273,25 @@ def project_version(reqs):
     return 'unknown'
 
 
+class BuildStatus(dict):
+    def __init__(self, status='success'):
+        super().__init__(status=status, messages=[])
+
+    def message(self, level, html):
+        self['messages'].append({'level': level, 'html': html})
+
+    def error(self, html): self.message('error', html)
+    def warning(self, html): self.message('warning', html)
+    def info(self, html): self.message('info', html)
+
+    def normalize(self):
+        if (st := self['status']) != 'success': return
+        ms = self['messages']
+        self['status'] = min((m['level'] for m in ms), key=util.level_key,
+                             default=st)
+        ms.sort(key=lambda m: util.level_key(m['level']))
+
+
 class Application:
     def __init__(self, opts, server, api_):
         self.opts = opts
@@ -360,14 +379,12 @@ class Application:
             self.build_status.set({'status': 'building'})
             incoming = self.check_incoming()
             unknown = self.check_unknown()
-            status = {'status': 'success', 'messages': []}
+            status = BuildStatus()
             ok, errors, fixes = self.build_site(build_next, mtime)
             if ok:
-                build = self.build_dir(mtime)
-                os.rename(build_next, build)
                 with self.lock:
                     self.build_mtime = mtime
-                    self.directory = build / 'html'
+                    self.directory = self.build_dir(mtime) / 'html'
                 self.build.set(str(mtime))
                 self.print_serving()
                 if build_mtime is not None:
@@ -377,14 +394,22 @@ class Application:
                 self.render_build_errors(status, errors)
                 self.remove(build_next)
             if not self.opts.full_builds and build_mtime is not None:
-                shutil.copytree(self.build_dir(build_mtime), build_next,
-                                symlinks=True)
+                try:
+                    shutil.copytree(self.build_dir(build_mtime), build_next,
+                                    symlinks=True)
+                except Exception as e:
+                    _log.warning("Failed to prepare next build directory; "
+                                 "falling back to full build: %(exc)s", exc=e)
+                    status.warning(f"""\
+<p><b>Failed to prepare the next build directory.</b> Falling back to a full \
+build.</p><p><b>Reason:</b> {esc(str(e))}</p>""")
+                    self.remove(build_next)
             self.render_fix_messages(status, fixes)
             self.render_incoming(status, incoming())
             self.render_unknown(status, unknown())
             self.render_upgrade(status)
             self.render_python_upgrade(status)
-            self.normalize_status(status)
+            status.normalize()
             self.build_status.set(status)
             prev = time.time_ns()
         if build_mtime is not None: self.remove(self.build_dir(build_mtime))
@@ -420,27 +445,32 @@ class Application:
     def build_dir(self, mtime):
         return self.opts.build / f'serve-{self.server.host_port[1]}-{mtime}'
 
-    def build_site(self, build, mtime):
+    def build_site(self, build_next, mtime):
         ok, errors, fixes = False, [], {}
         try:
             self.update_imports(mtime)
-            res = sphinx_build(self.opts, 'html', build=build,
+            res = sphinx_build(self.opts, 'html', build=build_next,
                                tags=['tdoc-local'], capture_build_errors=True)
             ok = res.returncode == 0
+
+            # Read build errors.
+            if (be := build_next / util.build_errors).is_file():
+                data = be.read_text('utf-8', errors='replace') \
+                         .replace(str(self.opts.source.parent) + os.sep, '')
+                errors.extend(r for e in data.split('\0') if (r := e.strip()))
+
+            # Read fixes.
+            if (p := build_next / util.fixes).is_file():
+                with open(p, 'rb') as f: fixes = json.load(f)
+
+            # Rename the finished build directory to its final location.
+            if ok:
+                build = self.build_dir(mtime)
+                util.retry_on_win(lambda: build_next.rename(build), duration=5)
         except Exception as e:
             _log.error("Build: %(exc)s", exc=e)
             errors.append(str(e).strip())
-
-        # Read build errors.
-        if (be := build / util.build_errors).is_file():
-            data = be.read_text('utf-8', errors='replace') \
-                     .replace(str(self.opts.source.parent) + os.sep, '')
-            errors.extend(r for e in data.split('\0') if (r := e.strip()))
-
-        # Read fixes.
-        if (p := build / util.fixes).is_file():
-            with open(p, 'rb') as f: fixes = json.load(f)
-
+        ok = ok and not errors
         if not ok and self.opts.exit_on_failure:
             self.returncode = rc_build_failure
             self.server.shutdown()
@@ -539,7 +569,7 @@ available in the terminal output.</p>""")
             out.write('<pre class="log m-0 border-1 p-2">')
         for err in errors: self.render_log_record(err, out)
         if errors: out.write('</pre>')
-        status['messages'].append({'level': 'error', 'html': out.getvalue()})
+        status.error(out.getvalue())
 
     _log_prefix_re = re.compile(
         r'^(?:(.+?)(?::(\d+))?: )?(WARNING|ERROR|CRITICAL): ')
@@ -551,22 +581,22 @@ available in the terminal output.</p>""")
         out.write('<div>')
         if m := self._log_prefix_re.search(err):
             if v := m[1]:
-                out.write(f'<span class="path">{e(v)}</span>')
-                if v := m[2]: out.write(f':<span class="line">{e(v)}</span>')
+                out.write(f'<span class="path">{esc(v)}</span>')
+                if v := m[2]: out.write(f':<span class="line">{esc(v)}</span>')
                 out.write(': ')
             if v := m[3]:
-                out.write(f'<span class="lvl-{e(v[0])}">{e(v)}</span>: ')
+                out.write(f'<span class="lvl-{esc(v[0])}">{esc(v)}</span>: ')
             err = err[len(m[0]):]
         elif m := self._exc_prefix_re.search(err):
-            out.write(f'<span class="exc">{e(m[1])}</span>: ')
+            out.write(f'<span class="exc">{esc(m[1])}</span>: ')
             err = err[len(m[0]):]
         if (i := err.find('\nTraceback (most recent call last):\n')) >= 0:
-            out.write(e(err[:i + 1]))
+            out.write(esc(err[:i + 1]))
             hl = pygments.highlight(err[i + 1:], self._tb_lexer,
                                     self._html_formatter)
             out.write(f'<div class="highlight">{hl}</div>')
             err = ''
-        if err: out.write(e(err))
+        if err: out.write(esc(err))
         out.write('</div>')
 
     def render_fix_messages(self, status, fxs):
@@ -585,22 +615,23 @@ the site.</p>\
         for name, locs in sorted(fxs.items()):
             deadline, title = fixes.attrs(name, 'deadline', 'title')
             out.write(f"""\
-<li><a class="mono" href="https://common.t-doc.org/fixes.html#{e(name)}">\
-{e(name)}</a>""")
+<li><a class="mono" href="https://common.t-doc.org/fixes.html#{esc(name)}">\
+{esc(name)}</a>""")
             if deadline is not None:
                 out.write(f"""\
- [deadline: <span class="deadline">{e(deadline)}</span>]""")
+ [deadline: <span class="deadline">{esc(deadline)}</span>]""")
             if locs: out.write(f' ({len(locs)} locations)')
             if title is not None: out.write(f": {title}")
             if not locs: continue
             out.write(f'<ul class="mono pt-1">')
             for src, line in sorted(locs):
-                out.write(f'<li><code class="path">{e(src)}</code>')
-                if line: out.write(f':<code class="line">{e(str(line))}</code>')
+                out.write(f'<li><code class="path">{esc(src)}</code>')
+                if line:
+                    out.write(f':<code class="line">{esc(str(line))}</code>')
                 out.write('</code></li>')
             out.write('</ul>')
         out.write('</ul>')
-        status['messages'].append({'level': level, 'html': out.getvalue()})
+        status.message(level, out.getvalue())
 
     def poll_incoming(self):
         incoming = {}
@@ -658,9 +689,9 @@ following repositories as soon as possible.</p>\
 <ul class="m-0">""")
         for repo, revs in sorted(incoming.items()):
             out.write(f"""\
-<li><code class="path">{e(repo)}</code>: {len(revs)} changes</li>""")
+<li><code class="path">{esc(repo)}</code>: {len(revs)} changes</li>""")
         out.write('</ul>')
-        status['messages'].append({'level': 'warning', 'html': out.getvalue()})
+        status.warning(out.getvalue())
 
     @util.task
     @util.suppress(list, log=_log.p.exception("Unknown file check", debug=True))
@@ -685,9 +716,9 @@ add</code>). Otherwise, move them to an ignored directory (see \
 add patterns to <code class="path">.hgignore</code> to ignore them.</p>\
 <ul class="m-0">""")
         for path in sorted(unknown):
-            out.write(f"""<li><code class="path">{e(path)}</code></li>""")
+            out.write(f"""<li><code class="path">{esc(path)}</code></li>""")
         out.write('</ul>')
-        status['messages'].append({'level': 'info', 'html': out.getvalue()})
+        status.info(out.getvalue())
 
     def render_upgrade(self, status):
         if sys.prefix == sys.base_prefix: return  # Not running in a venv
@@ -706,12 +737,12 @@ Release notes: <{o.LBLUE}https://common.t-doc.org/release-notes.html\
 #release-{new.replace('.', '-')}{o.NORM}>
 {o.LWHITE}Restart the server to upgrade.{o.NORM}
 """)
-        status['messages'].append({'level': 'info', 'html': f"""\
-<p><b>An upgrade is available:</b> <span class="version">{e(cur)}</span>\
-{f' &rarr; <span class="version">{e(new)}</span>' if new != cur else ""}. \
+        status.info(f"""\
+<p><b>An upgrade is available:</b> <span class="version">{esc(cur)}</span>\
+{f' &rarr; <span class="version">{esc(new)}</span>' if new != cur else ""}. \
 Please check the <a href="https://common.t-doc.org/release-notes.html\
-#release-{e(new.replace('.', '-'))}">release notes</a> and restart \
-the server to upgrade.</p>"""})
+#release-{esc(new.replace('.', '-'))}">release notes</a> and restart \
+the server to upgrade.</p>""")
 
     @util.suppress(log=_log.p.exception("Python upgrade check", debug=True))
     def render_python_upgrade(self, status):
@@ -720,9 +751,9 @@ the server to upgrade.</p>"""})
         if not vr or sys.version_info >= (vrt := util.version_tuple(vr)): return
         out = io.StringIO()
         out.write(f"""\
-<p><b>Python >=<span class="version">{e(vr)}</span> is recommended.</b> \
+<p><b>Python >=<span class="version">{esc(vr)}</span> is recommended.</b> \
 You are currently using Python <span class="version">\
-{e('.'.join(str(v) for v in sys.version_info[:3]))}</span>. \
+{esc('.'.join(str(v) for v in sys.version_info[:3]))}</span>. \
 Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         if sys.version_info[:2] == vrt[:2]:
             level = 'info'
@@ -730,14 +761,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         else:
             level = 'warning'
             out.write("install</a> a more recent version.</p>")
-        status['messages'].append({'level': level, 'html': out.getvalue()})
-
-    def normalize_status(self, status):
-        if (st := status['status']) != 'success': return
-        ms = status['messages']
-        status['status'] = min((m['level'] for m in ms), key=util.level_key,
-                               default=st)
-        ms.sort(key=lambda m: util.level_key(m['level']))
+        status.message(level, out.getvalue())
 
     def list_remote_repos(self):
         for repo in self.list_repos():

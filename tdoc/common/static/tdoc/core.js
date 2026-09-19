@@ -371,7 +371,8 @@ export function inlineMath(value) {
 }
 
 // Return a <div> containing display math. The element must be typeset after
-// being added to the DOM.
+// being added to the DOM. The implementation corresponds to
+// sphinx.ext.mathjax.html_visit_displaymath().
 // TODO: Typeset automatically using a web component
 export function displayMath(value) {
     // The formatting of the content corresponds to what spinx.ext.mathjax does.
