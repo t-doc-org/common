@@ -188,19 +188,22 @@ class Request:
 
     def run_post(self):
         post = self._post
-        while post:
-            try: post.pop()()
-            except Exception: pass
+        while post: post.pop()()
+        if (db := self._read_db) is not None:
+            self._read_db_pool.release(db)
+            self._read_db = None
 
     @property
     def read_db(self):
         if (db := self._read_db) is None:
             db = self._read_db = self._read_db_pool.get()
-            @self._post.append
-            def release():
-                self._read_db_pool.release(db)
-                self._read_db = None
         return db
+
+    @read_db.deleter
+    def read_db(self):
+        if (db := self._read_db) is not None:
+            self._read_db_pool.release(db)
+            self._read_db = None
 
     @property
     def write_db(self): return self._write_db()
@@ -285,7 +288,7 @@ def longest_prefix(trie):
 
 class Dispatcher:
     def __init__(self):
-        self._pre, self._post = [], []
+        self._pre = []
         self._endpoints = {}
         self._update_endpoints_re()
 

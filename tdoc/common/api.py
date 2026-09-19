@@ -112,6 +112,7 @@ class Api:
         active.inc()
         wr.post(active.dec)
         if token := wr.token:
+            # TODO: Make authentication lazy?
             try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
             except Exception as e:
@@ -316,6 +317,7 @@ class EventsApi:
             resp = {'sid': watcher.sid}
             if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
+            del wr.read_db  # Don't hold onto a cached DB connection
             yield util.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
