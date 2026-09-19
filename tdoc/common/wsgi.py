@@ -119,13 +119,18 @@ def with_hash_params(url, params):
 
 
 class Request:
-    __slots__ = ('env', '_respond', '_post', 'status')
+    __slots__ = ('env', '_respond', '_post', 'status', 'local', 'domain',
+                 'user', 'response_headers', '_read_db_pool', '_read_db',
+                 '_write_db')
 
     def __init__(self, env, respond):
         self.env = env
         self._respond = respond
         self._post = []
         self.status = None
+        self.local = False
+        self.domain = self.user = self.response_headers = None
+        self._read_db_pool = self._read_db = self._write_db = None
 
     method = property(lambda self: self.env['REQUEST_METHOD'])
     script = property(lambda self: self.env['SCRIPT_NAME'])
@@ -187,30 +192,18 @@ class Request:
             try: post.pop()()
             except Exception: pass
 
-    # TODO: Simplify the attr system
+    @property
+    def read_db(self):
+        if (db := self._read_db) is None:
+            db = self._read_db = self._read_db_pool.get()
+            @self._post.append
+            def release():
+                self._read_db_pool.release(db)
+                self._read_db = None
+        return db
 
-    @classmethod
-    def attr(cls, name, *, default=None, cache=True):
-        gname = f'tdoc.{name}.get'
-        if not cache:
-            setattr(cls, name, property(lambda self: self.env[gname]()))
-            return
-        pname = f'tdoc.{name}'
-        dname = f'tdoc.{name}.del'
-        def fget(self):
-            if (v := self.env.get(pname, _missing)) is _missing:
-                fn = self.env.get(gname)
-                v = self.env[pname] = fn() if fn is not None else default
-            return v
-        def fset(self, v): self.env[pname] = v
-        def fdel(self):
-            if (v := self.env.pop(pname, _missing)) is _missing: return
-            if (fn := self.env.get(dname)) is not None: fn(v)
-        setattr(cls, name, property(fget, fset, fdel))
-
-    def attr_handlers(self, name, fget=None, fdel=None):
-        if fget is not None: self.env[f'tdoc.{name}.get'] = fget
-        if fdel is not None: self.env[f'tdoc.{name}.del'] = fdel
+    @property
+    def write_db(self): return self._write_db()
 
     @property
     def json(self):
@@ -278,11 +271,6 @@ class Request:
             *(self.response_headers or ()),
         ])
         return [body]
-
-
-Request.attr('local')
-Request.attr('domain')
-Request.attr('response_headers')
 
 
 Trie = lambda: collections.defaultdict(Trie)

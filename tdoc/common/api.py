@@ -55,11 +55,6 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
     if not cond: raise wsgi.Error(code, msg)
 
 
-wsgi.Request.attr('user')
-wsgi.Request.attr('read_db')
-wsgi.Request.attr('write_db', cache=False)
-
-
 def handle_db_errors(fn):
     @functools.wraps(fn)
     def dfn(wr):
@@ -104,8 +99,10 @@ class Api:
         yield from wsgi.sub_endpoints('auth', self.auth.endpoints(disp))
 
     def pre_request(self, wr):
-        start = time.monotonic()
-        endpoint = wr.script or '/'
+        if not wr.local: wr.domain = self.domain
+        wr._read_db_pool = self._read_db_pool
+        wr._write_db = self.write_db
+        start, endpoint = time.monotonic(), wr.script or '/'
         @wr.post
         def record_duration():
             http_request_duration \
@@ -114,12 +111,6 @@ class Api:
         active = http_active_requests.labels(wr.method, endpoint)
         active.inc()
         wr.post(active.dec)
-        wr.domain = self.domain if not wr.local else None
-        wr.attr_handlers('read_db', fget=self._read_db_pool.get,
-                         fdel=self._read_db_pool.release)
-        wr.attr_handlers('write_db', fget=self.write_db)
-        @wr.post
-        def release_read_db(): del wr.read_db
         if token := wr.token:
             try:
                 with wr.read_db as db: user = db.tokens.authenticate(token)
