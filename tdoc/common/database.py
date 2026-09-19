@@ -9,7 +9,21 @@ import textwrap
 import threading
 import time
 
+import prometheus_client as pc
+
 from . import util
+
+db_open_connections = pc.Gauge(
+    subsystem='db', name='open_connections', labelnames=('db', 'mode'),
+    documentation="The number of open database connections.",
+)
+db_transaction_duration = pc.Histogram(
+    subsystem='db', name='transaction_duration', unit='seconds',
+    labelnames=('db', 'mode'),
+    buckets=[0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05,
+             0.1, 0.2, 0.5, 1.0],
+    documentation="The duration of database transactions.",
+)
 
 
 def to_datetime(nsec):
@@ -28,7 +42,12 @@ client_errors = (sqlite3.DataError, sqlite3.IntegrityError)
 
 
 class Connection(sqlite3.Connection):
+    def close(self):
+        db_open_connections.labels(self.database.type, self.mode).dec()
+        super().close()
+
     def __enter__(self):
+        self._start = time.monotonic()
         db = super().__enter__()
         if self.autocommit == sqlite3.LEGACY_TRANSACTION_CONTROL:
             try:
@@ -44,6 +63,8 @@ class Connection(sqlite3.Connection):
         if typ is None:
             for fn in self._after_commit: fn()
         del self._after_commit
+        db_transaction_duration.labels(self.database.type, self.mode) \
+                               .observe(time.monotonic() - self._start)
         return res
 
     def after_commit(self, fn):
@@ -141,8 +162,9 @@ class Database:
     Connection = Connection
     WriteConnection = Connection
 
-    def __init__(self, config, *, mem_name=None):
+    def __init__(self, config, type, *, mem_name=None):
         self.config = config
+        self.type = type
         self.mem_name = mem_name
         self.path = config.path('path')
         if self.path is None and not mem_name:
@@ -203,6 +225,8 @@ class Database:
                              factory=factory, autocommit=True,
                              isolation_level=isolation_level,
                              check_same_thread=False)
+        db.mode = mode[:2]
+        db_open_connections.labels(self.type, db.mode).inc()
         db.database = self
         db.execute("pragma journal_mode = wal")
         db.execute("pragma foreign_keys = on")

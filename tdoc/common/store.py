@@ -686,7 +686,7 @@ class Store(database.Database):
     WriteConnection = WriteConnection
 
     def __init__(self, config, **kwargs):
-        super().__init__(config, **kwargs)
+        super().__init__(config, 'store', **kwargs)
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}

@@ -359,7 +359,7 @@ class LogStore(database.Database):
     WriteConnection = Connection = Connection
 
     def __init__(self, config, *, stderr=None, **kwargs):
-        super().__init__(config, **kwargs)
+        super().__init__(config, 'logs', **kwargs)
         self.stderr = stderr
         self.flush_interval = config.get('flush_interval', 5)
         self.purge_interval = util.timedelta_to_nsec(util.parse_duration(
