@@ -17,6 +17,8 @@ import threading
 import time
 import traceback
 
+import prometheus_client as pc
+
 from . import context, database, config as _config, console, util
 
 globals().update(logging.getLevelNamesMapping())
@@ -31,6 +33,11 @@ default_query_format = \
     ' {LBLACK}[{NORM}{ctxc}{ctxs:20}{NORM}{LBLACK}]{NORM}' \
     ' {LBLACK}[{NORM}{LBLUE}{name}{NORM}{LBLACK}]{NORM} {message}'
 
+
+log_entries = pc.Counter(
+    subsystem='log', name='entries', labelnames=('level',),
+    documentation="A count of log entries.",
+)
 
 class Logger(logging.Logger):
     def _log(self, level, msg, args, exc_info=None, extra=None,
@@ -178,6 +185,11 @@ class QueueHandler(handlers.QueueHandler):
     def prepare(self, rec): return rec
 
 
+class MetricHandler(logging.Handler):
+    def emit(self, rec):
+        log_entries.labels(logging.getLevelName(rec.levelno)).inc()
+
+
 class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
     def __init__(self, *args, perms, **kwargs):
         self._perms = perms
@@ -215,7 +227,7 @@ def configure(config=None, stderr=None, level=WARNING, stream=False,
 
     with contextlib.ExitStack() as stack:
         stack.callback(logging.shutdown)
-        hs = []
+        hs = [MetricHandler()]
 
         if stderr is not None and \
                 (c := config.sub('stream')).get('enabled', stream):
