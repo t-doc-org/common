@@ -651,8 +651,8 @@ class EditorObservable(DbObservable, name='editor'):
     @classmethod
     def normalize(cls, req, wr):
         req['_origin'] = wr.required_origin
-        # TODO: Check that user is logged in
-        req['_instance'] = f'u:{wr.user:016x}'
+        if (u := wr.user) is None: raise wsgi.Error(HTTPStatus.FORBIDDEN)
+        req['_instance'] = f'u:{u:016x}'
         super().normalize(req, wr)
 
     def wake_keys(self, db):
