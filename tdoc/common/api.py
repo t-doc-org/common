@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import base64
+import collections
 import contextlib
 import functools
 import gzip
@@ -336,6 +337,12 @@ class EventsApi:
             if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
             del wr.read_db  # Don't hold onto a cached DB connection
+            # TODO: Remove logging
+            obs = collections.defaultdict(list)
+            with self.lock:
+                for k, o in self.observables.items():
+                    obs[o.name].append(util.to_json_sorted(o.req))
+            _log.info("Observables: %(obs)s", obs=obs)
             yield util.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
@@ -410,6 +417,7 @@ class Observable:
         return hashlib.sha256(util.to_json_sorted(req).encode('utf-8')).digest()
 
     def __init__(self, req):
+        self.req = req  # TODO: Remove
         self.key = self.hash(req)
         self.lock = threading.Condition(threading.Lock())
         self.watches = set()
