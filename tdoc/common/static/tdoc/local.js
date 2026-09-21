@@ -71,7 +71,7 @@ api.events.sub({add: [
             location.reload();
         }
     }),
-    new api.Watch({name: 'build_status'}, data => {
+    new api.Watch({name: 'build/status'}, data => {
         const {status, messages} = buildStatus = data;
         core.htmlData.tdocBuildStatus = status ?? '';
         updateBuildStatusTooltip();

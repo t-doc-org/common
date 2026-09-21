@@ -309,7 +309,7 @@ class Application:
         self.build_mtime = None
         self.build = api.ValueObservable('build', None)
         self.api.events.add_observable(self.build)
-        self.build_status = api.ValueObservable('build_status', {})
+        self.build_status = api.ValueObservable('build/status', {})
         self.api.events.add_observable(self.build_status)
         self.builder = threading.Thread(target=self.watch_and_build,
                                         name='builder')

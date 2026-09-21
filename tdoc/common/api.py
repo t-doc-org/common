@@ -37,6 +37,14 @@ http_active_requests = pc.Gauge(
     labelnames=('method', 'endpoint'),
     documentation="The number of active HTTP requests.",
 )
+event_observables = pc.Gauge(
+    subsystem='event', name='observables', labelnames=('name',),
+    documentation="The number of active observables.",
+)
+event_watches = pc.Gauge(
+    subsystem='event', name='watches', labelnames=('name',),
+    documentation="The number of active watches placed on observables.",
+)
 
 
 def arg(data, name, validate=None):
@@ -266,10 +274,17 @@ class EventsApi:
             for w in self.watchers.values(): w.stop()
 
     def add_observable(self, obs):
-        with self.lock: self.observables[obs.key] = obs
+        with self.lock:
+            if (o := self.observables.get(obs.key)) is not None:
+                event_observables.labels(o.name).dec()
+            self.observables[obs.key] = obs
+            event_observables.labels(obs.name).inc()
 
     def remove_observable(self, obs):
-        with self.lock: self.observables.pop(obs.key, None)
+        with self.lock:
+            if self.observables.get(obs.key) is not obs: return
+            self.observables.pop(obs.key, None)
+            event_observables.labels(obs.name).dec()
 
     def find_observable(self, req, wr):
         key = Observable.hash(req)
@@ -277,9 +292,12 @@ class EventsApi:
             if (obs := self.observables.get(key)) is not None:
                 if not obs.stopping: return obs
             if (cls := DynObservable.lookup(req['name'])) is not None:
-                obs = cls(req, self, wr)
-                self.observables[obs.key] = obs
-                return obs
+                new_obs = cls(req, self, wr)
+                if obs is not None:
+                    event_observables.labels(obs.name).dec()
+                self.observables[new_obs.key] = new_obs
+                event_observables.labels(new_obs.name).inc()
+                return new_obs
         raise Exception("Observable not found")
 
     @property
@@ -410,17 +428,22 @@ class Observable:
         with self.lock:
             if key in self.watches: return
             self.watches.add(key)
+            event_watches.labels(self.name).inc()
             self.send_initial_locked(watcher, wid)
 
     def unwatch(self, watcher, wid):
+        key = (watcher, wid)
         with self.lock:
-            self.watches.discard((watcher, wid))
+            if key not in self.watches: return
+            self.watches.discard(key)
+            event_watches.labels(self.name).dec()
             if not self.watches: self.stop_locked()
 
 
 class ValueObservable(Observable):
     def __init__(self, name, value):
         super().__init__({'name': name})
+        self.name = name
         self._value = value
 
     def set(self, value):
@@ -441,6 +464,7 @@ class DynObservable(Observable):
 
     def __init_subclass__(cls, /, **kwargs):
         if (name := kwargs.pop('name', None)) is not None:
+            cls.name = name
             DynObservable._observables[name] = cls
         super().__init_subclass__(**kwargs)
 
@@ -834,7 +858,7 @@ class OidcAuthApi:
                                   event='oidc:login:add'))
         elif user is not None:
             db.after_commit(
-                lambda: _log.info("User 0x%(user)016x logged in via %(name)s",
+                lambda: _log.info("User 0x%(user)016x logged in as %(name)s",
                                   user=user, name=self.token_name(id_token),
                                   iss=id_token['iss'], sub=id_token['sub'],
                                   event='oidc:login'))
