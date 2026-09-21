@@ -288,12 +288,14 @@ class EventsApi:
             event_observables.labels(obs.name).dec()
 
     def find_observable(self, req, wr):
+        if (cls := DynObservable.lookup(req['name'])) is not None:
+            cls.normalize(req, wr)
         key = Observable.hash(req)
         with self.lock:
             if (obs := self.observables.get(key)) is not None:
                 if not obs.stopping: return obs
-            if (cls := DynObservable.lookup(req['name'])) is not None:
-                new_obs = cls(req, self, wr)
+            if cls is not None:
+                new_obs = cls(key, req, self)
                 if obs is not None:
                     event_observables.labels(obs.name).dec()
                 self.observables[new_obs.key] = new_obs
@@ -413,14 +415,39 @@ class Watcher:
         if obs is not None: obs.unwatch(self, wid)
 
 
+class ReqAttr:
+    def __init__(self, optional=False):
+        self.optional = optional
+
+    def __set_name__(self, owner, name):
+        self.name = name
+        if (a := owner.__dict__.get('_req_attrs')) is None:
+            a = owner._req_attrs = set()
+            for b in owner.__bases__: a.update(b.__dict__.get('_req_attrs', ()))
+        a.add(name)
+
+    def __get__(self, inst, owner=None):
+        return inst.req[self.name] if inst is not None else self
+
+
 class Observable:
+    name = ReqAttr()
+
+    @classmethod
+    def normalize(cls, req, wr):
+        req_attrs = cls._req_attrs
+        for k in list(req):
+            if k not in req_attrs: del req[k]
+        for k in req_attrs:
+            if not getattr(cls, k).optional: arg(req, k)
+
     @staticmethod
     def hash(req):
         return hashlib.sha256(util.to_json_sorted(req).encode('utf-8')).digest()
 
-    def __init__(self, req):
-        self.req = req  # TODO: Remove
-        self.key = self.hash(req)
+    def __init__(self, key, req):
+        self.key = key
+        self.req = req
         self.lock = threading.Condition(threading.Lock())
         self.watches = set()
 
@@ -452,8 +479,8 @@ class Observable:
 
 class ValueObservable(Observable):
     def __init__(self, name, value):
-        super().__init__({'name': name})
-        self.name = name
+        req = {'name': name}
+        super().__init__(self.hash(req), req)
         self._value = value
 
     def set(self, value):
@@ -481,8 +508,8 @@ class DynObservable(Observable):
     @classmethod
     def lookup(cls, name): return cls._observables.get(name)
 
-    def __init__(self, req, events):
-        super().__init__(req)
+    def __init__(self, key, req, events):
+        super().__init__(key, req)
         self.events = events
 
     def unwatch(self, watcher, wid):
@@ -512,8 +539,8 @@ def limit_interval(interval, burst=1):
 
 
 class DbObservable(DynObservable):
-    def __init__(self, req, events, data=None, limit=None):
-        super().__init__(req, events)
+    def __init__(self, key, req, events, data=None, limit=None):
+        super().__init__(key, req, events)
         self._data = data
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stop = False
@@ -571,62 +598,78 @@ class DbObservable(DynObservable):
 
 
 class SolutionsObservable(DbObservable, name='solutions'):
-    def __init__(self, req, events, wr):
-        self._origin = req['_origin'] = wr.required_origin
-        self._page = arg(req, 'page')
-        super().__init__(req, events)
+    _origin = ReqAttr()
+    page = ReqAttr()
+
+    @classmethod
+    def normalize(cls, req, wr):
+        req['_origin'] = wr.required_origin
+        super().normalize(req, wr)
 
     def wake_keys(self, db):
-        return [db.solutions.show_key(self._origin, self._page)]
+        return [db.solutions.show_key(self._origin, self.page)]
 
     def query(self, db):
-        return {'show': db.solutions.get_show(self._origin, self._page)}, None
+        return {'show': db.solutions.get_show(self._origin, self.page)}, None
 
 
 class PollObservable(DbObservable, name='poll'):
-    def __init__(self, req, events, wr):
-        self._origin = req['_origin'] = wr.required_origin
-        self._id = arg(req, 'id')
-        super().__init__(req, events)
+    _origin = ReqAttr()
+    id = ReqAttr()
+
+    @classmethod
+    def normalize(cls, req, wr):
+        req['_origin'] = wr.required_origin
+        super().normalize(req, wr)
 
     def wake_keys(self, db):
-        return [db.polls.poll_key(self._origin, self._id)]
+        return [db.polls.poll_key(self._origin, self.id)]
 
     def query(self, db):
-        data = db.polls.poll_data(self._origin, self._id)
+        data = db.polls.poll_data(self._origin, self.id)
         if (exp := data.pop('exp')) is not None and exp <= time.time_ns():
             exp = None
         return data, exp
 
 
 class PollVotesObservable(DbObservable, name='poll/votes'):
-    def __init__(self, req, events, wr):
-        self._origin = req['_origin'] = wr.required_origin
-        self._voter, self._ids = args(req, 'voter', 'ids')
-        self._ids.sort()
-        super().__init__(req, events)
+    _origin = ReqAttr()
+    voter = ReqAttr()
+    # TODO: Accept a single ID, once on websockets
+    ids = ReqAttr()
+
+    @classmethod
+    def normalize(cls, req, wr):
+        req['_origin'] = wr.required_origin
+        super().normalize(req, wr)
+        req['ids'].sort()
 
     def wake_keys(self, db):
-        return [db.polls.voter_key(self._origin, poll, self._voter)
-                for poll in self._ids]
+        return [db.polls.voter_key(self._origin, poll, self.voter)
+                for poll in self.ids]
 
     def query(self, db):
-        return db.polls.votes_data(self._origin, self._voter, self._ids), None
+        return db.polls.votes_data(self._origin, self.voter, self.ids), None
 
 
 class EditorObservable(DbObservable, name='editor'):
-    def __init__(self, req, events, wr):
-        self._origin = req['_origin'] = wr.required_origin
-        self._editor = arg(req, 'editor')
-        self._instance = req['_instance'] = f'u:{wr.user:016x}'
-        super().__init__(req, events)
+    _origin = ReqAttr()
+    editor = ReqAttr()
+    _instance = ReqAttr()
+
+    @classmethod
+    def normalize(cls, req, wr):
+        req['_origin'] = wr.required_origin
+        # TODO: Check that user is logged in
+        req['_instance'] = f'u:{wr.user:016x}'
+        super().normalize(req, wr)
 
     def wake_keys(self, db):
-        return [db.editors.instance_key(self._origin, self._editor,
+        return [db.editors.instance_key(self._origin, self.editor,
                                         self._instance)]
 
     def query(self, db):
-        return {'version': db.editors.version(self._origin, self._editor,
+        return {'version': db.editors.version(self._origin, self.editor,
                                               self._instance)}, None
 
 
