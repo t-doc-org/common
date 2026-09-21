@@ -338,11 +338,13 @@ class EventsApi:
                 resp['failed'] = failed
             del wr.read_db  # Don't hold onto a cached DB connection
             # TODO: Remove logging
-            obs = collections.defaultdict(list)
+            obs = []
             with self.lock:
-                for k, o in self.observables.items():
-                    obs[o.name].append(util.to_json_sorted(o.req))
-            _log.info("Observables: %(obs)s", obs=obs)
+                for o in self.observables.values():
+                    with o.lock: wcnt = len(o.watches)
+                    obs.append(f"\n[{wcnt:3}] {util.to_json_sorted(o.req)}")
+            obs.sort()
+            _log.info("Observables:%(obs)s", obs=''.join(obs))
             yield util.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 
