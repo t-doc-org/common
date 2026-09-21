@@ -834,7 +834,9 @@ class OidcAuthApi:
                                   event='oidc:login:add'))
         elif user is not None:
             db.after_commit(
-                lambda: _log.info("User 0x%(user)016x logged in", user=user,
+                lambda: _log.info("User 0x%(user)016x logged in via %(name)s",
+                                  user=user, name=self.token_name(id_token),
+                                  iss=id_token['iss'], sub=id_token['sub'],
                                   event='oidc:login'))
 
         # If no existing user was found, and the identity matches auto-creation
@@ -842,8 +844,11 @@ class OidcAuthApi:
         if user is None and (name := self.new_user_name(id_token, icfg)):
             user, = db.users.create([name], unique=False)
             db.after_commit(
-                lambda: _log.info("User 0x%(user)016x was auto-created",
-                                  user=user, event='user:create:auto'))
+                lambda: _log.info(
+                    "User 0x%(user)016x was created for login %(name)s",
+                     user=user, name=self.token_name(id_token),
+                     iss=id_token['iss'], sub=id_token['sub'],
+                     event='oidc:login:create'))
 
         # If we've found or created a user, add or update the identity and
         # generate a new token.
