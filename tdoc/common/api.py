@@ -423,7 +423,7 @@ class ReqAttr:
         self.name = name
         if (a := owner.__dict__.get('_req_attrs')) is None:
             a = owner._req_attrs = set()
-            for b in owner.__bases__: a.update(b.__dict__.get('_req_attrs', ()))
+            for b in owner.__bases__: a.update(getattr(b, '_req_attrs', ()))
         a.add(name)
 
     def __get__(self, inst, owner=None):
@@ -501,7 +501,6 @@ class DynObservable(Observable):
 
     def __init_subclass__(cls, /, **kwargs):
         if (name := kwargs.pop('name', None)) is not None:
-            cls.name = name
             DynObservable._observables[name] = cls
         super().__init_subclass__(**kwargs)
 
