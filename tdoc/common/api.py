@@ -52,7 +52,7 @@ event_observable_notifications = pc.Counter(
     documentation="A count of notifications sent by observables.",
 )
 event_watcher_notifications = pc.Counter(
-    subsystem='event', name='watch_notifications', labelnames=('name',),
+    subsystem='event', name='watcher_notifications', labelnames=('name',),
     documentation="A count of notifications received by watchers.",
 )
 
