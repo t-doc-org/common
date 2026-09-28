@@ -128,17 +128,20 @@ class Timers:
                 self.log.exception("Exception")
             finally:
                 if period is not None:
-                    t += period
-                    self.at(max(t, time.monotonic()), run)
-        with self.lock:
-            heapq.heappush(self.timers, (t, run))
-            self.lock.notify()
+                    t = max(t + period, time.monotonic())
+                    self._at(t, run)
+        self._at(t, run)
 
     def after(self, delay, fn, period=None):
-        self.at(time.monotonic() + delay, fn)
+        self.at(time.monotonic() + delay, fn, period)
 
     def repeat(self, period, fn, delay=0):
         self.after(delay, fn, period)
+
+    def _at(self, t, fn):
+        with self.lock:
+            heapq.heappush(self.timers, (t, fn))
+            self.lock.notify()
 
     def run(self):
         with self.lock:
