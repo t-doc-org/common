@@ -46,6 +46,15 @@ event_watches = pc.Gauge(
     subsystem='event', name='watches', labelnames=('name',),
     documentation="The number of active watches placed on observables.",
 )
+event_observable_notifications = pc.Counter(
+    subsystem='event', name='observable_notifications',
+    labelnames=('name', 'kind'),
+    documentation="A count of notifications sent by observables.",
+)
+event_watcher_notifications = pc.Counter(
+    subsystem='event', name='watch_notifications', labelnames=('name',),
+    documentation="A count of notifications received by watchers.",
+)
 
 
 def arg(data, name, validate=None):
@@ -374,16 +383,17 @@ class Watcher:
     def stop(self):
         self.queue.shutdown(True)
 
-    def send(self, wid, msg):
-        self.queue.put((wid, msg))
+    def send(self, wid, msg, name):
+        self.queue.put((wid, msg, name))
 
     def __iter__(self):
         while True:
             try:
-                wid, msg = self.queue.get(timeout=1)
+                wid, msg, name = self.queue.get(timeout=1)
                 yield b'{"wid":%d,"data":' % wid
                 yield msg
                 yield b'}\n'
+                event_watcher_notifications.labels(name).inc()
             except queue.Empty:
                 yield b'\n'
             except queue.ShutDown:
@@ -443,14 +453,15 @@ class Observable:
         self.lock = threading.Condition(threading.Lock())
         self.watches = set()
 
-    def send_initial_locked(self, watcher, wid): pass
+    def send_initial_locked(self, watcher, wid): raise NotImplementedError()
 
     stopping = False
 
     def stop_locked(self): pass
 
     def send_locked(self, msg):
-        for watcher, wid in self.watches: watcher.send(wid, msg)
+        for watcher, wid in self.watches: watcher.send(wid, msg, self.name)
+        event_observable_notifications.labels(self.name, 'update').inc()
 
     def watch(self, watcher, wid):
         key = (watcher, wid)
@@ -458,7 +469,9 @@ class Observable:
             if key in self.watches: return
             self.watches.add(key)
             event_watches.labels(self.name).inc()
-            self.send_initial_locked(watcher, wid)
+            if self.send_initial_locked(watcher, wid) is not False:
+                event_observable_notifications.labels(self.name, 'initial') \
+                                              .inc()
 
     def unwatch(self, watcher, wid):
         key = (watcher, wid)
@@ -485,7 +498,7 @@ class ValueObservable(Observable):
         return util.to_json(self._value).encode('utf-8')
 
     def send_initial_locked(self, watcher, wid):
-        watcher.send(wid, self._msg())
+        watcher.send(wid, self._msg(), self.name)
 
 
 class DynObservable(Observable):
@@ -543,7 +556,8 @@ class DbObservable(DynObservable):
         return util.to_json(self._data).encode('utf-8')
 
     def send_initial_locked(self, watcher, wid):
-        if self._data is not None: watcher.send(wid, self._msg())
+        if self._data is None: return False
+        watcher.send(wid, self._msg(), self.name)
 
     @property
     def stopping(self):
