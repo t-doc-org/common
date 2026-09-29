@@ -106,7 +106,7 @@ class Timers:
     def __init__(self, executor, log):
         self.exec, self.log = executor, log
         self.lock = threading.Condition(threading.Lock())
-        self.timers, self.stop = [], False
+        self.timers, self.counter, self.stop = [], 0, False
         self.runner = threading.Thread(target=self.run, name='Timers.run')
         self.runner.start()
 
@@ -121,26 +121,33 @@ class Timers:
 
     def at(self, t, fn, period=None):
         def run():
-            nonlocal t
+            reschedule = period is not None
             try:
-                fn()
+                reschedule = fn() is not False and reschedule
             except Exception as e:
                 self.log.exception("Exception")
             finally:
-                if period is not None:
-                    t = max(t + period, time.monotonic())
-                    self._at(t, run)
-        self._at(t, run)
+                if reschedule and entry[2] is not None:
+                    entry[0] = max(entry[0] + period, time.monotonic())
+                    self.insert(entry)
+        entry = [t, 0, run]
+        self.insert(entry)
+        return entry
 
     def after(self, delay, fn, period=None):
-        self.at(time.monotonic() + delay, fn, period)
+        return self.at(time.monotonic() + delay, fn, period)
 
     def repeat(self, period, fn, delay=0):
-        self.after(delay, fn, period)
+        return self.after(delay, fn, period)
 
-    def _at(self, t, fn):
+    def remove(self, entry):
+        with self.lock: entry[2] = None
+
+    def insert(self, entry):
         with self.lock:
-            heapq.heappush(self.timers, (t, fn))
+            entry[1] = self.counter
+            self.counter += 1
+            heapq.heappush(self.timers, entry)
             self.lock.notify()
 
     def run(self):
@@ -149,7 +156,10 @@ class Timers:
                 now = time.monotonic()
                 d = None
                 while self.timers:
-                    t, fn = self.timers[0]
+                    t, _, fn = self.timers[0]
+                    if fn is None:
+                        heapq.heappop(self.timers)
+                        continue
                     if t > now:
                         d = t - now
                         break
