@@ -36,8 +36,8 @@ default_query_format = \
 
 log_entries = pc.Counter(
     subsystem='log', name='entries', labelnames=('level',),
-    documentation="A count of log entries.",
-)
+    documentation="A count of log entries.")
+
 
 class Logger(logging.Logger):
     def _log(self, level, msg, args, exc_info=None, extra=None,
@@ -212,7 +212,7 @@ def compress(src, dst):
 
 
 @contextlib.contextmanager
-def configure(config=None, stderr=None, level=WARNING, stream=False,
+def configure(*, config=None, level=WARNING, stderr=None, stream=False,
               debug=False, on_upgrade=None, db_logs=True):
     if config is None: config = _config.Config({})
     transport = config.get('transport', 'queue')

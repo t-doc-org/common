@@ -11,19 +11,20 @@ import time
 
 import prometheus_client as pc
 
-from . import util
+from . import metrics, util
 
+metrics.gauge(
+    name='db_size', unit="bytes", labels=('db', 'part'),
+    documentation="The size of database parts.")
 db_open_connections = pc.Gauge(
     subsystem='db', name='open_connections', labelnames=('db', 'mode'),
-    documentation="The number of open database connections.",
-)
+    documentation="The number of open database connections.")
 db_transaction_duration = pc.Histogram(
     subsystem='db', name='transaction_duration', unit='seconds',
     labelnames=('db', 'mode'),
     buckets=[0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05,
              0.1, 0.2, 0.5, 1.0],
-    documentation="The duration of database transactions.",
-)
+    documentation="The duration of database transactions.")
 
 
 def to_datetime(nsec):
@@ -60,11 +61,11 @@ class Connection(sqlite3.Connection):
 
     def __exit__(self, typ, value, tb):
         res = super().__exit__(typ, value, tb)
+        db_transaction_duration.labels(self.database.type, self.mode) \
+                               .observe(time.monotonic() - self._start)
         if typ is None:
             for fn in self._after_commit: fn()
         del self._after_commit
-        db_transaction_duration.labels(self.database.type, self.mode) \
-                               .observe(time.monotonic() - self._start)
         return res
 
     def after_commit(self, fn):
@@ -205,12 +206,24 @@ class Database:
         if self.path is None:
             self.mem_db = self.connect(mode='ro')
             self.create(local=True)  # Create in-memory DB
+        self.metrics_db = self.connect(mode='ro')
+        self.page_size = self.metrics_db.row("pragma page_size")[0]
+        self.metrics_stop = metrics.collect(self.set_metrics)
         return self
 
     def __exit__(self, typ, value, tb):
+        self.metrics_stop()
         if self.mem_db is not None:
             self.mem_db.close()
             self.mem_db = None
+
+    def set_metrics(self, metrics):
+        with self.metrics_db as db:
+            page_count = db.row("pragma page_count")[0]
+            freelist_count = db.row("pragma freelist_count")[0]
+        db_size = metrics['db_size']
+        db_size.add_metric((self.type, "total"), page_count * self.page_size)
+        db_size.add_metric((self.type, "free"), freelist_count * self.page_size)
 
     def connect(self, *, mode, path=False, isolation_level=None):
         if path is False: path = self.path

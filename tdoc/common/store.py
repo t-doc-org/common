@@ -696,7 +696,7 @@ class Store(database.Database):
         _log.debug("Store: %(path)s",
                    path=self.path if self.path is not None else ':in-memory:')
         res = super().__enter__()
-        self.dispatcher_db = self.mem_db or self.connect(mode='ro')
+        self.dispatcher_db = self.connect(mode='ro')
         self.dispatcher = threading.Thread(target=self.dispatch,
                                            name='store:dispatcher')
         with self.lock: self._stop = False
@@ -709,7 +709,7 @@ class Store(database.Database):
             self._stop = True
             self.lock.notify()
         self.dispatcher.join()
-        if self.dispatcher_db != self.mem_db: self.dispatcher_db.close()
+        self.dispatcher_db.close()
         res = super().__exit__(typ, value, tb)
         _log.debug("Store: done")
         return res

@@ -1,7 +1,6 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-from concurrent import futures
 import contextlib
 import errno
 import html
@@ -297,26 +296,22 @@ class Application:
         self.opts = opts
         self.server = server
         self.api = api_
+        self.exec = opts.exec
+        self.timers = opts.timers
         self.lock = threading.Condition(threading.Lock())
-        self.directory = self.build_dir(0) / 'html'
         self.stop = False
+        self.directory = self.build_dir(0) / 'html'
         self.min_mtime = time.time_ns()
         self.returncode = 0
         self.opened = False
-        self.exec = futures.ThreadPoolExecutor(thread_name_prefix='app')
-        self.timers = util.Timers(self.exec, _log)
 
         self.build_mtime = None
         self.build = api.ValueObservable('build', None)
         self.api.events.add_observable(self.build)
         self.build_status = api.ValueObservable('build/status', {})
         self.api.events.add_observable(self.build_status)
-        self.builder = threading.Thread(target=self.watch_and_build,
-                                        name='builder')
-        self.builder.start()
 
         self.incoming = None
-        self.timers.repeat(15 * 60, self.poll_incoming)
 
     def endpoints(self, disp):
         @disp.pre
@@ -326,15 +321,19 @@ class Application:
         yield from wsgi.endpoints(self)
         yield from wsgi.sub_endpoints('_api', self.api.endpoints(disp))
 
-    def __enter__(self): return self
+    def __enter__(self):
+        self.builder = threading.Thread(target=self.watch_and_build,
+                                        name='builder')
+        self.builder.start()
+        self.incoming_timer = self.timers.repeat(15 * 60, self.poll_incoming)
+        return self
 
     def __exit__(self, typ, value, tb):
+        self.timers.remove(self.incoming_timer)
         with self.lock:
             self.stop = True
             self.lock.notify_all()
         self.builder.join()
-        self.timers.shutdown()
-        self.exec.shutdown()
 
     def sleep(self, duration):
         with self.lock:

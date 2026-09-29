@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from concurrent import futures
 import contextlib
 import datetime
 import functools
@@ -49,13 +50,17 @@ def main(argv, stdin, stdout, stderr):
         opts.config.resolve() if opts.config is not None else None)
     if (fn := getattr(opts.handler, '_pre_run', None)) is not None:
         if (res := fn(opts)) is not None: return res
-    with logs.configure(config=opts.cfg.sub('logging'), stderr=stderr,
-                        level=logs.WARNING, stream=True, debug=opts.debug,
-                        on_upgrade=functools.partial(on_upgrade, opts),
-                        db_logs=not getattr(opts.handler, '_disable_db_logs',
-                                            False)):
+    with futures.ThreadPoolExecutor(thread_name_prefix='exec') as exec, \
+            util.Timers(exec, _log) as timers, \
+            logs.configure(config=opts.cfg.sub('logging'), level=logs.WARNING,
+                           stderr=stderr, stream=True, debug=opts.debug,
+                           on_upgrade=functools.partial(on_upgrade, opts),
+                           db_logs=not getattr(opts.handler, '_disable_db_logs',
+                                               False)):
         _log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
                   argv=argv)
+        opts.exec = exec
+        opts.timers = timers
         return opts.handler(opts)
 
 

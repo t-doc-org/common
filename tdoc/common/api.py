@@ -31,30 +31,24 @@ http_request_duration = pc.Histogram(
     labelnames=('method', 'endpoint', 'status'),
     buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
              1.0, 2.0, 5.0, 10.0],
-    documentation="The duration of HTTP requests.",
-)
+    documentation="The duration of HTTP requests.")
 http_active_requests = pc.Gauge(
     subsystem='http', name='active_requests',
     labelnames=('method', 'endpoint'),
-    documentation="The number of active HTTP requests.",
-)
+    documentation="The number of active HTTP requests.")
 event_observables = pc.Gauge(
     subsystem='event', name='observables', labelnames=('name',),
-    documentation="The number of active observables.",
-)
+    documentation="The number of active observables.")
 event_watches = pc.Gauge(
     subsystem='event', name='watches', labelnames=('name',),
-    documentation="The number of active watches placed on observables.",
-)
+    documentation="The number of active watches placed on observables.")
 event_observable_notifications = pc.Counter(
     subsystem='event', name='observable_notifications',
     labelnames=('name', 'kind'),
-    documentation="A count of notifications sent by observables.",
-)
+    documentation="A count of notifications sent by observables.")
 event_watcher_notifications = pc.Counter(
     subsystem='event', name='watcher_notifications', labelnames=('name',),
-    documentation="A count of notifications received by watchers.",
-)
+    documentation="A count of notifications received by watchers.")
 
 
 def arg(data, name, validate=None):
@@ -141,6 +135,7 @@ class Api:
 
     @contextlib.contextmanager
     def write_db(self):
+        # TODO: Move _write_db_lock and _write_db to Database
         with self._write_db_lock, self._write_db as db:
             yield db
 
