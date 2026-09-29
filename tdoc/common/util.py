@@ -123,14 +123,18 @@ class Timers:
         def run():
             reschedule = period is not None
             try:
-                reschedule = fn() is not False and reschedule
+                with entry[3]:
+                    if entry[2] is not None:
+                        reschedule = fn() is not False and reschedule
+                    else:
+                        reschedule = False
             except Exception as e:
                 self.log.exception("Exception")
             finally:
-                if reschedule and entry[2] is not None:
+                if reschedule:
                     entry[0] = max(entry[0] + period, time.monotonic())
                     self.insert(entry)
-        entry = [t, 0, run]
+        entry = [t, 0, run, threading.Lock()]
         self.insert(entry)
         return entry
 
@@ -141,7 +145,7 @@ class Timers:
         return self.after(delay, fn, period)
 
     def remove(self, entry):
-        with self.lock: entry[2] = None
+        with entry[3]: entry[2] = None
 
     def insert(self, entry):
         with self.lock:
@@ -156,11 +160,12 @@ class Timers:
                 now = time.monotonic()
                 d = None
                 while self.timers:
-                    t, _, fn = self.timers[0]
+                    entry = self.timers[0]
+                    with entry[3]: fn = entry[2]
                     if fn is None:
                         heapq.heappop(self.timers)
                         continue
-                    if t > now:
+                    if (t := entry[0]) > now:
                         d = t - now
                         break
                     heapq.heappop(self.timers)
