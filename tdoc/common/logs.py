@@ -59,7 +59,8 @@ log = logger(__name__)
 class CtxFilter(logging.Filter):
     def filter(self, rec):
         if not hasattr(rec, 'ctx'):
-            if (v := context.get()) is None: v = threading.current_thread().name
+            if (v := context.ctx.get(None)) is None:
+                v = threading.current_thread().name
             rec.ctx = v
         return True
 
@@ -426,7 +427,8 @@ class LogStore(database.Database):
                 if self.queue: recs, self.queue = self.queue, []
             if recs:
                 try:
-                    with self.write_db as db: db.log(recs)
+                    with context.tags.add('log'), self.write_db as db:
+                        db.log(recs)
                 except Exception as e:
                     if self.stderr is not None:
                         self.stderr.write(
@@ -436,7 +438,8 @@ class LogStore(database.Database):
             if next_purge is None or (now := time.monotonic_ns()) < next_purge:
                 continue
             try:
-                with self.write_db as db: db.purge(self.purge_specs)
+                with context.tags.add('purge'), self.write_db as db:
+                    db.purge(self.purge_specs)
             except Exception as e:
                 if self.stderr is not None:
                     self.stderr.write(f"Failed to purge log table: {e}\n")

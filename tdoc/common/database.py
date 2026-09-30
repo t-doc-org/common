@@ -11,7 +11,7 @@ import time
 
 import prometheus_client as pc
 
-from . import metrics, util
+from . import context, metrics, util
 
 metrics.gauge(
     name='db_size', unit="bytes", labels=('db', 'part'),
@@ -21,7 +21,7 @@ db_open_connections = pc.Gauge(
     documentation="The number of open database connections.")
 db_transaction_duration = pc.Histogram(
     subsystem='db', name='transaction_duration', unit='seconds',
-    labelnames=('db', 'mode'),
+    labelnames=('db', 'mode', 'tags'),
     buckets=[0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05,
              0.1, 0.2, 0.5, 1.0],
     documentation="The duration of database transactions.")
@@ -61,8 +61,10 @@ class Connection(sqlite3.Connection):
 
     def __exit__(self, typ, value, tb):
         res = super().__exit__(typ, value, tb)
-        db_transaction_duration.labels(self.database.type, self.mode) \
-                               .observe(time.monotonic() - self._start)
+        db_transaction_duration \
+            .labels(self.database.type, self.mode,
+                    ','.join(sorted(context.tags.get()))) \
+            .observe(time.monotonic() - self._start)
         if typ is None:
             for fn in self._after_commit: fn()
         del self._after_commit

@@ -214,7 +214,7 @@ else:
 def task(fn):
     @functools.wraps(fn)
     def wrapper(self, /, *args, **kwargs):
-        @context.set(fn.__name__)
+        @context.ctx.set_default(fn.__name__)
         def run(): return fn(self, *args, **kwargs)
         return self.exec.submit(run).result
     return wrapper

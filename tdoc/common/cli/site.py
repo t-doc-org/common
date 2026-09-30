@@ -641,7 +641,7 @@ the site.</p>\
     @util.tasks
     def check_incoming(self):
         for repo, name in self.list_remote_repos():
-            @context.set(f'incoming:{name}')
+            @context.ctx.set_default(f'incoming:{name}')
             @util.suppress(
                 lambda name=name: (name, []),
                 log=_log.p.exception("Incoming check on %(repo)s", repo=name,

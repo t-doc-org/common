@@ -21,7 +21,7 @@ import jwt
 import prometheus_client as pc
 from prometheus_client import exposition as pce
 
-from . import database, logs, store, util, wsgi
+from . import context, database, logs, store, util, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
@@ -124,7 +124,8 @@ class Api:
         if token := wr.token:
             # TODO: Make authentication lazy?
             try:
-                with wr.read_db as db: user = db.tokens.authenticate(token)
+                with context.tags.add('auth'), wr.read_db as db:
+                    user = db.tokens.authenticate(token)
             except Exception as e:
                 _log.exception("Authentication failure", event='auth:error')
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
@@ -141,6 +142,7 @@ class Api:
 
     @wsgi.endpoint('metrics', methods=(HTTPMethod.GET, HTTPMethod.OPTIONS),
                    require_authn=True, csrf=False)
+    @context.tags.add('ep:metrics')
     def handle_metrics(self, wr):
         origin = '' if wr.local else o if (o := wr.origin) is not None \
                  else wsgi.origin(wr.uri(include_query=False))
@@ -165,6 +167,7 @@ class Api:
         return [out]
 
     @wsgi.json_endpoint('editor', require_authn=True)
+    @context.tags.add('ep:editor')
     def handle_editor(self, wr, req):
         origin = wr.required_origin
         instance = f'u:{wr.user:016x}'
@@ -188,6 +191,7 @@ class Api:
         raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 
     @wsgi.json_endpoint('poll')
+    @context.tags.add('ep:poll')
     def handle_poll(self, wr, req):
         origin = wr.required_origin
         with wr.write_db as db:
@@ -217,6 +221,7 @@ class Api:
         return {}
 
     @wsgi.json_endpoint('repo', require_authn=True)
+    @context.tags.add('ep:repo')
     def handle_repo(self, wr, req):
         if req.get('info'):
             with wr.read_db as db:
@@ -233,6 +238,7 @@ class Api:
         raise wsgi.Error(HTTPStatus.BAD_REQUEST)
 
     @wsgi.json_endpoint('solutions', require_authn=True)
+    @context.tags.add('ep:solutions')
     def handle_solutions(self, wr, req):
         origin = wr.required_origin
         page = arg(req, 'page')
@@ -243,6 +249,7 @@ class Api:
         return {}
 
     @wsgi.json_endpoint('user')
+    @context.tags.add('ep:user')
     def handle_user(self, wr, req):
         origin = wr.required_origin
         if wr.user is None:
@@ -561,7 +568,8 @@ class DbObservable(DynObservable):
                    cls=self.__class__.__name__)
         try:
             store = self.events.api.store
-            with contextlib.closing(store.connect(mode='ro')) as db, \
+            with context.tags.add(f'obs:{self.name}'), \
+                    contextlib.closing(store.connect(mode='ro')) as db, \
                     store.waker(self.lock, self.wake_keys(db), db,
                                 self._limit) as waker:
                 while True:
@@ -710,6 +718,7 @@ class OidcAuthApi:
         return f'sub:{id_token['sub']}'
 
     @wsgi.json_endpoint('info')
+    @context.tags.add('ep:auth/info')
     def handle_info(self, wr, req):
         resp = {'issuers': [{'issuer': i, 'label': icfg.get('label', i)}
                             for i, icfg in self.issuers.items()]}
@@ -730,6 +739,7 @@ class OidcAuthApi:
         return resp
 
     @wsgi.json_endpoint('update', require_authn=True)
+    @context.tags.add('ep:auth/update')
     def handle_update(self, wr, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
@@ -779,6 +789,7 @@ class OidcAuthApi:
         raise Exception("Invalid issuer")
 
     @wsgi.json_endpoint('login')
+    @context.tags.add('ep:auth/login')
     def handle_login(self, wr, req):
         token = wr.token
         auth = wr.uri(include_query=False).rsplit('/', 1)[0]
@@ -824,6 +835,7 @@ class OidcAuthApi:
 
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
                    log_query=False)
+    @context.tags.add('ep:auth/redirect')
     def handle_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         if (state := qs.get('state')) is None:
@@ -949,6 +961,7 @@ class OidcAuthApi:
         return True
 
     @wsgi.json_endpoint('logout', require_authn=True)
+    @context.tags.add('ep:auth/logout')
     def handle_logout(self, wr, req):
         token = wr.token
         wr.set_token_cookie(None)

@@ -11,7 +11,7 @@ import time
 
 import bcrypt
 
-from . import database, logs, util
+from . import context, database, logs, util
 
 _log = logs.logger(__name__)
 max_id_len = 64  # Maximum length of globally-unique identifiers
@@ -743,6 +743,7 @@ class Store(database.Database):
             self._wake.merge(seqs.items())
             self.lock.notify()
 
+    @context.tags.add('db:notification')
     def dispatch(self):
         # TODO: Make more resilient against DB errors
         next_poll = None
