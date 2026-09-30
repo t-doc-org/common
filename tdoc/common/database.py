@@ -178,7 +178,9 @@ class Database:
         self.pragma.setdefault('temp_store', 'memory')
         self.write_isolation_level = config.get('write_isolation_level',
                                                 'immediate')
-        self.mem_db = None
+        self._mem_db = None
+        self._write_db_lock = threading.Lock()
+        self._write_db = None
 
     @property
     def exists(self): return self.path is not None and self.path.exists()
@@ -204,7 +206,7 @@ class Database:
 
     def __enter__(self):
         if self.path is None:
-            self.mem_db = self.connect(mode='ro')
+            self._mem_db = self.connect(mode='ro')
             self.create(local=True)  # Create in-memory DB
         self.metrics_db = self.connect(mode='ro')
         self.page_size = self.metrics_db.row("pragma page_size")[0]
@@ -213,9 +215,13 @@ class Database:
 
     def __exit__(self, typ, value, tb):
         self.metrics_stop()
-        if self.mem_db is not None:
-            self.mem_db.close()
-            self.mem_db = None
+        with self._write_db_lock:
+            if (db := self._write_db) is not None:
+                db.close()
+                self._write_db = None
+        if self._mem_db is not None:
+            self._mem_db.close()
+            self._mem_db = None
 
     def set_metrics(self, metrics):
         with self.metrics_db as db:
@@ -249,6 +255,14 @@ class Database:
                         else False
         db.create_function('regexp', 2, _regexp, deterministic=True)
         return db
+
+    @property
+    @contextlib.contextmanager
+    def write_db(self):
+        with self._write_db_lock:
+            if (wdb := self._write_db) is None:
+                wdb = self._write_db = self.connect(mode='rw')
+            with wdb as db: yield db
 
     def pool(self, **kwargs):
         kwargs.setdefault('size', self.config.get('pool_size', 16))

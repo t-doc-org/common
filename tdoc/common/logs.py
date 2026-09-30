@@ -393,7 +393,6 @@ class LogStore(database.Database):
 
     def __enter__(self):
         res = super().__enter__()
-        self.db = self.connect(mode='rw')
         self.flusher = threading.Thread(target=self._flush, name='log:flusher')
         with self.lock: self._stop = self._wake = False
         self.flusher.start()
@@ -404,7 +403,6 @@ class LogStore(database.Database):
             self._stop = True
             self.lock.notify()
         self.flusher.join()
-        self.db.close()
         return super().__exit__(typ, value, tb)
 
     def log(self, rec):
@@ -428,7 +426,7 @@ class LogStore(database.Database):
                 if self.queue: recs, self.queue = self.queue, []
             if recs:
                 try:
-                    with self.db as db: db.log(recs)
+                    with self.write_db as db: db.log(recs)
                 except Exception as e:
                     if self.stderr is not None:
                         self.stderr.write(
@@ -438,7 +436,7 @@ class LogStore(database.Database):
             if next_purge is None or (now := time.monotonic_ns()) < next_purge:
                 continue
             try:
-                with self.db as db: db.purge(self.purge_specs)
+                with self.write_db as db: db.purge(self.purge_specs)
             except Exception as e:
                 if self.stderr is not None:
                     self.stderr.write(f"Failed to purge log table: {e}\n")

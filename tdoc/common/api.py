@@ -91,8 +91,6 @@ class Api:
         self.domain = config.get('deployment.domain')
         self.cache = wsgi.HttpCache()
         self._read_db_pool = store.pool(mode='ro')
-        self._write_db_lock = threading.Lock()
-        self._write_db = store.connect(mode='rw')
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'))
 
@@ -113,7 +111,7 @@ class Api:
     def pre_request(self, wr):
         if not wr.local: wr.domain = self.domain
         wr._read_db_pool = self._read_db_pool
-        wr._write_db = self.write_db
+        wr._write_db = lambda: self.store.write_db
         start, endpoint = time.monotonic(), wr.script or '/'
         @wr.post
         def record_duration():
@@ -132,12 +130,6 @@ class Api:
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
-
-    @contextlib.contextmanager
-    def write_db(self):
-        # TODO: Move _write_db_lock and _write_db to Database
-        with self._write_db_lock, self._write_db as db:
-            yield db
 
     def has_perm(self, wr, db, perm, *, origin=None):
         if origin is None: origin = wr.required_origin
