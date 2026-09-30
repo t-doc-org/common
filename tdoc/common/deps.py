@@ -162,7 +162,7 @@ info = {
     },
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
-        'version': '314.0.6',
+        'version': '314.0.7',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [
@@ -173,7 +173,7 @@ info = {
     'sphinx-book-theme': {'version_tag': lambda v: f'v{v}'},
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        'version': '3.53.0-build1',
+        'version': '3.53.4-build1',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
