@@ -230,7 +230,8 @@ class Database:
             page_count = db.row("pragma page_count")[0]
             freelist_count = db.row("pragma freelist_count")[0]
         db_size = metrics['db_size']
-        db_size.add_metric((self.type, "total"), page_count * self.page_size)
+        db_size.add_metric((self.type, "used"),
+                           (page_count - freelist_count) * self.page_size)
         db_size.add_metric((self.type, "free"), freelist_count * self.page_size)
 
     def connect(self, *, mode, path=False, isolation_level=None):
