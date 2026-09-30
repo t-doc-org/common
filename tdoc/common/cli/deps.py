@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
+import functools
 import json
 import re
 import webbrowser
@@ -64,9 +65,9 @@ class Checker:
 
     def check_cdn(self):
         pkgs = []
-        for info in deps.info.values():
+        for k, info in deps.info.items():
             if 'cdn' not in info: continue
-            pkg = NpmPackage(info['name'], info['version'])
+            pkg = NpmPackage(info.get('name', k), info['version'])
             pkg.wanted_from_tag(info['tag'])
             pkg.add_urls(info.get('release_urls', ()))
             if pkg.outdated: pkgs.append(pkg)
@@ -161,13 +162,19 @@ class Package:
         res = self._info_cache[self.name] = util.fetch_json(self.info_url)
         return res
 
+    @functools.cached_property
+    def deps_info(self):
+        for k, info in deps.info.items():
+            if info.get('name', k) == self.name: return info
+        return {}
+
     def add_urls(self, urls=()):
         self.urls = {self.versions_url: None} | {u: None for u in urls}
         self.add_releases_url()
         self.add_diff_url()
 
     def forge_urls(self, urls):
-        fn = deps.info.get(self.name, {}).get('version_tag', lambda v: str(v))
+        fn = self.deps_info.get('version_tag', lambda v: str(v))
         cur, want = fn(self.current), fn(self.wanted)
         for url in urls:
             for pat, fns in forges.items():

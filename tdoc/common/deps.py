@@ -5,10 +5,11 @@ jsdelivr = 'https://cdn.jsdelivr.net'
 
 # TODO: Add constraints on allowed versions
 
-def cdn_url(dep, version=None):
-    if (d := info.get(dep)) is None: return
-    if (cdn := d.get('cdn')) is None: return
-    return cdn(d['name'], version if version is not None else d['version'])
+def cdn_url(key, version=None):
+    if (di := info.get(key)) is None: return
+    if (cdn := di.get('cdn')) is None: return
+    return cdn(di.get('name', key),
+               version if version is not None else di['version'])
 
 
 info = {
@@ -36,7 +37,6 @@ info = {
         ],
     },
     'chartjs-chart-error-bars': {
-        'name': 'chartjs-chart-error-bars',
         'version': '4.4.5',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
@@ -45,7 +45,6 @@ info = {
         ],
     },
     'chartjs-chart-graph': {
-        'name': 'chartjs-chart-graph',
         'version': '4.3.5',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
@@ -54,7 +53,6 @@ info = {
         ],
     },
     'chartjs-chart-venn': {
-        'name': 'chartjs-chart-venn',
         'version': '4.3.7',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/build',
@@ -63,7 +61,6 @@ info = {
         ],
     },
     'chartjs-plugin-annotation': {
-        'name': 'chartjs-plugin-annotation',
         'version': '3.1.0',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -72,7 +69,6 @@ info = {
         ],
     },
     'chartjs-plugin-datalabels': {
-        'name': 'chartjs-plugin-datalabels',
         'version': '2.2.0',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -81,7 +77,6 @@ info = {
         ],
     },
     'chartjs-plugin-deferred': {
-        'name': 'chartjs-plugin-deferred',
         'version': '2.0.0',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -100,7 +95,6 @@ info = {
     },
     'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
-        'name': 'jsxgraph',
         'version': '1.13.3',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
@@ -108,7 +102,6 @@ info = {
     },
     'idna': {'version_tag': lambda v: f'v{v}'},
     'mathjax': {
-        'name': 'mathjax',
         'version': '4.1.3',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
@@ -143,7 +136,6 @@ info = {
         'mathjax-mhchem-font-extension',
     ]},
     'mermaid': {
-        'name': 'mermaid',
         'version': '12.0.0',
         'tag': 'latest',
         'version_tag': lambda v: f'mermaid@{v}',
@@ -160,7 +152,6 @@ info = {
     'mdit-py-plugins': {'version_tag': lambda v: f'v{v}'},
     'myst-parser': {'version_tag': lambda v: f'v{v}'},
     'polyscript': {
-        'name': 'polyscript',
         'version': '0.20.20',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
@@ -171,7 +162,6 @@ info = {
     },
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
-        'name': 'pyodide',
         'version': '314.0.6',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
