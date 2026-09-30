@@ -215,12 +215,13 @@ ${ds.marker ? ' checked="checked"' : ''}>\
 // Handle Mermaid diagrams.
 if (tdoc.dyn?.mermaid) {
     (async () => {
+        // TODO(0.99): Remove support for <mermaid-12
         const [{default: mermaid}, {default: elk}] = await Promise.all([
             import(`${tdoc.versions.mermaid}/mermaid.esm.min.mjs`),
-            import(`\
-${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`),
+            +tdoc.versions.mermaid.match(/@(\d+)\./)[1] < 12 ? import(`\
+${tdoc.versions['mermaid-layout-elk']}/mermaid-layout-elk.esm.min.mjs`) : {},
         ]);
-        mermaid.registerLayoutLoaders(elk);
+        if (elk != null) mermaid.registerLayoutLoaders(elk);
         mermaid.initialize({...tdoc.dyn.mermaid, startOnLoad: false});
         const mu = new core.Mutex();  // Mermaid rendering is non-reentrant
         core.dyn.render.mermaid = async el => {

@@ -144,14 +144,14 @@ info = {
     ]},
     'mermaid': {
         'name': 'mermaid',
-        'version': '11.17.2',
+        'version': '12.0.0',
         'tag': 'latest',
         'version_tag': lambda v: f'mermaid@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '0.2.3',
+        'version': '1.0.0',
         'tag': 'latest',
         'version_tag': lambda v: f'@mermaid-js/layout-elk@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',

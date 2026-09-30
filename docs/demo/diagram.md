@@ -22,6 +22,7 @@ This flowchart has links and tooltips on the boxes.
 ```{mermaid}
 title: t-doc.org site structure
 config:
+  layout: dagre
   flowchart:
     curve: linear
     nodeSpacing: 20
@@ -48,6 +49,7 @@ title: How to repair a lamp
 config:
   theme: default
   look: handDrawn
+  layout: elk
 ---
 flowchart TD
   A(["Lamp doesn't work"]) --> B{"Lamp<br>plugged in?"}
