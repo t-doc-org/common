@@ -168,7 +168,7 @@ class Auth extends EventTarget {
         };
         const resp = await call(`/auth/login`, {req});
         this.state.update(v => { v.cnonce = req.cnonce; });
-        location.assign(resp.redirect);
+        return resp.redirect;
     }
 
     async logout() {
@@ -176,7 +176,6 @@ class Auth extends EventTarget {
         this.user.set(undefined);
         await core.showAlert("You have logged out successfully.",
                              {kind: 'warning', load: true});
-        location.reload();
     }
 
     async showLoginModal() {
@@ -215,8 +214,9 @@ Log in</button>\
             e.preventDefault();
             if (!input.value) return;
             await core.toModalMessage(el, async () => {
-                await this.login(`local:${input.value}`);
+                const redirect = await this.login(`local:${input.value}`);
                 modal.hide();
+                location.assign(redirect);
             });
         });
     }
@@ -312,7 +312,7 @@ The login ${login.name} has been removed successfully.`;
 
         const modal = core.showModal(el);
         this.state.update(v => { v.modal = 'settings'; });
-        on(el)['hidden.bs.modal'](() => {
+        on(el)['hide.bs.modal'](() => {
             this.state.update(v => { delete v.modal; });
         });
         on(qs(repo, '.reset')).click(async e => {
@@ -335,6 +335,7 @@ The password has been reset. Copy it now, as it won't be shown again.`;
             await core.toModalMessage(el, async () => {
                 await this.logout();
                 modal.hide();
+                location.reload();
             });
         });
     }
@@ -350,7 +351,7 @@ ${prefix} ${label}</button>\
 </div>`);
             on(btn).click(async () => {
                 await core.toModalMessage(modal, async () => {
-                    await this.login(issuer);
+                    location.assign(await this.login(issuer));
                 });
             });
         }
