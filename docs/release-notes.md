@@ -3,6 +3,14 @@
 
 # Release notes
 
+(release-0-96)=
+## 0.96 *(2026-10-01)*
+
+- Fixed the incoming changes and unknown files checks.
+- Fixed a spurious `PermissionError` when building on Windows.
+- Added a `/metrics` API endpoint and added some useful metrics.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.95...0.96)
+
 (release-0-95)=
 ## 0.95 *(2026-09-15)*
 
