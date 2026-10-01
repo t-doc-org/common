@@ -455,7 +455,7 @@ class Observable:
 
     def send_locked(self, msg):
         for watcher, wid in self.watches: watcher.send(wid, msg, self.name)
-        event_observable_notifications.labels(self.name, 'update').inc()
+        event_observable_notifications.labels(self.name, 'broadcast').inc()
 
     def watch(self, watcher, wid):
         key = (watcher, wid)
@@ -464,7 +464,7 @@ class Observable:
             self.watches.add(key)
             event_watches.labels(self.name).inc()
             if self.send_initial_locked(watcher, wid) is not False:
-                event_observable_notifications.labels(self.name, 'initial') \
+                event_observable_notifications.labels(self.name, 'unicast') \
                                               .inc()
 
     def unwatch(self, watcher, wid):
