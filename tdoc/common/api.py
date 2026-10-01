@@ -447,15 +447,21 @@ class Observable:
         self.lock = threading.Condition(threading.Lock())
         self.watches = set()
 
-    def send_initial_locked(self, watcher, wid): raise NotImplementedError()
-
     stopping = False
 
     def stop_locked(self): pass
 
-    def send_locked(self, msg):
-        for watcher, wid in self.watches: watcher.send(wid, msg, self.name)
-        event_observable_notifications.labels(self.name, 'broadcast').inc()
+    def msg_locked(self): raise NotImplementedError()
+
+    def send_locked(self, watcher=None, wid=None):
+        if (msg := self.msg_locked()) is None: return
+        broadcast = watcher is None
+        if broadcast:
+            for watcher, wid in self.watches: watcher.send(wid, msg, self.name)
+        else:
+            watcher.send(wid, msg, self.name)
+        event_observable_notifications \
+            .labels(self.name, 'broadcast' if broadcast else 'unicast').inc()
 
     def watch(self, watcher, wid):
         key = (watcher, wid)
@@ -463,9 +469,7 @@ class Observable:
             if key in self.watches: return
             self.watches.add(key)
             event_watches.labels(self.name).inc()
-            if self.send_initial_locked(watcher, wid) is not False:
-                event_observable_notifications.labels(self.name, 'unicast') \
-                                              .inc()
+            self.send_locked(watcher, wid)
 
     def unwatch(self, watcher, wid):
         key = (watcher, wid)
@@ -486,13 +490,9 @@ class ValueObservable(Observable):
         with self.lock:
             if value == self._value: return
             self._value = value
-            self.send_locked(self._msg())
+            self.send_locked()
 
-    def _msg(self):
-        return util.to_json(self._value).encode('utf-8')
-
-    def send_initial_locked(self, watcher, wid):
-        watcher.send(wid, self._msg(), self.name)
+    def msg_locked(self): return util.to_json(self._value).encode('utf-8')
 
 
 class DynObservable(Observable):
@@ -546,13 +546,6 @@ class DbObservable(DynObservable):
                                         name=f'obs:{self.key.hex()}')
         self._poller.start()
 
-    def _msg(self):
-        return util.to_json(self._data).encode('utf-8')
-
-    def send_initial_locked(self, watcher, wid):
-        if self._data is None: return False
-        watcher.send(wid, self._msg(), self.name)
-
     @property
     def stopping(self):
         with self.lock: return self._stop
@@ -560,6 +553,10 @@ class DbObservable(DynObservable):
     def stop_locked(self):
         self._stop = True
         self.lock.notify()
+
+    def msg_locked(self):
+        return None if self._data is None \
+               else util.to_json(self._data).encode('utf-8')
 
     def wake_keys(self, db): return None
 
@@ -582,7 +579,7 @@ class DbObservable(DynObservable):
                     with self.lock:
                         if queried and data != self._data:
                             self._data = data
-                            self.send_locked(self._msg())
+                            self.send_locked()
                         waker.wait(lambda: self._stop, until)
                         if self._stop: break
         except Exception:
