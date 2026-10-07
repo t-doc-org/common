@@ -281,7 +281,8 @@ Trie = lambda: collections.defaultdict(Trie)
 def longest_prefix(trie):
     def sub(subs):
         return '|'.join(
-            (f'/{re.escape(n)}' if n else '') + (f'(?:{sub(s)})' if s else '')
+            (f'/{re.escape(n)}' if n else '')
+            + (f'(?:{sub(s)})' if len(s) > 1 else '')
             for n, s in sorted(subs.items(), key=lambda v: (-len(v[0]), v[0])))
     return f'^({sub(trie) if trie else r'^\b$'})(/.*|)$'
 
@@ -303,6 +304,7 @@ class Dispatcher:
         for n in self._endpoints:
             node = trie
             for p in n.lstrip('/').split('/'): node = node[p]
+            node['']  # Ensure prefix paths match
         self._endpoints_re = re.compile(longest_prefix(trie))
 
     def get_handler(self, env):

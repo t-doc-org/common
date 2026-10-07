@@ -84,6 +84,14 @@ def handle_db_errors(fn):
     return dfn
 
 
+static_files = {
+    '/robots.txt': ('text/plain', """\
+User-agent: *
+Disallow: /
+"""),
+}
+
+
 class Api:
     def __init__(self, *, config, store):
         self.config = config
@@ -135,6 +143,22 @@ class Api:
     def has_perm(self, wr, db, perm, *, origin=None):
         if origin is None: origin = wr.required_origin
         return db.users.has_perm(origin, wr.user, perm)
+
+    @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
+                   csrf=False)
+    def handle_default(self, wr):
+        if (sf := static_files.get(wr.path)) is None:
+            raise wsgi.Error(HTTPStatus.NOT_FOUND)
+        mime_type, content = sf
+        if isinstance(content, str): content = content.encode('utf-8')
+        wr.respond(wsgi.http_status(HTTPStatus.OK), [
+            # TODO: Document why the Access-Control-* headers are needed
+            ('Access-Control-Allow-Origin', '*'),
+            ('Access-Control-Expose-Headers', '*'),
+            ('Content-Type', mime_type),
+            ('Content-Length', str(len(content))),
+        ])
+        return [b'' if wr.method == HTTPMethod.HEAD else content]
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def handle_health(self, wr, req):
