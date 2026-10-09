@@ -21,6 +21,7 @@ import prometheus_client as pc
 
 from . import context, database, config as _config, console, util
 
+logging.addLevelName(1000, 'DISABLED')
 globals().update(logging.getLevelNamesMapping())
 
 # The default format strings.
@@ -224,8 +225,13 @@ def configure(*, config=None, level=WARNING, stderr=None, stream=False,
     root = logging.getLogger()
     root._debug = debug
     root.setLevel(config.get('level', level))
-    ctx_filter = CtxFilter()
+    loggers = config.get('loggers', {})
+    for name in loggers.keys():
+        lg = logger(name)
+        cfg = loggers.get(name, {})
+        if (v := cfg.get('level')) is not None: lg.setLevel(v)
 
+    ctx_filter = CtxFilter()
     with contextlib.ExitStack() as stack:
         stack.callback(logging.shutdown)
         hs = [MetricHandler()]

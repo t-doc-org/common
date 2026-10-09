@@ -392,6 +392,15 @@ These tables define logging handlers that store records in text files.
     log file.
   - `keep` (default: `4`): The number of rotated files to keep.
 
+### `[logging.loggers]`
+
+This table configures individual loggers. The keys are logger names, and the
+values are tables that can contain the following keys.
+
+- `level`: The
+  [log level](https://docs.python.org/3/library/logging.html#logging-levels)
+  for the logger. Use the value `"DISABLED"` to disable logging for this logger.
+
 ### `[logging.stream]`
 
 This table configures the logging handler that outputs log records to `stderr`.
