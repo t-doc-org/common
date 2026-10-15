@@ -306,6 +306,17 @@ This table configures a multi-site t-doc deployment.
   cross-origin requests from this domain and all direct subdomains.
 - `scheme` (default: `"https"`): The scheme over which the deployment is served.
 
+### `[deployment.websocket]`
+
+This table configures the websocket server of the API.
+
+- `host`: The network interfaces to bind the server to.
+- `path`: The path to the Unix socket to bind the server to. When set, `host`
+  and `port` are ignored.
+- `permissions` (default: `0o600`): The permissions to set on the Unix socket.
+- `port` (default: `0`): The TCP port to listen on. When zero, choose a random
+  port.
+
 ### `[import-files]`
 
 This table defines files to be copied from outside the repository. The files are

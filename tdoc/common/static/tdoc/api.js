@@ -24,6 +24,26 @@ const [url, bes] = (() => {
 const tokenFlag = `\
 __Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;
 
+if (core.debug('ws')) {
+    (async () => {
+        const ws = new WebSocket(`${url}/ws`);
+        ws.binaryType = 'arraybuffer';
+        on(ws).open(e => {
+            console.log("open:", e);
+            (async () => {
+                let i = 0;
+                while (ws.readyState === WebSocket.OPEN && i < 10) {
+                    ws.send(JSON.stringify({value: i++}));
+                    await core.sleep(500);
+                }
+            })();  // BG
+        });
+        on(ws).message(e => { console.log(e.data); });
+        on(ws).close(e => { console.log("close:", e); });
+        on(ws).error(e => { console.log("error:", e); });
+    })();  // BG
+}
+
 export async function call(path, opts) {
     return await core.fetchJson(`${url}${path}`, {
         credentials: 'include',

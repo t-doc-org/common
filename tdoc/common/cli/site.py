@@ -1,7 +1,9 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import asyncio
 import contextlib
+import contextvars
 import errno
 import html
 from http import HTTPMethod, HTTPStatus
@@ -13,6 +15,7 @@ import os
 import pathlib
 import posixpath
 import re
+import secrets
 import shutil
 import signal
 import socket
@@ -28,7 +31,7 @@ from wsgiref import simple_server
 import pygments
 from pygments import formatters, lexers
 
-from .. import __project__, api, cli, context, deps, fixes, logs, util, wsgi
+from .. import __project__, api, cli, context, deps, fixes, logs, util, ws, wsgi
 
 _log = logs.logger(__name__)
 rc_build_failure = 1
@@ -161,7 +164,10 @@ def cmd_serve(opts):
                          else socket.AF_INET
         default_port = opts.default_port
 
-    with Server(addr, RequestHandler) as srv, \
+    with ws.Server(host='127.0.0.1',
+                   scheme=opts.cfg.get('deployment.scheme', 'http'),
+                   origins='.*', local=True) as ws_srv, \
+            Server(addr, RequestHandler, ws_srv.port) as srv, \
             cli.get_store(opts, allow_mem=True) as st, \
             api.Api(config=opts.cfg, store=st) as api_, \
             Application(opts, srv, api_) as app:
@@ -169,6 +175,7 @@ def cmd_serve(opts):
         disp.add(app.endpoints(disp))
         srv.set_app(disp)
         try:
+            ws_srv.start_serving()
             srv.serve_forever()
         except KeyboardInterrupt:
             opts.stderr.write("Interrupted, exiting\n")
@@ -229,6 +236,10 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
     # https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ/14388707#14388707
     allow_reuse_address = os.name not in ('nt', 'cygwin')
 
+    def __init__(self, addr, req_cls, ws_port, **kwargs):
+        self.ws_port = ws_port
+        super().__init__(addr, req_cls, **kwargs)
+
     @property
     def host_port(self): return self.bind_address[:2]
 
@@ -250,10 +261,64 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
 
 
 class RequestHandler(simple_server.WSGIRequestHandler):
+    # TODO: This would enable automatic keepalive; check if it's worth doing
+    # protocol_version = "HTTP/1.1"
+
     def log_request(self, code='-', size='-'): pass
 
     def log_message(self, format, *args):
         _log.debug((format % args).translate(self._control_char_table))
+
+    def parse_request(self):
+        rl = self.raw_requestline.decode('iso-8859-1').rstrip('\r\n').split()
+        if len(rl) == 3 and rl[0] == 'GET' and rl[2].startswith('HTTP/'):
+            vp = rl[2][5:].split('.')
+            if len(vp) == 2 and all(p.isdigit() and len(p) <= 10 for p in vp):
+                v = tuple(int(p) for p in vp)
+                if (1, 1) <= v < (2, 0) and rl[1] == '/_api/ws':
+                    self.forward_ws(rl[1])
+                    return False
+        return super().parse_request()
+
+    def forward_ws(self, path):
+        self.close_connection = True
+        token = context.ctx.set('wsf:' + secrets.token_hex(8))
+        _log.info("Connecting websocket at %(path)s", path=path)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect(('127.0.0.1', self.server.ws_port))
+                # TODO(py-3.14): Use the context= argument of Thread
+                with util.Thread(
+                        target=lambda c: c.run(self.forward_ws_out, sock),
+                        args=(contextvars.copy_context(),)):
+                    self.forward_ws_in(sock)
+        except Exception as e:
+            _log.exception("Exception in websocket forwarder")
+        finally:
+            _log.info("Disconnected websocket at %(path)s", path=path)
+            context.ctx.reset(token)
+
+    def forward_ws_in(self, sock):
+        try:
+            sock.sendall(self.raw_requestline)
+            while data := self.rfile.read1(): sock.sendall(data)
+            sock.shutdown(socket.SHUT_WR)
+        except Exception:
+            with contextlib.suppress(OSError):
+                sock.shutdown(socket.SHUT_RDWR)
+            _log.exception("Exception in incoming websocket forwarding")
+        finally:
+            self.rfile.close()
+
+    def forward_ws_out(self, sock):
+        try:
+            while data := sock.recv(1 << 16): self.wfile.write(data)
+        except Exception:
+            with contextlib.suppress(OSError):
+                sock.shutdown(socket.SHUT_RDWR)
+            _log.exception("Exception in outgoing websocket forwarding")
+        finally:
+            self.wfile.close()
 
 
 def try_stat(path):

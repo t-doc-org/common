@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import asyncio
 from concurrent import futures
 import contextlib
 import datetime
@@ -33,6 +34,7 @@ build_errors = 'tdoc-build-errors.log'
 fixes = 'tdoc-fixes.json'
 fixes_badge = 'tdoc-fixes.svg'
 _levels = {'error': 0, 'warning': 1, 'info': 2}
+no_match = r'^\b$'
 
 
 def level_key(level): return _levels.get(level, 3)
@@ -428,3 +430,60 @@ def urlopen(*args, **kwargs):
 def fetch_json(*args, **kwargs):
     with urlopen(*args, **kwargs) as f:
         return json.load(f, object_pairs_hook=Namespace)
+
+
+class Thread(threading.Thread):
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, typ, value, tb):
+        self.join()
+
+
+class AsyncThread(threading.Thread):
+    def __init__(self, *, run=None, init=None, group=None, name=None,
+                 daemon=None, context=None):
+        super().__init__(group=group, name=name, daemon=daemon, context=context)
+        self.__init = init if init is not None else self.init()
+        self.__run = run if run is not None else self.async_run()
+        self.__running = threading.Event()
+        self.__exception = None
+
+    def start(self):
+        super().start()
+        self.__running.wait()
+        if (e := self.__exception) is not None: raise e
+
+    def stop(self, *args):
+        self.__loop.call_soon_threadsafe(self.__task.cancel)
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, typ, value, tb):
+        self.stop()
+        self.join()
+
+    def run(self):
+        with asyncio.Runner() as runner:
+            self.__loop = runner.get_loop()
+            return runner.run(self._run())
+
+    async def _run(self):
+        self.__task = asyncio.current_task()
+        try:
+            await self.__init
+        except BaseException as e:
+            self.__exception = e
+            self.__running.set()
+            return
+        self.__running.set()
+        return await self.__run
+
+    async def init(self): pass
+    async def async_run(self): pass
+
+    def call(self, coro):
+        return asyncio.run_coroutine_threadsafe(coro, self.__loop)

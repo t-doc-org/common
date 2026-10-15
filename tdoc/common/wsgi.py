@@ -44,21 +44,21 @@ class Error(Exception):
     def message(self): return self.args[1]
 
 
-def cors(origins=(), methods=(), headers=(), max_age=None, credentials=False):
+def origins(scheme, domain):
+    return rf'{re.escape(scheme)}://(?:{hostname_re}\.)?{re.escape(domain)}'
+
+
+def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
+         credentials=False):
     achs = []
     if origins == '*':
         def allow_origin(origin): return [('Access-Control-Allow-Origin', '*')]
-    elif isinstance(origins, str):
+    else:
         achs.append(('Vary', 'Origin'))
         pat = re.compile(origins)
         def allow_origin(origin):
             return [('Access-Control-Allow-Origin', origin)] \
                    if pat.fullmatch(origin) else []
-    else:
-        achs.append(('Vary', 'Origin'))
-        def allow_origin(origin):
-            return [('Access-Control-Allow-Origin', origin)] \
-                   if origin in origins else []
     if methods:
         achs.append(('Access-Control-Allow-Methods', ','.join(methods)))
     if headers:
@@ -150,8 +150,7 @@ class Request:
     @property
     def required_origin(self):
         if (v := self.env.get('HTTP_ORIGIN')) is None:
-            raise Error(HTTPStatus.PRECONDITION_FAILED,
-                        "Missing Origin: header")
+            raise Error(HTTPStatus.FORBIDDEN, "Missing Origin: header")
         return v if not self.local else ''
 
     @property
@@ -284,7 +283,7 @@ def longest_prefix(trie):
             (f'/{re.escape(n)}' if n else '')
             + (f'(?:{sub(s)})' if len(s) > 1 else '')
             for n, s in sorted(subs.items(), key=lambda v: (-len(v[0]), v[0])))
-    return f'^({sub(trie) if trie else r'^\b$'})(/.*|)$'
+    return f'^({sub(trie) if trie else util.no_match})(/.*|)$'
 
 
 class Dispatcher:

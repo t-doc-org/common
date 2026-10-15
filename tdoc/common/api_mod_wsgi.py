@@ -7,7 +7,7 @@ import re
 import sys
 import threading
 
-from tdoc.common import api, config, store, logs, wsgi
+from tdoc.common import api, config, store, logs, ws, wsgi
 
 _log = logs.logger(__name__)
 
@@ -49,11 +49,21 @@ def application(config_path, events_level=logs.NOTSET):
     disp = wsgi.Dispatcher()
     disp.add(app.endpoints(disp))
 
+    # Set up the websocket server.
     dep = cfg.sub('deployment')
+    scheme = dep.get('scheme', 'https')
+    origins = wsgi.origins(scheme=scheme, domain=domain) \
+              if (domain := dep.get('domain')) is not None else util.no_match
+    wc = dep.get('websocket')
+    if (host := wc.get('host')) is not None \
+            or (path := wc.path('path')) is not None:
+        ws_server = stack.enter_context(ws.Server(
+            host=host, port=wc.get('port', 0), path=path,
+            perms=wc.get('permissions', 0o600), scheme=scheme, origins=origins))
+        ws_server.start_serving()
+
     return wsgi.cors(
-        origins=rf'{re.escape(dep.get('scheme', 'https'))}://'
-                rf'(?:{wsgi.hostname_re}\.)?{re.escape(domain)}'
-                if (domain := dep.get('domain')) is not None else (),
+        origins=origins,
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie',
                  'X-Csrf'),
