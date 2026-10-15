@@ -54,12 +54,12 @@ def application(config_path, events_level=logs.NOTSET):
     scheme = dep.get('scheme', 'https')
     origins = wsgi.origins(scheme=scheme, domain=domain) \
               if (domain := dep.get('domain')) is not None else util.no_match
-    wc = dep.get('websocket')
-    if (host := wc.get('host')) is not None \
-            or (path := wc.path('path')) is not None:
+    if (host := dep.get('websocket.host')) is not None \
+            or (path := dep.path('websocket.path')) is not None:
         ws_server = stack.enter_context(ws.Server(
-            host=host, port=wc.get('port', 0), path=path,
-            perms=wc.get('permissions', 0o600), scheme=scheme, origins=origins))
+            host=host, port=dep.get('websocket.port', 0), path=path,
+            perms=dep.get('websocket.permissions', 0o600), scheme=scheme,
+            origins=origins))
         ws_server.start_serving()
 
     return wsgi.cors(
