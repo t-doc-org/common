@@ -54,8 +54,8 @@ def application(config_path, events_level=logs.NOTSET):
     scheme = dep.get('scheme', 'https')
     origins = wsgi.origins(scheme=scheme, domain=domain) \
               if (domain := dep.get('domain')) is not None else util.no_match
-    if (host := dep.get('websocket.host')) is not None \
-            or (path := dep.path('websocket.path')) is not None:
+    host, path = dep.get('websocket.host'), dep.path('websocket.path')
+    if host is not None or path is not None:
         ws_server = stack.enter_context(ws.Server(
             host=host, port=dep.get('websocket.port', 0), path=path,
             perms=dep.get('websocket.permissions', 0o600), scheme=scheme,
