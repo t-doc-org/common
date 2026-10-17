@@ -35,8 +35,8 @@ class Connection(server.ServerConnection):
     @property
     def remote_addr(self):
         if (rah := self.server.thread.remote_addr_header) \
-                and (h := self.request.headers.get(rah)) is not None:
-            return h
+                and (hs := self.request.headers.get_all(rah)):
+            return hs[0]
         if isinstance(ra := self.remote_address, tuple): return ra[0]
         return ra
 
@@ -45,10 +45,6 @@ class Connection(server.ServerConnection):
         if (v := self.request.headers.get('Origin')) is None:
             raise wsgi.Error(HTTPStatus.FORBIDDEN, "Missing Origin: header")
         return v if not self.local else ''
-
-    @property
-    def cookies(self):
-        return cookies.SimpleCookie(self.request.headers.get('Cookie', ''))
 
     @property
     def token(self):
