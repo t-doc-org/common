@@ -148,12 +148,11 @@ class ConnectionPool:
         return self.database.connect(**self.kwargs)
 
     def release(self, db):
+        db.rollback()
         with self.lock:
-            if self.size <= 0 or len(self.connections) < self.size:
-                db.rollback()
+            if keep := (self.size <= 0 or len(self.connections) < self.size):
                 self.connections.append(db)
-            else:
-                db.close()
+        if not keep: db.close()
 
 
 def _regexp(pat, v):
@@ -181,6 +180,8 @@ class Database:
         self.write_isolation_level = config.get('write_isolation_level',
                                                 'immediate')
         self._mem_db = None
+        self._read_db_pool = ConnectionPool(
+            self, mode='ro', size=self.config.get('pool_size', 16))
         self._write_db_lock = threading.Lock()
         self._write_db = None
 
@@ -258,6 +259,15 @@ class Database:
                         else False
         db.create_function('regexp', 2, _regexp, deterministic=True)
         return db
+
+    @property
+    @contextlib.contextmanager
+    def read_db(self):
+        rdb = self._read_db_pool.get()
+        try:
+            with rdb as db: yield db
+        finally:
+            self._read_db_pool.release(rdb)
 
     @property
     @contextlib.contextmanager
