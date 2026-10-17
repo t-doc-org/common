@@ -158,15 +158,21 @@ class Server(util.AsyncThread):
             return conn.respond(HTTPStatus.INTERNAL_SERVER_ERROR)
 
     async def handle_connection(self, conn):
+        status = 'unknown'
         try:
-            with contextlib.suppress(exceptions.ConnectionClosedOK):
-                while True:
-                    data = await conn.recv()
-                    _log.debug("data=%(data)r", data=data)
-                    await conn.send(data)
+            while True:
+                data = await conn.recv()
+                _log.debug("data=%(data)r", data=data)
+                await conn.send(data)
+        except exceptions.ConnectionClosedOK:
+            status = 'ok'
+        except exceptions.ConnectionClosedError:
+            status = 'error'
         except Exception as e:
+            status = 'exception'
             _log.exception("Uncaught exception", event='ws:exception',
                            **conn._log_args)
         finally:
-            _log.info("Connection closed", event="ws:end", **conn._log_args)
+            _log.info("Connection closed: %(status)s", event="ws:end",
+                      status=status, **conn._log_args)
             conn.run_post()
