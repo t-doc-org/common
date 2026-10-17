@@ -101,7 +101,6 @@ class Api:
         self.store = store
         self.domain = config.get('deployment.domain')
         self.cache = wsgi.HttpCache()
-        self._read_db_pool = store.pool(mode='ro')
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'))
 
@@ -122,7 +121,7 @@ class Api:
 
     def pre_request(self, wr):
         if not wr.local: wr.domain = self.domain
-        wr._read_db_pool = self._read_db_pool
+        wr._read_db = lambda: self.store.read_db
         wr._write_db = lambda: self.store.write_db
         start, endpoint = time.monotonic(), wr.script or '/'
         @wr.post
@@ -388,7 +387,6 @@ class EventsApi:
             resp = {'sid': watcher.sid}
             if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
-            del wr.read_db  # Don't hold onto a cached DB connection
             yield util.to_json(resp).encode('utf-8') + b'\n'
             yield from watcher
 

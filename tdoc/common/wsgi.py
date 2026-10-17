@@ -127,8 +127,7 @@ def with_hash_params(url, params):
 
 class Request:
     __slots__ = ('env', '_respond', '_post', 'status', 'local', 'domain',
-                 'user', 'response_headers', '_read_db_pool', '_read_db',
-                 '_write_db')
+                 'user', 'response_headers', '_read_db', '_write_db')
 
     def __init__(self, env, respond):
         self.env = env
@@ -137,7 +136,7 @@ class Request:
         self.status = None
         self.local = False
         self.domain = self.user = self.response_headers = None
-        self._read_db_pool = self._read_db = self._write_db = None
+        self._read_db = self._write_db = None
 
     method = property(lambda self: self.env['REQUEST_METHOD'])
     script = property(lambda self: self.env['SCRIPT_NAME'])
@@ -194,21 +193,9 @@ class Request:
     def run_post(self):
         post = self._post
         while post: post.pop()()
-        if (db := self._read_db) is not None:
-            self._read_db_pool.release(db)
-            self._read_db = None
 
     @property
-    def read_db(self):
-        if (db := self._read_db) is None:
-            db = self._read_db = self._read_db_pool.get()
-        return db
-
-    @read_db.deleter
-    def read_db(self):
-        if (db := self._read_db) is not None:
-            self._read_db_pool.release(db)
-            self._read_db = None
+    def read_db(self): return self._read_db()
 
     @property
     def write_db(self): return self._write_db()

@@ -153,14 +153,15 @@ def get_store(opts, allow_mem=False):
 
 
 @contextlib.contextmanager
-def get_db(opts, mode):
-    with get_store(opts) as st, \
-            contextlib.closing(st.connect(mode=mode)) as db, db:
+def read_db(opts):
+    with get_store(opts) as st, st.read_db as db:
         yield db
 
 
-def read_db(opts): return get_db(opts, 'ro')
-def write_db(opts): return get_db(opts, 'rw')
+@contextlib.contextmanager
+def write_db(opts):
+    with get_store(opts) as st, st.write_db as db:
+        yield db
 
 
 def backup_path(st):

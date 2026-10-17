@@ -142,6 +142,11 @@ class ConnectionPool:
         self.lock = threading.Lock()
         self.connections = []
 
+    def close(self):
+        with self.lock:
+            conns, self.connections = self.connections, None
+        for db in conns: db.close()
+
     def get(self):
         with self.lock:
             if self.connections: return self.connections.pop()
@@ -150,8 +155,9 @@ class ConnectionPool:
     def release(self, db):
         db.rollback()
         with self.lock:
-            if keep := (self.size <= 0 or len(self.connections) < self.size):
-                self.connections.append(db)
+            keep = self.connections is not None \
+                   and (self.size <= 0 or len(self.connections) < self.size)
+            if keep: self.connections.append(db)
         if not keep: db.close()
 
 
@@ -218,6 +224,7 @@ class Database:
 
     def __exit__(self, typ, value, tb):
         self.metrics_stop()
+        self._read_db_pool.close()
         with self._write_db_lock:
             if (db := self._write_db) is not None:
                 db.close()
@@ -276,10 +283,6 @@ class Database:
             if (wdb := self._write_db) is None:
                 wdb = self._write_db = self.connect(mode='rw')
             with wdb as db: yield db
-
-    def pool(self, **kwargs):
-        kwargs.setdefault('size', self.config.get('pool_size', 16))
-        return ConnectionPool(self, **kwargs)
 
     def backup(self, db, dest):
         if dest.exists(): raise Exception("Backup destination already exists")
