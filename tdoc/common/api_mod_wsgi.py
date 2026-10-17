@@ -60,7 +60,7 @@ def application(config_path, events_level=logs.NOTSET):
             host=host, port=dep.get('websocket.port', 0), path=path,
             perms=dep.get('websocket.permissions', 0o600), scheme=scheme,
             origins=origins, threads=dep.get('websocket.threads')))
-        ws_server.start_serving()
+        ws_server.start_serving(disp)
 
     return wsgi.cors(
         origins=origins,
