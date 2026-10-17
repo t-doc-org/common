@@ -164,19 +164,19 @@ def cmd_serve(opts):
                          else socket.AF_INET
         default_port = opts.default_port
 
-    with ws.Server(host='127.0.0.1',
-                   scheme=opts.cfg.get('deployment.scheme', 'http'),
-                   origins='.*', local=True) as ws_srv, \
+    dep = opts.cfg.sub('deployment')
+    with ws.Server(host='127.0.0.1', port=0, scheme=dep.get('scheme', 'http'),
+                   origins='.*', threads=dep.get('websocket.threads'),
+                   local=True) as ws_srv, \
             Server(addr, RequestHandler, ws_srv.port) as srv, \
             cli.get_store(opts, allow_mem=True) as st, \
             api.Api(config=opts.cfg, store=st) as api_, \
             Application(opts, srv, api_) as app:
         disp = wsgi.Dispatcher()
         disp.add(app.endpoints(disp))
-        srv.set_app(disp)
         try:
-            ws_srv.start_serving()
-            srv.serve_forever()
+            ws_srv.start_serving(disp)
+            srv.serve_forever(disp)
         except KeyboardInterrupt:
             opts.stderr.write("Interrupted, exiting\n")
     return app.returncode
@@ -258,6 +258,10 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
             except OSError as e:
                 if not auto_port or e.errno != errno.EADDRINUSE: raise
                 if (port := port + 1) > 65535: raise
+
+    def serve_forever(self, app):
+        self.set_app(app)
+        super().serve_forever()
 
 
 class RequestHandler(simple_server.WSGIRequestHandler):

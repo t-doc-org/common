@@ -482,6 +482,9 @@ class AsyncThread(threading.Thread):
         self.__running.set()
         return await self.__run
 
+    @property
+    def loop(self): return self.__loop
+
     async def init(self): pass
     async def async_run(self): pass
 

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import collections
+from collections import abc
 import contextlib
 from email import utils
 import functools
@@ -98,6 +99,12 @@ _token_flag_cookie_attrs = {
 }
 
 
+def cookie_token(cookie):
+    if cookie is None: return
+    c = cookies.SimpleCookie(cookie)
+    if (m := c.get(_token_cookie)) is not None: return m.value
+
+
 def cookie(c, name, value, attrs, *, domain=None, max_age=None):
     c[name] = value
     m = c[name]
@@ -155,9 +162,8 @@ class Request:
 
     @property
     def token(self):
-        if (h := self.env.get('HTTP_COOKIE')) is not None:
-            c = cookies.SimpleCookie(h)
-            if (m := c.get(_token_cookie)) is not None: return m.value
+        if (v := cookie_token(self.env.get('HTTP_COOKIE'))) is not None:
+            return v
         if (auth := self.env.get('HTTP_AUTHORIZATION')) is not None:
             parts = auth.split()
             if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
@@ -287,12 +293,21 @@ def longest_prefix(trie):
 
 
 class Dispatcher:
+    # TODO: Move Dispatcher to a separate dispatch.py
+    # TODO: Move websocket handlers here
+
     def __init__(self):
         self._pre = []
+        self._pre_ws = []
         self._endpoints = {}
         self._update_endpoints_re()
 
     def pre(self, fn): self._pre.append(fn)
+    def pre_ws(self, fn): self._pre_ws.append(fn)
+
+    async def run_pre_ws(self, conn):
+        for fn in self._pre_ws:
+            if isinstance(res := fn(conn), abc.Awaitable): await res
 
     def add(self, endpoints):
         self._endpoints.update(endpoints)

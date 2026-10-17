@@ -36,6 +36,9 @@ http_active_requests = pc.Gauge(
     subsystem='http', name='active_requests',
     labelnames=('method', 'endpoint'),
     documentation="The number of active HTTP requests.")
+websocket_active_connections = pc.Gauge(
+    subsystem='websocket', name='active_connections',
+    documentation="The number of active websocket connections.")
 event_observables = pc.Gauge(
     subsystem='event', name='observables', labelnames=('name',),
     documentation="The number of active observables.")
@@ -112,6 +115,7 @@ class Api:
     @wsgi.wrap_endpoints(handle_db_errors)
     def endpoints(self, disp):
         disp.pre(self.pre_request)
+        disp.pre_ws(self.pre_websocket)
         yield from wsgi.endpoints(self)
         yield from wsgi.sub_endpoints('events', self.events.endpoints(disp))
         yield from wsgi.sub_endpoints('auth', self.auth.endpoints(disp))
@@ -139,6 +143,25 @@ class Api:
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             wr.user = user
+
+    async def pre_websocket(self, conn):
+        if not conn.local: conn.domain = self.domain
+        conn._read_db = lambda: self.store.read_db
+        conn._write_db = lambda: self.store.write_db
+        websocket_active_connections.inc()
+        conn.post(websocket_active_connections.dec)
+        if token := conn.token:
+            @conn.blocking
+            def authenticate():
+                with context.tags.add('auth'), conn.read_db as db:
+                    return db.tokens.authenticate(token)
+            try:
+                user = await authenticate
+            except Exception as e:
+                _log.exception("Authentication failure", event='auth:error')
+                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+            if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+            conn.user = user
 
     def has_perm(self, wr, db, perm, *, origin=None):
         if origin is None: origin = wr.required_origin

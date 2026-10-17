@@ -316,6 +316,8 @@ This table configures the websocket server of the API.
 - `permissions` (default: `0o600`): The permissions to set on the Unix socket.
 - `port` (default: `0`): The TCP port to listen on. When zero, choose a random
   port.
+- `threads`: The maximum number of worker threads to use for running blocking
+  code from asynchronous websocket handlers.
 
 ### `[import-files]`
 
