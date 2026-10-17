@@ -33,6 +33,14 @@ class Connection(server.ServerConnection):
     def scheme(self): return self.server.thread.scheme
 
     @property
+    def remote_addr(self):
+        if (rah := self.server.thread.remote_addr_header) \
+                and (h := self.request.headers.get(rah)) is not None:
+            return h
+        if isinstance(ra := self.remote_address, tuple): return ra[0]
+        return ra
+
+    @property
     def origin(self):
         if (v := self.request.headers.get('Origin')) is None:
             raise wsgi.Error(HTTPStatus.FORBIDDEN, "Missing Origin: header")
@@ -81,7 +89,7 @@ class Connection(server.ServerConnection):
         kwargs = {
             'method': req.method,
             'uri': f'{self.scheme}://{req.headers.get('Host', '')}{req.path}',
-            'origin': req.headers.get('Origin'),
+            'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs
@@ -92,12 +100,13 @@ class Connection(server.ServerConnection):
 
 class Server(util.AsyncThread):
     def __init__(self, *, host=None, port=0, path=None, perms=0o600,
-                 scheme='https', origins=util.no_match, threads=None,
-                 local=False):
+                 scheme='https', origins=util.no_match,
+                 remote_addr_header=None, threads=None, local=False):
         self.host, self.port = host, port
         self.path, self.perms = path, perms
         self.scheme = scheme
         self.origins = re.compile(origins)
+        self.remote_addr_header = remote_addr_header
         self.threads = threads
         self.local = local
         super().__init__(name='ws.Server')
@@ -138,7 +147,7 @@ class Server(util.AsyncThread):
         try:
             await self.dispatcher.run_pre_ws(conn)
             log_args = conn._log_args
-            msg = "%(method)s %(uri)s\norigin=%(origin)s"
+            msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
             if 'user' in log_args: msg += " user=0x%(user)016x"
             _log.info(msg, event='ws:start', **log_args)
         except wsgi.Error as e:

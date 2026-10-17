@@ -166,7 +166,8 @@ def cmd_serve(opts):
 
     dep = opts.cfg.sub('deployment')
     with ws.Server(host='127.0.0.1', port=0, scheme=dep.get('scheme', 'http'),
-                   origins='.*', threads=dep.get('websocket.threads'),
+                   origins='.*', remote_addr_header='X-Remote-Addr',
+                   threads=dep.get('websocket.threads'),
                    local=True) as ws_srv, \
             Server(addr, RequestHandler, ws_srv.port) as srv, \
             cli.get_store(opts, allow_mem=True) as st, \
@@ -305,6 +306,8 @@ class RequestHandler(simple_server.WSGIRequestHandler):
     def forward_ws_in(self, sock):
         try:
             sock.sendall(self.raw_requestline)
+            sock.sendall(
+                f'X-Remote-Addr: {self.client_address[0]}\r\n'.encode('utf-8'))
             while data := self.rfile.read1(): sock.sendall(data)
             sock.shutdown(socket.SHUT_WR)
         except Exception:
