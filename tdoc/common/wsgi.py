@@ -39,7 +39,7 @@ class Error(Exception):
         self.headers = headers
 
     @property
-    def status(self): return self.args[0]
+    def code(self): return self.args[0]
 
     @property
     def message(self): return self.args[1]
@@ -237,8 +237,10 @@ class Request:
         self.add_response_headers(*self.token_cookie_headers(token))
 
     def error(self, status, msg=None, exc_info=None, headers=()):
-        if msg is None: msg = status.description
-        body = msg.encode('utf-8')
+        body = f"""\
+{status} {status.phrase}
+{msg if msg is not None else status.description}
+""".encode()
         self.respond(http_status(status), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
@@ -258,7 +260,7 @@ class Request:
         return []
 
     def respond_json(self, data):
-        body = util.to_json(data).encode('utf-8')
+        body = util.to_json(data).encode()
         self.respond(http_status(HTTPStatus.OK), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
@@ -287,6 +289,7 @@ class Dispatcher:
         self._pre = []
         self._pre_ws = []
         self._endpoints = {}
+        self._endpoints_ws = {}
         self._update_endpoints_re()
 
     def pre(self, fn): self._pre.append(fn)
@@ -297,7 +300,13 @@ class Dispatcher:
             if isinstance(res := fn(conn), abc.Awaitable): await res
 
     def add(self, endpoints):
-        self._endpoints.update(endpoints)
+        for name, fn in endpoints:
+            if (et := fn._endpoint_type) == 'wsgi':
+                self._endpoints[name] = fn
+            elif et == 'ws':
+                self._endpoints_ws[name] = fn
+            else:
+                raise TypeError(f"Unknown endpoint type: {et}")
         self._update_endpoints_re()
 
     def _update_endpoints_re(self):
@@ -308,10 +317,13 @@ class Dispatcher:
             node['']  # Ensure prefix paths match
         self._endpoints_re = re.compile(longest_prefix(trie))
 
+    def handler_ws(self, endpoint):
+        return self._endpoints_ws.get(endpoint)
+
     def get_handler(self, env):
         if (p := env.get('PATH_INFO')) \
                 and (m := self._endpoints_re.fullmatch(p)) \
-                and (h := self._endpoints[(ep := m[1])]) is not None:
+                and (h := self._endpoints.get(ep := m[1])) is not None:
             env['SCRIPT_NAME'] += ep
             env['PATH_INFO'] = m[2]
             return h
@@ -334,7 +346,7 @@ class Dispatcher:
                 _log.log(log_level, msg, event='req:start', **log_args)
             yield from handler(wr)
         except Error as e:
-            yield from wr.error(e.status, e.message, exc_info=sys.exc_info(),
+            yield from wr.error(e.code, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
         except Exception as e:
             if log_args is None: log_args = self._log_args(wr, log_query)
@@ -366,9 +378,10 @@ def endpoints(obj):
             yield (f'/{ep}' if ep else ''), getattr(obj, k)
 
 
-def sub_endpoints(parent, endpoints):
+def sub_endpoints(endpoints, **parents):
     for name, fn in endpoints:
-        yield f'/{parent}{name}', fn
+        if p := parents.get(fn._endpoint_type): name = f'/{p}{name}'
+        yield name, fn
 
 
 def wrap_endpoints(wrap):
@@ -398,7 +411,8 @@ def endpoint(name, methods=None, final=True, require_authn=False,
                          or wr.csrf is None):
                 raise Error(HTTPStatus.FORBIDDEN)
             return fn(self, wr)
-        if name is not None: dfn._endpoint = name
+        dfn._endpoint = name
+        dfn._endpoint_type = 'wsgi'
         dfn._log_level = log_level
         dfn._log_query = log_query
         return dfn

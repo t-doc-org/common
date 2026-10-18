@@ -31,10 +31,13 @@ if (core.debug('ws')) {
         on(ws).open(e => {
             console.log("open:", e);
             (async () => {
-                let i = 0;
+                let id = 0, i = 0;
                 while (ws.readyState === WebSocket.OPEN && i < 10) {
-                    ws.send(JSON.stringify({value: i++}));
-                    await core.sleep(500);
+                    ws.send(JSON.stringify({
+                        $A: 1, $Z: 1, $I: id++, $P: '/echo',
+                        value: i++,
+                    }));
+                    await core.sleep(200);
                 }
             })();  // BG
         });

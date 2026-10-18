@@ -21,7 +21,7 @@ import jwt
 import prometheus_client as pc
 from prometheus_client import exposition as pce
 
-from . import context, database, logs, store, util, wsgi
+from . import context, database, logs, store, util, ws, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
@@ -56,9 +56,9 @@ event_watcher_notifications = pc.Counter(
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Missing argument '{name}'")
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Missing argument: {name}")
     if validate is not None and not validate(v):
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Invalid argument '{name}'")
+        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Invalid argument: {name}")
     return v
 
 
@@ -71,19 +71,36 @@ def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
 
 
 def handle_db_errors(fn):
-    @functools.wraps(fn)
-    def dfn(wr):
-        try:
-            yield from fn(wr)
-        except database.client_errors:
-            _log.exception("Store client error", exc_limit=-1, exc_chain=False,
-                           event='store:error:client')
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST)
-        except database.Error as e:
-            _log.exception("Store error", exc_limit=-1, exc_chain=False,
-                           event='store:error')
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST,
-                             e.args[0] if e.args else None)
+    if (et := fn._endpoint_type) == 'wsgi':
+        @functools.wraps(fn)
+        def dfn(wr):
+            try:
+                yield from fn(wr)
+            except database.client_errors:
+                _log.exception("Store client error", exc_limit=-1,
+                               exc_chain=False, event='store:error:client')
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            except database.Error as e:
+                _log.exception("Store error", exc_limit=-1, exc_chain=False,
+                               event='store:error')
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST,
+                                 e.args[0] if e.args else None)
+    elif et == 'ws':
+        @functools.wraps(fn)
+        async def dfn(*args):
+            try:
+                return await fn(*args)
+            except database.client_errors:
+                _log.exception("Store client error", exc_limit=-1,
+                               exc_chain=False, event='store:error:client')
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            except database.Error as e:
+                _log.exception("Store error", exc_limit=-1, exc_chain=False,
+                               event='store:error')
+                raise wsgi.Error(HTTPStatus.BAD_REQUEST,
+                                 e.args[0] if e.args else None)
+    else:
+        dfn = fn
     return dfn
 
 
@@ -116,8 +133,10 @@ class Api:
         disp.pre(self.pre_request)
         disp.pre_ws(self.pre_websocket)
         yield from wsgi.endpoints(self)
-        yield from wsgi.sub_endpoints('events', self.events.endpoints(disp))
-        yield from wsgi.sub_endpoints('auth', self.auth.endpoints(disp))
+        yield from wsgi.sub_endpoints(self.events.endpoints(disp),
+                                      wsgi='events', ws='events')
+        yield from wsgi.sub_endpoints(self.auth.endpoints(disp),
+                                      wsgi='auth', ws='auth')
 
     def pre_request(self, wr):
         if not wr.local: wr.domain = self.domain
@@ -133,11 +152,10 @@ class Api:
         active.inc()
         wr.post(active.dec)
         if token := wr.token:
-            # TODO: Make authentication lazy?
             try:
                 with context.tags.add('auth'), wr.read_db as db:
                     user = db.tokens.authenticate(token)
-            except Exception as e:
+            except Exception:
                 _log.exception("Authentication failure", event='auth:error')
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
@@ -156,7 +174,7 @@ class Api:
                     return db.tokens.authenticate(token)
             try:
                 user = await authenticate
-            except Exception as e:
+            except Exception:
                 _log.exception("Authentication failure", event='auth:error')
                 raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
             if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
@@ -185,6 +203,11 @@ class Api:
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def handle_health(self, wr, req):
         return {}
+
+    @ws.endpoint('echo')
+    @context.tags.add('ep:echo')
+    async def handle_echo(self, conn, req):
+        return req
 
     @wsgi.endpoint('metrics', methods=(HTTPMethod.GET, HTTPMethod.OPTIONS),
                    require_authn=True, csrf=False)
@@ -292,6 +315,20 @@ class Api:
         with wr.write_db as db:
             check(self.has_perm(wr, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
+        return {}
+
+    @ws.endpoint('solutions', require_authn=True)
+    @context.tags.add('ep:solutions')
+    async def ws_handle_solutions(self, conn, req):
+        origin = conn.origin
+        page = arg(req, 'page')
+        show = arg(req, 'show', lambda v: v in ('show', 'hide'))
+        @conn.blocking
+        def transaction():
+            with conn.write_db as db:
+                check(self.has_perm(conn, db, 'solutions:write'))
+                db.solutions.set_show(origin, page, show)
+        await transaction
         return {}
 
     @wsgi.json_endpoint('user')

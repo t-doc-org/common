@@ -391,7 +391,7 @@ class Application:
             wr.env['wsgi.multithread'] = True
             wr.local = True
         yield from wsgi.endpoints(self)
-        yield from wsgi.sub_endpoints('_api', self.api.endpoints(disp))
+        yield from wsgi.sub_endpoints(self.api.endpoints(disp), wsgi='_api')
 
     def __enter__(self):
         self.builder = threading.Thread(target=self.watch_and_build,
