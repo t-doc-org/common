@@ -202,7 +202,7 @@ class Api:
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
     def wsgi_health(self, wr, req):
-        return {'auth': conn.user is not None}
+        return {'auth': wr.user is not None}
 
     @ws.endpoint('health')
     async def ws_health(self, conn, req):
