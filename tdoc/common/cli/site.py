@@ -871,10 +871,10 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
 
     @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
                    final=False, csrf=False, log_level=logs.DEBUG)
-    def handle_cache(self, wr):
-        yield from self.handle_file(wr, self.opts.cache,
-                                    self.fix_cache_path_info,
-                                    self.on_cache_not_found)
+    def wsgi_cache(self, wr):
+        yield from self.serve_file(wr, self.opts.cache,
+                                   self.fix_cache_path_info,
+                                   self.on_cache_not_found)
 
     def _split_cache_path(self, path_info):
         parts = path_info.split('/', 2)
@@ -905,11 +905,11 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
 
     @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
                    csrf=False, log_level=logs.DEBUG)
-    def handle_default(self, wr):
+    def wsgi_default(self, wr):
         with self.lock: base = self.directory
-        yield from self.handle_file(wr, base)
+        yield from self.serve_file(wr, base)
 
-    def handle_file(self, wr, base, fix_path_info=None, on_not_found=None):
+    def serve_file(self, wr, base, fix_path_info=None, on_not_found=None):
         method = wr.method
         path_info = wr.path
         if fix_path_info is not None: path_info = fix_path_info(path_info)
@@ -959,7 +959,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         return res / '' if trailing else res
 
     @wsgi.endpoint('_api/terminate', methods=(HTTPMethod.POST,), csrf=False)
-    def handle_terminate(self, wr):
+    def wsgi_terminate(self, wr):
         rc = wr.json.get('rc', 0)
         yield from wr.respond_json({})
         try:

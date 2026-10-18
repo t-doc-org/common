@@ -186,7 +186,7 @@ class Api:
 
     @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
                    csrf=False)
-    def handle_default(self, wr):
+    def wsgi_default(self, wr):
         if (sf := static_files.get(wr.path)) is None:
             raise wsgi.Error(HTTPStatus.NOT_FOUND)
         mime_type, content = sf
@@ -201,18 +201,17 @@ class Api:
         return [b'' if wr.method == HTTPMethod.HEAD else content]
 
     @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
-    def handle_health(self, wr, req):
-        return {}
+    def wsgi_health(self, wr, req):
+        return {'auth': conn.user is not None}
 
-    @ws.endpoint('echo')
-    @context.tags.add('ep:echo')
-    async def handle_echo(self, conn, req):
-        return req
+    @ws.endpoint('health')
+    async def ws_health(self, conn, req):
+        return {'auth': conn.user is not None}
 
     @wsgi.endpoint('metrics', methods=(HTTPMethod.GET, HTTPMethod.OPTIONS),
                    require_authn=True, csrf=False)
     @context.tags.add('ep:metrics')
-    def handle_metrics(self, wr):
+    def wsgi_metrics(self, wr):
         origin = '' if wr.local else o if (o := wr.origin) is not None \
                  else wsgi.origin(wr.uri(include_query=False))
         with wr.read_db as db:
@@ -237,7 +236,7 @@ class Api:
 
     @wsgi.json_endpoint('editor', require_authn=True)
     @context.tags.add('ep:editor')
-    def handle_editor(self, wr, req):
+    def wsgi_editor(self, wr, req):
         origin = wr.required_origin
         instance = f'u:{wr.user:016x}'
         if editor := req.get('init'):
@@ -261,7 +260,7 @@ class Api:
 
     @wsgi.json_endpoint('poll')
     @context.tags.add('ep:poll')
-    def handle_poll(self, wr, req):
+    def wsgi_poll(self, wr, req):
         origin = wr.required_origin
         with wr.write_db as db:
             if polls := req.get('open'):
@@ -291,7 +290,7 @@ class Api:
 
     @wsgi.json_endpoint('repo', require_authn=True)
     @context.tags.add('ep:repo')
-    def handle_repo(self, wr, req):
+    def wsgi_repo(self, wr, req):
         if req.get('info'):
             with wr.read_db as db:
                 enabled, prefix = db.repo.auth(wr.user)
@@ -308,7 +307,7 @@ class Api:
 
     @wsgi.json_endpoint('solutions', require_authn=True)
     @context.tags.add('ep:solutions')
-    def handle_solutions(self, wr, req):
+    def wsgi_solutions(self, wr, req):
         origin = wr.required_origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
@@ -319,7 +318,7 @@ class Api:
 
     @ws.endpoint('solutions', require_authn=True)
     @context.tags.add('ep:solutions')
-    async def ws_handle_solutions(self, conn, req):
+    async def ws_solutions(self, conn, req):
         origin = conn.origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
@@ -333,7 +332,7 @@ class Api:
 
     @wsgi.json_endpoint('user')
     @context.tags.add('ep:user')
-    def handle_user(self, wr, req):
+    def wsgi_user(self, wr, req):
         origin = wr.required_origin
         if wr.user is None:
             raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
@@ -414,7 +413,7 @@ class EventsApi:
                         self._last_watcher = time.time_ns()
 
     @wsgi.endpoint('watch', methods=(HTTPMethod.POST,))
-    def handle_watch(self, wr):
+    def wsgi_watch(self, wr):
         req = wr.json
         with self.watcher() as watcher:
             wr.respond(wsgi.http_status(HTTPStatus.OK), [
@@ -428,7 +427,7 @@ class EventsApi:
             yield from watcher
 
     @wsgi.json_endpoint('sub')
-    def handle_sub(self, wr, req):
+    def wsgi_sub(self, wr, req):
         sid = arg(req, 'sid')
         with self.lock: watcher = self.watchers.get(sid)
         if watcher is None:
@@ -798,7 +797,7 @@ class OidcAuthApi:
 
     @wsgi.json_endpoint('info')
     @context.tags.add('ep:auth/info')
-    def handle_info(self, wr, req):
+    def wsgi_info(self, wr, req):
         resp = {'issuers': [{'issuer': i, 'label': icfg.get('label', i)}
                             for i, icfg in self.issuers.items()]}
         if wr.user is not None:
@@ -819,7 +818,7 @@ class OidcAuthApi:
 
     @wsgi.json_endpoint('update', require_authn=True)
     @context.tags.add('ep:auth/update')
-    def handle_update(self, wr, req):
+    def wsgi_update(self, wr, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
             with wr.write_db as db:
@@ -869,7 +868,7 @@ class OidcAuthApi:
 
     @wsgi.json_endpoint('login')
     @context.tags.add('ep:auth/login')
-    def handle_login(self, wr, req):
+    def wsgi_login(self, wr, req):
         token = wr.token
         auth = wr.uri(include_query=False).rsplit('/', 1)[0]
         redirect_uri = f'{auth}/redirect'
@@ -915,7 +914,7 @@ class OidcAuthApi:
     @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
                    log_query=False)
     @context.tags.add('ep:auth/redirect')
-    def handle_redirect(self, wr):
+    def wsgi_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         if (state := qs.get('state')) is None:
             raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing state")
@@ -1041,7 +1040,7 @@ class OidcAuthApi:
 
     @wsgi.json_endpoint('logout', require_authn=True)
     @context.tags.add('ep:auth/logout')
-    def handle_logout(self, wr, req):
+    def wsgi_logout(self, wr, req):
         token = wr.token
         wr.set_token_cookie(None)
         with wr.write_db as db:
