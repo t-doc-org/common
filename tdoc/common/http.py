@@ -6,7 +6,7 @@ from http import cookies, HTTPMethod as Method, HTTPStatus as Status
 import re
 import threading
 import time
-# from urllib import parse
+from urllib import parse
 
 from . import logs, util
 
@@ -36,6 +36,7 @@ class Error(Exception):
 
 # A regexp matching a hostname component.
 hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
+
 
 def origins(scheme, domain):
     return rf'{re.escape(scheme)}://(?:{hostname_re}\.)?{re.escape(domain)}'
