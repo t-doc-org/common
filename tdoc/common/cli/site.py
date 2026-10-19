@@ -937,7 +937,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         if not stat.S_ISREG(st.st_mode):
             raise http.Error(http.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
-        wr.respond(http.status(http.OK), [
+        wr.respond(http.OK, [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),

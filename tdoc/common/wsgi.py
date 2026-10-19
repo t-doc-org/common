@@ -17,9 +17,6 @@ from . import context, http, logs, util
 
 _log = logs.logger(__name__)
 
-# A regexp matching the status code part of an HTTP status.
-status_code_re = re.compile(r'^(\d{3}) ')
-
 
 def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
          credentials=False):
@@ -113,12 +110,7 @@ class Request:
 
     def respond(self, status, headers, exc_info=None):
         if self.status is None: self.status = status
-        self._respond(status, headers, exc_info)
-
-    @property
-    def status_code(self):
-        return m[1] if (s := self.status) and (m := status_code_re.search(s)) \
-               else None
+        self._respond(http.status(status), headers, exc_info)
 
     def post(self, fn): self._post.append(fn)
 
@@ -165,7 +157,7 @@ class Request:
     def error(self, status, msg=None, exc_info=None, headers=()):
         if msg is None: msg = http.message(status)
         body = msg.encode()
-        self.respond(http.status(status), [
+        self.respond(status, [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', str(len(body))),
@@ -174,7 +166,7 @@ class Request:
         return [body]
 
     def redirect(self, url, status=http.FOUND):
-        self.respond(http.status(status), [
+        self.respond(status, [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', '0'),
@@ -185,7 +177,7 @@ class Request:
 
     def respond_json(self, data):
         body = util.to_json(data).encode()
-        self.respond(http.status(http.OK), [
+        self.respond(http.OK, [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
@@ -280,9 +272,12 @@ class Dispatcher:
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
+                st = wr.status
                 if log_args is None: log_args = self._log_args(wr, log_query)
-                _log.log(log_level, "%(status)s", event='req:end',
-                         status=wr.status or '<unknown>', **log_args)
+                _log.log(log_level, "%(code)s %(phrase)s", event='req:end',
+                         code=int(st) if st else 0,
+                         phrase=st.phrase if st else 'status unknown',
+                         **log_args)
             wr.run_post()
             context.ctx.reset(token)
 

@@ -88,8 +88,8 @@ class Connection(server.ServerConnection):
         finally:
             if self.protocol.state is not protocol.OPEN:
                 resp = self.response
-                _log.info("%(status)s", event="ws:end",
-                          status=f'{resp.status_code} {resp.reason_phrase}',
+                _log.info("%(code)s %(phrase)s", event="ws:end",
+                          code=int(resp.status_code), phrase=resp.reason_phrase,
                           **self._log_args)
                 self.run_post()
 
@@ -135,14 +135,17 @@ class Connection(server.ServerConnection):
         finally:
             await self.close(close_code)
             rclose, sclose = self.protocol.close_rcvd, self.protocol.close_sent
-            if not rclose: rclose = frames.Close(ABNORMAL_ABNORMAL_CLOSURE, '')
-            if not sclose: sclose = frames.Close(ABNORMAL_ABNORMAL_CLOSURE, '')
+            if rclose is None: rclose = frames.Close(ABNORMAL_CLOSURE, '')
+            if sclose is None: sclose = frames.Close(ABNORMAL_CLOSURE, '')
+            ok = rclose.code in frames.OK_CLOSE_CODES \
+                 and sclose.code in frames.OK_CLOSE_CODES
             if self.protocol.close_rcvd_then_sent:
-                status = f'r:{close_str(rclose)}, s:{close_str(sclose)}'
+                closure = f'r:{close_str(rclose)}, s:{close_str(sclose)}'
             else:
-                status = f's:{close_str(sclose)}, r:{close_str(rclose)}'
-            _log.info("Connection closed: %(status)s", event="ws:end",
-                      status=status, **self._log_args)
+                closure = f's:{close_str(sclose)}, r:{close_str(rclose)}'
+            _log.info("Connection closed: %(status)s (%(closure)s)",
+                      event="ws:end", status='OK' if ok else 'ERROR',
+                      closure=closure, **self._log_args)
             self.run_post()
 
     async def handle_rpc(self, req):
@@ -169,18 +172,18 @@ class Connection(server.ServerConnection):
             code = e.code
             await self.send_error(e.code, e.message)
         except exceptions.ConnectionClosedOK:
-            code = http.OK
+            code = http.SERVICE_UNAVAILABLE
         except exceptions.ConnectionClosedError:
-            code = http.INTERNAL_SERVER_ERROR
+            code = http.SERVICE_UNAVAILABLE
         except Exception:
             _log.exception("Uncaught exception", event='rpc:exception')
             code = http.INTERNAL_SERVER_ERROR
             await self.send_error(code)
         finally:
             if log_level != logs.NOTSET:
-                _log.log(log_level, "RPC end: %(status)s", event='rpc:end',
-                         status=f'{code} {code.phrase}', cid=cid, rid=rid,
-                         **lkw)
+                _log.log(log_level, "RPC end: %(code)s %(phrase)s",
+                         event='rpc:end', code=int(code), phrase=code.phrase,
+                         cid=cid, rid=rid, **lkw)
             context.ctx.reset(token)
 
     def send(self, resp, final=False):
@@ -191,7 +194,7 @@ class Connection(server.ServerConnection):
     def send_error(self, code, msg=''):
         resp = {'$E': code}
         if msg: resp['$M'] = msg
-        return self.send(resp, final=True)
+        return self.send(resp)
 
     @functools.cached_property
     def _log_args(self):

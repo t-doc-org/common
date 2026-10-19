@@ -25,6 +25,7 @@ from . import context, database, http, logs, store, util, ws, wsgi
 _log = logs.logger(__name__)
 missing = object()
 
+# TODO: Move HTTP metrics to wsgi.py
 http_request_duration = pc.Histogram(
     subsystem='http', name='request_duration', unit='seconds',
     labelnames=('method', 'endpoint', 'status'),
@@ -35,6 +36,7 @@ http_active_requests = pc.Gauge(
     subsystem='http', name='active_requests',
     labelnames=('method', 'endpoint'),
     documentation="The number of active HTTP requests.")
+# TODO: Move websocket metrics to wsgi.py
 websocket_active_connections = pc.Gauge(
     subsystem='websocket', name='active_connections',
     documentation="The number of active websocket connections.")
@@ -145,7 +147,8 @@ class Api:
         @wr.post
         def record_duration():
             http_request_duration \
-                .labels(wr.method, endpoint, wr.status_code or '<unknown>') \
+                .labels(wr.method, endpoint,
+                        str(s) if (s := wr.status) else '0') \
                 .observe(time.monotonic() - start)
         active = http_active_requests.labels(wr.method, endpoint)
         active.inc()
@@ -189,7 +192,7 @@ class Api:
             raise http.Error(http.NOT_FOUND)
         mime_type, content = sf
         if isinstance(content, str): content = content.encode('utf-8')
-        wr.respond(http.status(http.OK), [
+        wr.respond(http.OK, [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
@@ -215,7 +218,7 @@ class Api:
         with wr.read_db as db:
             check(self.has_perm(wr, db, 'metrics:read', origin=origin))
         if wr.method == http.OPTIONS:
-            wr.respond(http.status(http.OK), [('Allow', 'OPTIONS,GET')])
+            wr.respond(http.OK, [('Allow', 'OPTIONS,GET')])
             return [b'']
         qs = parse.parse_qs(wr.query)
         registry = pc.REGISTRY
@@ -228,7 +231,7 @@ class Api:
         if pce.gzip_accepted(wr.accept_encoding):
             headers.append(('Content-Encoding', 'gzip'))
             out = gzip.compress(out)
-        wr.respond(http.status(http.OK), headers)
+        wr.respond(http.OK, headers)
         return [out]
 
     @wsgi.json_endpoint('editor', require_authn=True)
@@ -413,7 +416,7 @@ class EventsApi:
     def wsgi_watch(self, wr):
         req = wr.json
         with self.watcher() as watcher:
-            wr.respond(http.status(http.OK), [
+            wr.respond(http.OK, [
                 ('Cache-Control', 'no-store'),
                 ('Content-Type', 'text/plain; charset=utf-8'),
             ])
