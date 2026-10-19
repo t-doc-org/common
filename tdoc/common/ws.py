@@ -6,7 +6,6 @@ from concurrent import futures
 import contextlib
 import contextvars
 import functools
-from http import cookies, HTTPStatus
 import json
 import re
 import secrets
@@ -14,13 +13,13 @@ import secrets
 from websockets import exceptions, frames, protocol
 from websockets.asyncio import server
 
-from . import context, logs, util, wsgi
+from . import context, http, logs, util, wsgi
 
 _log = logs.logger(__name__)
 _wlog = logs.logger('websockets')
 _wlog.setLevel(logs.DISABLED)  # Disable websockets logging by default
 
-CloseCode = frames.CloseCode
+globals().update((v.name, v) for v in frames.CloseCode)
 
 req_id = contextvars.ContextVar('req_id')
 
@@ -53,12 +52,12 @@ class Connection(server.ServerConnection):
     @property
     def required_origin(self):
         if not (v := self.request.headers.get_all('Origin')):
-            raise wsgi.Error(HTTPStatus.FORBIDDEN, "Missing Origin: header")
+            raise http.Error(http.FORBIDDEN, "Missing Origin: header")
         return v[0] if not self.local else ''
 
     @property
     def token(self):
-        t = wsgi.cookie_token(self.request.headers.get('Cookie', ''))
+        t = http.cookie_token(self.request.headers.get('Cookie', ''))
         return t if t is not None else ''
 
     def post(self, fn): self._post.append(fn)
@@ -73,11 +72,11 @@ class Connection(server.ServerConnection):
     @property
     def write_db(self): return self._write_db()
 
-    def respond(self, status, text=None):
-        return super().respond(status, f"""\
-{status} {status.phrase}
-{text.rstrip() if text is not None else status.description}
-""")
+    def respond(self, status, text=None, headers=()):
+        if text is None: text = http.message(status)
+        resp = super().respond(status, text)
+        resp.headers.update(headers)
+        return resp
 
     def blocking(self, fn):
         return self.loop.run_in_executor(None, fn)
@@ -101,15 +100,15 @@ class Connection(server.ServerConnection):
             msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
             if 'user' in log_args: msg += " user=0x%(user)016x"
             _log.info(msg, event='ws:start', **log_args)
-        except wsgi.Error as e:
-            return self.respond(e.status, e.message)
+        except http.Error as e:
+            return self.respond(e.status, e.message, e.headers)
         except Exception as e:
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
-            return self.respond(HTTPStatus.INTERNAL_SERVER_ERROR)
+            return self.respond(http.INTERNAL_SERVER_ERROR)
 
     async def handle_connection(self):
-        close_code = CloseCode.NORMAL_CLOSURE
+        close_code = NORMAL_CLOSURE
         try:
             async with asyncio.TaskGroup() as workers:
                 # TODO: Don't abort workers when exiting block due to exception
@@ -130,16 +129,14 @@ class Connection(server.ServerConnection):
         except exceptions.ConnectionClosed as e:
             pass
         except Exception as e:
-            close_code = CloseCode.INTERNAL_ERROR
+            close_code = INTERNAL_ERROR
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
         finally:
             await self.close(close_code)
             rclose, sclose = self.protocol.close_rcvd, self.protocol.close_sent
-            if not rclose:
-                rclose = frames.Close(CloseCode.ABNORMAL_ABNORMAL_CLOSURE, '')
-            if not sclose:
-                sclose = frames.Close(CloseCode.ABNORMAL_ABNORMAL_CLOSURE, '')
+            if not rclose: rclose = frames.Close(ABNORMAL_ABNORMAL_CLOSURE, '')
+            if not sclose: sclose = frames.Close(ABNORMAL_ABNORMAL_CLOSURE, '')
             if self.protocol.close_rcvd_then_sent:
                 status = f'r:{close_str(rclose)}, s:{close_str(sclose)}'
             else:
@@ -150,14 +147,14 @@ class Connection(server.ServerConnection):
 
     async def handle_rpc(self, req):
         # TODO: Add metrics
-        code, log_level = HTTPStatus.INTERNAL_SERVER_ERROR, logs.NOTSET
+        code, log_level = http.INTERNAL_SERVER_ERROR, logs.NOTSET
         cid, rid = self.id.hex, req_id.get()
         token = context.ctx.set('rpc:' + secrets.token_hex(8))
         try:
             if (path := req.pop('$P', None)) is None:
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+                raise http.Error(http.BAD_REQUEST)
             if (handler := self.dispatcher.handler_ws(path)) is None:
-                raise wsgi.Error(HTTPStatus.NOT_FOUND)
+                raise http.Error(http.NOT_FOUND)
             log_level = getattr(handler, '_log_level', logs.NOTSET)
             if log_level != logs.NOTSET:
                 lkw = self._log_rpc
@@ -167,17 +164,17 @@ class Connection(server.ServerConnection):
                 _log.log(log_level, msg, event='rpc:start', path=path, cid=cid,
                          rid=rid, **lkw)
             await handler(self, req)
-            code = HTTPStatus.OK
-        except wsgi.Error as e:
+            code = http.OK
+        except http.Error as e:
             code = e.code
             await self.send_error(e.code, e.message)
         except exceptions.ConnectionClosedOK:
-            code = HTTPStatus.OK
+            code = http.OK
         except exceptions.ConnectionClosedError:
-            code = HTTPStatus.INTERNAL_SERVER_ERROR
+            code = http.INTERNAL_SERVER_ERROR
         except Exception:
             _log.exception("Uncaught exception", event='rpc:exception')
-            code = HTTPStatus.INTERNAL_SERVER_ERROR
+            code = http.INTERNAL_SERVER_ERROR
             await self.send_error(code)
         finally:
             if log_level != logs.NOTSET:

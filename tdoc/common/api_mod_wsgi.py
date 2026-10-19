@@ -7,7 +7,7 @@ import re
 import sys
 import threading
 
-from tdoc.common import api, config, store, logs, ws, wsgi
+from tdoc.common import api, config, http, logs, store, ws, wsgi
 
 _log = logs.logger(__name__)
 
@@ -52,7 +52,7 @@ def application(config_path, events_level=logs.NOTSET):
     # Set up the websocket server.
     dep = cfg.sub('deployment')
     scheme = dep.get('scheme', 'https')
-    origins = wsgi.origins(scheme=scheme, domain=domain) \
+    origins = http.origins(scheme=scheme, domain=domain) \
               if (domain := dep.get('domain')) is not None else util.no_match
     dws = dep.sub('websocket')
     host, path = dws.get('host'), dws.path('path')

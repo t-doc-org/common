@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 from concurrent import futures
-from http import HTTPStatus
 import io
 import json
 import os
@@ -15,7 +14,7 @@ import sys
 import threading
 from urllib import request
 
-from .. import cli, fixes, util
+from .. import cli, fixes, http, util
 
 # TODO: Handle SIGTERM
 
@@ -229,7 +228,7 @@ def run_tests(tests, repo, wheel, write, opts):
                                       headers=headers)
                 with request.urlopen(req, **kwargs) as f:
                     data = f.read()
-                return HTTPStatus(f.status), f.headers, data
+                return http.Status(f.status), f.headers, data
 
             # Run server tests.
             exercise_server(write, opts, urlopen)

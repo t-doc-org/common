@@ -6,7 +6,6 @@ import contextlib
 import contextvars
 import errno
 import html
-from http import HTTPMethod, HTTPStatus
 import io
 import itertools
 import json
@@ -31,7 +30,8 @@ from wsgiref import simple_server
 import pygments
 from pygments import formatters, lexers
 
-from .. import __project__, api, cli, context, deps, fixes, logs, util, ws, wsgi
+from .. import __project__, api, cli, context, deps, fixes, http, logs, util, \
+               ws, wsgi
 
 _log = logs.logger(__name__)
 rc_build_failure = 1
@@ -869,8 +869,8 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
     def hg(self, *args, **kwargs):
         return util.run('hg', *args, capture_output=True, text=True, **kwargs)
 
-    @wsgi.endpoint('_cache', methods=(HTTPMethod.GET, HTTPMethod.HEAD),
-                   final=False, csrf=False, log_level=logs.DEBUG)
+    @wsgi.endpoint('_cache', methods=(http.GET, http.HEAD), final=False,
+                   csrf=False, log_level=logs.DEBUG)
     def wsgi_cache(self, wr):
         yield from self.serve_file(wr, self.opts.cache,
                                    self.fix_cache_path_info,
@@ -903,8 +903,8 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         except Exception as e:
             _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
-    @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
-                   csrf=False, log_level=logs.DEBUG)
+    @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, csrf=False,
+                   log_level=logs.DEBUG)
     def wsgi_default(self, wr):
         with self.lock: base = self.directory
         yield from self.serve_file(wr, base)
@@ -916,33 +916,33 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         path = self.file_path(path_info, base)
         path.relative_to(base)  # Ensure we're below base
         if (st := try_stat(path)) is None:
-            if on_not_found is None: raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            if on_not_found is None: raise http.Error(http.NOT_FOUND)
             on_not_found(path_info, path)
             if (st := try_stat(path)) is None:
-                raise wsgi.Error(HTTPStatus.NOT_FOUND)
+                raise http.Error(http.NOT_FOUND)
 
         if stat.S_ISDIR(st.st_mode):
             parts = parse.urlsplit(path_info)
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
-                wr.redirect(location, HTTPStatus.MOVED_PERMANENTLY)
+                wr.redirect(location, http.MOVED_PERMANENTLY)
                 return
             path = path / 'index.html'
             if (st := try_stat(path)) is None:
-                raise wsgi.Error(HTTPStatus.NOT_FOUND)
+                raise http.Error(http.NOT_FOUND)
 
         if not stat.S_ISREG(st.st_mode):
-            raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            raise http.Error(http.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
-        wr.respond(wsgi.http_status(HTTPStatus.OK), [
+        wr.respond(http.status(http.OK), [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
             ('Content-Type', mime_type),
             ('Content-Length', str(st.st_size)),
         ])
-        if method == HTTPMethod.HEAD: return
+        if method == http.HEAD: return
         yield from wr.file_wrapper(open(path, 'rb'))
 
     def file_path(self, path, base):
@@ -958,7 +958,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             res = res / part
         return res / '' if trailing else res
 
-    @wsgi.endpoint('_api/terminate', methods=(HTTPMethod.POST,), csrf=False)
+    @wsgi.endpoint('_api/terminate', methods=(http.POST,), csrf=False)
     def wsgi_terminate(self, wr):
         rc = wr.json.get('rc', 0)
         yield from wr.respond_json({})

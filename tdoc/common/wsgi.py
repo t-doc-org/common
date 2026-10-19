@@ -6,47 +6,19 @@ from collections import abc
 import contextlib
 from email import utils
 import functools
-from http import cookies, HTTPMethod, HTTPStatus
 import json
 import re
 import secrets
 import sys
-import threading
-import time
 from urllib import parse
 from wsgiref import util as wsgiutil
 
-from . import context, logs, util
+from . import context, http, logs, util
 
 _log = logs.logger(__name__)
-_missing = object()
-
-# A regexp matching a hostname component.
-hostname_re = r'(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])'
 
 # A regexp matching the status code part of an HTTP status.
 status_code_re = re.compile(r'^(\d{3}) ')
-
-
-def http_status(status):
-    return f'{status} {status.phrase}'
-
-
-class Error(Exception):
-    def __init__(self, status=HTTPStatus.INTERNAL_SERVER_ERROR, msg=None,
-                 headers=()):
-        super().__init__(status, msg)
-        self.headers = headers
-
-    @property
-    def code(self): return self.args[0]
-
-    @property
-    def message(self): return self.args[1]
-
-
-def origins(scheme, domain):
-    return rf'{re.escape(scheme)}://(?:{hostname_re}\.)?{re.escape(domain)}'
 
 
 def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
@@ -78,51 +50,11 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
                     exc_info)
             if (env['REQUEST_METHOD'] == 'OPTIONS' and
                     env.get('HTTP_ACCESS_CONTROL_REQUEST_METHOD') is not None):
-                respond_with_headers(http_status(HTTPStatus.OK), achs)
+                respond_with_headers(http.status(http.OK), achs)
                 return []
             return fn(env, respond_with_headers)
         return handle
     return decorator
-
-
-_token_cookie = '__Host-Http-tdoc-token'
-_token_cookie_attrs = {
-    'httponly': True,
-    'path': '/',
-    'samesite': 'Strict',
-    'secure': True,
-}
-_token_flag_cookie_attrs = {
-    'path': '/',
-    'samesite': 'Strict',
-    'secure': True,
-}
-
-
-def cookie_token(cookie):
-    if cookie is None: return
-    c = cookies.SimpleCookie(cookie)
-    if (m := c.get(_token_cookie)) is not None: return m.value
-
-
-def cookie(c, name, value, attrs, *, domain=None, max_age=None):
-    c[name] = value
-    m = c[name]
-    m.update(attrs)
-    if domain is not None: m['domain'] = domain
-    if max_age is not None: m['max-age'] = max_age
-    return m.OutputString()
-
-
-def origin(url):
-    return parse.urlunsplit(parse.urlsplit(url)._replace(
-            path='', query='', fragment=''))
-
-
-def with_hash_params(url, params):
-    parts = parse.urlsplit(url)
-    parts = parts._replace(fragment='?' + parse.urlencode(params))
-    return parse.urlunsplit(parts)
 
 
 class Request:
@@ -156,12 +88,12 @@ class Request:
     @property
     def required_origin(self):
         if (v := self.env.get('HTTP_ORIGIN')) is None:
-            raise Error(HTTPStatus.FORBIDDEN, "Missing Origin: header")
+            raise http.Error(http.FORBIDDEN, "Missing Origin: header")
         return v if not self.local else ''
 
     @property
     def token(self):
-        if (v := cookie_token(self.env.get('HTTP_COOKIE'))) is not None:
+        if (v := http.cookie_token(self.env.get('HTTP_COOKIE'))) is not None:
             return v
         if (auth := self.env.get('HTTP_AUTHORIZATION')) is not None:
             parts = auth.split()
@@ -171,8 +103,8 @@ class Request:
     def uri(self, include_query=True):
         return wsgiutil.request_uri(self.env, include_query)
 
-    _content_methods = (HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH,
-                        HTTPMethod.OPTIONS, HTTPMethod.DELETE)
+    _content_methods = (http.POST, http.PUT, http.PATCH, http.OPTIONS,
+                        http.DELETE)
 
     @property
     def has_content(self):
@@ -204,14 +136,14 @@ class Request:
     def json(self):
         if (v := self.env.get('tdoc.input.json')) is not None: return v
         if self.env.get('CONTENT_TYPE') != 'application/json':
-            raise Error(HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+            raise http.Error(http.UNSUPPORTED_MEDIA_TYPE)
         try:
             data = self.env['wsgi.input'].read(
                 int(self.env.get('CONTENT_LENGTH', -1)))
             v = self.env['tdoc.input.json'] = json.loads(data)
             return v
         except Exception as e:
-            raise Error(HTTPStatus.BAD_REQUEST)
+            raise http.Error(http.BAD_REQUEST)
 
     def add_response_headers(self, *headers):
         if (rh := self.response_headers) is None:
@@ -225,23 +157,15 @@ class Request:
             domain = self.domain
             url = parse.urlsplit(self.uri(include_query=False))
             suffix = f'-{url.hostname}'
-        max_age = 400 * 24 * 3600 if token else 0
-        c = cookies.SimpleCookie()
-        mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
-                    max_age=max_age)
-        mf = cookie(c, f'__Secure-tdoc-token{suffix}', '1',
-                    _token_flag_cookie_attrs, domain=domain, max_age=max_age)
-        return [('Set-Cookie', mt), ('Set-Cookie', mf)]
+        return http.token_cookie_headers(token, domain, suffix)
 
     def set_token_cookie(self, token):
         self.add_response_headers(*self.token_cookie_headers(token))
 
     def error(self, status, msg=None, exc_info=None, headers=()):
-        body = f"""\
-{status} {status.phrase}
-{msg if msg is not None else status.description}
-""".encode()
-        self.respond(http_status(status), [
+        if msg is None: msg = http.message(status)
+        body = msg.encode()
+        self.respond(http.status(status), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', str(len(body))),
@@ -249,8 +173,8 @@ class Request:
         ], exc_info)
         return [body]
 
-    def redirect(self, url, status=HTTPStatus.FOUND):
-        self.respond(http_status(status), [
+    def redirect(self, url, status=http.FOUND):
+        self.respond(http.status(status), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', '0'),
@@ -261,7 +185,7 @@ class Request:
 
     def respond_json(self, data):
         body = util.to_json(data).encode()
-        self.respond(http_status(HTTPStatus.OK), [
+        self.respond(http.status(http.OK), [
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
@@ -335,7 +259,7 @@ class Dispatcher:
         try:
             handler = self.get_handler(wr.env)
             for fn in self._pre: fn(wr)
-            if handler is None: raise Error(HTTPStatus.NOT_FOUND)
+            if handler is None: raise http.Error(http.NOT_FOUND)
             log_level = getattr(handler, '_log_level', logs.NOTSET)
             log_query = getattr(handler, '_log_query', True)
             if log_level != logs.NOTSET:
@@ -345,14 +269,14 @@ class Dispatcher:
                 if 'user' in log_args: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='req:start', **log_args)
             yield from handler(wr)
-        except Error as e:
+        except http.Error as e:
             yield from wr.error(e.code, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
         except Exception as e:
             if log_args is None: log_args = self._log_args(wr, log_query)
             _log.exception("Uncaught exception", event='req:exception',
                            **log_args)
-            yield from wr.error(HTTPStatus.INTERNAL_SERVER_ERROR,
+            yield from wr.error(http.INTERNAL_SERVER_ERROR,
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
@@ -400,16 +324,16 @@ def endpoint(name, methods=None, final=True, require_authn=False,
     def decorator(fn):
         @functools.wraps(fn)
         def dfn(self, /, wr):
-            if final and wr.path: raise Error(HTTPStatus.NOT_FOUND)
+            if final and wr.path: raise http.Error(http.NOT_FOUND)
             if wr.method not in methods:
-                raise Error(HTTPStatus.METHOD_NOT_ALLOWED, headers=[
+                raise http.Error(http.METHOD_NOT_ALLOWED, headers=[
                     ('Allow', ','.join(methods)),
                 ])
             if require_authn and wr.user is None:
-                raise Error(HTTPStatus.UNAUTHORIZED)
+                raise http.Error(http.UNAUTHORIZED)
             if csrf and (wr.sec_fetch_site not in ('same-origin', 'same-site')
                          or wr.csrf is None):
-                raise Error(HTTPStatus.FORBIDDEN)
+                raise http.Error(http.FORBIDDEN)
             return fn(self, wr)
         dfn._endpoint = name
         dfn._endpoint_type = 'wsgi'
@@ -419,7 +343,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
     return decorator
 
 
-def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
+def json_endpoint(name, methods=(http.POST,), require_authn=False,
                   csrf=True, log_level=logs.INFO, log_query=True):
     def decorator(fn):
         @endpoint(name, methods=methods, require_authn=require_authn, csrf=csrf,
@@ -430,27 +354,3 @@ def json_endpoint(name, methods=(HTTPMethod.POST,), require_authn=False,
                 fn(self, wr, wr.json if wr.has_content else None))
         return dfn
     return decorator
-
-
-class HttpCache:
-    def __init__(self, min_lifetime=10 * 60):
-        self.min_lifetime = min_lifetime
-        self.lock = threading.Lock()
-        self.cache = {}
-
-    def get(self, url, timeout=None):
-        with self.lock:
-            data, exp = self.cache.get(url, (None, None))
-            now = time.time()
-            if data is not None and now < exp: return data
-            try:
-                with util.urlopen(url, timeout=timeout) as f: data = f.read()
-                exp = now + self.min_lifetime
-                with contextlib.suppress(Exception):
-                    if (v := f.headers.get('expires')) is not None:
-                        expires = utils.mktime_tz(utils.parsedate_tz(v))
-                        if expires > exp: exp = expires
-                self.cache[url] = (data, exp)
-            except Exception:
-                if data is None: raise
-            return data

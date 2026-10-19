@@ -7,7 +7,6 @@ import contextlib
 import functools
 import gzip
 import hashlib
-from http import HTTPMethod, HTTPStatus
 import json
 import queue
 import re
@@ -21,7 +20,7 @@ import jwt
 import prometheus_client as pc
 from prometheus_client import exposition as pce
 
-from . import context, database, logs, store, util, ws, wsgi
+from . import context, database, http, logs, store, util, ws, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
@@ -56,9 +55,9 @@ event_watcher_notifications = pc.Counter(
 
 def arg(data, name, validate=None):
     if (v := data.get(name, missing)) is missing:
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Missing argument: {name}")
+        raise http.Error(http.BAD_REQUEST, f"Missing argument: {name}")
     if validate is not None and not validate(v):
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST, f"Invalid argument: {name}")
+        raise http.Error(http.BAD_REQUEST, f"Invalid argument: {name}")
     return v
 
 
@@ -66,8 +65,8 @@ def args(data, *names):
     return tuple(arg(data, n) for n in names)
 
 
-def check(cond, code=HTTPStatus.FORBIDDEN, msg=None):
-    if not cond: raise wsgi.Error(code, msg)
+def check(cond, code=http.FORBIDDEN, msg=None):
+    if not cond: raise http.Error(code, msg)
 
 
 def handle_db_errors(fn):
@@ -79,11 +78,11 @@ def handle_db_errors(fn):
             except database.client_errors:
                 _log.exception("Store client error", exc_limit=-1,
                                exc_chain=False, event='store:error:client')
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+                raise http.Error(http.BAD_REQUEST)
             except database.Error as e:
                 _log.exception("Store error", exc_limit=-1, exc_chain=False,
                                event='store:error')
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST,
+                raise http.Error(http.BAD_REQUEST,
                                  e.args[0] if e.args else None)
     elif et == 'ws':
         @functools.wraps(fn)
@@ -93,11 +92,11 @@ def handle_db_errors(fn):
             except database.client_errors:
                 _log.exception("Store client error", exc_limit=-1,
                                exc_chain=False, event='store:error:client')
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+                raise http.Error(http.BAD_REQUEST)
             except database.Error as e:
                 _log.exception("Store error", exc_limit=-1, exc_chain=False,
                                event='store:error')
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST,
+                raise http.Error(http.BAD_REQUEST,
                                  e.args[0] if e.args else None)
     else:
         dfn = fn
@@ -117,7 +116,7 @@ class Api:
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
-        self.cache = wsgi.HttpCache()
+        self.cache = http.Cache()
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'))
 
@@ -157,8 +156,8 @@ class Api:
                     user = db.tokens.authenticate(token)
             except Exception:
                 _log.exception("Authentication failure", event='auth:error')
-                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-            if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+                raise http.Error(http.UNAUTHORIZED)
+            if user is None: raise http.Error(http.UNAUTHORIZED)
             wr.user = user
 
     async def pre_websocket(self, conn):
@@ -176,31 +175,30 @@ class Api:
                 user = await authenticate
             except Exception:
                 _log.exception("Authentication failure", event='auth:error')
-                raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
-            if user is None: raise wsgi.Error(HTTPStatus.UNAUTHORIZED)
+                raise http.Error(http.UNAUTHORIZED)
+            if user is None: raise http.Error(http.UNAUTHORIZED)
             conn.user = user
 
     def has_perm(self, wr, db, perm, *, origin=None):
         if origin is None: origin = wr.required_origin
         return db.users.has_perm(origin, wr.user, perm)
 
-    @wsgi.endpoint('', methods=(HTTPMethod.GET, HTTPMethod.HEAD), final=False,
-                   csrf=False)
+    @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, csrf=False)
     def wsgi_default(self, wr):
         if (sf := static_files.get(wr.path)) is None:
-            raise wsgi.Error(HTTPStatus.NOT_FOUND)
+            raise http.Error(http.NOT_FOUND)
         mime_type, content = sf
         if isinstance(content, str): content = content.encode('utf-8')
-        wr.respond(wsgi.http_status(HTTPStatus.OK), [
+        wr.respond(http.status(http.OK), [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
             ('Content-Type', mime_type),
             ('Content-Length', str(len(content))),
         ])
-        return [b'' if wr.method == HTTPMethod.HEAD else content]
+        return [b'' if wr.method == http.HEAD else content]
 
-    @wsgi.json_endpoint('health', methods=(HTTPMethod.GET,), csrf=False)
+    @wsgi.json_endpoint('health', methods=(http.GET,), csrf=False)
     def wsgi_health(self, wr, req):
         return {'auth': wr.user is not None}
 
@@ -208,17 +206,16 @@ class Api:
     async def ws_health(self, conn, req):
         return {'auth': conn.user is not None}
 
-    @wsgi.endpoint('metrics', methods=(HTTPMethod.GET, HTTPMethod.OPTIONS),
+    @wsgi.endpoint('metrics', methods=(http.GET, http.OPTIONS),
                    require_authn=True, csrf=False)
     @context.tags.add('ep:metrics')
     def wsgi_metrics(self, wr):
         origin = '' if wr.local else o if (o := wr.origin) is not None \
-                 else wsgi.origin(wr.uri(include_query=False))
+                 else http.origin(wr.uri(include_query=False))
         with wr.read_db as db:
             check(self.has_perm(wr, db, 'metrics:read', origin=origin))
-        if wr.method == HTTPMethod.OPTIONS:
-            wr.respond(wsgi.http_status(HTTPStatus.OK),
-                       [('Allow', 'OPTIONS,GET')])
+        if wr.method == http.OPTIONS:
+            wr.respond(http.status(http.OK), [('Allow', 'OPTIONS,GET')])
             return [b'']
         qs = parse.parse_qs(wr.query)
         registry = pc.REGISTRY
@@ -231,7 +228,7 @@ class Api:
         if pce.gzip_accepted(wr.accept_encoding):
             headers.append(('Content-Encoding', 'gzip'))
             out = gzip.compress(out)
-        wr.respond(wsgi.http_status(HTTPStatus.OK), headers)
+        wr.respond(http.status(http.OK), headers)
         return [out]
 
     @wsgi.json_endpoint('editor', require_authn=True)
@@ -256,7 +253,7 @@ class Api:
                     origin, editor, instance, version, client,
                     updates, text, wr.user)
             return {'success': success}
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        raise http.Error(http.BAD_REQUEST)
 
     @wsgi.json_endpoint('poll')
     @context.tags.add('ep:poll')
@@ -299,11 +296,11 @@ class Api:
         if req.get('reset'):
             with wr.write_db as db:
                 if not db.repo.auth(wr.user)[0]:
-                    raise wsgi.Error(HTTPStatus.FORBIDDEN)
+                    raise http.Error(http.FORBIDDEN)
                 rounds = self.config.get('repo.bcrypt_rounds', 10)
                 password = db.repo.new_password(wr.user, rounds=rounds)
             return {'user': f'0x{wr.user:016x}', 'password': password}
-        raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+        raise http.Error(http.BAD_REQUEST)
 
     @wsgi.json_endpoint('solutions', require_authn=True)
     @context.tags.add('ep:solutions')
@@ -335,7 +332,7 @@ class Api:
     def wsgi_user(self, wr, req):
         origin = wr.required_origin
         if wr.user is None:
-            raise wsgi.Error(HTTPStatus.UNAUTHORIZED,
+            raise http.Error(http.UNAUTHORIZED,
                              headers=wr.token_cookie_headers(None))
         with wr.read_db as db: info = db.users.info(origin, wr.user)
         if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
@@ -398,7 +395,7 @@ class EventsApi:
             sid = secrets.token_urlsafe(8)
             with self.lock:
                 if self._stop_watchers:
-                    raise wsgi.Error(HTTPStatus.REQUEST_TIMEOUT)
+                    raise http.Error(http.REQUEST_TIMEOUT)
                 while sid in self.watchers:
                     sid = secrets.token_urlsafe(8)
                 watcher.sid = sid
@@ -412,11 +409,11 @@ class EventsApi:
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
-    @wsgi.endpoint('watch', methods=(HTTPMethod.POST,))
+    @wsgi.endpoint('watch', methods=(http.POST,))
     def wsgi_watch(self, wr):
         req = wr.json
         with self.watcher() as watcher:
-            wr.respond(wsgi.http_status(HTTPStatus.OK), [
+            wr.respond(http.status(http.OK), [
                 ('Cache-Control', 'no-store'),
                 ('Content-Type', 'text/plain; charset=utf-8'),
             ])
@@ -431,7 +428,7 @@ class EventsApi:
         sid = arg(req, 'sid')
         with self.lock: watcher = self.watchers.get(sid)
         if watcher is None:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Unknown stream ID")
+            raise http.Error(http.BAD_REQUEST, "Unknown stream ID")
         resp = {}
         for wid in req.get('remove', []): watcher.unwatch(wid)
         if failed := self.watch(watcher, req.get('add', []), wr):
@@ -738,7 +735,7 @@ class EditorObservable(DbObservable, name='editor'):
     @classmethod
     def normalize(cls, req, wr):
         req['_origin'] = wr.required_origin
-        if (u := wr.user) is None: raise wsgi.Error(HTTPStatus.FORBIDDEN)
+        if (u := wr.user) is None: raise http.Error(http.FORBIDDEN)
         req['_instance'] = f'u:{u:016x}'
         super().normalize(req, wr)
 
@@ -826,7 +823,7 @@ class OidcAuthApi:
                 count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
                             if self.token_issuer(id_token) is not None)
                 if count < 1:
-                    raise wsgi.Error(HTTPStatus.FORBIDDEN,
+                    raise http.Error(http.FORBIDDEN,
                                      "At least one login is required")
             if id_token is not None:
                 _log.info("User 0x%(user)016x removed login %(name)s",
@@ -873,26 +870,26 @@ class OidcAuthApi:
         auth = wr.uri(include_query=False).rsplit('/', 1)[0]
         redirect_uri = f'{auth}/redirect'
         issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
-        if (href_origin := wsgi.origin(href)) != wr.origin:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Origin mismatch: href")
+        if (href_origin := http.origin(href)) != wr.origin:
+            raise http.Error(http.BAD_REQUEST, "Origin mismatch: href")
         state_id = secrets.token_urlsafe()
         state = {'cnonce': cnonce, 'href': href}
         query = {'state': state_id}
         if wr.local and issuer.startswith('local:'):
             # Handle "log in as" in local mode.
-            if href_origin != wsgi.origin(redirect_uri):
-                raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            if href_origin != http.origin(redirect_uri):
+                raise http.Error(http.BAD_REQUEST)
             with wr.read_db as db:
                 try:
                     uid = db.users.uid(issuer[6:])
                 except Exception as e:
-                    raise wsgi.Error(HTTPStatus.BAD_REQUEST, str(e))
+                    raise http.Error(http.BAD_REQUEST, str(e))
             state.update(login_as=str(uid))
             url = parse.urlsplit(redirect_uri)
         else:
             # Handle OIDC login.
             icfg, disc = self.issuer(issuer)
-            if icfg is None: raise wsgi.Error(HTTPStatus.BAD_REQUEST)
+            if icfg is None: raise http.Error(http.BAD_REQUEST)
             nonce = secrets.token_urlsafe()
             # Create the PKCE challenge as per RFC7636
             # <https://datatracker.ietf.org/doc/html/rfc7636>.
@@ -911,25 +908,24 @@ class OidcAuthApi:
         url = url._replace(query=parse.urlencode(query))
         return {'redirect': parse.urlunsplit(url)}
 
-    @wsgi.endpoint('redirect', methods=(HTTPMethod.GET,), csrf=False,
-                   log_query=False)
+    @wsgi.endpoint('redirect', methods=(http.GET,), csrf=False, log_query=False)
     @context.tags.add('ep:auth/redirect')
     def wsgi_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
         if (state := qs.get('state')) is None:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Missing state")
+            raise http.Error(http.BAD_REQUEST, "Missing state")
         state, href, params = state[0], None, None
         try:
             with wr.write_db as db:
                 if (state := db.oidc.state(state)) is None:
-                    raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
+                    raise http.Error(http.BAD_REQUEST, "Bad state")
                 href, cnonce = state['href'], state['cnonce']
                 handle = self._handle_local_redirect \
                          if wr.local and 'login_as' in state \
                          else self._handle_redirect
                 wr.set_token_cookie(handle(wr, qs, db, state))
                 params = {'auth': cnonce}
-        except wsgi.Error:
+        except http.Error:
             raise
         except Exception as e:
             params = {'auth_error': str(e)}
@@ -937,8 +933,8 @@ class OidcAuthApi:
                       type=e.__class__.__name__, message=str(e),
                       event='oidc:login:error')
         if href is None or params is None:
-            raise wsgi.Error(HTTPStatus.BAD_REQUEST, "Bad state")
-        return wr.redirect(wsgi.with_hash_params(href, params))
+            raise http.Error(http.BAD_REQUEST, "Bad state")
+        return wr.redirect(http.with_hash_params(href, params))
 
     def _handle_local_redirect(self, wr, qs, db, state):
         uid = db.users.uid(int(state['login_as']))

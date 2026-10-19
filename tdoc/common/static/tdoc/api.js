@@ -32,10 +32,9 @@ if (core.debug('ws')) {
             console.log("open:", e);
             (async () => {
                 let id = 0, i = 0;
-                while (ws.readyState === WebSocket.OPEN && i < 10) {
+                while (ws.readyState === WebSocket.OPEN && i++ < 10) {
                     ws.send(JSON.stringify({
                         $A: 1, $Z: 1, $I: id++, $P: '/health',
-                        value: i++,
                     }));
                     await core.sleep(200);
                 }
