@@ -316,6 +316,7 @@ def wrap_endpoints(wrap):
 def endpoint(name, methods=None, final=True, require_authn=False,
              csrf=True, log_level=logs.INFO, log_query=True):
     if methods is None: raise TypeError("Missing methods")
+    if isinstance(methods, http.Method): methods = (methods,)
     def decorator(fn):
         @functools.wraps(fn)
         def dfn(self, /, wr):

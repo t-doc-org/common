@@ -201,7 +201,7 @@ class Api:
         ])
         return [b'' if wr.method == http.HEAD else content]
 
-    @wsgi.json_endpoint('health', methods=(http.GET,), csrf=False)
+    @wsgi.json_endpoint('health', methods=http.GET, csrf=False)
     def wsgi_health(self, wr, req):
         return {'auth': wr.user is not None}
 
@@ -412,7 +412,7 @@ class EventsApi:
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
-    @wsgi.endpoint('watch', methods=(http.POST,))
+    @wsgi.endpoint('watch', methods=http.POST)
     def wsgi_watch(self, wr):
         req = wr.json
         with self.watcher() as watcher:
@@ -911,7 +911,7 @@ class OidcAuthApi:
         url = url._replace(query=parse.urlencode(query))
         return {'redirect': parse.urlunsplit(url)}
 
-    @wsgi.endpoint('redirect', methods=(http.GET,), csrf=False, log_query=False)
+    @wsgi.endpoint('redirect', methods=http.GET, csrf=False, log_query=False)
     @context.tags.add('ep:auth/redirect')
     def wsgi_redirect(self, wr):
         qs = parse.parse_qs(wr.query)
