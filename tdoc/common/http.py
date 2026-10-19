@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
+import functools
 from http import cookies, HTTPMethod as Method, HTTPStatus as Status
 import re
 import threading
@@ -114,3 +115,61 @@ class Cache:
             except Exception:
                 if data is None: raise
             return data
+
+
+class Handler:
+    _types = {}
+
+    def __init_subclass__(cls, /, **kwargs):
+        if (type := kwargs.pop('type', None)) is not None:
+            Handler._types[type] = cls
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self):
+        self._pre = []
+        self.endpoints = {}
+        self.updated()
+
+    def pre(self, fn): self._pre.append(fn)
+    def add(self, name, fn): self.endpoints[name] = fn
+    def updated(self): pass
+
+
+class Dispatcher:
+    def __init__(self):
+        self._handlers = {name: cls() for name, cls in Handler._types.items()}
+
+    def __getitem__(self, type): return self._handlers[type]
+
+    def add(self, endpoints):
+        updated = set()
+        for name, fn in endpoints:
+            try:
+                updated.add(handler := self._handlers[fn._endpoint_type])
+                handler.add(name, fn)
+            except KeyError:
+                raise TypeError(f"Unknown endpoint type: {et}")
+        for handler in updated: handler.updated()
+
+
+def endpoints(obj):
+    for cls in reversed(obj.__class__.__mro__):
+        for k, v in cls.__dict__.items():
+            if (ep := getattr(v, '_endpoint', False)) is False: continue
+            yield (f'/{ep}' if ep else ''), getattr(obj, k)
+
+
+def sub_endpoints(endpoints, **parents):
+    for name, fn in endpoints:
+        if p := parents.get(fn._endpoint_type): name = f'/{p}{name}'
+        yield name, fn
+
+
+def wrap_endpoints(wrap):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def dfn(self, /, reg):
+            for name, hfn in fn(self, reg):
+                yield name, wrap(hfn)
+        return dfn
+    return decorator

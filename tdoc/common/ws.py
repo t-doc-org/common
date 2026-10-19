@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import asyncio
+from collections import abc
 from concurrent import futures
 import contextlib
 import contextvars
@@ -36,10 +37,11 @@ class Connection(server.ServerConnection):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._post = []
-        self.local = self.server.thread.local
-        self.scheme = self.server.thread.scheme
-        self.dispatcher = self.server.thread.dispatcher
+        th = self.server.thread
+        self.local = th.local
+        self.scheme = th.scheme
+        self.__handler = th.handler
+        self.__disconnected = []
 
     @property
     def remote_addr(self):
@@ -60,11 +62,11 @@ class Connection(server.ServerConnection):
         t = http.cookie_token(self.request.headers.get('Cookie', ''))
         return t if t is not None else ''
 
-    def post(self, fn): self._post.append(fn)
+    def disconnected(self, fn): self.__disconnected.append(fn)
 
-    def run_post(self):
-        post = self._post
-        while post: post.pop()()
+    def run_disconnected(self):
+        disconnected = self.__disconnected
+        while disconnected: disconnected.pop()()
 
     @property
     def read_db(self): return self._read_db()
@@ -91,11 +93,11 @@ class Connection(server.ServerConnection):
                 _log.info("%(code)s %(phrase)s", event="ws:end",
                           code=int(resp.status_code), phrase=resp.reason_phrase,
                           **self._log_args)
-                self.run_post()
+                self.run_disconnected()
 
     async def process_request(self, req):
         try:
-            await self.dispatcher.run_pre_ws(self)
+            await self.__handler.run_pre(self)
             log_args = self._log_args
             msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
             if 'user' in log_args: msg += " user=0x%(user)016x"
@@ -143,10 +145,10 @@ class Connection(server.ServerConnection):
                 closure = f'r:{close_str(rclose)}, s:{close_str(sclose)}'
             else:
                 closure = f's:{close_str(sclose)}, r:{close_str(rclose)}'
-            _log.info("Connection closed: %(status)s (%(closure)s)",
+            _log.info("Disconnected: %(status)s (%(closure)s)",
                       event="ws:end", status='OK' if ok else 'ERROR',
                       closure=closure, **self._log_args)
-            self.run_post()
+            self.run_disconnected()
 
     async def handle_rpc(self, req):
         # TODO: Add metrics
@@ -156,9 +158,9 @@ class Connection(server.ServerConnection):
         try:
             if (path := req.pop('$P', None)) is None:
                 raise http.Error(http.BAD_REQUEST)
-            if (handler := self.dispatcher.handler_ws(path)) is None:
+            if (endpoint := self.__handler.endpoints.get(path)) is None:
                 raise http.Error(http.NOT_FOUND)
-            log_level = getattr(handler, '_log_level', logs.NOTSET)
+            log_level = getattr(endpoint, '_log_level', logs.NOTSET)
             if log_level != logs.NOTSET:
                 lkw = self._log_rpc
                 msg = "RPC start: %(path)s\n" \
@@ -166,7 +168,7 @@ class Connection(server.ServerConnection):
                 if 'user' in lkw: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='rpc:start', path=path, cid=cid,
                          rid=rid, **lkw)
-            await handler(self, req)
+            await endpoint(self, req)
             code = http.OK
         except http.Error as e:
             code = e.code
@@ -215,6 +217,12 @@ class Connection(server.ServerConnection):
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs
+
+
+class Handler(http.Handler, type='ws'):
+    async def run_pre(self, conn):
+        for fn in self._pre:
+            if isinstance(res := fn(conn), abc.Awaitable): await res
 
 
 def endpoint(name, require_authn=False, log_level=logs.INFO):
@@ -274,5 +282,5 @@ class Server(util.AsyncThread):
             await self._server.serve_forever()
 
     def start_serving(self, dispatcher):
-        self.dispatcher = dispatcher
+        self.handler = dispatcher['ws']
         self.call(self._server.start_serving()).result()

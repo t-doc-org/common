@@ -129,17 +129,17 @@ class Api:
         self.events.stop()
         _log.debug("Api: done")
 
-    @wsgi.wrap_endpoints(handle_db_errors)
+    @http.wrap_endpoints(handle_db_errors)
     def endpoints(self, disp):
-        disp.pre(self.pre_request)
-        disp.pre_ws(self.pre_websocket)
-        yield from wsgi.endpoints(self)
-        yield from wsgi.sub_endpoints(self.events.endpoints(disp),
+        disp['wsgi'].pre(self.pre_wsgi)
+        disp['ws'].pre(self.pre_ws)
+        yield from http.endpoints(self)
+        yield from http.sub_endpoints(self.events.endpoints(disp),
                                       wsgi='events', ws='events')
-        yield from wsgi.sub_endpoints(self.auth.endpoints(disp),
+        yield from http.sub_endpoints(self.auth.endpoints(disp),
                                       wsgi='auth', ws='auth')
 
-    def pre_request(self, wr):
+    def pre_wsgi(self, wr):
         if not wr.local: wr.domain = self.domain
         wr._read_db = lambda: self.store.read_db
         wr._write_db = lambda: self.store.write_db
@@ -163,12 +163,12 @@ class Api:
             if user is None: raise http.Error(http.UNAUTHORIZED)
             wr.user = user
 
-    async def pre_websocket(self, conn):
+    async def pre_ws(self, conn):
         if not conn.local: conn.domain = self.domain
         conn._read_db = lambda: self.store.read_db
         conn._write_db = lambda: self.store.write_db
         websocket_active_connections.inc()
-        conn.post(websocket_active_connections.dec)
+        conn.disconnected(websocket_active_connections.dec)
         if token := conn.token:
             @conn.blocking
             def authenticate():
@@ -352,7 +352,7 @@ class EventsApi:
         self._last_watcher = None
 
     def endpoints(self, disp):
-        yield from wsgi.endpoints(self)
+        yield from http.endpoints(self)
 
     def stop(self):
         with self.lock:
@@ -756,7 +756,7 @@ class OidcAuthApi:
         self.config = config
 
     def endpoints(self, disp):
-        yield from wsgi.endpoints(self)
+        yield from http.endpoints(self)
 
     @functools.cached_property
     def issuers(self):

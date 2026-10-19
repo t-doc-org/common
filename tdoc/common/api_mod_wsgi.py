@@ -46,7 +46,7 @@ def application(config_path, events_level=logs.NOTSET):
     app = stack.enter_context(api.Api(config=cfg, store=st))
 
     # Set up the request dispatcher.
-    disp = wsgi.Dispatcher()
+    disp = http.Dispatcher()
     disp.add(app.endpoints(disp))
 
     # Set up the websocket server.
@@ -71,4 +71,4 @@ def application(config_path, events_level=logs.NOTSET):
                  'X-Csrf'),
         max_age=dep.get('access_control_max_age'),
         credentials=True,
-    )(disp)
+    )(disp['wsgi'].handle)

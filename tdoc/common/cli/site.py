@@ -173,7 +173,7 @@ def cmd_serve(opts):
             cli.get_store(opts, allow_mem=True) as st, \
             api.Api(config=opts.cfg, store=st) as api_, \
             Application(opts, srv, api_) as app:
-        disp = wsgi.Dispatcher()
+        disp = http.Dispatcher()
         disp.add(app.endpoints(disp))
         try:
             ws_srv.start_serving(disp)
@@ -260,8 +260,8 @@ class ServerBase(socketserver.ThreadingMixIn, simple_server.WSGIServer):
                 if not auto_port or e.errno != errno.EADDRINUSE: raise
                 if (port := port + 1) > 65535: raise
 
-    def serve_forever(self, app):
-        self.set_app(app)
+    def serve_forever(self, disp):
+        self.set_app(disp['wsgi'].handle)
         super().serve_forever()
 
 
@@ -388,12 +388,12 @@ class Application:
         self.incoming = None
 
     def endpoints(self, disp):
-        @disp.pre
+        @disp['wsgi'].pre
         def pre_request(wr):
             wr.env['wsgi.multithread'] = True
             wr.local = True
-        yield from wsgi.endpoints(self)
-        yield from wsgi.sub_endpoints(self.api.endpoints(disp), wsgi='_api')
+        yield from http.endpoints(self)
+        yield from http.sub_endpoints(self.api.endpoints(disp), wsgi='_api')
 
     def __enter__(self):
         self.builder = threading.Thread(target=self.watch_and_build,

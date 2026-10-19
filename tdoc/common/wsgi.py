@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 import collections
-from collections import abc
-import contextlib
 from email import utils
 import functools
 import json
@@ -197,70 +195,41 @@ def longest_prefix(trie):
     return f'^({sub(trie) if trie else util.no_match})(/.*|)$'
 
 
-class Dispatcher:
-    # TODO: Move Dispatcher to a separate dispatch.py
-    # TODO: Move websocket handlers here
-
-    def __init__(self):
-        self._pre = []
-        self._pre_ws = []
-        self._endpoints = {}
-        self._endpoints_ws = {}
-        self._update_endpoints_re()
-
-    def pre(self, fn): self._pre.append(fn)
-    def pre_ws(self, fn): self._pre_ws.append(fn)
-
-    async def run_pre_ws(self, conn):
-        for fn in self._pre_ws:
-            if isinstance(res := fn(conn), abc.Awaitable): await res
-
-    def add(self, endpoints):
-        for name, fn in endpoints:
-            if (et := fn._endpoint_type) == 'wsgi':
-                self._endpoints[name] = fn
-            elif et == 'ws':
-                self._endpoints_ws[name] = fn
-            else:
-                raise TypeError(f"Unknown endpoint type: {et}")
-        self._update_endpoints_re()
-
-    def _update_endpoints_re(self):
+class Handler(http.Handler, type='wsgi'):
+    def updated(self):
+        super().updated()
         trie = Trie()
-        for n in self._endpoints:
+        for n in self.endpoints:
             node = trie
             for p in n.lstrip('/').split('/'): node = node[p]
             node['']  # Ensure prefix paths match
         self._endpoints_re = re.compile(longest_prefix(trie))
 
-    def handler_ws(self, endpoint):
-        return self._endpoints_ws.get(endpoint)
-
-    def get_handler(self, env):
+    def endpoint(self, env):
         if (p := env.get('PATH_INFO')) \
                 and (m := self._endpoints_re.fullmatch(p)) \
-                and (h := self._endpoints.get(ep := m[1])) is not None:
+                and (fn := self.endpoints.get(ep := m[1])) is not None:
             env['SCRIPT_NAME'] += ep
             env['PATH_INFO'] = m[2]
-            return h
+            return fn
 
-    def __call__(self, env, respond):
+    def handle(self, env, respond):
         wr = Request(env, respond)
         log_level, log_query, log_args = logs.NOTSET, False, None
         token = context.ctx.set('req:' + secrets.token_hex(8))
         try:
-            handler = self.get_handler(wr.env)
+            endpoint = self.endpoint(wr.env)
             for fn in self._pre: fn(wr)
-            if handler is None: raise http.Error(http.NOT_FOUND)
-            log_level = getattr(handler, '_log_level', logs.NOTSET)
-            log_query = getattr(handler, '_log_query', True)
+            if endpoint is None: raise http.Error(http.NOT_FOUND)
+            log_level = getattr(endpoint, '_log_level', logs.NOTSET)
+            log_query = getattr(endpoint, '_log_query', True)
             if log_level != logs.NOTSET:
                 log_args = self._log_args(wr, log_query)
                 msg = "%(method)s %(uri)s\n" \
                       "origin=%(origin)s remote=%(remote)s"
                 if 'user' in log_args: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='req:start', **log_args)
-            yield from handler(wr)
+            yield from endpoint(wr)
         except http.Error as e:
             yield from wr.error(e.code, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
@@ -288,29 +257,6 @@ class Dispatcher:
                   'origin': wr.origin, 'remote': wr.remote_addr}
         if (v := wr.user) is not None: kwargs['user'] = v
         return kwargs
-
-
-def endpoints(obj):
-    for cls in reversed(obj.__class__.__mro__):
-        for k, v in cls.__dict__.items():
-            if (ep := getattr(v, '_endpoint', False)) is False: continue
-            yield (f'/{ep}' if ep else ''), getattr(obj, k)
-
-
-def sub_endpoints(endpoints, **parents):
-    for name, fn in endpoints:
-        if p := parents.get(fn._endpoint_type): name = f'/{p}{name}'
-        yield name, fn
-
-
-def wrap_endpoints(wrap):
-    def decorator(fn):
-        @functools.wraps(fn)
-        def dfn(self, /, reg):
-            for name, hfn in fn(self, reg):
-                yield name, wrap(hfn)
-        return dfn
-    return decorator
 
 
 def endpoint(name, methods=None, final=True, require_authn=False,
