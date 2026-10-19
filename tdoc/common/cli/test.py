@@ -221,7 +221,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 data = None
                 headers = {}
                 if json is not None:
-                    data = util.to_json(json).encode('utf-8')
+                    data = util.to_json(json).encode()
                     headers['Content-Type'] = 'application/json'
                     headers['Content-Length'] = str(len(data))
                 req = request.Request(f'{base}{url}', data=data,

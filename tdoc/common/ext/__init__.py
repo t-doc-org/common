@@ -91,8 +91,7 @@ def pydata_sphinx_theme_css(data):
     return data
 
 
-def to_base64(s):
-    return base64.b64encode(s.encode('utf-8')).decode('utf-8').rstrip('=')
+def to_base64(s): return base64.b64encode(s.encode()).decode().rstrip('=')
 
 
 unset = object()

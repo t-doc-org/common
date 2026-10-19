@@ -307,7 +307,7 @@ class RequestHandler(simple_server.WSGIRequestHandler):
         try:
             sock.sendall(self.raw_requestline)
             sock.sendall(
-                f'X-Remote-Addr: {self.client_address[0]}\r\n'.encode('utf-8'))
+                f'X-Remote-Addr: {self.client_address[0]}\r\n'.encode())
             while data := self.rfile.read1(): sock.sendall(data)
             sock.shutdown(socket.SHUT_WR)
         except Exception as e:

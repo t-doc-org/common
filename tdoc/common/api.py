@@ -191,7 +191,7 @@ class Api:
         if (sf := static_files.get(wr.path)) is None:
             raise http.Error(http.NOT_FOUND)
         mime_type, content = sf
-        if isinstance(content, str): content = content.encode('utf-8')
+        if isinstance(content, str): content = content.encode()
         wr.respond(http.OK, [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
@@ -423,7 +423,7 @@ class EventsApi:
             resp = {'sid': watcher.sid}
             if failed := self.watch(watcher, req.get('add', []), wr):
                 resp['failed'] = failed
-            yield util.to_json(resp).encode('utf-8') + b'\n'
+            yield util.to_json(resp).encode() + b'\n'
             yield from watcher
 
     @wsgi.json_endpoint('sub')
@@ -520,7 +520,7 @@ class Observable:
 
     @staticmethod
     def hash(req):
-        return hashlib.sha256(util.to_json_sorted(req).encode('utf-8')).digest()
+        return hashlib.sha256(util.to_json_sorted(req).encode()).digest()
 
     def __init__(self, key, req):
         self.key = key
@@ -573,7 +573,7 @@ class ValueObservable(Observable):
             self._value = value
             self.send_locked()
 
-    def msg_locked(self): return util.to_json(self._value).encode('utf-8')
+    def msg_locked(self): return util.to_json(self._value).encode()
 
 
 class DynObservable(Observable):
@@ -636,8 +636,7 @@ class DbObservable(DynObservable):
         self.lock.notify()
 
     def msg_locked(self):
-        return None if self._data is None \
-               else util.to_json(self._data).encode('utf-8')
+        return None if self._data is None else util.to_json(self._data).encode()
 
     def wake_keys(self, db): return None
 
@@ -960,7 +959,7 @@ class OidcAuthApi:
             'client_secret': icfg['client_secret'],
             'redirect_uri': wr.uri(include_query=False),
             'grant_type': 'authorization_code',
-        }).encode('utf-8')
+        }).encode()
         req = request.Request(disc['token_endpoint'], data, headers={
             'Cache-Control': 'no-store',
             'Content-Type': 'application/x-www-form-urlencoded',

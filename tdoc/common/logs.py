@@ -144,7 +144,7 @@ _ctx_colors = ['RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',
                'LRED', 'LGREEN', 'LYELLOW', 'LBLUE', 'LMAGENTA', 'LCYAN']
 
 def _ctxc(rec, attrs):
-    h = binascii.crc32(rec.get('ctx', '').encode('utf-8'))
+    h = binascii.crc32(rec.get('ctx', '').encode())
     return attrs[_ctx_colors[h % len(_ctx_colors)]]
 
 
