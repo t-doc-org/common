@@ -25,21 +25,6 @@ from . import context, database, http, logs, store, util, ws, wsgi
 _log = logs.logger(__name__)
 missing = object()
 
-# TODO: Move HTTP metrics to wsgi.py
-http_request_duration = pc.Histogram(
-    subsystem='http', name='request_duration', unit='seconds',
-    labelnames=('method', 'endpoint', 'status'),
-    buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
-             1.0, 2.0, 5.0, 10.0],
-    documentation="The duration of HTTP requests.")
-http_active_requests = pc.Gauge(
-    subsystem='http', name='active_requests',
-    labelnames=('method', 'endpoint'),
-    documentation="The number of active HTTP requests.")
-# TODO: Move websocket metrics to wsgi.py
-websocket_active_connections = pc.Gauge(
-    subsystem='websocket', name='active_connections',
-    documentation="The number of active websocket connections.")
 event_observables = pc.Gauge(
     subsystem='event', name='observables', labelnames=('name',),
     documentation="The number of active observables.")
@@ -132,7 +117,7 @@ class Api:
     @http.wrap_endpoints(handle_db_errors)
     def endpoints(self, disp):
         disp['wsgi'].pre(self.pre_wsgi)
-        disp['ws'].pre(self.pre_ws)
+        disp['ws'].connected(self.connected_ws)
         yield from http.endpoints(self)
         yield from http.sub_endpoints(self.events.endpoints(disp),
                                       wsgi='events', ws='events')
@@ -143,16 +128,6 @@ class Api:
         if not wr.local: wr.domain = self.domain
         wr._read_db = lambda: self.store.read_db
         wr._write_db = lambda: self.store.write_db
-        start, endpoint = time.monotonic(), wr.script or '/'
-        @wr.post
-        def record_duration():
-            http_request_duration \
-                .labels(wr.method, endpoint,
-                        str(s) if (s := wr.status) else '0') \
-                .observe(time.monotonic() - start)
-        active = http_active_requests.labels(wr.method, endpoint)
-        active.inc()
-        wr.post(active.dec)
         if token := wr.token:
             try:
                 with context.tags.add('auth'), wr.read_db as db:
@@ -163,12 +138,10 @@ class Api:
             if user is None: raise http.Error(http.UNAUTHORIZED)
             wr.user = user
 
-    async def pre_ws(self, conn):
+    async def connected_ws(self, conn):
         if not conn.local: conn.domain = self.domain
         conn._read_db = lambda: self.store.read_db
         conn._write_db = lambda: self.store.write_db
-        websocket_active_connections.inc()
-        conn.disconnected(websocket_active_connections.dec)
         if token := conn.token:
             @conn.blocking
             def authenticate():

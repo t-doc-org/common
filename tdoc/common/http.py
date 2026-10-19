@@ -126,11 +126,9 @@ class Handler:
         super().__init_subclass__(**kwargs)
 
     def __init__(self):
-        self._pre = []
         self.endpoints = {}
         self.updated()
 
-    def pre(self, fn): self._pre.append(fn)
     def add(self, name, fn): self.endpoints[name] = fn
     def updated(self): pass
 

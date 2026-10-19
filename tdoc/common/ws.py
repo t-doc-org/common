@@ -11,6 +11,7 @@ import json
 import re
 import secrets
 
+import prometheus_client as pc
 from websockets import exceptions, frames, protocol
 from websockets.asyncio import server
 
@@ -23,6 +24,10 @@ _wlog.setLevel(logs.DISABLED)  # Disable websockets logging by default
 globals().update((v.name, v) for v in frames.CloseCode)
 
 req_id = contextvars.ContextVar('req_id')
+
+websocket_active_connections = pc.Gauge(
+    subsystem='websocket', name='active_connections',
+    documentation="The number of active websocket connections.")
 
 
 def close_str(frame):
@@ -97,7 +102,9 @@ class Connection(server.ServerConnection):
 
     async def process_request(self, req):
         try:
-            await self.__handler.run_pre(self)
+            await self.__handler.run_connected(self)
+            websocket_active_connections.inc()
+            self.disconnected(websocket_active_connections.dec)
             log_args = self._log_args
             msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
             if 'user' in log_args: msg += " user=0x%(user)016x"
@@ -220,8 +227,14 @@ class Connection(server.ServerConnection):
 
 
 class Handler(http.Handler, type='ws'):
-    async def run_pre(self, conn):
-        for fn in self._pre:
+    def __init__(self):
+        super().__init__()
+        self._connected = []
+
+    def connected(self, fn): self._connected.append(fn)
+
+    async def run_connected(self, conn):
+        for fn in self._connected:
             if isinstance(res := fn(conn), abc.Awaitable): await res
 
 

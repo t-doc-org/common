@@ -8,12 +8,26 @@ import json
 import re
 import secrets
 import sys
+import time
 from urllib import parse
 from wsgiref import util as wsgiutil
+
+import prometheus_client as pc
 
 from . import context, http, logs, util
 
 _log = logs.logger(__name__)
+
+http_request_duration = pc.Histogram(
+    subsystem='http', name='request_duration', unit='seconds',
+    labelnames=('method', 'endpoint', 'status'),
+    buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
+             1.0, 2.0, 5.0, 10.0],
+    documentation="The duration of HTTP requests.")
+http_active_requests = pc.Gauge(
+    subsystem='http', name='active_requests',
+    labelnames=('method', 'endpoint'),
+    documentation="The number of active HTTP requests.")
 
 
 def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
@@ -196,6 +210,12 @@ def longest_prefix(trie):
 
 
 class Handler(http.Handler, type='wsgi'):
+    def __init__(self):
+        super().__init__()
+        self._pre = []
+
+    def pre(self, fn): self._pre.append(fn)
+
     def updated(self):
         super().updated()
         trie = Trie()
@@ -214,13 +234,31 @@ class Handler(http.Handler, type='wsgi'):
             return fn
 
     def handle(self, env, respond):
+        start, ep = time.monotonic(), None
         wr = Request(env, respond)
+        @wr.post
+        def record_duration():
+            if ep is None: return
+            http_request_duration \
+                .labels(wr.method, ep, str(s) if (s := wr.status) else '0') \
+                .observe(time.monotonic() - start)
+
         log_level, log_query, log_args = logs.NOTSET, False, None
         token = context.ctx.set('req:' + secrets.token_hex(8))
         try:
-            endpoint = self.endpoint(wr.env)
+            # Find the endpoint
+            if (endpoint := self.endpoint(wr.env)) is None:
+                raise http.Error(http.NOT_FOUND)
+
+            # Run pre-request handlers. This includes authentication.
             for fn in self._pre: fn(wr)
-            if endpoint is None: raise http.Error(http.NOT_FOUND)
+
+            # Record the active request in metrics.
+            ep = wr.script or '/'
+            (active := http_active_requests.labels(wr.method, ep)).inc()
+            wr.post(active.dec)
+
+            # Log the start of the request.
             log_level = getattr(endpoint, '_log_level', logs.NOTSET)
             log_query = getattr(endpoint, '_log_query', True)
             if log_level != logs.NOTSET:
@@ -229,6 +267,8 @@ class Handler(http.Handler, type='wsgi'):
                       "origin=%(origin)s remote=%(remote)s"
                 if 'user' in log_args: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='req:start', **log_args)
+
+            # Run the endpoint.
             yield from endpoint(wr)
         except http.Error as e:
             yield from wr.error(e.code, e.message, exc_info=sys.exc_info(),
