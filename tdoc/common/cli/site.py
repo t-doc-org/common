@@ -310,20 +310,22 @@ class RequestHandler(simple_server.WSGIRequestHandler):
                 f'X-Remote-Addr: {self.client_address[0]}\r\n'.encode('utf-8'))
             while data := self.rfile.read1(): sock.sendall(data)
             sock.shutdown(socket.SHUT_WR)
-        except Exception:
+        except Exception as e:
             with contextlib.suppress(OSError):
                 sock.shutdown(socket.SHUT_RDWR)
-            _log.exception("Exception in incoming websocket forwarding")
+            if not isinstance(e, ConnectionError):
+                _log.exception("Exception in incoming websocket forwarding")
         finally:
             self.rfile.close()
 
     def forward_ws_out(self, sock):
         try:
             while data := sock.recv(1 << 16): self.wfile.write(data)
-        except Exception:
+        except Exception as e:
             with contextlib.suppress(OSError):
                 sock.shutdown(socket.SHUT_RDWR)
-            _log.exception("Exception in outgoing websocket forwarding")
+            if not isinstance(e, ConnectionError):
+                _log.exception("Exception in outgoing websocket forwarding")
         finally:
             self.wfile.close()
 
