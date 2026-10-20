@@ -24,29 +24,7 @@ const [url, bes] = (() => {
 const tokenFlag = `\
 __Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;
 
-if (core.debug('ws')) {
-    (async () => {
-        const ws = new WebSocket(`${url}/ws`);
-        ws.binaryType = 'arraybuffer';
-        on(ws).open(e => {
-            console.log("open:", e);
-            (async () => {
-                let id = 0, i = 0;
-                while (ws.readyState === WebSocket.OPEN && i++ < 10) {
-                    ws.send(JSON.stringify({
-                        $A: 1, $Z: 1, $I: id++, $P: '/health',
-                    }));
-                    await core.sleep(200);
-                }
-            })();  // BG
-        });
-        on(ws).message(e => { console.log(e.data); });
-        on(ws).close(e => { console.log("close:", e); });
-        on(ws).error(e => { console.log("error:", e); });
-    })();  // BG
-}
-
-export async function call(path, opts) {
+async function httpCall(path, opts) {
     return await core.fetchJson(`${url}${path}`, {
         credentials: 'include',
         ...opts,
@@ -56,6 +34,157 @@ export async function call(path, opts) {
             ...opts?.headers,
         },
     });
+}
+
+class Rpc {
+    constructor(conn, path, req) {
+        this.conn = conn;
+        this.rid = conn.rid++;
+        this.req = req;
+        req.$A = req.$Z = 1;
+        req.$I = this.rid;
+        req.$P = path;
+        ({promise: this.resp, resolve: this.resolve, reject: this.reject} =
+            Promise.withResolvers());
+        this.conn.rpcs.set(this.rid, this);
+    }
+
+    get started() { return this.req == null; }
+
+    start() {
+        if (!this.conn.connected) return;
+        this.conn.send(this.req);
+        delete this.req;
+    }
+
+    onMessage(resp) {
+        if (!this.conn.rpcs.delete(this.rid)) return;
+        delete resp.$Z;
+        const code = resp.$E;
+        if (code == null) {
+            this.resolve(resp);
+        } else {
+            this.reject(new Error(resp.$M ?? "Request failed",
+                                  {cause: {code}}));
+        }
+    }
+
+    abort(err) {
+        if (this.conn.rpcs.delete(this.rid)) {
+            this.reject(new Error(err));
+            if (this.conn.connected) {
+                this.conn.send({$I: this.rid, $E: 408});  // REQUEST_TIMEOUT
+            }
+        }
+    }
+}
+
+class Connection {
+    constructor() {
+        this.rpcs = new Map();
+    }
+
+    async call(path, req) {
+        this.start();
+        const rpc = new Rpc(this, path, req);
+        try {
+            rpc.start();
+            return await rpc.resp;
+        } finally {
+            rpc.abort("Canceled");
+        }
+    }
+
+    get connected() {
+        return this.ws != null && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    send(req) { this.ws.send(JSON.stringify(req)); }
+
+    start() {
+        if (this.running) return;
+        this.running = this.run();  // BG
+    }
+
+    async run() {
+        try {
+            for (let retries = 0;;) {
+                let start = performance.now();
+                try { await this.stream(); } catch (e) {}
+                if (performance.now() - start > 30000) retries = 0;
+                await core.sleep(core.backoff({min: 1000, max: 10000},
+                                              retries++));
+            }
+        } finally {
+            // TODO: Abort all RPCs?
+            delete this.running;
+        }
+    }
+
+    async stream() {
+        this.rid = 0;
+        const {promise, resolve} = Promise.withResolvers();
+        const ws = new WebSocket(`${url}/ws`);
+        try {
+            ws.binaryType = 'arraybuffer';
+            on(ws).open(e => {
+                this.ws = ws;
+                this.onConnected();
+            });
+            on(ws).close(e => {
+                delete this.ws;
+                this.onDisconnected();
+                resolve();
+            });
+            on(ws).message(e => this.onMessage(e));
+            await promise;
+        } finally {
+            ws.close();
+        }
+    }
+
+    onConnected() {
+        // Start queued RPCs.
+        for (const rpc of this.rpcs.values()) rpc.start();
+    }
+
+    onDisconnected() {
+        // Abort all RPCs that have started already. Keep the others queued.
+        for (const rpc of this.rpcs.values()) {
+            if (rpc.started) rpc.abort("Disconnected");
+        }
+    }
+
+    onMessage(e) {
+        const data = JSON.parse(e.data);
+        const rid = data.$I;
+        if (rid == null) return;
+        const rpc = this.rpcs.get(rid);
+        if (rpc == null) return;
+        delete data.$I;
+        rpc.onMessage(data);
+    }
+}
+
+const conn = new Connection();
+const httpOnlyPaths = {
+    '/events/sub': true,
+};
+
+export async function call(path, req = {}) {
+    if (core.debug('ws') && !httpOnlyPaths[path]) {
+        return await conn.call(path, req)
+    }
+    return await httpCall(path, {req});
+}
+
+if (core.debug('health')) {
+    (async () => {
+        for (let i = 0; i < 4; ++i) {
+            console.log(await call('/health'));
+            await core.sleep(200);
+        }
+    })();  // BG
 }
 
 class Auth extends EventTarget {
@@ -73,6 +202,7 @@ class Auth extends EventTarget {
         const [token, auth, error] =
             core.page.handleHashParams('token', 'auth', 'auth_error');
         if (token && !hasUser) {  // Initial login via token= URL
+            // TODO: Use separate /auth/token endpoint to set cookie + reload
             await this.postLogin(state, token);
         } else if (auth && auth === cnonce) {  // Normal login flow
             const done = this.postLogin(state);
@@ -131,7 +261,8 @@ class Auth extends EventTarget {
         let user = this.user.get(), res = true, loggedOut = false;
         if (force || user !== undefined) {
             try {
-                user = await call(`/user`, {token});
+                // TODO: Remove token argument, and use call()
+                user = await httpCall(`/user`, {token});
             } catch (e) {
                 res = false;
                 if (e.cause?.status === 401) {  // UNAUTHORIZED
@@ -180,7 +311,7 @@ class Auth extends EventTarget {
     }
 
     async update(req) {
-        return await call(`/auth/update`, {req});
+        return await call(`/auth/update`, req);
     }
 
     async login(issuer) {
@@ -188,13 +319,13 @@ class Auth extends EventTarget {
             issuer, href: location.href,
             cnonce: await core.randomId(33),
         };
-        const resp = await call(`/auth/login`, {req});
+        const resp = await call(`/auth/login`, req);
         this.state.update(v => { v.cnonce = req.cnonce; });
         return resp.redirect;
     }
 
     async logout() {
-        await call(`/auth/logout`);
+        await httpCall(`/auth/logout`);
         this.user.set(undefined);
         await core.showAlert("You have logged out successfully.",
                              {kind: 'warning', load: true});
@@ -246,7 +377,7 @@ Log in</button>\
     async showSettingsModal(message, kind = 'success') {
         const [info, rauth] = await Promise.all([
             this.info(),
-            call(`/repo`, {req: {info: true}}),
+            call(`/repo`, {info: true}),
         ]);
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
@@ -345,7 +476,7 @@ You will need to set the new password in your Mercurial configuration.`)) {
                 return;
             }
             await core.toModalMessage(el, async () => {
-                const resp = await call(`/repo`, {req: {reset: true}});
+                const resp = await call(`/repo`, {reset: true});
                 user.textContent = resp.user;
                 pass.textContent = resp.password;
                 rauth.prefix = '';
@@ -388,19 +519,19 @@ tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
 export async function editor(req) {
-    return await call(`/editor`, {req});
+    return await call(`/editor`, req);
 }
 
 export async function poll(req) {
-    return await call(`/poll`, {req});
+    return await call(`/poll`, req);
 }
 
 export async function solutions(show) {
-    return await call(`/solutions`, {req: {page: core.page.path, show}});
+    return await call(`/solutions`, {page: core.page.path, show});
 }
 
 export async function terminate(rc = 0) {
-    return await call(`/terminate`, {req: {rc}});
+    return await httpCall(`/terminate`, {req: {rc}});
 }
 
 export class Watch {
@@ -444,7 +575,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await call(`/events/sub`, {req});
+            const resp = await call(`/events/sub`, req);
             this.reportFailed(resp.failed);
         } catch (e) {}
     }
