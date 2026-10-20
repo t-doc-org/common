@@ -101,6 +101,10 @@ class Request:
         return v if not self.local else ''
 
     @property
+    def server_origin(self):
+        return http.origin(wsgiutil.application_uri(self.env))
+
+    @property
     def token(self):
         if (v := http.cookie_token(self.env.get('HTTP_COOKIE'))) is not None:
             return v
@@ -109,7 +113,7 @@ class Request:
             if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
         return ''
 
-    def uri(self, include_query=True):
+    def uri(self, include_query=False):
         return wsgiutil.request_uri(self.env, include_query)
 
     _content_methods = (http.POST, http.PUT, http.PATCH, http.OPTIONS,
@@ -159,8 +163,7 @@ class Request:
             domain, suffix = None, ''
         else:
             domain = self.domain
-            url = parse.urlsplit(self.uri(include_query=False))
-            suffix = f'-{url.hostname}'
+            suffix = f'-{parse.urlsplit(self.server_origin).hostname}'
         return http.token_cookie_headers(token, domain, suffix)
 
     def set_token_cookie(self, token):
@@ -319,6 +322,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
             return fn(self, wr)
         dfn._endpoint = name
         dfn._endpoint_type = 'wsgi'
+        dfn._require_authn = require_authn
         dfn._log_level = log_level
         dfn._log_query = log_query
         return dfn
@@ -334,5 +338,6 @@ def json_endpoint(name, methods=(http.POST,), require_authn=False,
         def dfn(self, /, wr):
             return wr.respond_json(
                 fn(self, wr, wr.json if wr.has_content else None))
+        dfn._fn = fn
         return dfn
     return decorator

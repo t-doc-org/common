@@ -37,7 +37,7 @@ def close_str(frame):
 
 
 class Connection(server.ServerConnection):
-    domain = user = None
+    host = domain = user = None
     _read_db = _write_db = None
 
     def __init__(self, *args, **kwargs):
@@ -57,10 +57,16 @@ class Connection(server.ServerConnection):
         return ra
 
     @property
+    def origin(self): return self.request.headers.get('Origin')
+
+    @property
     def required_origin(self):
         if not (v := self.request.headers.get_all('Origin')):
             raise http.Error(http.FORBIDDEN, "Missing Origin: header")
         return v[0] if not self.local else ''
+
+    @property
+    def server_origin(self): return f'{self.scheme}://{self.host}'
 
     @property
     def token(self):
@@ -85,8 +91,8 @@ class Connection(server.ServerConnection):
         resp.headers.update(headers)
         return resp
 
-    def blocking(self, fn):
-        return self.loop.run_in_executor(None, fn)
+    def blocking(self, fn, *args):
+        return self.loop.run_in_executor(None, fn, *args)
 
     async def handshake(self, process_request, process_response, server_header):
         try:
@@ -103,6 +109,7 @@ class Connection(server.ServerConnection):
     async def process_request(self, req):
         try:
             await self.__handler.run_connected(self)
+            self.host = req.headers['Host']
             websocket_active_connections.inc()
             self.disconnected(websocket_active_connections.dec)
             log_args = self._log_args
@@ -178,6 +185,9 @@ class Connection(server.ServerConnection):
             await endpoint(self, req)
             code = http.OK
         except http.Error as e:
+            if e.headers:
+                _log.warning("Ignored headers in RPC error: %(headers)s",
+                             str(e.headers))
             code = e.code
             await self.send_error(e.code, e.message)
         except exceptions.ConnectionClosedOK:
@@ -210,7 +220,7 @@ class Connection(server.ServerConnection):
         req = self.request
         kwargs = {
             'method': req.method,
-            'uri': f'{self.scheme}://{req.headers.get('Host', '')}{req.path}',
+            'uri': f'{self.server_origin}{req.path}',
             'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
         }
         if (v := self.user) is not None: kwargs['user'] = v
@@ -243,11 +253,22 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
         @functools.wraps(fn)
         async def dfn(self, /, conn, req):
             if require_authn and conn.user is None:
-                return await conn.send_error('unauthorized')
+                return await conn.send_error(http.UNAUTHORIZED)
             await conn.send(await fn(self, conn, req), final=True)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
         dfn._log_level = log_level
+        return dfn
+
+    if getattr(name, '_endpoint_type', None) == 'wsgi':
+        fn = name._fn
+        require_authn = name._require_authn
+        log_level = name._log_level
+        name = name._endpoint
+        @decorator
+        @functools.wraps(fn)
+        def dfn(self, /, conn, req):
+            return conn.blocking(fn, self, conn, req)
         return dfn
     return decorator
 

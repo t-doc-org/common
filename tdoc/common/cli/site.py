@@ -34,6 +34,7 @@ from .. import __project__, api, cli, context, deps, fixes, http, logs, util, \
                ws, wsgi
 
 _log = logs.logger(__name__)
+api_base = '_api'
 rc_build_failure = 1
 rc_source_change = 123
 esc = html.escape
@@ -171,7 +172,8 @@ def cmd_serve(opts):
                    local=True) as ws_srv, \
             Server(addr, RequestHandler, ws_srv.port) as srv, \
             cli.get_store(opts, allow_mem=True) as st, \
-            api.Api(config=opts.cfg, store=st) as api_, \
+            api.Api(config=opts.cfg, store=st, base_path=f'/{api_base}') \
+                as api_, \
             Application(opts, srv, api_) as app:
         disp = http.Dispatcher()
         disp.add(app.endpoints(disp))
@@ -280,7 +282,7 @@ class RequestHandler(simple_server.WSGIRequestHandler):
             vp = rl[2][5:].split('.')
             if len(vp) == 2 and all(p.isdigit() and len(p) <= 10 for p in vp):
                 v = tuple(int(p) for p in vp)
-                if (1, 1) <= v < (2, 0) and rl[1] == '/_api/ws':
+                if (1, 1) <= v < (2, 0) and rl[1] == f'/{api_base}/ws':
                     self.forward_ws(rl[1])
                     return False
         return super().parse_request()
@@ -393,7 +395,7 @@ class Application:
             wr.env['wsgi.multithread'] = True
             wr.local = True
         yield from http.endpoints(self)
-        yield from http.sub_endpoints(self.api.endpoints(disp), wsgi='_api')
+        yield from http.sub_endpoints(self.api.endpoints(disp), wsgi=api_base)
 
     def __enter__(self):
         self.builder = threading.Thread(target=self.watch_and_build,
@@ -960,7 +962,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             res = res / part
         return res / '' if trailing else res
 
-    @wsgi.endpoint('_api/terminate', methods=http.POST, csrf=False)
+    @wsgi.endpoint(f'{api_base}/terminate', methods=http.POST, csrf=False)
     def wsgi_terminate(self, wr):
         rc = wr.json.get('rc', 0)
         yield from wr.respond_json({})

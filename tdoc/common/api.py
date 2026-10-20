@@ -99,13 +99,14 @@ Disallow: /
 
 
 class Api:
-    def __init__(self, *, config, store):
+    def __init__(self, *, config, store, base_path=''):
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
         self.cache = http.Cache()
         self.events = EventsApi(self)
-        self.auth = OidcAuthApi(self, config.sub('oidc'))
+        self.auth = OidcAuthApi(self, config.sub('oidc'),
+                                base_path=f'{base_path}/auth')
 
     def __enter__(self): return self
 
@@ -174,20 +175,18 @@ class Api:
         ])
         return [b'' if wr.method == http.HEAD else content]
 
-    @wsgi.json_endpoint('health', methods=http.GET, csrf=False)
+    @wsgi.json_endpoint('health', methods=(http.GET, http.POST), csrf=False)
     def wsgi_health(self, wr, req):
         return {'auth': wr.user is not None}
 
-    @ws.endpoint('health')
-    async def ws_health(self, conn, req):
-        return {'auth': conn.user is not None}
+    ws_health = ws.endpoint(wsgi_health)
 
     @wsgi.endpoint('metrics', methods=(http.GET, http.OPTIONS),
                    require_authn=True, csrf=False)
     @context.tags.add('ep:metrics')
     def wsgi_metrics(self, wr):
         origin = '' if wr.local else o if (o := wr.origin) is not None \
-                 else http.origin(wr.uri(include_query=False))
+                 else wr.server_origin()
         with wr.read_db as db:
             check(self.has_perm(wr, db, 'metrics:read', origin=origin))
         if wr.method == http.OPTIONS:
@@ -231,6 +230,8 @@ class Api:
             return {'success': success}
         raise http.Error(http.BAD_REQUEST)
 
+    ws_editor = ws.endpoint(wsgi_editor)
+
     @wsgi.json_endpoint('poll')
     @context.tags.add('ep:poll')
     def wsgi_poll(self, wr, req):
@@ -261,6 +262,8 @@ class Api:
                                             'vote'))
         return {}
 
+    ws_poll = ws.endpoint(wsgi_poll)
+
     @wsgi.json_endpoint('repo', require_authn=True)
     @context.tags.add('ep:repo')
     def wsgi_repo(self, wr, req):
@@ -278,6 +281,8 @@ class Api:
             return {'user': f'0x{wr.user:016x}', 'password': password}
         raise http.Error(http.BAD_REQUEST)
 
+    ws_repo = ws.endpoint(wsgi_repo)
+
     @wsgi.json_endpoint('solutions', require_authn=True)
     @context.tags.add('ep:solutions')
     def wsgi_solutions(self, wr, req):
@@ -289,23 +294,12 @@ class Api:
             db.solutions.set_show(origin, page, show)
         return {}
 
-    @ws.endpoint('solutions', require_authn=True)
-    @context.tags.add('ep:solutions')
-    async def ws_solutions(self, conn, req):
-        origin = conn.origin
-        page = arg(req, 'page')
-        show = arg(req, 'show', lambda v: v in ('show', 'hide'))
-        @conn.blocking
-        def transaction():
-            with conn.write_db as db:
-                check(self.has_perm(conn, db, 'solutions:write'))
-                db.solutions.set_show(origin, page, show)
-        await transaction
-        return {}
+    ws_solutions = ws.endpoint(wsgi_solutions)
 
     @wsgi.json_endpoint('user')
     @context.tags.add('ep:user')
     def wsgi_user(self, wr, req):
+        # TODO: Refresh headers during authentication
         origin = wr.required_origin
         if wr.user is None:
             raise http.Error(http.UNAUTHORIZED,
@@ -313,6 +307,8 @@ class Api:
         with wr.read_db as db: info = db.users.info(origin, wr.user)
         if token := wr.token: wr.set_token_cookie(token)  # Update cookie expiry
         return info
+
+    ws_user = ws.endpoint(wsgi_user)
 
 
 class EventsApi:
@@ -724,9 +720,10 @@ class EditorObservable(DbObservable, name='editor'):
 
 
 class OidcAuthApi:
-    def __init__(self, api, config):
+    def __init__(self, api, config, base_path):
         self.api = api
         self.config = config
+        self.base_path = base_path
 
     def endpoints(self, disp):
         yield from http.endpoints(self)
@@ -788,6 +785,8 @@ class OidcAuthApi:
             logins.sort(key=lambda i: (i['name'], i['issuer']))
         return resp
 
+    ws_info = ws.endpoint(wsgi_info)
+
     @wsgi.json_endpoint('update', require_authn=True)
     @context.tags.add('ep:auth/update')
     def wsgi_update(self, wr, req):
@@ -806,6 +805,8 @@ class OidcAuthApi:
                           iss=id_token['iss'], sub=id_token['sub'],
                           event='oidc:login:remove')
         return {}
+
+    ws_update = ws.endpoint(wsgi_update)
 
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
@@ -842,8 +843,7 @@ class OidcAuthApi:
     @context.tags.add('ep:auth/login')
     def wsgi_login(self, wr, req):
         token = wr.token
-        auth = wr.uri(include_query=False).rsplit('/', 1)[0]
-        redirect_uri = f'{auth}/redirect'
+        redirect_uri = f'{wr.server_origin}{self.base_path}/redirect'
         issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
         if (href_origin := http.origin(href)) != wr.origin:
             raise http.Error(http.BAD_REQUEST, "Origin mismatch: href")
@@ -882,6 +882,8 @@ class OidcAuthApi:
             db.oidc.create_state(state_id, state)
         url = url._replace(query=parse.urlencode(query))
         return {'redirect': parse.urlunsplit(url)}
+
+    ws_login = ws.endpoint(wsgi_login)
 
     @wsgi.endpoint('redirect', methods=http.GET, csrf=False, log_query=False)
     @context.tags.add('ep:auth/redirect')
@@ -930,7 +932,7 @@ class OidcAuthApi:
             'code_verifier': state['verifier'],
             'client_id': icfg['client_id'],
             'client_secret': icfg['client_secret'],
-            'redirect_uri': wr.uri(include_query=False),
+            'redirect_uri': wr.uri(),
             'grant_type': 'authorization_code',
         }).encode()
         req = request.Request(disc['token_endpoint'], data, headers={
