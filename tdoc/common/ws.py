@@ -70,7 +70,7 @@ class Connection(server.ServerConnection):
 
     @property
     def token(self):
-        t = http.cookie_token(self.request.headers.get('Cookie', ''))
+        t = http.token_from(self.request.headers.get('Cookie', ''))
         return t if t is not None else ''
 
     def disconnected(self, fn): self.__disconnected.append(fn)

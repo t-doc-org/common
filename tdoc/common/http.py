@@ -68,7 +68,7 @@ _token_flag_cookie_attrs = {
 }
 
 
-def cookie_token(cookie):
+def token_from(cookie):
     if cookie is None: return
     c = cookies.SimpleCookie(cookie)
     if (m := c.get(_token_cookie)) is not None: return m.value

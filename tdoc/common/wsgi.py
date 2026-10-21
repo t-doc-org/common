@@ -106,7 +106,7 @@ class Request:
 
     @property
     def token(self):
-        if (v := http.cookie_token(self.env.get('HTTP_COOKIE'))) is not None:
+        if (v := http.token_from(self.env.get('HTTP_COOKIE'))) is not None:
             return v
         if (auth := self.env.get('HTTP_AUTHORIZATION')) is not None:
             parts = auth.split()
