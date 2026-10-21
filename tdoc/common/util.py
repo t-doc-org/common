@@ -442,11 +442,12 @@ class Thread(threading.Thread):
 
 
 class AsyncThread(threading.Thread):
-    def __init__(self, *, run=None, init=None, group=None, name=None,
-                 daemon=None, context=None):
+    def __init__(self, *, run=None, init=None, stop_on_exit=False, group=None,
+                 name=None, daemon=None, context=None):
         super().__init__(group=group, name=name, daemon=daemon, context=context)
         self.__init = init if init is not None else self.init()
         self.__run = run if run is not None else self.async_run()
+        self.__stop_on_exit = stop_on_exit
         self.__running = threading.Event()
         self.__exception = None
 
@@ -456,6 +457,7 @@ class AsyncThread(threading.Thread):
         if (e := self.__exception) is not None: raise e
 
     def stop(self, *args):
+        # TODO: This fails if the loop has already terminated
         self.__loop.call_soon_threadsafe(self.__task.cancel)
 
     def __enter__(self):
@@ -463,8 +465,9 @@ class AsyncThread(threading.Thread):
         return self
 
     def __exit__(self, typ, value, tb):
-        self.stop()
+        if self.__stop_on_exit: self.stop()
         self.join()
+        if (e := self.__exception) is not None: raise e
 
     def run(self):
         with asyncio.Runner() as runner:
@@ -480,7 +483,10 @@ class AsyncThread(threading.Thread):
             self.__running.set()
             return
         self.__running.set()
-        return await self.__run
+        try:
+            return await self.__run
+        except BaseException as e:
+            self.__exception = e
 
     @property
     def loop(self): return self.__loop

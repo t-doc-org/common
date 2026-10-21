@@ -284,7 +284,7 @@ class Server(util.AsyncThread):
         self.remote_addr_header = remote_addr_header
         self.threads = threads
         self.local = local
-        super().__init__(name='ws.Server')
+        super().__init__(name='ws.Server', stop_on_exit=True)
 
     async def init(self):
         self.loop.set_default_executor(

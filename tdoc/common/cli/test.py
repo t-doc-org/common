@@ -1,6 +1,7 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import asyncio
 from concurrent import futures
 import io
 import json
@@ -13,6 +14,8 @@ import subprocess
 import sys
 import threading
 from urllib import request
+
+from websockets.asyncio import client
 
 from .. import cli, fixes, http, util
 
@@ -153,6 +156,19 @@ def build_wheel(tests, opts):
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
 
+def urlopen(url, json=None, **kwargs):
+    data = None
+    headers = {}
+    if json is not None:
+        data = util.to_json(json).encode()
+        headers['Content-Type'] = 'application/json'
+        headers['Content-Length'] = str(len(data))
+    req = request.Request(url, data=data, headers=headers)
+    with request.urlopen(req, **kwargs) as f:
+        data = f.read()
+    return http.Status(f.status), f.headers, data
+
+
 def run_tests(tests, repo, wheel, write, opts):
     # Clone the document repository.
     repo_dir = tests / repo
@@ -217,24 +233,12 @@ def run_tests(tests, repo, wheel, write, opts):
             base = m[1].rstrip('/')
             out = None
 
-            def urlopen(url, json=None, **kwargs):
-                data = None
-                headers = {}
-                if json is not None:
-                    data = util.to_json(json).encode()
-                    headers['Content-Type'] = 'application/json'
-                    headers['Content-Length'] = str(len(data))
-                req = request.Request(f'{base}{url}', data=data,
-                                      headers=headers)
-                with request.urlopen(req, **kwargs) as f:
-                    data = f.read()
-                return http.Status(f.status), f.headers, data
-
             # Run server tests.
-            exercise_server(write, opts, urlopen)
+            with util.AsyncThread(run=exercise_server_async(write, opts, base)):
+                exercise_server(write, opts, base)
             if not opts.interactive:
                 write("Terminating local server\n")
-                urlopen('/_api/terminate', json={'rc': 0})
+                urlopen(f'{base}/_api/terminate', json={'rc': 0})
     except BaseException as e:
         error = e
     finally:
@@ -401,7 +405,21 @@ path = "tmp/store.sqlite"
     return fxs
 
 
-def exercise_server(write, opts, urlopen):
-    # Check server health.
-    write("Checking local server health\n")
-    urlopen('/_api/health')
+def exercise_server(write, opts, base):
+    # Check server health over HTTP.
+    write("Checking local server health (HTTP)\n")
+    urlopen(f'{base}/_api/health')
+
+
+async def exercise_server_async(write, opts, base):
+    base_ws = base.replace('http://', 'ws://')
+
+    # Check server health over Websocket.
+    write("Checking local server health (Websocket)\n")
+    async with asyncio.timeout(30), \
+            client.connect(f'{base_ws}/_api/ws', origin=base, proxy=None) \
+                as sock:
+        await sock.send('{"$A":1,"$Z":1,"$I":0,"$P":"/health"}')
+        resp = json.loads(await sock.recv())
+        if resp != {"$Z": 1, "$I": 0, "auth": False}:
+            raise Exception(f"{o.BOLD}Health response:{o.NORM}\n{resp}")
