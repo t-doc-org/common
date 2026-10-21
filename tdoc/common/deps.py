@@ -136,14 +136,14 @@ info = {
         'mathjax-mhchem-font-extension',
     ]},
     'mermaid': {
-        'version': '12.0.0',
+        'version': '12.2.0',
         'tag': 'latest',
         'version_tag': lambda v: f'mermaid@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '1.0.0',
+        'version': '1.0.1',
         'tag': 'latest',
         'version_tag': lambda v: f'@mermaid-js/layout-elk@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -173,7 +173,7 @@ info = {
     'sphinx-book-theme': {'version_tag': lambda v: f'v{v}'},
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
-        'version': '3.53.4-build1',
+        'version': '3.54.1-build1',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}',
         'release_urls': [
