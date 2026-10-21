@@ -186,7 +186,7 @@ class Api:
     @context.tags.add('ep:metrics')
     def wsgi_metrics(self, wr):
         origin = '' if wr.local else o if (o := wr.origin) is not None \
-                 else wr.server_origin()
+                 else wr.server_origin
         with wr.read_db as db:
             check(self.has_perm(wr, db, 'metrics:read', origin=origin))
         if wr.method == http.OPTIONS:
