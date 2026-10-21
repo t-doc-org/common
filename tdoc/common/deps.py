@@ -160,6 +160,11 @@ info = {
             'https://github.com/pyscript/polyscript/tags',
         ],
     },
+    'pycparser': {
+        'version_tag': lambda v: f'release_v{'.'.join(
+            f'{int(p):02}' if i == 1 else p
+            for i, p in enumerate(v.split('.')))}',
+    },
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
         'version': '314.0.7',
