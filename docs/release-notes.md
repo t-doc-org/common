@@ -3,6 +3,15 @@
 
 # Release notes
 
+(release-0-97)=
+## 0.97 *(2026-10-22)*
+
+- Updated packages affected by the
+  [eMudhra fiasco](https://en.wikipedia.org/wiki/EMudhra#2026_intermediate_certificate_compromise).
+- Fixed the vertical alignment of quiz checkboxes and radio buttons when using
+  images rendered from Python as answers.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.96...0.97)
+
 (release-0-96)=
 ## 0.96 *(2026-10-01)*
 
