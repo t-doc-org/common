@@ -301,15 +301,20 @@ class QuizCheck(docutils.SphinxDirective):
         pid = node['ids'][0]
         for i, c in enumerate(node):
             c['ids'].append(f'{pid}-{i}')
-            n = c.next_node(nodes.Text)
-            if (sol := n.startswith(':')):
+            n = cc0c0 if (cc := c.children) \
+                         and isinstance(cc0 := cc[0], nodes.paragraph) \
+                         and (cc0c := cc0.children) \
+                         and isinstance(cc0c0 := cc0c[0], nodes.Text) \
+                         and cc0c0.startswith(':') \
+                      else None
+            if n is not None:
                 p = n.parent
                 if len(n) > 1:
                     p.replace(n, n.__class__(n[1:]))
                 else:
                     p.remove(n)
                     if not p.children: p.parent.remove(p)
-            c['text'] = '1' if sol else '0'
+            c['text'] = '1' if n is not None else '0'
         node['classes'] += self.options.get('class', [])
         set_style(node, self.options)
         return [node]
