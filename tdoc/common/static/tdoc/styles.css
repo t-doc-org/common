@@ -993,6 +993,10 @@ tdoc-quiz ul.tdoc-quiz-group li > label > p:first-child {
 tdoc-quiz ul.tdoc-quiz-group li > label > p:last-child {
     margin-bottom: 0;
 }
+tdoc-quiz ul.tdoc-quiz-group li > label
+        .tdoc-exec-output.tdoc-sectioned > div > svg {
+    vertical-align: top;
+}
 tdoc-quiz .tdoc-quiz-field.bad,
 tdoc-quiz ul.tdoc-quiz-group:has(.tdoc-quiz-field.bad) {
     background-color: var(--pst-color-danger-bg);

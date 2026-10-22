@@ -136,6 +136,88 @@ They can also be laid out as lists, usually with right-aligned fields.
         print(i)
       ```
     ````
+12. What does the following program print?
+    ```{exec} python
+    :name: print-range
+    :when:
+    for i in range(1, 6):
+      print(i)
+    ```
+    ````{quiz-check}
+    :randomize:
+    :class: grid-4
+    - :
+      ```{exec} python
+      :after: print-range
+      :when: load
+      :class: hidden
+      ```
+    - ```{exec} python
+      :when: load
+      :class: hidden
+      for i in range(1, 5):
+        print(i)
+      ```
+    - ```{exec} python
+      :when: load
+      :class: hidden
+      for i in range(5):
+        print(i)
+      ```
+    - ```{exec} python
+      :when: load
+      :class: hidden
+      for i in range(6):
+        print(i)
+      ```
+    ````
+13. What does the following program display?
+    ```{exec} python
+    :name: display-rect-defs
+    :when:
+    :class: hidden
+    from tdoc import svg
+
+    def rectangle(x, y, width, height, color):
+      img = svg.Image(600, 400, stroke='transparent',
+                      style='width: 100%; height: 100%;')
+      img.rect(x, y, width, height, fill=color)
+      render(img)
+    ```
+    ```{exec} python
+    :name: display-rect
+    :after: display-rect-defs
+    :when:
+    rectangle(50, 50, 150, 150, 'red')
+    ```
+    ````{quiz-check}
+    :randomize:
+    :class: grid-4
+    - :
+      ```{exec} python
+      :after: display-rect
+      :when: load
+      :class: hidden
+      ```
+    - ```{exec} python
+      :after: display-rect-defs
+      :when: load
+      :class: hidden
+      rectangle(50, 50, 150, 150, 'blue')
+      ```
+    - ```{exec} python
+      :after: display-rect-defs
+      :when: load
+      :class: hidden
+      rectangle(50, 50, 150, 150, 'green')
+      ```
+    - ```{exec} python
+      :after: display-rect-defs
+      :when: load
+      :class: hidden
+      rectangle(50, 50, 150, 150, 'yellow')
+      ```
+    ````
 `````
 
 For each of the following code blocks, indicate whether they succeed or fail,

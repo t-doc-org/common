@@ -369,19 +369,27 @@ class PythonRunner extends exec.Runner {
     }
 
     onRender(html, name) {
-        const el = this.output.render(
-            name, core.htmlFragment(html).firstElementChild);
-        if (el instanceof SVGSVGElement) {
-            coords.addHandlers(el, ev => {
-                if (this.node.classList.contains('no-coords')) return [];
-                const {x, y, width, height} = el.viewBox.animVal;
-                return [
-                    Math.round(ev.offsetX * (width / el.scrollWidth) + x),
-                    Math.round(ev.offsetY * (height / el.scrollHeight) + y),
-                ];
-            });
+        // Wrap the rendered fragment in a <div>, for two reasons:
+        //  - It allows rendering fragments, not only elements.
+        //  - It avoids forcing rendered elements to "display: block" due to
+        //    their being flex items. Displaying as block prevents controlling
+        //    the vertical alignment of quiz checkboxes and radio buttons within
+        //    a {quiz-check} via vertical-align on e.g. <svg> elements.
+        const div = this.output.render(name, elmt`<div></div>`);
+        div.appendChild(core.htmlFragment(html));
+        for (const el of div.children) {
+            if (el instanceof SVGSVGElement) {
+                coords.addHandlers(el, ev => {
+                    if (this.node.classList.contains('no-coords')) return [];
+                    const {x, y, width, height} = el.viewBox.animVal;
+                    return [
+                        Math.round(ev.offsetX * (width / el.scrollWidth) + x),
+                        Math.round(ev.offsetY * (height / el.scrollHeight) + y),
+                    ];
+                });
+            }
         }
-        return [el.scrollWidth, el.scrollHeight];
+        return [div.scrollWidth, div.scrollHeight];
     }
 
     onSetupCanvas() {
