@@ -68,7 +68,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     {input100}`42`{quiz-hint}`You've seen this before.`
 6.  What is the capital of Switzerland?
     ```{quiz-check}
-    :class: columns-3
+    :class: grid-3
     :hint: The answer might surprise you.
     - Berlin
     - Zürich
@@ -79,7 +79,7 @@ They can also be laid out as lists, usually with right-aligned fields.
     ```
 7.  ```{quiz-check}
     :multi:
-    :class: columns-2
+    :class: grid-2
     :hint: It should have an x squared, and no funny functions.
     :right:
     - $2x + 3$
@@ -91,7 +91,7 @@ They can also be laid out as lists, usually with right-aligned fields.
 8.  ```{defaults} quiz-check
     :multi:
     :randomize:
-    :class: columns-3
+    :class: grid-3
     :right: width: 60%;
     ```
     ```{quiz-check}
@@ -322,7 +322,7 @@ Table-based quizzes that use {rst:dir}`quiz-check` must be created with
 - - {quiz-ph}`n`
   - ```{quiz-check} multiple
     :multi:
-    :class: columns-4
+    :class: grid-4
     - 2
     - 3
     - 5
