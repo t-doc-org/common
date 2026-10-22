@@ -116,7 +116,7 @@ located below the `docs` directory.
   - After the initial full build of all pages, the server **rebuilds only pages
     that change**. This is much faster, but can sometimes cause artifacts or
     failures. If this happens, restart the local server to trigger a full
-    rebuild, and [report the issue](#faq-report-issue) to the t-doc authors.
+    rebuild, and [report the issue](#faq-report-issue).
   - Don't forget to **commit changes frequently**.
 
 - **Stop the local server** by typing {kbd}`Ctrl+C` in the terminal, or by
