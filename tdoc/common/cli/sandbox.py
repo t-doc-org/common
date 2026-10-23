@@ -17,6 +17,7 @@ from .. import cli, util
 name_base = 't-doc'
 default_port = 9000
 default_ports = 20
+default_debian_version = 'trixie'
 
 label_base = 'org.t-doc.sandbox'
 
@@ -48,6 +49,10 @@ def add_commands(parser):
 
 def add_image_options(parser):
     arg = parser.add_argument_group("Image options").add_argument
+    arg('--debian', metavar='VERSION', dest='debian',
+        default=default_debian_version,
+        help="The version of Debian to install in the sandbox (default: "
+             "%(default)s). ")
     arg('--python', metavar='VERSION', dest='python', default=None,
         help="The version of Python to install in the sandbox (default: "
              "python.recommend in run.toml). ")
@@ -140,7 +145,7 @@ def build_image(opts):
     util.run('podman', 'image', 'build',
              f'--tag={image_name(opts)}', '--pull', '--no-cache',
              f'--file={ctx / 'sandbox.Containerfile'}',
-             f'--from=docker.io/python:{opts.python}-slim',
+             f'--from=docker.io/python:{opts.python}-slim-{opts.debian}',
              f'--label={label_base}.python={opts.python}',
              f'--build-context=config={opts.common / 'config'}',
              ctx)
