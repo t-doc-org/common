@@ -10,16 +10,12 @@ core.onHashParams(['api'], api => {
     location.reload();
 });
 
-const [url, bes] = (() => {
-    if (tdoc.local) return ['/_api', ''];
-    if (tdoc.api_url) return [tdoc.api_url, ''];
-    const loc = new URL(location);
-    if (loc.host === 't-doc.org' || loc.host.endsWith('.t-doc.org')) {
-        const b = backend.get();
-        const suffix = b ? '-' + b : '';
-        return [`${loc.protocol}//api${suffix}.t-doc.org`, suffix];
-    }
-    return ['/missing_api_url', ''];
+const [url, bes, domain] = (() => {
+    if (tdoc.local) return ['/_api', '', ''];
+    const loc = new URL(location), api=tdoc.api, domain = tdoc.domain;
+    const b = backend.get();
+    const suffix = b ? '-' + b : '';
+    return [`${loc.protocol}//${api}${suffix}.${domain}`, suffix, domain];
 })();
 const tokenFlag = `\
 __Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;

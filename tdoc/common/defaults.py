@@ -146,8 +146,3 @@ mathjax4_config = {
         'verb',
     ],
 }
-
-# Domain storage options.
-tdoc_domain_storage = {
-    'origin': 'https://t-doc.org',
-}

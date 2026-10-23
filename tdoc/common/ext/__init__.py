@@ -263,9 +263,10 @@ def setup(app):
     app.add_config_value(
         'license_url', lambda c: _license_urls.get(c.license, ''), 'html', str)
     app.add_config_value('tdoc', {}, 'html', dict)
-    app.add_config_value('tdoc_api', '', 'html', str)
-    app.add_config_value('tdoc_repos', 'https://rc.t-doc.org/', 'html', str)
+    app.add_config_value('tdoc_domain', '', 'html', str)
     app.add_config_value('tdoc_domain_storage', {}, 'html', dict)
+    app.add_config_value('tdoc_api', 'api', 'html', str)
+    app.add_config_value('tdoc_repos', '', 'html', str)
     app.add_config_value('tdoc_enable_sab', 'no', 'html',
                          config.ENUM('no', 'cross-origin-isolation', 'sabayon'))
     app.add_config_value('tdoc_source_type', 'md', 'env',
@@ -485,11 +486,14 @@ def restore_mathjax(app, page, template, context, doctree):
 
 
 def tdoc_config(app, page=None, doctree=None, context=None):
+    domain = app.config.tdoc_domain or 't-doc.org'
     tdoc = {
+        'api': app.config.tdoc_api,
         'conf': copy.deepcopy(app.config.tdoc),
+        'domain': domain,
         'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
         'enable_sab': app.config.tdoc_enable_sab,
-        'repos': app.config.tdoc_repos,
+        'repos': app.config.tdoc_repos or f'https://rc.{domain}/',
     }
     if is_local := 'tdoc-local' in app.tags: tdoc['local'] = True
     versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
@@ -498,7 +502,6 @@ def tdoc_config(app, page=None, doctree=None, context=None):
         if '://' not in (v := versions.setdefault(name, info['version'])):
             versions[name] = f'/_cache/{name}@{v}' if is_local \
                              else deps.cdn_url(name, v)
-    if v := app.config.tdoc_api: tdoc['api_url'] = v
     app.emit('tdoc-html-page-config', page, tdoc, doctree)
     return tdoc
 

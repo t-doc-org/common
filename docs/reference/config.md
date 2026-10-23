@@ -224,9 +224,9 @@ as `tdoc.conf`.
 
 ```{confval} tdoc_api
 :type: {py}`str`
-:default: {py}`""`
-The base URL of the t-doc API server. When empty, the URL is set automatically
-for `t-doc.org` and its subdomains.
+:default: {py}`"api"`
+The hostname below {confval}`tdoc_domain` at which the API is served. The base
+URL of the API is `https://{tdoc_api}.{domain}`.
 ```
 
 ```{confval} tdoc_directive_defaults
@@ -236,16 +236,20 @@ Site-wide defaults for directive options. Each entry maps a directive name to a
 {py:class}`dict` containing default option values for that directive.
 ```
 
+```{confval} tdoc_domain
+:type: {py}`str`
+:default: {py}`"t-doc.org"`
+The apex domain below which sites are deployed.
+```
+
 ```{confval} tdoc_domain_storage
 :type: {py}`str`
 :default: {py}`{}`
 t-doc sites are deployed as sub-domains (e.g. `common.t-doc.org`) of an apex
 domain (e.g. `t-doc.org`). The apex site provides access to a subset of its
-`localStorage` to sub-domains, e.g. for login information. This option
-configures the domain-wide storage; the following keys can be set:
+`localStorage` to sub-domains. This option configures the domain-wide storage;
+the following keys can be set:
 
-- `origin`: The origin of the apex domain (default: `https://t-doc.org`). This
-  option must be set on all sites.
 - `allowed_origins`: A regexp matching origins that are allowed to read and
   write to domain-wide storage. This option must be set on the apex site.
 - `allowed_keys`: The storage keys that can be read and written. This option
@@ -269,7 +273,7 @@ The strategy to use to work around the absence of `SharedArrayBuffer`.
 
 ```{confval} tdoc_repos
 :type: {py}`str`
-:default: {py}`"https://rc.t-doc.org/"`
+:default: {py}`"https://rc.{tdoc_domain}/"`
 The base URL of the site repositories.
 ```
 

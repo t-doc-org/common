@@ -682,8 +682,7 @@ class DomainStorage {
         on(port1).message(e => this.onMessage(e));
         port1.start();
         this.port = port1;
-        const origin = tdoc.local ? location.origin
-                                  : tdoc.domain_storage.origin;
+        const origin = tdoc.local ? location.origin : `https://${tdoc.domain}`;
         await domLoaded;
         const iframe = elmt`\
 <iframe class="tdoc-domain-storage" src="${origin}/_static/tdoc/domain.html">\
