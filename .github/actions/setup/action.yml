@@ -83,7 +83,7 @@ runs:
       run: |
         dpkg-query --list
         echo -e "\n### graphviz"
-        echo | dot -v
+        echo | dot -v 2>&1
         echo
         cat /usr/lib/x86_64-linux-gnu/graphviz/config8
         echo
