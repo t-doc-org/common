@@ -391,9 +391,9 @@ class Application:
 
     def endpoints(self, disp):
         @disp['wsgi'].pre
-        def pre_request(wr):
-            wr.env['wsgi.multithread'] = True
-            wr.local = True
+        def pre_wsgi(ctx, endpoint):
+            ctx.env['wsgi.multithread'] = True
+            ctx.local = True
         yield from http.endpoints(self)
         yield from http.sub_endpoints(self.api.endpoints(disp), wsgi=api_base)
 
@@ -875,8 +875,8 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
 
     @wsgi.endpoint('_cache', methods=(http.GET, http.HEAD), final=False,
                    csrf=False, log_level=logs.DEBUG)
-    def wsgi_cache(self, wr):
-        yield from self.serve_file(wr, self.opts.cache,
+    def wsgi_cache(self, ctx):
+        yield from self.serve_file(ctx, self.opts.cache,
                                    self.fix_cache_path_info,
                                    self.on_cache_not_found)
 
@@ -909,13 +909,13 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
 
     @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, csrf=False,
                    log_level=logs.DEBUG)
-    def wsgi_default(self, wr):
+    def wsgi_default(self, ctx):
         with self.lock: base = self.directory
-        yield from self.serve_file(wr, base)
+        yield from self.serve_file(ctx, base)
 
-    def serve_file(self, wr, base, fix_path_info=None, on_not_found=None):
-        method = wr.method
-        path_info = wr.path
+    def serve_file(self, ctx, base, fix_path_info=None, on_not_found=None):
+        method = ctx.method
+        path_info = ctx.path
         if fix_path_info is not None: path_info = fix_path_info(path_info)
         path = self.file_path(path_info, base)
         path.relative_to(base)  # Ensure we're below base
@@ -930,7 +930,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             if not parts.path.endswith('/'):
                 location = parse.urlunsplit(
                     (parts[:2] + (parts[2] + '/',) + parts[3:]))
-                wr.redirect(location, http.MOVED_PERMANENTLY)
+                ctx.redirect(location, http.MOVED_PERMANENTLY)
                 return
             path = path / 'index.html'
             if (st := try_stat(path)) is None:
@@ -939,7 +939,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         if not stat.S_ISREG(st.st_mode):
             raise http.Error(http.NOT_FOUND)
         mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
-        wr.respond(http.OK, [
+        ctx.respond(http.OK, [
             # TODO: Document why the Access-Control-* headers are needed
             ('Access-Control-Allow-Origin', '*'),
             ('Access-Control-Expose-Headers', '*'),
@@ -947,7 +947,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             ('Content-Length', str(st.st_size)),
         ])
         if method == http.HEAD: return
-        yield from wr.file_wrapper(open(path, 'rb'))
+        yield from ctx.file_wrapper(open(path, 'rb'))
 
     def file_path(self, path, base):
         trailing = path.rstrip().endswith('/')
@@ -963,9 +963,10 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         return res / '' if trailing else res
 
     @wsgi.endpoint(f'{api_base}/terminate', methods=http.POST, csrf=False)
-    def wsgi_terminate(self, wr):
-        rc = wr.json.get('rc', 0)
-        yield from wr.respond_json({})
+    def wsgi_terminate(self, ctx):
+        # TODO: Change to csrf=True
+        rc = ctx.json.get('rc', 0)
+        yield from ctx.respond_json({})
         try:
             self.returncode = int(rc)
         except ValueError:

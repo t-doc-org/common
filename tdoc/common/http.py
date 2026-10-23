@@ -103,17 +103,14 @@ class Context:
             if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
         return ''
 
-    def token_cookie_headers(self, token):
+    def set_token_cookie(self, token):
         max_age = 400 * 24 * 3600 if token else 0
         c = cookies.SimpleCookie()
         mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
                     max_age=max_age)
         mp = cookie(c, self._has_token, '1', _has_token_cookie_attrs,
                     domain=None if self.local else self.domain, max_age=max_age)
-        return [('Set-Cookie', mt), ('Set-Cookie', mp)]
-
-    def set_token_cookie(self, token):
-        self.add_headers(self.token_cookie_headers(token))
+        self.add_headers([('Set-Cookie', mt), ('Set-Cookie', mp)])
 
     @property
     def _has_token(self):

@@ -51,7 +51,7 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
 
     def decorator(fn):
         @functools.wraps(fn)
-        def handle(env, respond, ctx=None):
+        def dfn(env, respond):
             def respond_with_headers(status, headers, exc_info=None):
                 return respond(
                     status,
@@ -62,7 +62,7 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
                 respond_with_headers(http.status(http.OK), achs)
                 return []
             return fn(env, respond_with_headers)
-        return handle
+        return dfn
     return decorator
 
 
@@ -113,6 +113,7 @@ class Context(http.Context):
 
     def respond(self, status, headers, exc_info=None):
         if self.status is None: self.status = status
+        if rh := self.response_headers: headers += rh
         self._respond(http.status(status), headers, exc_info)
 
     def post(self, fn): self._post.append(fn)
@@ -151,7 +152,6 @@ class Context(http.Context):
             ('Content-Type', 'text/plain; charset=utf-8'),
             ('Content-Length', '0'),
             ('Location', url),
-            *(self.response_headers or ()),
         ])
         return []
 
@@ -161,7 +161,6 @@ class Context(http.Context):
             ('Cache-Control', 'no-store'),
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
-            *(self.response_headers or ()),
         ])
         return [body]
 
@@ -219,7 +218,7 @@ class Handler(http.Handler, type='wsgi'):
                 raise http.Error(http.NOT_FOUND)
 
             # Run pre-request handlers. This includes authentication.
-            for fn in self._pre: fn(ctx)
+            for fn in self._pre: fn(ctx, endpoint)
 
             # Record the active request in metrics.
             ep = ctx.script or '/'
@@ -268,7 +267,8 @@ class Handler(http.Handler, type='wsgi'):
 
 
 def endpoint(name, methods=None, final=True, require_authn=False,
-             csrf=True, log_level=logs.INFO, log_query=True):
+             refresh_token=False, csrf=True, log_level=logs.INFO,
+             log_query=True):
     if methods is None: raise TypeError("Missing methods")
     if isinstance(methods, http.Method): methods = (methods,)
     def decorator(fn):
@@ -288,6 +288,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
         dfn._endpoint = name
         dfn._endpoint_type = 'wsgi'
         dfn._require_authn = require_authn
+        dfn._refresh_token = refresh_token
         dfn._log_level = log_level
         dfn._log_query = log_query
         return dfn
@@ -295,9 +296,11 @@ def endpoint(name, methods=None, final=True, require_authn=False,
 
 
 def json_endpoint(name, methods=(http.POST,), require_authn=False,
-                  csrf=True, log_level=logs.INFO, log_query=True):
+                  refresh_token=True, csrf=True, log_level=logs.INFO,
+                  log_query=True):
     def decorator(fn):
-        @endpoint(name, methods=methods, require_authn=require_authn, csrf=csrf,
+        @endpoint(name, methods=methods, require_authn=require_authn,
+                  refresh_token=refresh_token, csrf=csrf,
                   log_level=log_level, log_query=log_query)
         @functools.wraps(fn)
         def dfn(self, /, ctx):

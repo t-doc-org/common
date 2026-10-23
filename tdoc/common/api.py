@@ -125,7 +125,7 @@ class Api:
         yield from http.sub_endpoints(self.auth.endpoints(disp),
                                       wsgi='auth', ws='auth')
 
-    def pre_wsgi(self, ctx):
+    def pre_wsgi(self, ctx, endpoint):
         if not ctx.local: ctx.domain = self.domain
         ctx._read_db = lambda: self.store.read_db
         ctx._write_db = lambda: self.store.write_db
@@ -138,12 +138,15 @@ class Api:
                 _log.exception("Authentication failure", event='auth:error')
             if user is None: raise http.Error(http.UNAUTHORIZED)
             ctx.user = user
+        if endpoint._refresh_token:  # Update cookie expiry
+            ctx.set_token_cookie(ctx.token if ctx.user is not None else None)
 
     async def connected_ws(self, ctx):
         if not ctx.local: ctx.domain = self.domain
         ctx._read_db = lambda: self.store.read_db
         ctx._write_db = lambda: self.store.write_db
         if token := ctx.token:
+            user = None
             @ctx.blocking
             def authenticate():
                 with context.tags.add('auth'), ctx.read_db as db:
@@ -152,9 +155,11 @@ class Api:
                 user = await authenticate
             except Exception:
                 _log.exception("Authentication failure", event='auth:error')
-                raise http.Error(http.UNAUTHORIZED)
             if user is None: raise http.Error(http.UNAUTHORIZED)
             ctx.user = user
+            ctx.set_token_cookie(token)  # Update cookie expiry
+        else:
+            ctx.set_token_cookie(None)
 
     def has_perm(self, ctx, db, perm, *, origin=None):
         if origin is None: origin = ctx.required_origin
@@ -296,23 +301,14 @@ class Api:
 
     ws_solutions = ws.endpoint(wsgi_solutions)
 
-    @wsgi.json_endpoint('user')
+    @wsgi.json_endpoint('user', require_authn=True)
     @context.tags.add('ep:user')
     def wsgi_user(self, ctx, req):
         origin = ctx.required_origin
-        if ctx.user is None:
-            raise http.Error(http.UNAUTHORIZED,
-                             headers=ctx.token_cookie_headers(None))
         with ctx.read_db as db: info = db.users.info(origin, ctx.user)
-        ctx.set_token_cookie(ctx.token)  # Update cookie expiry
         return info
 
-    @ws.endpoint('user', require_authn=True)
-    @context.tags.add('ep:user')
-    async def ws_user(self, ctx, req):
-        origin = ctx.required_origin
-        with ctx.read_db as db: info = db.users.info(origin, ctx.user)
-        return info
+    ws_user = ws.endpoint(wsgi_user)
 
 
 class EventsApi:
@@ -385,7 +381,7 @@ class EventsApi:
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
-    @wsgi.endpoint('watch', methods=http.POST)
+    @wsgi.endpoint('watch', methods=http.POST, refresh_token=True)
     def wsgi_watch(self, ctx):
         req = ctx.json
         with self.watcher() as watcher:
@@ -1014,14 +1010,14 @@ class OidcAuthApi:
                 return False
         return True
 
-    @wsgi.json_endpoint('logout', require_authn=True)
+    @wsgi.json_endpoint('logout', refresh_token=False)
     @context.tags.add('ep:auth/logout')
-    def wsgi_logout(self, wr, req):
-        token = wr.token
-        wr.set_token_cookie(None)
-        with wr.write_db as db:
-            # Remove the token if the user has at least one login.
-            count = sum(1 for id_token, _ in db.oidc.logins(wr.user)
-                        if self.token_issuer(id_token) is not None)
-            if count > 0: db.tokens.remove([token])
+    def wsgi_logout(self, ctx, req):
+        ctx.set_token_cookie(None)
+        if ctx.user is not None:
+            with ctx.write_db as db:
+                # Remove the token if the user has at least one login.
+                count = sum(1 for id_token, _ in db.oidc.logins(ctx.user)
+                            if self.token_issuer(id_token) is not None)
+                if count > 0: db.tokens.remove([ctx.token])
         return {}
