@@ -92,7 +92,7 @@ runs:
       run: |
         echo -e "### OS"
         cat /etc/os-release
-        echo "### Packages"
+        echo -e "\n### Packages"
         dpkg-query --list
         if which dot &>/dev/null; then
           echo -e "\n### graphviz"

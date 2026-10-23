@@ -9,7 +9,7 @@ on:
 jobs:
   test-sites:
     name: Test sites
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_LINUX }}
     steps:
       - name: Set up for running t-doc
         id: setup
