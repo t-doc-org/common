@@ -962,9 +962,8 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             res = res / part
         return res / '' if trailing else res
 
-    @wsgi.endpoint(f'{api_base}/terminate', methods=http.POST, csrf=False)
+    @wsgi.endpoint(f'{api_base}/terminate', methods=http.POST)
     def wsgi_terminate(self, ctx):
-        # TODO: Change to csrf=True
         rc = ctx.json.get('rc', 0)
         yield from ctx.respond_json({})
         try:

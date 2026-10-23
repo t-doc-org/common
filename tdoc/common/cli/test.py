@@ -156,13 +156,16 @@ def build_wheel(tests, opts):
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
 
 
-def urlopen(url, json=None, **kwargs):
+def urlopen(url, json=None, csrf=False, **kwargs):
     data = None
     headers = {}
     if json is not None:
         data = util.to_json(json).encode()
         headers['Content-Type'] = 'application/json'
         headers['Content-Length'] = str(len(data))
+    if csrf:
+        headers['X-Csrf'] = '0'
+        headers['Sec-Fetch-Site'] = 'same-origin'
     req = request.Request(url, data=data, headers=headers)
     with request.urlopen(req, **kwargs) as f:
         data = f.read()
@@ -238,7 +241,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 exercise_server(write, opts, base)
             if not opts.interactive:
                 write("Terminating local server\n")
-                urlopen(f'{base}/_api/terminate', json={'rc': 0})
+                urlopen(f'{base}/_api/terminate', json={'rc': 0}, csrf=True)
     except BaseException as e:
         error = e
     finally:
