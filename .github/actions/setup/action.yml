@@ -74,6 +74,17 @@ runs:
             fonts-roboto \
             graphviz \
             gsfonts \
+            libgvplugin-devil8 \
+            libgvplugin-gd8 \
+            libgvplugin-gs8 \
+            libgvplugin-neato-layout8 \
+            libgvplugin-pango8 \
+            libgvplugin-poppler8 \
+            libgvplugin-rsvg8 \
+            libgvplugin-vt100 \
+            libgvplugin-vt8 \
+            libgvplugin-webp8 \
+            libgvplugin-xlib8 \
             ttf-bitstream-vera \
             ttf-mscorefonts-installer \
             xournalpp
