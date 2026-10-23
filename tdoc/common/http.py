@@ -54,6 +54,75 @@ def with_hash_params(url, params):
     return parse.urlunsplit(parts)
 
 
+class Context:
+    __slots__ = ('local', 'domain', 'user', '_cookies', 'response_headers',
+                 '_read_db', '_write_db')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.local = False
+        self.domain = self.user = self._cookies = self.response_headers = None
+        self._read_db = self._write_db = None
+
+    def header(self, name, default=None): raise NotImplementedError()
+
+    def add_headers(self, headers):
+        if (rh := self.response_headers) is None:
+            rh = self.response_headers = []
+        rh.extend(headers)
+
+    origin = property(lambda self: self.header('Origin'))
+    server_host = property(lambda self: self.header('Host'))
+    server_origin = property(util.not_implemented)
+    remote_addr = property(util.not_implemented)
+
+    @property
+    def required_origin(self):
+        if (v := self.header('Origin')) is None:
+            raise Error(http.FORBIDDEN, "Missing Origin: header")
+        return v if not self.local else ''
+
+    @property
+    def cookies(self):
+        if (c := self._cookies) is None:
+            c = self._cookies = cookies.SimpleCookie(self.header('Cookie'))
+        return c
+
+    @property
+    def token(self):
+        c = self.cookies
+        if c.get(self._has_token) is not None:
+            return m.value if (m := c.get(_token_cookie)) is not None \
+                   else '<missing>'
+        if (auth := self.header('Authorization')) is not None:
+            parts = auth.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
+        return ''
+
+    def token_cookie_headers(self, token):
+        max_age = 400 * 24 * 3600 if token else 0
+        c = cookies.SimpleCookie()
+        mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
+                    max_age=max_age)
+        mp = cookie(c, self._has_token, '1', _has_token_cookie_attrs,
+                    domain=None if self.local else self.domain, max_age=max_age)
+        return [('Set-Cookie', mt), ('Set-Cookie', mp)]
+
+    def set_token_cookie(self, token):
+        self.add_headers(self.token_cookie_headers(token))
+
+    @property
+    def _has_token(self):
+        suffix = '' if self.local else f'-{self.server_host}'
+        return f'__Secure-tdoc-token{suffix}'
+
+    @property
+    def read_db(self): return self._read_db()
+
+    @property
+    def write_db(self): return self._write_db()
+
+
 _token_cookie = '__Host-Http-tdoc-token'
 _token_cookie_attrs = {
     'httponly': True,
@@ -61,27 +130,11 @@ _token_cookie_attrs = {
     'samesite': 'Strict',
     'secure': True,
 }
-_token_flag_cookie_attrs = {
+_has_token_cookie_attrs = {
     'path': '/',
     'samesite': 'Strict',
     'secure': True,
 }
-
-
-def token_from(cookie):
-    if cookie is None: return
-    c = cookies.SimpleCookie(cookie)
-    if (m := c.get(_token_cookie)) is not None: return m.value
-
-
-def token_cookie_headers(token, domain, suffix):
-    max_age = 400 * 24 * 3600 if token else 0
-    c = cookies.SimpleCookie()
-    mt = cookie(c, _token_cookie, token or '', _token_cookie_attrs,
-                max_age=max_age)
-    mf = cookie(c, f'__Secure-tdoc-token{suffix}', '1',
-                _token_flag_cookie_attrs, domain=domain, max_age=max_age)
-    return [('Set-Cookie', mt), ('Set-Cookie', mf)]
 
 
 def cookie(c, name, value, attrs, *, domain=None, max_age=None):

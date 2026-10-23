@@ -36,10 +36,7 @@ def close_str(frame):
     return f"{frame.code} {r}"
 
 
-class Connection(server.ServerConnection):
-    host = domain = user = None
-    _read_db = _write_db = None
-
+class Connection(http.Context, server.ServerConnection):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         th = self.server.thread
@@ -47,6 +44,12 @@ class Connection(server.ServerConnection):
         self.scheme = th.scheme
         self.__handler = th.handler
         self.__disconnected = []
+
+    def header(self, name, default=None):
+        return self.request.headers.get(name, default)
+
+    server_host = None
+    server_origin = property(lambda self: f'{self.scheme}://{self.server_host}')
 
     @property
     def remote_addr(self):
@@ -56,34 +59,11 @@ class Connection(server.ServerConnection):
         if isinstance(ra := self.remote_address, tuple): return ra[0]
         return ra
 
-    @property
-    def origin(self): return self.request.headers.get('Origin')
-
-    @property
-    def required_origin(self):
-        if not (v := self.request.headers.get_all('Origin')):
-            raise http.Error(http.FORBIDDEN, "Missing Origin: header")
-        return v[0] if not self.local else ''
-
-    @property
-    def server_origin(self): return f'{self.scheme}://{self.host}'
-
-    @property
-    def token(self):
-        t = http.token_from(self.request.headers.get('Cookie', ''))
-        return t if t is not None else ''
-
     def disconnected(self, fn): self.__disconnected.append(fn)
 
     def run_disconnected(self):
         disconnected = self.__disconnected
         while disconnected: disconnected.pop()()
-
-    @property
-    def read_db(self): return self._read_db()
-
-    @property
-    def write_db(self): return self._write_db()
 
     def respond(self, status, text=None, headers=()):
         if text is None: text = http.message(status)
@@ -109,7 +89,7 @@ class Connection(server.ServerConnection):
     async def process_request(self, req):
         try:
             await self.__handler.run_connected(self)
-            self.host = req.headers['Host']
+            self.server_host = req.headers['Host']
             websocket_active_connections.inc()
             self.disconnected(websocket_active_connections.dec)
             log_args = self._log_args
@@ -122,6 +102,11 @@ class Connection(server.ServerConnection):
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
             return self.respond(http.INTERNAL_SERVER_ERROR)
+
+    def process_response(self, req, resp):
+        if resp.status_code == http.SWITCHING_PROTOCOLS \
+                and (hs := self.response_headers):
+            for k, v in hs: resp.headers[k] = v
 
     async def handle_connection(self):
         close_code = NORMAL_CLOSURE
@@ -177,8 +162,7 @@ class Connection(server.ServerConnection):
             log_level = getattr(endpoint, '_log_level', logs.NOTSET)
             if log_level != logs.NOTSET:
                 lkw = self._log_rpc
-                msg = "RPC start: %(path)s\n" \
-                      "origin=%(origin)s remote=%(remote)s"
+                msg = "RPC %(path)s\norigin=%(origin)s remote=%(remote)s"
                 if 'user' in lkw: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='rpc:start', path=path, cid=cid,
                          rid=rid, **lkw)
@@ -200,9 +184,9 @@ class Connection(server.ServerConnection):
             await self.send_error(code)
         finally:
             if log_level != logs.NOTSET:
-                _log.log(log_level, "RPC end: %(code)s %(phrase)s",
-                         event='rpc:end', code=int(code), phrase=code.phrase,
-                         cid=cid, rid=rid, **lkw)
+                _log.log(log_level, "%(code)s %(phrase)s", event='rpc:end',
+                         code=int(code), phrase=code.phrase, cid=cid, rid=rid,
+                         **lkw)
             context.ctx.reset(token)
 
     def send(self, resp, final=False):
@@ -251,10 +235,10 @@ class Handler(http.Handler, type='ws'):
 def endpoint(name, require_authn=False, log_level=logs.INFO):
     def decorator(fn):
         @functools.wraps(fn)
-        async def dfn(self, /, conn, req):
-            if require_authn and conn.user is None:
-                return await conn.send_error(http.UNAUTHORIZED)
-            await conn.send(await fn(self, conn, req), final=True)
+        async def dfn(self, /, ctx, req):
+            if require_authn and ctx.user is None:
+                raise http.Error(http.UNAUTHORIZED)
+            await ctx.send(await fn(self, ctx, req), final=True)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
         dfn._log_level = log_level
@@ -267,8 +251,8 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
         name = name._endpoint
         @decorator
         @functools.wraps(fn)
-        def dfn(self, /, conn, req):
-            return conn.blocking(fn, self, conn, req)
+        def dfn(self, /, ctx, req):
+            return ctx.blocking(fn, self, ctx, req)
         return dfn
     return decorator
 
@@ -297,6 +281,8 @@ class Server(util.AsyncThread):
             handler=lambda conn: conn.handle_connection(), start_serving=False,
             create_connection=Connection, origins=[self.origins],
             process_request=lambda conn, req: conn.process_request(req),
+            process_response=
+                lambda conn, req, resp: conn.process_response(req, resp),
             server_header=None, **addr)
         self._server.thread = self
         async def handler(connection):

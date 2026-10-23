@@ -37,6 +37,9 @@ _levels = {'error': 0, 'warning': 1, 'info': 2}
 no_match = r'^\b$'
 
 
+def not_implemented(*args, **kwargs): raise NotImplementedError()
+
+
 def level_key(level): return _levels.get(level, 3)
 
 

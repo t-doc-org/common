@@ -51,7 +51,7 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
 
     def decorator(fn):
         @functools.wraps(fn)
-        def handle(env, respond, wr=None):
+        def handle(env, respond, ctx=None):
             def respond_with_headers(status, headers, exc_info=None):
                 return respond(
                     status,
@@ -66,52 +66,37 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
     return decorator
 
 
-class Request:
-    __slots__ = ('env', '_respond', '_post', 'status', 'local', 'domain',
-                 'user', 'response_headers', '_read_db', '_write_db')
+class Context(http.Context):
+    __slots__ = ('env', '_respond', '_post', 'status')
 
     def __init__(self, env, respond):
+        super().__init__()
         self.env = env
         self._respond = respond
         self._post = []
         self.status = None
-        self.local = False
-        self.domain = self.user = self.response_headers = None
-        self._read_db = self._write_db = None
+
+    def header(self, name, default=None):
+        return self.env.get(f'HTTP_{name.replace('-', '_').upper()}', default)
+
+    server_host = property(lambda self:
+        parse.urlsplit(wsgiutil.application_uri(self.env)).hostname)
+    server_origin = property(lambda self:
+        http.origin(wsgiutil.application_uri(self.env)))
+    remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
 
     method = property(lambda self: self.env['REQUEST_METHOD'])
     script = property(lambda self: self.env['SCRIPT_NAME'])
     path = property(lambda self: self.env['PATH_INFO'])
     query = property(lambda self: self.env['QUERY_STRING'])
     content_type = property(lambda self: self.env.get('CONTENT_TYPE'))
-    origin = property(lambda self: self.env.get('HTTP_ORIGIN'))
     accept = property(lambda self: self.env.get('HTTP_ACCEPT'))
     accept_encoding = property(
         lambda self: self.env.get('HTTP_ACCEPT_ENCODING'))
-    remote_addr = property(lambda self: self.env.get('REMOTE_ADDR'))
     file_wrapper = property(lambda self: self.env.get('wsgi.file_wrapper',
                                                       wsgiutil.FileWrapper))
     sec_fetch_site = property(lambda self: self.env.get('HTTP_SEC_FETCH_SITE'))
     csrf = property(lambda self: self.env.get('HTTP_X_CSRF'))
-
-    @property
-    def required_origin(self):
-        if (v := self.env.get('HTTP_ORIGIN')) is None:
-            raise http.Error(http.FORBIDDEN, "Missing Origin: header")
-        return v if not self.local else ''
-
-    @property
-    def server_origin(self):
-        return http.origin(wsgiutil.application_uri(self.env))
-
-    @property
-    def token(self):
-        if (v := http.token_from(self.env.get('HTTP_COOKIE'))) is not None:
-            return v
-        if (auth := self.env.get('HTTP_AUTHORIZATION')) is not None:
-            parts = auth.split()
-            if len(parts) == 2 and parts[0].lower() == 'bearer': return parts[1]
-        return ''
 
     def uri(self, include_query=False):
         return wsgiutil.request_uri(self.env, include_query)
@@ -135,12 +120,6 @@ class Request:
         while post: post.pop()()
 
     @property
-    def read_db(self): return self._read_db()
-
-    @property
-    def write_db(self): return self._write_db()
-
-    @property
     def json(self):
         if (v := self.env.get('tdoc.input.json')) is not None: return v
         if self.env.get('CONTENT_TYPE') != 'application/json':
@@ -152,22 +131,6 @@ class Request:
             return v
         except Exception as e:
             raise http.Error(http.BAD_REQUEST)
-
-    def add_response_headers(self, *headers):
-        if (rh := self.response_headers) is None:
-            rh = self.response_headers = []
-        rh.extend(headers)
-
-    def token_cookie_headers(self, token):
-        if self.local:
-            domain, suffix = None, ''
-        else:
-            domain = self.domain
-            suffix = f'-{parse.urlsplit(self.server_origin).hostname}'
-        return http.token_cookie_headers(token, domain, suffix)
-
-    def set_token_cookie(self, token):
-        self.add_response_headers(*self.token_cookie_headers(token))
 
     def error(self, status, msg=None, exc_info=None, headers=()):
         if msg is None: msg = http.message(status)
@@ -238,67 +201,67 @@ class Handler(http.Handler, type='wsgi'):
 
     def handle(self, env, respond):
         start, ep = time.monotonic(), None
-        wr = Request(env, respond)
-        @wr.post
+        ctx = Context(env, respond)
+        @ctx.post
         def record_duration():
             if ep is None: return
             http_request_duration \
-                .labels(wr.method, ep, str(s) if (s := wr.status) else '0') \
+                .labels(ctx.method, ep, str(s) if (s := ctx.status) else '0') \
                 .observe(time.monotonic() - start)
 
         log_level, log_query, log_args = logs.NOTSET, False, None
         token = context.ctx.set('req:' + secrets.token_hex(8))
         try:
             # Find the endpoint
-            if (endpoint := self.endpoint(wr.env)) is None:
+            if (endpoint := self.endpoint(ctx.env)) is None:
                 raise http.Error(http.NOT_FOUND)
 
             # Run pre-request handlers. This includes authentication.
-            for fn in self._pre: fn(wr)
+            for fn in self._pre: fn(ctx)
 
             # Record the active request in metrics.
-            ep = wr.script or '/'
-            (active := http_active_requests.labels(wr.method, ep)).inc()
-            wr.post(active.dec)
+            ep = ctx.script or '/'
+            (active := http_active_requests.labels(ctx.method, ep)).inc()
+            ctx.post(active.dec)
 
             # Log the start of the request.
             log_level = getattr(endpoint, '_log_level', logs.NOTSET)
             log_query = getattr(endpoint, '_log_query', True)
             if log_level != logs.NOTSET:
-                log_args = self._log_args(wr, log_query)
+                log_args = self._log_args(ctx, log_query)
                 msg = "%(method)s %(uri)s\n" \
                       "origin=%(origin)s remote=%(remote)s"
                 if 'user' in log_args: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='req:start', **log_args)
 
             # Run the endpoint.
-            yield from endpoint(wr)
+            yield from endpoint(ctx)
         except http.Error as e:
-            yield from wr.error(e.code, e.message, exc_info=sys.exc_info(),
+            yield from ctx.error(e.code, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
         except Exception as e:
-            if log_args is None: log_args = self._log_args(wr, log_query)
+            if log_args is None: log_args = self._log_args(ctx, log_query)
             _log.exception("Uncaught exception", event='req:exception',
                            **log_args)
-            yield from wr.error(http.INTERNAL_SERVER_ERROR,
+            yield from ctx.error(http.INTERNAL_SERVER_ERROR,
                                 exc_info=sys.exc_info())
         finally:
             if log_level != logs.NOTSET:
-                st = wr.status
-                if log_args is None: log_args = self._log_args(wr, log_query)
+                st = ctx.status
+                if log_args is None: log_args = self._log_args(ctx, log_query)
                 _log.log(log_level, "%(code)s %(phrase)s", event='req:end',
                          code=int(st) if st else 0,
                          phrase=st.phrase if st else 'status unknown',
                          **log_args)
-            wr.run_post()
+            ctx.run_post()
             context.ctx.reset(token)
 
     @staticmethod
-    def _log_args(wr, include_query):
-        kwargs = {'method': wr.method,
-                  'uri': wr.uri(include_query=include_query),
-                  'origin': wr.origin, 'remote': wr.remote_addr}
-        if (v := wr.user) is not None: kwargs['user'] = v
+    def _log_args(ctx, include_query):
+        kwargs = {'method': ctx.method,
+                  'uri': ctx.uri(include_query=include_query),
+                  'origin': ctx.origin, 'remote': ctx.remote_addr}
+        if (v := ctx.user) is not None: kwargs['user'] = v
         return kwargs
 
 
@@ -308,18 +271,18 @@ def endpoint(name, methods=None, final=True, require_authn=False,
     if isinstance(methods, http.Method): methods = (methods,)
     def decorator(fn):
         @functools.wraps(fn)
-        def dfn(self, /, wr):
-            if final and wr.path: raise http.Error(http.NOT_FOUND)
-            if wr.method not in methods:
+        def dfn(self, /, ctx):
+            if final and ctx.path: raise http.Error(http.NOT_FOUND)
+            if ctx.method not in methods:
                 raise http.Error(http.METHOD_NOT_ALLOWED, headers=[
                     ('Allow', ','.join(methods)),
                 ])
-            if require_authn and wr.user is None:
+            if require_authn and ctx.user is None:
                 raise http.Error(http.UNAUTHORIZED)
-            if csrf and (wr.sec_fetch_site not in ('same-origin', 'same-site')
-                         or wr.csrf is None):
+            if csrf and (ctx.sec_fetch_site not in ('same-origin', 'same-site')
+                         or ctx.csrf is None):
                 raise http.Error(http.FORBIDDEN)
-            return fn(self, wr)
+            return fn(self, ctx)
         dfn._endpoint = name
         dfn._endpoint_type = 'wsgi'
         dfn._require_authn = require_authn
@@ -335,9 +298,9 @@ def json_endpoint(name, methods=(http.POST,), require_authn=False,
         @endpoint(name, methods=methods, require_authn=require_authn, csrf=csrf,
                   log_level=log_level, log_query=log_query)
         @functools.wraps(fn)
-        def dfn(self, /, wr):
-            return wr.respond_json(
-                fn(self, wr, wr.json if wr.has_content else None))
+        def dfn(self, /, ctx):
+            return ctx.respond_json(
+                fn(self, ctx, ctx.json if ctx.has_content else None))
         dfn._fn = fn
         return dfn
     return decorator
