@@ -91,7 +91,9 @@ runs:
       shell: bash
       run: |
         echo -e "### Runner"
-        echo "${{ runner }}"
+        echo "runner.name=${{ runner.name }}"
+        echo "runner.os=${{ runner.os }}"
+        echo "runner.arch=${{ runner.arch }}"
         echo -e "\n### OS"
         cat /etc/os-release
         echo -e "\n### Packages"
