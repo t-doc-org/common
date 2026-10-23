@@ -84,3 +84,5 @@ runs:
         dpkg-query --list
         echo -e "\n### graphviz"
         dpkg-query --listfiles graphviz
+        echo
+        echo | dot -v
