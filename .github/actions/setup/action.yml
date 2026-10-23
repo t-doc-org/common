@@ -81,21 +81,24 @@ runs:
             libgvplugin-pango8 \
             libgvplugin-poppler8 \
             libgvplugin-rsvg8 \
-            libgvplugin-vt100 \
             libgvplugin-vt8 \
             libgvplugin-webp8 \
             libgvplugin-xlib8 \
             ttf-bitstream-vera \
             ttf-mscorefonts-installer \
             xournalpp
-    - name: List system packages
-      if: ${{ inputs.build-sites == 'true' }}
+    - name: Show system information
       shell: bash
       run: |
+        echo -e "### OS"
+        cat /etc/os-release
+        echo "### Packages"
         dpkg-query --list
-        echo -e "\n### graphviz"
-        echo | dot -v 2>&1
-        echo
-        cat /usr/lib/x86_64-linux-gnu/graphviz/config8
-        echo
-        dpkg-query --listfiles graphviz
+        if which dot &>/dev/null; then
+          echo -e "\n### graphviz"
+          echo | dot -v 2>&1
+          echo
+          cat /usr/lib/x86_64-linux-gnu/graphviz/config8
+          echo
+          dpkg-query --listfiles graphviz
+        fi
