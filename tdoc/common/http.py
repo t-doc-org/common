@@ -48,10 +48,14 @@ def origin(url):
             path='', query='', fragment=''))
 
 
-def with_hash_params(url, params):
+def url_replace(url, **kwargs):
     parts = parse.urlsplit(url)
-    parts = parts._replace(fragment='?' + parse.urlencode(params))
+    parts = parts._replace(**kwargs)
     return parse.urlunsplit(parts)
+
+
+def with_hash_params(url, params):
+    return url_replace(url, fragment='?' + parse.urlencode(params))
 
 
 class Context:

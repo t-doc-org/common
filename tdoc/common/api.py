@@ -864,7 +864,7 @@ class OidcAuthApi:
                 except Exception as e:
                     raise http.Error(http.BAD_REQUEST, str(e))
             state.update(login_as=str(uid))
-            url = parse.urlsplit(redirect_uri)
+            url = redirect_uri
         else:
             # Handle OIDC login.
             icfg, disc = self.issuer(issuer)
@@ -877,15 +877,14 @@ class OidcAuthApi:
                 verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
             state.update(issuer=issuer, nonce=nonce, verifier=verifier,
                          user=ctx.user, token=token)
-            url = parse.urlsplit(disc['authorization_endpoint'])
+            url = disc['authorization_endpoint']
             query.update(client_id=icfg['client_id'], code_challenge=challenge,
                          code_challenge_method='S256', nonce=nonce,
                          prompt='select_account', redirect_uri=redirect_uri,
                          response_type='code', scope='openid profile email')
         with ctx.write_db as db:
             db.oidc.create_state(state_id, state)
-        url = url._replace(query=parse.urlencode(query))
-        return {'redirect': parse.urlunsplit(url)}
+        return {'redirect': http.url_replace(url, query=parse.urlencode(query))}
 
     ws_login = ws.endpoint(wsgi_login)
 

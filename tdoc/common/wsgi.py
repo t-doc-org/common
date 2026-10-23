@@ -98,8 +98,10 @@ class Context(http.Context):
     sec_fetch_site = property(lambda self: self.env.get('HTTP_SEC_FETCH_SITE'))
     csrf = property(lambda self: self.env.get('HTTP_X_CSRF'))
 
-    def uri(self, include_query=False):
-        return wsgiutil.request_uri(self.env, include_query)
+    def uri(self, include_query=False, relative=False):
+        uri = wsgiutil.request_uri(self.env, include_query)
+        if relative: uri = http.url_replace(uri, scheme='', netloc='')
+        return uri
 
     _content_methods = (http.POST, http.PUT, http.PATCH, http.OPTIONS,
                         http.DELETE)
@@ -259,7 +261,7 @@ class Handler(http.Handler, type='wsgi'):
     @staticmethod
     def _log_args(ctx, include_query):
         kwargs = {'method': ctx.method,
-                  'uri': ctx.uri(include_query=include_query),
+                  'uri': ctx.uri(include_query=include_query, relative=True),
                   'origin': ctx.origin, 'remote': ctx.remote_addr}
         if (v := ctx.user) is not None: kwargs['user'] = v
         return kwargs
