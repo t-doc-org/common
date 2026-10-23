@@ -77,3 +77,10 @@ runs:
             ttf-bitstream-vera \
             ttf-mscorefonts-installer \
             xournalpp
+    - name: List system packages
+      if: ${{ inputs.build-sites == 'true' }}
+      shell: bash
+      run: |
+        dpkg-query --list
+        echo -e "\n### graphviz"
+        dpkg-query --listfiles graphviz
