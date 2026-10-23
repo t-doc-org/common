@@ -90,7 +90,9 @@ runs:
     - name: Show system information
       shell: bash
       run: |
-        echo -e "### OS"
+        echo -e "### Runner"
+        echo "${{ runner }}"
+        echo -e "\n### OS"
         cat /etc/os-release
         echo -e "\n### Packages"
         dpkg-query --list
