@@ -808,6 +808,10 @@ class OidcAuthApi:
 
     ws_update = ws.endpoint(wsgi_update)
 
+    @wsgi.json_endpoint('token')
+    def wsgi_token(self, ctx, req):
+        return {}  # The token is set in Api.connected_ws().
+
     def get_key(self, disc, token):
         header = jwt.get_unverified_header(token)
         alg, kid = header['alg'], header['kid']
