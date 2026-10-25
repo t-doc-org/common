@@ -266,7 +266,7 @@ class Handler(http.Handler, type='wsgi'):
         return kwargs
 
 
-def endpoint(name, methods=None, final=True, require_authn=False,
+def endpoint(name, methods=None, final=True, authn=True, require_authn=False,
              refresh_token=False, csrf=True, log_level=logs.INFO,
              log_query=True):
     if methods is None: raise TypeError("Missing methods")
@@ -287,6 +287,7 @@ def endpoint(name, methods=None, final=True, require_authn=False,
             return fn(self, ctx)
         dfn._endpoint = name
         dfn._endpoint_type = 'wsgi'
+        dfn._authn = authn
         dfn._require_authn = require_authn
         dfn._refresh_token = refresh_token
         dfn._log_level = log_level

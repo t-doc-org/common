@@ -129,6 +129,7 @@ class Api:
         if not ctx.local: ctx.domain = self.domain
         ctx._read_db = lambda: self.store.read_db
         ctx._write_db = lambda: self.store.write_db
+        if not endpoint._authn: return
         if token := ctx.token:
             user = None
             try:
@@ -165,7 +166,8 @@ class Api:
         if origin is None: origin = ctx.required_origin
         return db.users.has_perm(origin, ctx.user, perm)
 
-    @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, csrf=False)
+    @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, authn=False,
+                   csrf=False)
     def wsgi_default(self, ctx):
         if (sf := static_files.get(ctx.path)) is None:
             raise http.Error(http.NOT_FOUND)
@@ -888,7 +890,8 @@ class OidcAuthApi:
 
     ws_login = ws.endpoint(wsgi_login)
 
-    @wsgi.endpoint('redirect', methods=http.GET, csrf=False, log_query=False)
+    @wsgi.endpoint('redirect', methods=http.GET, authn=False, csrf=False,
+                   log_query=False)
     @context.tags.add('ep:auth/redirect')
     def wsgi_redirect(self, ctx):
         qs = parse.parse_qs(ctx.query)
