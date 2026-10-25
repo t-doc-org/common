@@ -229,8 +229,7 @@ class Auth extends EventTarget {
                 try {
                     user = await call(`/user`);
                 } catch (e) {
-                    core.showAlert(`Failed to get user info: ${e.message}`,
-                                   {kind: 'danger'});
+                    if (!user) user = {name: "(Unknown user)"};
                 }
                 this.set(user);
             })();  // BG
@@ -244,14 +243,14 @@ class Auth extends EventTarget {
         if (loginFlow) {
             let msg, kind;
             if (!error) {
-                kind = 'success';
                 msg = settings ? "The login has been added successfully." :
                       `You have logged in successfully as "${this.name}".`;
+                kind = 'success';
             } else {
-                kind = 'danger';
                 msg = settings ?
                       html`<b>The login could not be added:</b> ${error}` :
                       html`<b>Logging in has failed:</b> ${error}`;
+                kind = 'danger';
             }
             if (settings) {
                 this.showSettingsModal(msg, kind);
@@ -325,7 +324,7 @@ class Auth extends EventTarget {
             info = await this.info();
         } catch (e) {
             info = {issuers: []};
-            message = `Failed to get login info: ${e.message}`;
+            message = html`<b>Failed to get login info:</b> ${e.message}`;
             kind = 'danger';
         }
         const el = elmt`\
@@ -380,7 +379,7 @@ Log in</button>\
             info = {issuers: [], logins: []};
             rauth = {enabled: false};
             if (message == null || (kind === 'success' || kind === 'warning')) {
-                message = `Failed to get user info: ${e.message}`;
+                message = html`<b>Failed to get user info:</b> ${e.message}`;
                 kind = 'danger';
             }
         }
@@ -416,7 +415,8 @@ t-doc.password = <span class="pass user-select-all"></span>
  style="position: absolute; top: 0.5rem; right: 0.5rem;">Reset</button>\
 </div></div></div>\
 </div><div class="modal-footer flex-nowrap">\
-<button type="button" class="btn btn-danger text-nowrap logout">Log out\
+<button type="button" class="btn btn-danger text-nowrap logout">\
+<i class="tfa fa-right-from-bracket"></i> Log out\
 </button>\
 <div class="flex-fill text-${kind} message">${message ?? ""}</div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
