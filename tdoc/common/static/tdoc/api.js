@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as core from './core.js';
-const {elmt, on, qs, qsa} = core;
+const {elmt, html, on, qs, qsa} = core;
 
 const backend = new core.Stored('tdoc:api:backend', undefined, sessionStorage);
 core.onHashParams(['api'], api => {
@@ -17,8 +17,19 @@ const [url, bes, domain] = (() => {
     const suffix = b ? '-' + b : '';
     return [`${loc.protocol}//${api}${suffix}.${domain}`, suffix, domain];
 })();
-const tokenFlag = `\
-__Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=1`;
+
+const _hasToken = `\
+__Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=`;
+
+function hasToken() {
+    return document.cookie.split(';').some(c => c.trim().startsWith(_hasToken));
+}
+
+function removeToken() {
+    const domainAttr = domain ? `domain=${domain}; ` : '';
+    document.cookie = `\
+${_hasToken}=; ${domainAttr}max-age=0; path=/; samesite=Strict; secure`;
+}
 
 async function httpCall(path, opts) {
     return await core.fetchJson(`${url}${path}`, {
@@ -48,6 +59,7 @@ class Rpc {
     get started() { return this.req == null; }
 
     start() {
+        // TODO: Fail with UNAUTHORIZED if channel failed to authenticate
         if (!this.conn.connected) return;
         this.conn.send(this.req);
         delete this.req;
@@ -192,24 +204,61 @@ class Auth extends EventTarget {
     }
 
     async init() {
-        const hasUser = this.user.get();
-        const state = this.state.get(), cnonce = state?.cnonce;
-        this.state.update(v => { delete v.cnonce; });
-        const [token, auth, error] =
+        // All UI actions below are scheduled in the background.
+        const state = this.state.get();
+        const cnonce = state?.cnonce, settings = state?.modal === 'settings';
+        this.state.update(v => { delete v.cnonce; delete v.modal; });
+
+        // Handle the login flow.
+        let [token, auth, error] =
             core.page.handleHashParams('token', 'auth', 'auth_error');
-        if (token && !hasUser) {  // Initial login via token= URL
-            // TODO: Use separate /auth/token endpoint to set cookie + reload
-            await this.postLogin(state, token);
-        } else if (auth && auth === cnonce) {  // Normal login flow
-            const done = this.postLogin(state);
-            if (!hasUser) await done;
-        } else {
-            const hasToken = document.cookie.split(';').some(
-                c => c.trim().includes(tokenFlag));
-            const done = this.updateUser({force: hasToken});
-            if (!hasUser) await done;
+        let loginFlow = false;
+        if (token && !hasToken()) {  // Initial login flow via token= URL
+            loginFlow = true;
+            try { await httpCall('/auth/token', {token}); } catch (e) {}
+            if (!hasToken()) error = "Token verification failure";
+        } else if ((auth && auth === cnonce) || error) {  // Redirect login flow
+            loginFlow = true;
+            if (!hasToken() && !error) error = "Authentication failure";
         }
-        if (error) this.postLoginError(state, error);  // Background
+
+        // Get or refresh user information.
+        if (hasToken()) {  // Logged in
+            const done = (async () => {
+                let user = this.user.get();
+                try {
+                    user = await call(`/user`);
+                } catch (e) {
+                    core.showAlert(`Failed to get user info: ${e.message}`,
+                                   {kind: 'danger'});
+                }
+                this.set(user);
+            })();  // BG
+            // Wait for fresh info only if no cached info is available.
+            if (!this.user.get()) await done;
+        } else {  // Not logged in
+            this.set(undefined);
+        }
+
+        // Display the result of the login flow.
+        if (loginFlow) {
+            let msg, kind;
+            if (!error) {
+                kind = 'success';
+                msg = settings ? "The login has been added successfully." :
+                      `You have logged in successfully as "${this.name}".`;
+            } else {
+                kind = 'danger';
+                msg = settings ?
+                      html`<b>The login could not be added:</b> ${error}` :
+                      html`<b>Logging in has failed:</b> ${error}`;
+            }
+            if (settings) {
+                this.showSettingsModal(msg, kind);
+            } else {
+                core.showAlert(msg, {kind});
+            }
+        }
 
         // Update the username shown in the user menu.
         core.domLoaded.then(() => {
@@ -220,60 +269,6 @@ class Auth extends EventTarget {
                     this.name ?? "Not logged in");
             });
         });
-    }
-
-    async postLogin(state, token) {
-        const updated = await this.updateUser({token});
-        (async () => {
-            if (updated) {
-                if (state?.modal === 'settings') {
-                    await this.showSettingsModal(
-                        "The login has been added successfully.");
-                } else {
-                    await core.showAlert(
-                        `You have logged in successfully as "${this.name}".`);
-                }
-            } else {
-                if (state?.modal === 'settings') {
-                    await this.showSettingsModal(
-                        "The login could not be added.", {kind: 'danger'});
-                } else {
-                    await core.showAlert(
-                        "Logging in has failed.", {kind: 'danger'});
-                }
-            }
-        })();  // Background
-    }
-
-    async postLoginError(state, error) {
-        if (state?.modal === 'settings') {
-            await this.showSettingsModal(error, {kind: 'danger'});
-        } else {
-            await core.showAlert(error, {kind: 'danger'});
-        }
-    }
-
-    async updateUser({token, force = true} = {}) {
-        let user = this.user.get(), res = true, loggedOut = false;
-        if (force || user !== undefined) {
-            try {
-                // TODO: Remove token argument, and use call()
-                user = await httpCall(`/user`, {token});
-            } catch (e) {
-                res = false;
-                if (e.cause?.status === 401) {  // UNAUTHORIZED
-                    loggedOut = user !== undefined;
-                    user = undefined;
-                }
-            }
-        }
-        this.set(user);
-        if (loggedOut) {
-            await core.showAlert("You have been logged out.",
-                                 {kind: 'warning', load: true});
-            location.reload();
-        }
-        return res;
     }
 
     set(user) {
@@ -311,24 +306,28 @@ class Auth extends EventTarget {
     }
 
     async login(issuer) {
-        const req = {
-            issuer, href: location.href,
-            cnonce: await core.randomId(33),
-        };
-        const resp = await call(`/auth/login`, req);
-        this.state.update(v => { v.cnonce = req.cnonce; });
+        const cnonce = await core.randomId(33);
+        const resp = await call(`/auth/login`,
+                                {issuer, href: location.href, cnonce});
+        this.state.update(v => { v.cnonce = cnonce; });
         return resp.redirect;
     }
 
     async logout() {
-        await httpCall(`/auth/logout`);
+        try { await httpCall(`/auth/logout`); } catch (e) {}
+        removeToken();
         this.user.set(undefined);
-        await core.showAlert("You have logged out successfully.",
-                             {kind: 'warning', load: true});
     }
 
     async showLoginModal() {
-        const info = await this.info();
+        let info, message, kind;
+        try {
+            info = await this.info();
+        } catch (e) {
+            info = {issuers: []};
+            message = `Failed to get login info: ${e.message}`;
+            kind = 'danger';
+        }
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-modal-title">\
@@ -346,7 +345,7 @@ Log in</button>\
 </form>\
 <div class="hstack flex-wrap gap-2 text-nowrap issuers"></div>\
 </div><div class="modal-footer flex-nowrap">\
-<div class="flex-fill message"></div>\
+<div class="flex-fill text-${kind ?? 'success'} message">${message ?? ""}</div>\
 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close\
 </button>\
 </div></div></div>`;
@@ -371,10 +370,20 @@ Log in</button>\
     }
 
     async showSettingsModal(message, kind = 'success') {
-        const [info, rauth] = await Promise.all([
-            this.info(),
-            call(`/repo`, {info: true}),
-        ]);
+        let info, rauth;
+        try {
+            [info, rauth] = await Promise.all([
+                this.info(),
+                call(`/repo`, {info: true}),
+            ]);
+        } catch (e) {
+            info = {issuers: [], logins: []};
+            rauth = {enabled: false};
+            if (message == null || (kind === 'success' || kind === 'warning')) {
+                message = `Failed to get user info: ${e.message}`;
+                kind = 'danger';
+            }
+        }
         const el = elmt`\
 <div class="modal fade" tabindex="-1" aria-hidden="true"\
  aria-labelledby="tdoc-modal-title">\
@@ -484,6 +493,8 @@ The password has been reset. Copy it now, as it won't be shown again.`;
             await core.toModalMessage(el, async () => {
                 await this.logout();
                 modal.hide();
+                await core.showAlert("You have logged out successfully.",
+                                     {kind: 'warning', load: true});
                 location.reload();
             });
         });

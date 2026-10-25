@@ -345,7 +345,7 @@ export class Runner {
     // Append an error output node associated with the {exec} block.
     appendErrorOutput() {
         const output = elmt`\
-<div class="tdoc-exec-output tdoc-error"><strong>Error:</strong></div>`;
+<div class="tdoc-exec-output tdoc-error"><b>Error:</b></div>`;
         this.addOutputRemove(output);
         this.appendOutputs(output);
         return output;

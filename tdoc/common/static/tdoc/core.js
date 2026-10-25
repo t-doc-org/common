@@ -155,9 +155,9 @@ export class HtmlError extends Error {
     static of(err) {
         if (err instanceof HtmlError) return err;
         if (err instanceof Error) {
-            return htmle`<strong>${err.name}:</strong> ${err.message}`;
+            return htmle`<b>${err.name}:</b> ${err.message}`;
         }
-        return htmle`<strong>Error:</strong> ${err}`;
+        return htmle`<b>Error:</b> ${err}`;
     }
 
     constructor(html, options) {
@@ -1152,7 +1152,7 @@ export class DynElement extends TdocElement {
         // properties.
         const msg = html`\
 <div class="error">\
-<strong><code>{${this.type}}</code> Rendering seems to have failed.</strong>\
+<b><code>{${this.type}}</code> Rendering seems to have failed.</b>\
 <ul><li>Check the JavaScript console for errors.</li></ul></div>`;
         const ul = qs(msg, 'ul');
         const pending = pendingAsyncPropsFor(this.type);
