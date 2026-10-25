@@ -97,7 +97,7 @@ class Connection(http.Context, server.ServerConnection):
             if 'user' in log_args: msg += " user=0x%(user)016x"
             _log.info(msg, event='ws:start', **log_args)
         except http.Error as e:
-            return self.respond(e.status, e.message, e.headers)
+            return self.respond(e.code, e.message, e.headers)
         except Exception as e:
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
