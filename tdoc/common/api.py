@@ -14,7 +14,7 @@ import secrets
 import threading
 import time
 import traceback
-from urllib import parse, request
+from urllib import error, parse, request
 
 import jwt
 import prometheus_client as pc
@@ -942,7 +942,16 @@ class OidcAuthApi:
             'Cache-Control': 'no-store',
             'Content-Type': 'application/x-www-form-urlencoded',
         })
-        with util.urlopen(req, timeout=10) as f: resp = json.load(f)
+        try:
+            with util.urlopen(req, timeout=10) as f: resp = json.load(f)
+        except error.HTTPError as e:
+            msg = str(e)
+            try:
+                err = json.load(e.fp)
+                msg = err.get('error_description', err.get('error', msg))
+            except Exception:
+                pass
+            raise Exception(f"Failed to get id_token: {msg}")
 
         # Validate the ID token.
         if (id_token := resp.get('id_token')) is None:
