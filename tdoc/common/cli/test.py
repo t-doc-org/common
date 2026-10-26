@@ -43,6 +43,8 @@ def add_commands(parser):
              "(default: %(default)s).")
     arg('--interactive', action='store_true', dest='interactive',
         help="Enable interactive site testing.")
+    arg('--log-level', metavar='LEVEL', dest='log_level',
+        help="The log level to use for the local servers.")
     arg('repo', metavar='REPO', nargs='*', help="A site repository to test.")
     cli.add_common_options(p)
 
@@ -280,7 +282,6 @@ def run_tests(tests, repo, wheel, write, opts):
     write("Running local server\n")
     args = ['tdoc', 'site', 'serve', '--debug', '--exit-on-failure']
     if opts.interactive: args += ['--exit-on-idle=2', '--open']
-    # TODO: Manage server process in a background thread
     error = None
     p = subprocess.Popen(
         (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
@@ -288,34 +289,37 @@ def run_tests(tests, repo, wheel, write, opts):
         cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
+        # Wait for server to report as serving.
+        base = None
         out = io.StringIO()
         for line in p.stdout:
-            if out is None:
-                write(line)
-                continue
             out.write(line)
-            if (m := serving_re.match(line)) is None: continue
-            write(line.replace(m[1], f'{o.LBLUE}{m[1]}{o.NORM}'))
-            base = m[1].rstrip('/')
-            out = None
+            if m := serving_re.match(line):
+                write(line.replace(m[1], f'{o.LBLUE}{m[1]}{o.NORM}'))
+                base = m[1].rstrip('/')
+                break
 
-            # Run server tests.
-            with util.AsyncThread(run=exercise_server_async(
-                    lambda t: write('ws: ' + t), opts, Browser(base))):
-                exercise_server(lambda t: write('wsgi: ' + t), opts,
-                                Browser(base))
-            if not opts.interactive:
-                write("Terminating local server\n")
-                Browser(base).call('/_api/terminate', {'rc': 0})
+        if base is not None:
+            def drain_stdout():
+                for line in p.stdout: write(line)
+            with util.Thread(target=drain_stdout):
+                try:
+                    # Run server tests.
+                    with util.AsyncThread(run=exercise_server_async(
+                            lambda t: write('ws: ' + t), opts, Browser(base))):
+                        exercise_server(lambda t: write('wsgi: ' + t), opts,
+                                        Browser(base))
+                    if not opts.interactive:
+                        write("Terminating local server\n")
+                        Browser(base).call('/_api/terminate', {'rc': 0})
+                except BaseException:
+                    write("Killing local server\n")
+                    p.terminate()
+                    raise
     except BaseException as e:
         error = e
     finally:
-        if error is not None:
-            write("Killing local server\n")
-            p.terminate()
         write("Waiting for local server termination\n")
-        for line in p.stdout:
-            if out is None: write(line)
         if (rc := p.wait()) != 0 and error is None:
             output = f"\n{o.BOLD}Output:{o.NORM}\n{out.getvalue()}" \
                      if out is not None else ""
@@ -344,19 +348,19 @@ def exercise_cli(repo_dir, write, opts, vrun):
     # Create the log database.
     write("Setting up logging\n")
     (repo_dir / 'tmp').mkdir()
-    (repo_dir / 'tdoc.local.toml').write_text("""\
+    (repo_dir / 'tdoc.local.toml').write_text(f"""\
 [deployment]
 scheme = "http"
 domain = "localhost"
 
 [logging]
 level = "DEBUG"
-format = "{asctime} {leveli} {ctx} {name} {message}"
+format = "{{asctime}} {{leveli}} {{ctx}} {{name}} {{message}}"
 
 [logging.stream]
 enabled = true
-level = "WARNING"
-# level = "DEBUG"
+level = "{ll if (ll := opts.log_level) is not None else
+          'INFO' if len(opts.repo) == 1 else 'WARNING'}"
 
 [[logging.files]]
 path = "tmp/t-doc.log"
