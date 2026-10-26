@@ -552,8 +552,22 @@ def add_user_button(app, page, template, context, doctree):
     })
 
 
+_char_width = {
+    '0': 7, '1': 7, '2': 7, '3': 7, '4': 7, '5': 7, '6': 7, '7': 7, '8': 7,
+    '9': 7, '.': 4, '+': 9, '-': 5,
+}
+
+
 def write_static_files(app, builder):
     if builder.format != 'html': return
+
+    # Generate the version badge.
+    parts = __version__.split('.')
+    version = '.'.join(p for p in parts if p.isdigit())
+    if any(p.startswith('dev') for p in parts): version += '+'
+    width = 10 + sum(_char_width.get(c, 7) for c in version)
+    (app.outdir / 'tdoc-version.svg').write_text(
+        badge(('t-doc', 40), (version, width), '#007ec6'), 'utf-8')
 
     # The file must be at the root of the website, to avoid limiting the scope
     # of the service worker to _static.
@@ -672,3 +686,49 @@ def add_dyn_config(app, page, config, doctree):
     for typ in {n['type'] for n in doctree.findall(dyn)}:
         dcfg[typ] = meta(app.env, page, typ, {})
     if dcfg: config['dyn'] = dcfg
+
+
+_colors = {'error': '#d72d47', 'warning': '#f66a0a', 'info': '#276be9',
+           'ok': '#34D058'}
+
+
+def badge(label, value, color):
+    lt, lw = label
+    vt, vw = value
+    lx = 1 + lw / 2
+    vx = lw + vw / 2 - 1
+    color = _colors.get(color, color)
+    return f"""\
+<svg xmlns="http://www.w3.org/2000/svg" width="{lw + vw}" height="20"\
+ role="img" aria-label="{lt}: {vt}">\
+<title>{lt}: {vt}</title>\
+<filter id="blur"><feGaussianBlur stdDeviation="16"/></filter>\
+<linearGradient id="s" x2="0" y2="100%">\
+<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>\
+<stop offset="1" stop-opacity=".1"/>\
+</linearGradient>\
+<clipPath id="r"><rect width="{lw + vw}" height="20" rx="3"/></clipPath>\
+<g clip-path="url(#r)">\
+<rect width="{lw}" height="20" fill="#555"/>\
+<rect x="{lw}" width="{vw}" height="20" fill="{color}"/>\
+<rect width="{lw + vw}" height="20" fill="url(#s)"/>\
+</g>\
+<g fill="#fff" text-anchor="middle"\
+ font-family="Verdana,Geneva,DejaVu Sans,sans-serif"\
+ text-rendering="geometricPrecision" font-size="11">\
+<g>\
+<g aria-hidden="true" fill="#010101">\
+<text x="{lx}" y="15" fill-opacity=".8" filter="url(#blur)">{lt}</text>\
+<text x="{lx}" y="15" fill-opacity=".3">{lt}</text>\
+</g>\
+<text x="{lx}" y="14">{lt}</text>\
+</g>\
+<g>\
+<g aria-hidden="true" fill="#010101">\
+<text x="{vx}" y="15" fill-opacity=".8" filter="url(#blur)">{vt}</text>\
+<text x="{vx}" y="15" fill-opacity=".3">{vt}</text>\
+</g>\
+<text x="{vx}" y="14">{vt}</text>\
+</g>\
+</g>\
+</svg>"""
