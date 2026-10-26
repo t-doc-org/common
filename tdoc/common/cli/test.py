@@ -314,6 +314,8 @@ def run_tests(tests, repo, wheel, write, opts):
             write("Killing local server\n")
             p.terminate()
         write("Waiting for local server termination\n")
+        for line in p.stdout:
+            if out is None: write(line)
         if (rc := p.wait()) != 0 and error is None:
             output = f"\n{o.BOLD}Output:{o.NORM}\n{out.getvalue()}" \
                      if out is not None else ""
@@ -354,6 +356,7 @@ format = "{asctime} {leveli} {ctx} {name} {message}"
 [logging.stream]
 enabled = true
 level = "WARNING"
+# level = "DEBUG"
 
 [[logging.files]]
 path = "tmp/t-doc.log"
@@ -480,6 +483,8 @@ def exercise_server(write, opts, browser):
     write("Unauthenticated requests\n")
     _, resp = browser.call('/_api/health', csrf=False)
     equal(o, resp, {'auth': False}, "wsgi: Unauthenticated health")
+    _, resp = browser.call('/_api/auth/info', {})
+    equal(o, resp, {'issuers': []}, "wsgi: Authentication info")
 
     # Perform the initial login flow via a token= URL.
     write("Initial login flow\n")
@@ -490,6 +495,8 @@ def exercise_server(write, opts, browser):
     write("Authenticated requests\n")
     _, resp = browser.call('/_api/health', {})
     equal(o, resp, {'auth': True}, "wsgi: Authenticated health")
+    _, resp = browser.call('/_api/auth/info', {})
+    equal(o, resp, {'issuers': [], 'logins': []}, "wsgi: Authentication info")
 
     # Log out.
     write("Logout\n")
@@ -506,6 +513,8 @@ async def exercise_server_async(write, opts, browser):
     async with asyncio.timeout(30), browser.connect() as conn:
         resp = await conn.call('/health', {})
         equal(o, resp, {'auth': False}, "ws: Unauthenticated health")
+        resp = await conn.call('/auth/info', {})
+        equal(o, resp, {'issuers': []}, "ws: Authentication info")
 
     # Perform the OIDC login flow.
     write("OIDC login flow\n")
@@ -524,6 +533,8 @@ async def exercise_server_async(write, opts, browser):
     async with asyncio.timeout(30), browser.connect() as conn:
         resp = await conn.call('/health', {})
         equal(o, resp, {'auth': True}, "ws: Authenticated health")
+        resp = await conn.call('/auth/info', {})
+        equal(o, resp, {'issuers': [], 'logins': []}, "ws: Authentication info")
 
     # Log out.
     write("Logout\n")
