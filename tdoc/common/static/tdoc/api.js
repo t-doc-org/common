@@ -215,7 +215,7 @@ class Auth extends EventTarget {
         let loginFlow = false;
         if (token && !hasToken()) {  // Initial login flow via token= URL
             loginFlow = true;
-            try { await httpCall('/auth/token', {token}); } catch (e) {}
+            try { await this.token(token); } catch (e) {}
             if (!hasToken()) error = "Token verification failure";
         } else if ((auth && auth === cnonce) || error) {  // Redirect login flow
             loginFlow = true;
@@ -296,24 +296,28 @@ class Auth extends EventTarget {
         return perms.includes(perm) || perms.includes('*');
     }
 
+    async token(token) {
+        return await httpCall('/auth/token', {token});
+    }
+
     async info() {
-        return await call(`/auth/info`);
+        return await call('/auth/info');
     }
 
     async update(req) {
-        return await call(`/auth/update`, req);
+        return await call('/auth/update', req);
     }
 
     async login(issuer) {
         const cnonce = await core.randomId(33);
-        const resp = await call(`/auth/login`,
+        const resp = await call('/auth/login',
                                 {issuer, href: location.href, cnonce});
         this.state.update(v => { v.cnonce = cnonce; });
         return resp.redirect;
     }
 
     async logout() {
-        try { await httpCall(`/auth/logout`); } catch (e) {}
+        try { await httpCall('/auth/logout'); } catch (e) {}
         removeToken();
         this.user.set(undefined);
     }

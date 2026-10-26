@@ -13,7 +13,6 @@ import re
 import secrets
 import threading
 import time
-import traceback
 from urllib import error, parse, request
 
 import jwt

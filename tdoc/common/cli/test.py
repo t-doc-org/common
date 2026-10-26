@@ -3,16 +3,19 @@
 
 import asyncio
 from concurrent import futures
+from http import cookiejar
 import io
 import json
 import os
 import re
+import secrets
 import shlex
 import shutil
 import stat
 import subprocess
 import sys
 import threading
+import traceback
 from urllib import request
 
 from websockets.asyncio import client
@@ -113,7 +116,8 @@ def cmd_site(opts):
         # Display output of failures.
         for repo in opts.repo:
             if (e := tasks[repo].exception()) is None: continue
-            se = str(e)
+            se = str(e) if isinstance(e, AssertionError) \
+                 else "".join(traceback.format_exception(e))
             eol = "" if se.endswith("\n") else "\n"
             write(f"\n{o.LBLACK}{'=' * 79}{o.NORM}\n"
                   f"{label(repo)}{o.LRED}FAIL{o.NORM}\n"
@@ -153,23 +157,82 @@ def build_wheel(tests, opts):
     return wheel
 
 
+def equal(o, got, want, msg):
+    if got == want: return
+    raise AssertionError(
+        f"{o.BOLD}{msg}{o.NORM}\n{o.LMAGENTA}Got :{o.NORM} {got}\n"
+        f"{o.CYAN}Want:{o.NORM} {want}\n")
+
+
+class Browser:
+    def __init__(self, base):
+        self.base = base
+        self.cookies = cookiejar.CookieJar(
+            cookiejar.DefaultCookiePolicy(secure_protocols=('http', 'ws')))
+        self.opener = request.build_opener(
+            request.HTTPCookieProcessor(self.cookies))
+
+    def fetch(self, url, data=None, headers=None, csrf=True, **kwargs):
+        if not url.startswith('http://'): url = f'{self.base}{url}'
+        headers = {} if headers is None else headers.copy()
+        if data is not None:
+            if isinstance(data, str): data = data.encode()
+            headers['Content-Length'] = str(len(data))
+        if csrf:
+            headers['X-Csrf'] = '0'
+            headers['Sec-Fetch-Site'] = 'same-origin'
+        req = request.Request(url, data=data, headers=headers)
+        with self.opener.open(req, **kwargs) as f: resp = f.read()
+        return f, resp
+
+    def call(self, url, req=None, headers=None, csrf=True, **kwargs):
+        data = None
+        headers = {} if headers is None else headers.copy()
+        if req is not None:
+            data = util.to_json(req).encode()
+            headers['Content-Type'] = 'application/json'
+        f, resp = self.fetch(url, data=data, headers=headers, csrf=csrf,
+                             **kwargs)
+        return f, json.loads(resp)
+
+    def connect(self):
+        url = f'{self.base.replace('http://', 'ws://')}/_api/ws'
+        req = request.Request(url, headers={'Origin': self.base})
+        self.cookies.add_cookie_header(req)
+        headers = []
+        if (v := req.get_header('Cookie')) is not None:
+            headers.append(('Cookie', v))
+        # TODO: Figure out why the close_timeout always elapses on close()
+        return client.connect(url, origin=self.base, additional_headers=headers,
+                              proxy=None, user_agent_header=None,
+                              close_timeout=0.2, create_connection=Connection)
+
+
+class Connection(client.ClientConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rid = 0
+
+    async def send(self, req):
+        await super().send(util.to_json(req))
+
+    async def recv(self):
+        return json.loads(await super().recv())
+
+    async def call(self, path, req):
+        req['$A'] = 1
+        req['$Z'] = 1
+        req['$I'] = self.rid
+        req['$P'] = path
+        self.rid += 1
+        await self.send(req)
+        resp = await self.recv()
+        assert resp.pop('$Z') == 1
+        assert resp.pop('$I') == req['$I']
+        return resp
+
+
 serving_re = re.compile(r'(?m)^Serving at <([^>]+)>$')
-
-
-def urlopen(url, json=None, csrf=False, **kwargs):
-    data = None
-    headers = {}
-    if json is not None:
-        data = util.to_json(json).encode()
-        headers['Content-Type'] = 'application/json'
-        headers['Content-Length'] = str(len(data))
-    if csrf:
-        headers['X-Csrf'] = '0'
-        headers['Sec-Fetch-Site'] = 'same-origin'
-    req = request.Request(url, data=data, headers=headers)
-    with request.urlopen(req, **kwargs) as f:
-        data = f.read()
-    return http.Status(f.status), f.headers, data
 
 
 def run_tests(tests, repo, wheel, write, opts):
@@ -183,7 +246,7 @@ def run_tests(tests, repo, wheel, write, opts):
                             stderr=subprocess.STDOUT, text=True, check=True,
                             **kwargs)
         except subprocess.CalledProcessError as e:
-            raise Exception(
+            raise AssertionError(
                 f"{o.BOLD}Command failed:{o.NORM} exit status: {e.returncode}\n"
                 f"{o.BOLD}Command:{o.NORM}"
                 f" {shlex.join(str(a) for a in (cmd or args))}\n"
@@ -203,7 +266,7 @@ def run_tests(tests, repo, wheel, write, opts):
                 '--', *args, cwd=repo_dir, cmd=args)
         for regex in out:
             if not re.search(regex, p.stdout, re.MULTILINE):
-                raise Exception(
+                raise AssertionError(
                     f"{o.BOLD}Command:{o.NORM}"
                     f" {shlex.join(str(a) for a in args)}\n"
                     f"{o.BOLD}Regex:{o.NORM} {regex}\n"
@@ -237,11 +300,13 @@ def run_tests(tests, repo, wheel, write, opts):
             out = None
 
             # Run server tests.
-            with util.AsyncThread(run=exercise_server_async(write, opts, base)):
-                exercise_server(write, opts, base)
+            with util.AsyncThread(run=exercise_server_async(
+                    lambda t: write('ws: ' + t), opts, Browser(base))):
+                exercise_server(lambda t: write('wsgi: ' + t), opts,
+                                Browser(base))
             if not opts.interactive:
                 write("Terminating local server\n")
-                urlopen(f'{base}/_api/terminate', json={'rc': 0}, csrf=True)
+                Browser(base).call('/_api/terminate', {'rc': 0})
     except BaseException as e:
         error = e
     finally:
@@ -252,7 +317,7 @@ def run_tests(tests, repo, wheel, write, opts):
         if (rc := p.wait()) != 0 and error is None:
             output = f"\n{o.BOLD}Output:{o.NORM}\n{out.getvalue()}" \
                      if out is not None else ""
-            raise Exception(
+            raise AssertionError(
                 f"{o.BOLD}Server failed:{o.NORM} exit status: {rc}{output}")
         if error is not None: raise error
     return fxs
@@ -408,21 +473,61 @@ path = "tmp/store.sqlite"
     return fxs
 
 
-def exercise_server(write, opts, base):
-    # Check server health over HTTP.
-    write("Checking local server health (HTTP)\n")
-    urlopen(f'{base}/_api/health')
+def exercise_server(write, opts, browser):
+    o = opts.stdout
+
+    # Perform unauthenticated requests.
+    write("Unauthenticated requests\n")
+    _, resp = browser.call('/_api/health', csrf=False)
+    equal(o, resp, {'auth': False}, "wsgi: Unauthenticated health")
+
+    # Perform the initial login flow via a token= URL.
+    write("Initial login flow\n")
+    browser.call('/_api/auth/token', {},
+                 headers={'Authorization': 'Bearer admin'})
+
+    # Perform authenticated requests.
+    write("Authenticated requests\n")
+    _, resp = browser.call('/_api/health', {})
+    equal(o, resp, {'auth': True}, "wsgi: Authenticated health")
+
+    # Log out.
+    write("Logout\n")
+    browser.call('/_api/auth/logout', {})
+    _, resp = browser.call('/_api/health', csrf=False)
+    equal(o, resp, {'auth': False}, "wsgi: Post-logout health")
 
 
-async def exercise_server_async(write, opts, base):
-    base_ws = base.replace('http://', 'ws://')
+async def exercise_server_async(write, opts, browser):
+    o = opts.stdout
 
-    # Check server health over Websocket.
-    write("Checking local server health (Websocket)\n")
-    async with asyncio.timeout(30), \
-            client.connect(f'{base_ws}/_api/ws', origin=base, proxy=None) \
-                as sock:
-        await sock.send('{"$A":1,"$Z":1,"$I":0,"$P":"/health"}')
-        resp = json.loads(await sock.recv())
-        if resp != {"$Z": 1, "$I": 0, "auth": False}:
-            raise Exception(f"{o.BOLD}Health response:{o.NORM}\n{resp}")
+    # Perform unauthenticated requests.
+    write("Unauthenticated requests\n")
+    async with asyncio.timeout(30), browser.connect() as conn:
+        resp = await conn.call('/health', {})
+        equal(o, resp, {'auth': False}, "ws: Unauthenticated health")
+
+    # Perform the OIDC login flow.
+    write("OIDC login flow\n")
+    cnonce = secrets.token_urlsafe(33)
+    _, resp = browser.call('/_api/auth/login',
+                           {'issuer': 'local:admin', 'cnonce': cnonce,
+                            'href': f'{browser.base}/index.html'},
+                           headers={'Origin': browser.base})
+    m, _ = browser.fetch(resp['redirect'])
+    equal(o, m.url, f'{browser.base}/index.html#?auth={cnonce}',
+          "ws: Redirect URL")
+    equal(o, m.status, http.OK, "ws: Redirect status")
+
+    # Perform authenticated requests.
+    write("Authenticated requests\n")
+    async with asyncio.timeout(30), browser.connect() as conn:
+        resp = await conn.call('/health', {})
+        equal(o, resp, {'auth': True}, "ws: Authenticated health")
+
+    # Log out.
+    write("Logout\n")
+    browser.call('/_api/auth/logout', {})
+    async with asyncio.timeout(30), browser.connect() as conn:
+        resp = await conn.call('/health', {})
+        equal(o, resp, {'auth': False}, "ws: Post-logout health")
