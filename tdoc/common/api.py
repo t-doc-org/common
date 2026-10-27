@@ -625,7 +625,7 @@ class DbObservable(DynObservable):
                         with db: data, until = self.query(db)
                         queried = True
                     except Exception:
-                        _log.exception("Exception")
+                        _log.exception("Query exception", event='obs:error')
                     with self.lock:
                         if queried and data != self._data:
                             self._data = data

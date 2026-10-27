@@ -38,6 +38,9 @@ default_query_format = \
 log_entries = pc.Counter(
     subsystem='log', name='entries', labelnames=('level',),
     documentation="A count of log entries.")
+log_events = pc.Counter(
+    subsystem='log', name='events', labelnames=('event',),
+    documentation="A count of log events.")
 
 
 class Logger(logging.Logger):
@@ -190,6 +193,8 @@ class QueueHandler(handlers.QueueHandler):
 class MetricHandler(logging.Handler):
     def emit(self, rec):
         log_entries.labels(logging.getLevelName(rec.levelno)).inc()
+        if (event := get_kwarg(rec, 'event')) is not None:
+            log_events.labels(event).inc()
 
 
 class TimedRotatingFileHandler(handlers.TimedRotatingFileHandler):
