@@ -15,6 +15,7 @@ import time
 
 from docutils import nodes
 from docutils.parsers.rst import directives
+from packaging import version
 import pyjson5
 from sphinx import addnodes, config, errors, locale
 from sphinx.builders import html
@@ -203,6 +204,15 @@ def meta(env, docname, key, default=None):
         except (KeyError, TypeError):
             return default
     return v
+
+
+def short_version(v):
+    v = version.Version(v)
+    res = v.base_version
+    if (p := v.pre) is not None: res += pre[0][:1]
+    if v.is_postrelease: res += 'p'
+    if v.is_devrelease: res += 'd'
+    return res
 
 
 def repo_relative(env, path):
@@ -429,7 +439,7 @@ def fix_rst_signatures(app, doctree):
 
 
 def set_html_context(app, page, template, context, doctree):
-    context['tdoc_version'] = __version__
+    context['tdoc_version'] = short_version(__version__)
     context.setdefault('html_attrs', {})
     if 'tdoc-local' in app.tags: context['html_attrs']['data-tdoc-local'] = ''
     if v := app.config.license: context['license'] = v
@@ -554,7 +564,8 @@ def add_user_button(app, page, template, context, doctree):
 
 _char_width = {
     '0': 7, '1': 7, '2': 7, '3': 7, '4': 7, '5': 7, '6': 7, '7': 7, '8': 7,
-    '9': 7, '.': 4, '+': 9, '-': 5,
+    '9': 7, 'a': 6.7, 'b': 6.9, 'd': 6.9, 'p': 6.9, 'r': 4.75,
+    '.': 4.05, '+': 9, '-': 5.05,
 }
 
 
@@ -562,9 +573,7 @@ def write_static_files(app, builder):
     if builder.format != 'html': return
 
     # Generate the version badge.
-    parts = __version__.split('.')
-    version = '.'.join(p for p in parts if p.isdigit())
-    if any(p.startswith('dev') for p in parts): version += '+'
+    version = short_version(__version__)
     width = 10 + sum(_char_width.get(c, 7) for c in version)
     (app.outdir / 'tdoc-version.svg').write_text(
         badge(('t-doc', 40), (version, width), '#007ec6'), 'utf-8')
