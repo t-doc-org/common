@@ -134,7 +134,8 @@ class Timers:
                     else:
                         reschedule = False
             except Exception as e:
-                self.log.exception("Exception")
+                self.log.exception("Uncaught exception in timer",
+                                   event='timer:exception')
             finally:
                 if reschedule:
                     entry[0] = max(entry[0] + period, time.monotonic())

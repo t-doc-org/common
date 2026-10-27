@@ -54,7 +54,7 @@ class Logger(logging.Logger):
 
 logging.setLoggerClass(Logger)
 logger = logging.getLogger
-log = logger(__name__)
+_log = logger(__name__)
 
 
 class CtxFilter(logging.Filter):
@@ -289,8 +289,25 @@ def configure(*, config=None, level=WARNING, stderr=None, stream=False,
         else:
             raise Exception(f"Invalid log transport: {transport}")
 
-        log.debug("Logs: transport=%(transport)s", transport=transport)
-        stack.callback(lambda: log.debug("Logs: stopping"))
+        _log.debug("Logs: transport=%(transport)s", transport=transport)
+        stack.callback(lambda: _log.debug("Logs: stopping"))
+
+        old_threading_excepthook = threading.excepthook
+        def threading_excepthook(args):
+            if args.exc_type == SystemExit: return
+            try:
+                thread = args.thread.name if (th := args.thread) is not None \
+                         else threading.get_ident()
+                _log.error("Uncaught exception in thread %(thread)s",
+                           thread=thread, event='thread:exception',
+                           exc_info=(args.exc_type, args.exc_value,
+                                     args.exc_traceback))
+            except BaseException:
+                return old_threading_excepthook(args)
+        threading.excepthook = threading_excepthook
+        @stack.callback
+        def restore(): threading.excepthook = old_threading_excepthook
+
         yield
 
 
