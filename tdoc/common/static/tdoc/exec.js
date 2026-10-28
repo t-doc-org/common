@@ -278,7 +278,7 @@ export class Runner {
         const {promise, resolve} = Promise.withResolvers();
         this.running = promise;
         const run_id = this.run_id = Runner.next_run_id;
-        Runner.next_run_id = run_id < Number.MAX_SAFE_INTEGER ? run_id + 1 : 0;
+        Runner.next_run_id = core.nextInt(run_id);
         try {
             this.preRun(run_id);
             try {

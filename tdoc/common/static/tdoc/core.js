@@ -456,6 +456,13 @@ export function rgb2hex(value) {
     return `#${res}`;
 }
 
+// Return the next integer after `value`, wrapping around at MAX_SAFE_INTEGER to
+// zero if neg = false or MIN_SAFE_INTEGER if neg = true.
+export function nextInt(value, neg = false) {
+    return value < Number.MAX_SAFE_INTEGER ? value + 1 :
+           neg ? Number.MIN_SAFE_INTEGER : 0;
+}
+
 const cMinus = '-'.charCodeAt(0), cPlus = '+'.charCodeAt(0);
 const c0 = '0'.charCodeAt(0), cA = 'A'.charCodeAt(0);
 

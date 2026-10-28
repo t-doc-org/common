@@ -46,27 +46,27 @@ async function httpCall(path, opts) {
 class Rpc {
     constructor(conn, path, req) {
         this.conn = conn;
-        this.rid = conn.rid++;
+        this.rid = conn.rid;
+        conn.rid = core.nextInt(conn.rid);
         this.req = req;
         req.$A = req.$Z = 1;
         req.$I = this.rid;
         req.$P = path;
         ({promise: this.resp, resolve: this.resolve, reject: this.reject} =
             Promise.withResolvers());
-        this.conn.rpcs.set(this.rid, this);
     }
 
-    get started() { return this.req == null; }
-
     start() {
-        // TODO: Fail with UNAUTHORIZED if channel failed to authenticate
-        if (!this.conn.connected) return;
-        this.conn.send(this.req);
-        delete this.req;
+        this.conn.start(this);
+        this.initiate();
+    }
+
+    initiate() {
+        if (this.conn.send(this.req)) delete this.req;
     }
 
     onMessage(resp) {
-        if (!this.conn.rpcs.delete(this.rid)) return;
+        if (!this.conn.finish(this)) return;
         delete resp.$Z;
         const code = resp.$E;
         if (code == null) {
@@ -78,89 +78,86 @@ class Rpc {
     }
 
     abort(err) {
-        if (this.conn.rpcs.delete(this.rid)) {
-            this.reject(new Error(err));
-            if (this.conn.connected) {
-                this.conn.send({$I: this.rid, $E: 408});  // REQUEST_TIMEOUT
-            }
-        }
+        if (!this.conn.finish(this)) return;
+        this.reject(new Error(err));
+        this.conn.send({$I: this.rid, $E: 408});  // REQUEST_TIMEOUT
     }
 }
 
 class Connection {
-    constructor() {
-        this.rpcs = new Map();
-    }
+    static linger = 10000;
 
-    async call(path, req) {
-        this.start();
-        const rpc = new Rpc(this, path, req);
-        try {
-            rpc.start();
-            return await rpc.resp;
-        } finally {
-            rpc.abort("Canceled");
-        }
+    constructor(chan, notBefore) {
+        this.chan = chan;
+        this.rpcs = new Map();
+        this.rid = 0;
+        this.connect(notBefore);  // BG
     }
 
     get connected() {
         return this.ws != null && this.ws.readyState === WebSocket.OPEN;
     }
 
-    send(req) { this.ws.send(JSON.stringify(req)); }
-
-    start() {
-        if (this.running) return;
-        this.running = this.run();  // BG
+    send(req) {
+        if (!this.connected) return false;
+        this.ws.send(JSON.stringify(req));
+        return true;
     }
 
-    async run() {
-        try {
-            for (let retries = 0;;) {
-                let start = performance.now();
-                try { await this.stream(); } catch (e) {}
-                if (performance.now() - start > 30000) retries = 0;
-                await core.sleep(core.backoff({min: 1000, max: 10000},
-                                              retries++));
-            }
-        } finally {
-            // TODO: Abort all RPCs?
-            delete this.running;
+    start(rpc) {
+        if (this.rpcs.size === 0) this.stopLinger();
+        this.rpcs.set(rpc.rid, rpc);
+    }
+
+    finish(rpc) {
+        if (!this.rpcs.delete(rpc.rid)) return false;
+        if (this.rpcs.size === 0) this.startLinger();
+        return true;
+    }
+
+    startLinger() {
+        if (this.closing) return;
+        this.linger = setTimeout(() => {
+            delete this.linger;
+            this.closing = true;
+            this.chan.closed(this);
+            if (this.ws != null) this.ws.close();
+        }, this.constructor.linger);
+    }
+
+    stopLinger() {
+        if (this.linger == null) return;
+        clearTimeout(this.linger);
+        delete this.linger;
+    }
+
+    closed(err = false) {
+        this.closing = true;
+        this.chan.closed(this, err);
+        this.stopLinger();
+    }
+
+    async connect(notBefore) {
+        if (notBefore != null) {  // Handle backoff
+            const delay = notBefore - performance.now();
+            if (delay > 0) await core.sleep(delay);
         }
-    }
-
-    async stream() {
-        this.rid = 0;
-        const {promise, resolve} = Promise.withResolvers();
+        this.connectTime = performance.now();
         const ws = new WebSocket(`${url}/ws`);
-        try {
-            ws.binaryType = 'arraybuffer';
-            on(ws).open(e => {
-                this.ws = ws;
-                this.onConnected();
-            });
-            on(ws).close(e => {
-                delete this.ws;
-                this.onDisconnected();
-                resolve();
-            });
-            on(ws).message(e => this.onMessage(e));
-            await promise;
-        } finally {
-            ws.close();
-        }
-    }
-
-    onConnected() {
-        // Start queued RPCs.
-        for (const rpc of this.rpcs.values()) rpc.start();
-    }
-
-    onDisconnected() {
-        // Abort all RPCs that have started already. Keep the others queued.
-        for (const rpc of this.rpcs.values()) {
-            if (rpc.started) rpc.abort("Disconnected");
-        }
+        ws.binaryType = 'arraybuffer';
+        on(ws).open(e => {
+            this.ws = ws;
+            for (const rpc of this.rpcs.values()) rpc.initiate();
+        });
+        on(ws).message(e => this.onMessage(e));
+        on(ws).error(e => {
+            this.closed(true);
+        });
+        on(ws).close(e => {
+            this.closed();
+            for (const rpc of this.rpcs.values()) rpc.abort("Disconnected");
+        });
+        if (this.rpcs.size === 0) this.startLinger();
     }
 
     onMessage(e) {
@@ -174,14 +171,52 @@ class Connection {
     }
 }
 
-const conn = new Connection();
+class Channel {
+    static backoff = {min: 1000, max: 10000};
+    static noBackoffConnDuration = 30000;
+
+    async call(path, req) {
+        const rpc = new Rpc(this.conn, path, req);
+        try {
+            rpc.start();
+            return await rpc.resp;
+        } finally {
+            rpc.abort("Canceled");
+        }
+    }
+
+    get conn() {
+        let conn = this._conn;
+        if (!conn) {
+            conn = this._conn = new Connection(this, this.notBefore);
+        }
+        return conn;
+    }
+
+    closed(conn, err = false) {
+        if (conn !== this._conn) return;
+        delete this._conn;
+        if (!err || performance.now() >
+                    conn.connectTime + this.constructor.noBackoffConnDuration) {
+            delete this.retries;
+            delete this.notBefore;
+        } else {
+            if (this.retries == null) this.retries = 0;
+            this.notBefore = performance.now()
+                             + core.backoff(this.constructor.backoff,
+                                            this.retries++);
+        }
+    }
+}
+
+const chan = new Channel();
 const httpOnlyPaths = {
     '/events/sub': true,
 };
 
 export async function call(path, req = {}) {
     if (core.debug('ws') && !httpOnlyPaths[path]) {
-        return await conn.call(path, req)
+        return await chan.call(path, req)
     }
     return await httpCall(path, {req});
 }
@@ -570,7 +605,6 @@ class EventsApi {
         for (const w of add) this.watches.set(w.id, w);
         if (!this.running) {
             if (this.watches.size === 0) return;
-            // TODO: Delay startup so initial watches get aggregated
             this.run();  // Background
             return;
         }
