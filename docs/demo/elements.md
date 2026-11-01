@@ -122,8 +122,7 @@ it looks like a normal table.
 
 Inline code: `a <= b and b >= c and c != d`{l=py}
 
-````{list-grid}
-:style: grid-template-columns: 1fr 1fr;
+````{list-grid} 1fr 1fr
 - # Code block
   ```{code-block} python
   a = b = c = d = 0

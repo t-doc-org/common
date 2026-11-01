@@ -333,8 +333,7 @@ annotations: [{
 
 ### Renderer with arguments
 
-````{list-grid}
-:style: grid-template-columns: 1fr 1fr;
+````{list-grid} 1fr 1fr
 - ```{chartjs} randomBars
   :style: width: 90%;
   count: 3, min: 10, max: 50,

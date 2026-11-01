@@ -149,6 +149,8 @@ def closest_section(node):
 
 
 class ListGrid(docutils.SphinxDirective):
+    optional_arguments = 1
+    final_argument_whitespace = True
     has_content = True
     option_spec = {
         'cell-style': directives.unchanged,
@@ -165,7 +167,11 @@ class ListGrid(docutils.SphinxDirective):
                           for it in children[0].children))
         self.set_source_info(node)
         node['classes'] += self.options.get('class', [])
-        if v := self.options.get('style', '').strip(): node['style'] = v
+        style = []
+        if self.arguments:
+            style.append(f'grid-template-columns: {self.arguments[0]};')
+        if v := self.options.get('style', '').strip(): style.append(v)
+        if style: node['style'] = ' '.join(style)
         if v := self.options.get('cell-style', '').strip():
             node['cell-style'] = v
         return [node]

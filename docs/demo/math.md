@@ -162,8 +162,7 @@ options: {
 
 ### Renderer with arguments
 
-````{list-grid}
-:style: grid-template-columns: 1fr 1fr;
+````{list-grid} 1fr 1fr
 - ```{jsxgraph} regularPolygon
   sides: 3,
   ```

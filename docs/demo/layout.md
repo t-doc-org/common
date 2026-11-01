@@ -160,8 +160,7 @@ This is the last quote.
 
 ### Item spacing
 
-```{list-grid}
-:style: grid-template-columns: 1fr 1fr;
+```{list-grid} 1fr 1fr
 - # Bullet list
   - Item 1
   - Item 2
@@ -332,8 +331,7 @@ The list below is laid out in 3 columns.
 The {rst:dir}`list-grid` below creates a 2-column layout. A heading is used to
 label the columns.
 
-```{list-grid}
-:style: grid-template-columns: 5fr 3fr;
+```{list-grid} 5fr 3fr
 - # Cell 1
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
   eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
