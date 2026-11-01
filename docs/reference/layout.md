@@ -172,8 +172,7 @@ supported:
   points values, excluding those postfixed with `!`.
 
 ````{code-block}
-```{flex-table}
-:class: points grid
+```{flex-table} grid points align-left
 {t=h}|{.l}Exercise    |{points=label}|Total
 {t=b}|{t=h .l}Points  |{points=value}|{points=sum}
      |{t=h .l}Obtained|{points=empty}|

@@ -112,12 +112,13 @@ element loading a YouTube video. The argument is the ID of the video, e.g.
 
 ## Table
 
-`````{rst:directive} {flex-table}
+`````{rst:directive} {flex-table} [class ...]
 This directive defines an HTML `<table>`{l=html} using a more flexible syntax
 than Markdown tables or other table directives. In particular, it allows
 assigning CSS classes to individual rows and cells, and allows cells to span
-multiple rows and / or columns. The directive content defines the content of the
-table, using the following syntax:
+multiple rows and / or columns. Directive arguments are added as CSS classes on
+the `<table>`{l=html}. The directive content defines the content of the table,
+using the following syntax:
 
 - Each line of the directive content defines a row.
 - Each cell in a row starts with a `|` character.
@@ -144,7 +145,7 @@ table, using the following syntax:
   `\|`.
 
 ````{code-block}
-```{flex-table}
+```{flex-table} align-left
 {t=h}|Name|Age|Shoe size
 {t=b}|{t=h}Joe|23|43
      |{t=h}Jack|18|41
@@ -153,7 +154,8 @@ table, using the following syntax:
 ````
 
 Tables have no styling by default, but the following classes are set up in the
-stylesheet and can be used in the {rst:dir}`:class: <flex-table:class>` option.
+stylesheet and can be used as directive arguments or in the
+{rst:dir}`:class: <flex-table:class>` option.
 
 - `grid`: Formats the table as a grid, using a `1px` solid border on all cells.
   The following classes can be set on table cells:

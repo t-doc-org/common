@@ -20,6 +20,8 @@ def setup(app):
 
 
 class FlexTable(docutils.SphinxDirective):
+    optional_arguments = 1
+    final_argument_whitespace = True
     has_content = True
     option_spec = {
         'class': ext.opt_classes,
@@ -31,6 +33,7 @@ class FlexTable(docutils.SphinxDirective):
         table = flex_table()
         self.set_source_info(table)
         self.add_name(table)
+        if self.arguments: table['classes'] += self.arguments[0].split()
         table['classes'] += self.options.get('class', [])
         for i, line in enumerate(self.content, 1):
             lineno = self.lineno + self.content_offset + i

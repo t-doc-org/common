@@ -107,8 +107,7 @@ table.points > thead > tr > th {
 }
 </style>
 
-```{flex-table}
-:class: points grid align-left
+```{flex-table} grid points align-left
 {t=h}|{.l}Exercise    |{points=label}|Total
 {t=b}|{t=h .l}Points  |{points=value}|{points=sum}
      |{t=h .l}Obtained|{points=empty}|
@@ -240,14 +239,12 @@ This is the last quote.
     |1|2|3|4|5|6|
 
     This is a table.
-4.  ```{flex-table}
-    :class: grid
+4.  ```{flex-table} grid
     {t=h}|$x$|0|1|2|3
     {t=b}|{t=h}$f(x)$|1|3|5|7
     ```
     This is a `{flex-table} grid`.
-5.  ```{flex-table}
-    :class: function-table
+5.  ```{flex-table} function-table
     |$x$|$0$|$1$|$2$|$3$
     |$f(x)$|$1$|$3$|$5$|$7$
     ```
@@ -419,34 +416,28 @@ x_{1,2}=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
 
 # Tables
 
-```{flex-table}
-:class: grid align-left
+```{flex-table} grid align-left
 {t=h}|$x$|0|1|2|3
 {t=b}|{t=h}$f(x)$|1|3|5|7
 ```
-```{flex-table}
-:class: grid
+```{flex-table} grid
 {t=h}|$x$|0|1|2|3
 {t=b}|{t=h}$f(x)$|1|3|5|7
 ```
-```{flex-table}
-:class: grid align-right
+```{flex-table} grid align-right
 {t=h}|$x$|0|1|2|3
 {t=b}|{t=h}$f(x)$|1|3|5|7
 ```
 
-```{flex-table}
-:class: function-table
+```{flex-table} function-table
 |$x$|$0$|$1$|$2$|$3$
 |$f(x)$|$1$|$3$|$5$|$7$
 ```
-```{flex-table}
-:class: function-table align-center
+```{flex-table} function-table align-center
 |$x$|$0$|$1$|$2$|$3$
 |$f(x)$|$1$|$3$|$5$|$7$
 ```
-```{flex-table}
-:class: function-table align-right
+```{flex-table} function-table align-right
 |$x$|$0$|$1$|$2$|$3$
 |$f(x)$|$1$|$3$|$5$|$7$
 ```
