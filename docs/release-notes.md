@@ -3,6 +3,16 @@
 
 # Release notes
 
+(release-0-98)=
+## 0.98 *(2026-11-01)*
+
+- Improved {rst:dir}`flex-table` to accept classes as directive arguments.
+- Improved {rst:dir}`list-grid` for simple cases by accepting column definitions
+  as directive arguments.
+- Fixed the position of list markers when list items start with certain kinds of
+  block content.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.97...0.98)
+
 (release-0-97)=
 ## 0.97 *(2026-10-22)*
 
