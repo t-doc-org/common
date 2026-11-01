@@ -946,7 +946,6 @@ export class RateLimited {
     }
 }
 
-
 const alerts = new StoredJson('tdoc:alerts', undefined, sessionStorage);
 
 // Show an alert at the top of the article.

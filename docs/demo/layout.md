@@ -159,6 +159,8 @@ This is the last quote.
 
 ## Lists
 
+### Item spacing
+
 ```{list-grid}
 :style: grid-template-columns: 1fr 1fr;
 - # Bullet list
@@ -216,6 +218,103 @@ This is the last quote.
 
   6.  Item 6
 ```
+
+### Marker position
+
+{.lower-alpha-paren .columns-2 .avoid-break-items}
+1.  ```{figure} /_static/liquid.png
+    ```
+    This is a `{figure}`.
+2.  ```{math}
+    :class: align-left
+    \left\{
+    \begin{aligned}
+    x + 3y &= 8 \\
+    2x - 5y &= -17
+    \end{aligned}
+    \right.
+    ```
+    This is a `{math}` block.
+3.  |A|B|C|D|E|F|
+    |-|-|-|-|-|-|
+    |1|2|3|4|5|6|
+
+    This is a table.
+4.  ```{flex-table}
+    :class: grid
+    {t=h}|$x$|0|1|2|3
+    {t=b}|{t=h}$f(x)$|1|3|5|7
+    ```
+    This is a `{flex-table} grid`.
+5.  ```{flex-table}
+    :class: function-table
+    |$x$|$0$|$1$|$2$|$3$
+    |$f(x)$|$1$|$3$|$5$|$7$
+    ```
+    This is a `{flex-table} function-table`.
+6.  ```{chartjs} chart
+    :style: aspect-ratio: 3 / 1;
+    type: 'bar',
+    data: {
+      labels: ['Monday', 'Tuesday', 'Wednesday'],
+      datasets: [{data: [7, 11, 3]}],
+    },
+    options: {
+      borderWidth: 1,
+      borderColor: '#36a2eb', hoverBorderColor: '#36a2eb',
+      backgroundColor: '#36a2eb33',
+      plugins: {legend: {display: false}},
+    },
+    ```
+    This is a `{chart}`.
+7.  ```{jsxgraph} grid
+    width: 15, height: 3,
+    ```
+    This is a `{jsxgraph}` block.
+8.  ```{mermaid}
+    config:
+      flowchart:
+        curve: linear
+    ---
+    flowchart LR;
+        node(Node)
+    ```
+    This is a `{mermaid}` block.
+9.  ```{graphviz}
+    digraph {
+        bgcolor="transparent"
+        A
+    }
+    ```
+    This is a `{graphviz}` block.
+10. ```{youtube} aVwxzDHniEw
+    ```
+    This is a `{youtube}` video.
+11. ```{exec} python
+    :when: load
+    :class: hidden
+    for i in range(3):
+      print(i)
+    ```
+    This is `{exec}` text output.
+12. ```{exec} python
+    :when: load
+    :class: hidden
+    from tdoc import svg
+    img = svg.Image(200, 50, stroke='red', fill='transparent')
+    img.rect(0, 0, 200, 50)
+    render(img)
+    ```
+    This is `{exec}` SVG output.
+13. ```{exec} html
+    :when: load
+    :class: hidden
+    :output-style: height: 4rem;
+    <title>Hello, world</title>
+    <style>h1 { margin: 0; font-size: 2rem; }</style>
+    <h1>Hello, world!</h1>
+    ```
+    This is `{exec} html` output.
 
 ## Column layouts
 

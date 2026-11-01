@@ -115,6 +115,7 @@ class flex_table(nodes.General, nodes.Element): pass
 
 def visit_flex_table(self, node):
     self.context.append(None)
+    self.body.append('<div class="flex-table">')
     self.body.append(self.starttag(node, 'table', ''))
 
 
@@ -122,7 +123,7 @@ def depart_flex_table(self, node):
     if (prev_typ := self.context[-1]) is not None:
         self.body.append(f'</{prev_typ}>')
     self.context.pop()
-    self.body.append('</table>\n')
+    self.body.append('</table></div>\n')
 
 
 class flex_row(nodes.Part, nodes.Element): pass

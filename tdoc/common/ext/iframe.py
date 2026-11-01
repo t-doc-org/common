@@ -30,9 +30,10 @@ def visit_iframe(self, node):
     attrs.setdefault('allow', 'autoplay; clipboard-write; encrypted-media; '
                      'fullscreen; picture-in-picture; screen-wake-lock; '
                      'web-share')
+    self.body.append('<div class="iframe">')
     self.body.append(self.starttag(
         node, 'iframe', suffix='', classes=['tdoc'], src=node['src'], **attrs))
-    self.body.append('</iframe>\n')
+    self.body.append('</iframe></div>\n')
     raise nodes.SkipNode()
 
 

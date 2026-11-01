@@ -37,6 +37,15 @@ section.hidden-heading:not(#¶) > :is(h1, h2, h3, h4, h5, h6):first-child {
 .line-height-normal:not(#¶) .highlight pre {
     line-height: normal;
 }
+.valign-top:not(#¶) {
+    vertical-align: top;
+}
+.valign-middle:not(#¶) {
+    vertical-align: middle;
+}
+.valign-bottom:not(#¶) {
+    vertical-align: bottom;
+}
 @media print {
     .no-print {
         display: none !important;
@@ -566,63 +575,74 @@ ul.contains-task-list > li.task-list-item
     --fa: "\f14a";  /* square-check */
 }
 
+/* Flex tables */
+div.flex-table {
+    margin: 0 0 1rem;
+}
+div.flex-table > table {
+    display: inline-table;
+    vertical-align: top;
+}
+
 /* Grid tables */
-table.grid {
-    margin: 0 auto 1rem;
+div.flex-table:has(> table.grid) {
     text-align: center;
 }
-table.grid > :is(thead, tbody) > tr > :is(th, td) {
+div.flex-table > table.grid {
+    text-align: center;
+}
+div.flex-table > table.grid > :is(thead, tbody) > tr > :is(th, td) {
     border: 1px solid var(--pst-color-text-base);
     padding: 0.1rem 0.5rem;
 }
-table.grid > :is(thead, tbody) > tr > :is(th, td).l {
+div.flex-table > table.grid > :is(thead, tbody) > tr > :is(th, td).l {
     text-align: left;
 }
-table.grid > :is(thead, tbody) > tr > :is(th, td).r {
+div.flex-table > table.grid > :is(thead, tbody) > tr > :is(th, td).r {
     text-align: right;
 }
 
 /* Function tables */
-table.function-table {
-    margin: 0 0 1rem;
+div.flex-table:has(> table.function-table) {
+    text-align: left;
+}
+div.flex-table > table.function-table {
     text-align: center;
 }
-table.function-table > :is(thead, tbody) > tr:not(:last-child) {
+div.flex-table > table.function-table > :is(thead, tbody)
+        > tr:not(:last-child) {
     border-bottom: 1px solid var(--pst-color-text-base);
 }
-table.function-table > :is(thead, tbody) > tr > :is(th, td) {
+div.flex-table > table.function-table > :is(thead, tbody) > tr > :is(th, td) {
     border-right: 1px solid var(--pst-color-text-base);
     padding: 0.1rem 0.5rem;
 }
-table.function-table > :is(thead, tbody) > tr > :is(th, td).l {
+div.flex-table > table.function-table > :is(thead, tbody) > tr > :is(th, td).l {
     text-align: left;
 }
-table.function-table > :is(thead, tbody) > tr > :is(th, td).r {
+div.flex-table > table.function-table > :is(thead, tbody) > tr > :is(th, td).r {
     text-align: right;
 }
-table.function-table > :is(thead, tbody) > tr > :is(th, td).g {
+div.flex-table > table.function-table > :is(thead, tbody) > tr > :is(th, td).g {
     background-color: var(--pst-color-border);
 }
-table.function-table > :is(thead, tbody) > tr > :is(th, td).w {
+div.flex-table > table.function-table > :is(thead, tbody) > tr > :is(th, td).w {
     min-width: 5rem;
 }
-table.function-table > :is(thead, tbody) > tr
+div.flex-table > table.function-table > :is(thead, tbody) > tr
         > :is(th, td):is(:first-child, :last-child) {
     border-right: 3px double var(--pst-color-text-base);
 }
 
-/* Table alignment */
-table.align-left {
-    margin-left: 0;
-    margin-right: auto;
+/* Flex table alignment */
+div.flex-table:has(> table.align-left) {
+    text-align: left;
 }
-table.align-center {
-    margin-left: auto;
-    margin-right: auto;
+div.flex-table:has(> table.align-center) {
+    text-align: center;
 }
-table.align-right {
-    margin-left: auto;
-    margin-right: 0;
+div.flex-table:has(> table.align-right) {
+    text-align: right;
 }
 
 /* Framed blocks */
@@ -648,6 +668,20 @@ div.frame.docutils.container > :last-child:not(#¶) {
    text. */
 p.rubric {
     display: block;
+}
+
+/* Fix the list marker position for various list item content. */
+figure:is(.align-default, .align-center) > img,
+figure:is(.align-default, .align-center) > a > img {
+    display: inline;
+    vertical-align: top;
+}
+:is(ol, ul) > li div.math > mjx-container > svg {
+    vertical-align: top !important;  /* Override element style */
+}
+div.pst-scrollable-table-container > table.table {
+    display: inline-table;
+    vertical-align: top;
 }
 
 /* Fix the layout of admonition content. pydata-sphinx-theme sets left and right
@@ -710,11 +744,14 @@ div.admonition > .admonition-title {
 }
 
 /* Iframes */
+div.iframe {
+    margin: 0 auto 1rem;
+}
 iframe.tdoc {
-    display: block;
+    display: inline;
     width: 100%;
     aspect-ratio: 16/9;
-    margin: 0 auto 1rem;
+    vertical-align: top;
 }
 
 /* Solutions */
@@ -992,10 +1029,6 @@ tdoc-quiz ul.tdoc-quiz-group li > label > p:first-child {
 }
 tdoc-quiz ul.tdoc-quiz-group li > label > p:last-child {
     margin-bottom: 0;
-}
-tdoc-quiz ul.tdoc-quiz-group li > label
-        .tdoc-exec-output.tdoc-sectioned > div > svg {
-    vertical-align: top;
 }
 tdoc-quiz .tdoc-quiz-field.bad,
 tdoc-quiz ul.tdoc-quiz-group:has(.tdoc-quiz-field.bad) {
@@ -1310,6 +1343,12 @@ div.tdoc-exec-output.tdoc-sectioned > div.highlight > pre {
     border: none;
     border-radius: 0;
 }
+div.tdoc-exec-output.tdoc-sectioned > div:has(> svg:only-child) {
+    text-align: center;
+}
+div.tdoc-exec-output.tdoc-sectioned > div > svg {
+    vertical-align: top;
+}
 div.tdoc-exec-output.tdoc-sectioned > .canvas > canvas {
     display: block;
     margin: 0 auto;
@@ -1357,6 +1396,7 @@ div.tdoc-exec-output > .tdoc-navbar {
     display: flex;
     flex-direction: row;
     column-gap: 0.3rem;
+    align-items: center;
     background-color: var(--pst-color-background);
 }
 div.tdoc-exec-output > .tdoc-navbar > .tdoc-title {
@@ -1455,6 +1495,10 @@ tdoc-dyn[type=jsxgraph] {
     border-radius: 0.25rem;
     background-color: var(--pst-color-background);
 }
+tdoc-dyn[type=jsxgraph] > svg {
+    display: inline !important;
+    vertical-align: top;
+}
 html[data-theme=dark] tdoc-dyn[type=jsxgraph]
         > :is(svg, div[class^=JXG]) {
     filter: invert(1) hue-rotate(180deg);
@@ -1493,8 +1537,10 @@ tdoc-dyn[type=chartjs] > canvas {
        https://github.com/chartjs/Chart.js/issues/11005
        https://github.com/chartjs/Chart.js/issues/7006
     */
+    display: inline !important;
     width: 100% !important;
     height: auto !important;
+    vertical-align: top;
 }
 html[data-theme=dark] tdoc-dyn[type=chartjs] > canvas {
     filter: invert(1) hue-rotate(180deg);
@@ -1503,6 +1549,9 @@ html[data-theme=dark] tdoc-dyn[type=chartjs] > canvas {
 /* Mermaid diagrams */
 tdoc-dyn[type=mermaid]:not([data-processed]) {
     color: #0000;
+}
+tdoc-dyn[type=mermaid] > svg {
+    vertical-align: top;
 }
 html[data-theme=dark] tdoc-dyn[type=mermaid] > svg {
     filter: invert(1) hue-rotate(180deg);
@@ -1532,6 +1581,7 @@ div.graphviz.align-right {
 div.graphviz > svg {
     max-width: 100%;
     height: auto;
+    vertical-align: top;
 }
 div.graphviz > img.graphviz:not(#¶) {
     background-color: transparent;
@@ -1837,11 +1887,6 @@ div.math {
 }
 mjx-container[display="true"]:not(#¶) {
     margin: 0;
-}
-
-/* Keep list markers at the top for math content. */
-:is(ol, ul) > li div.math > mjx-container > svg {
-    vertical-align: top !important;  /* Override element style */
 }
 
 /* Avoid that form controls change size on focus. */
