@@ -8,7 +8,7 @@ previous = "0.97"
 
 [python]
 minimum = "3.13"
-recommend = "3.14.7"
+recommend = "3.14.10"
 
 [defaults]
 command = ["tdoc", "site", "serve"]
