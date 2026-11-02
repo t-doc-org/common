@@ -500,3 +500,9 @@ class AsyncThread(threading.Thread):
 
     def call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)
+
+
+class TaskGroup(asyncio.TaskGroup):
+    def run(self, fn=None, /, **kwargs):
+        if fn is not None: return self.create_task(fn(), **kwargs)
+        return lambda fn: self.create_task(fn(), **kwargs)

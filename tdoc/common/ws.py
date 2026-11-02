@@ -5,11 +5,11 @@ import asyncio
 from collections import abc
 from concurrent import futures
 import contextlib
-import contextvars
 import functools
 import json
 import re
 import secrets
+import time
 
 import prometheus_client as pc
 from websockets import exceptions, frames, protocol
@@ -17,23 +17,93 @@ from websockets.asyncio import server
 
 from . import context, http, logs, util, wsgi
 
+# TODO: Use own RPC error codes and exception type, not HTTP codes
+
 _log = logs.logger(__name__)
 _wlog = logs.logger('websockets')
 _wlog.setLevel(logs.DISABLED)  # Disable websockets logging by default
 
 globals().update((v.name, v) for v in frames.CloseCode)
 
-req_id = contextvars.ContextVar('req_id')
-
 websocket_active_connections = pc.Gauge(
     subsystem='websocket', name='active_connections',
     documentation="The number of active websocket connections.")
+websocket_rpc_duration = pc.Histogram(
+    subsystem='websocket', name='rpc_duration', unit='seconds',
+    labelnames=('endpoint', 'status'),
+    buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
+             1.0, 2.0, 5.0, 10.0],
+    documentation="The duration of websocket RPCs.")
+websocket_active_rpcs = pc.Gauge(
+    subsystem='websocket', name='active_rpcs',
+    labelnames=('endpoint',),
+    documentation="The number of active websocket RPCs.")
 
 
 def close_str(frame):
     if not (r := frame.reason):
         r = frames.CLOSE_CODE_EXPLANATIONS.get(frame.code, 'unknown')
     return f"{frame.code} {r}"
+
+
+class Rpc:
+    queue_size = 16
+
+    def __init__(self, conn, rid, req):
+        self.conn, self.rid = conn, rid
+        self.path = req.pop('$P', None)
+        self.queue = asyncio.Queue(self.queue_size)
+        self.queue.put_nowait(req)
+        self.receive_closed = req.pop('$Z', None) is not None
+        if self.receive_closed: self.queue.shutdown()
+        self.send_closed = self.canceled = False
+
+    def __getattr__(self, name): return getattr(self.conn, name)
+
+    def cancel(self, code, msg=None):
+        if self.canceled: return False
+        self.receive_closed = self.send_closed = self.canceled = True
+        self.queue.shutdown(True)
+        self.task.cancel(f'{code} {msg}' if msg else str(code))
+        return True
+
+    @functools.cached_property
+    async def reqs(self):
+        with contextlib.suppress(asyncio.QueueShutDown):
+            while True: yield await self.queue.get()
+
+    async def received(self, req):
+        if (code := req.get('$E')) is not None:
+            self.cancel(code, req.get('$M'))
+            return
+        if self.receive_closed: return
+        if (last := req.pop('$Z', None)) is None:
+            await self.queue.put(req)
+            return
+        self.receive_closed = True
+        if last != 0: await self.queue.put(req)
+        self.queue.shutdown()
+
+    async def send(self, resp, final=False):
+        if self.send_closed: raise http.Error(http.INTERNAL_SERVER_ERROR)
+        resp['$I'] = self.rid
+        if final: resp['$Z'] = 1
+        await self.conn.send(resp)
+        if final: self.send_closed = True
+
+    async def close_send(self):
+        if self.send_closed: return
+        self.send_closed = True
+        await self.conn.send({'$I': self.rid, '$Z': 0})
+
+    def abort(self, code, msg=None):
+        if not self.cancel(code, msg): return
+        resp = {'$I': self.rid, '$E': code}
+        if msg: resp['$M'] = msg
+        @self.conn.workers.run
+        async def sender():
+            try: await self.conn.send(resp)
+            except Exception: pass
 
 
 class Connection(http.Context, server.ServerConnection):
@@ -109,27 +179,32 @@ class Connection(http.Context, server.ServerConnection):
             for k, v in hs: resp.headers[k] = v
 
     async def handle_connection(self):
+        self.__rpcs = {}
         close_code = NORMAL_CLOSURE
         try:
-            async with asyncio.TaskGroup() as workers:
-                # TODO: Don't abort workers when exiting block due to exception
-                async for data in self:
+            async with util.TaskGroup() as workers:
+                self.workers = workers
+                while True:
+                    data = await self.recv()
                     try:
                         req = json.loads(data)
-                        rid = req.pop('$I')
-                        # TODO: Implement streaming RPCs
-                        if req.pop('$A', None) is None: continue
-                        if req.pop('$Z', None) is None: continue
+                        if (rid := req.pop('$I', None)) is None: continue
                     except Exception:
                         continue
-                    token = req_id.set(rid)
-                    try:
-                        workers.create_task(self.handle_rpc(req))
-                    finally:
-                        req_id.reset(token)
-        except exceptions.ConnectionClosed as e:
+                    if req.pop('$A', None) is None:
+                        if (rpc := self.__rpcs.get(rid)) is not None:
+                            await rpc.received(req)
+                        continue
+                    if (rpc := self.__rpcs.get(rid)) is not None:
+                        rpc.abort(http.BAD_REQUEST)
+                        continue
+                    # TODO: Limit the number of in-progress RPCs
+                    rpc = Rpc(self, rid, req)
+                    rpc.task = workers.create_task(self.handle_rpc(rpc))
+                    self.__rpcs[rid] = rpc
+        except* exceptions.ConnectionClosed:
             pass
-        except Exception as e:
+        except* Exception:
             close_code = INTERNAL_ERROR
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
@@ -149,55 +224,66 @@ class Connection(http.Context, server.ServerConnection):
                       closure=closure, **self._log_args)
             self.run_disconnected()
 
-    async def handle_rpc(self, req):
-        # TODO: Add metrics
-        code, log_level = http.INTERNAL_SERVER_ERROR, logs.NOTSET
-        cid, rid = self.id.hex, req_id.get()
+    async def handle_rpc(self, rpc):
+        code = path = None
+        start, active = time.monotonic(), None
+        cid, log_level = self.id.hex, logs.NOTSET
         token = context.ctx.set('rpc:' + secrets.token_hex(8))
         try:
-            if (path := req.pop('$P', None)) is None:
-                raise http.Error(http.BAD_REQUEST)
+            # Find the endpoint
+            if (path := rpc.path) is None: raise http.Error(http.BAD_REQUEST)
             if (endpoint := self.__handler.endpoints.get(path)) is None:
                 raise http.Error(http.NOT_FOUND)
+
+            # Record the active RPC in metrics.
+            (active := websocket_active_rpcs.labels(path)).inc()
+
+            # Log the start of the RPC.
             log_level = getattr(endpoint, '_log_level', logs.NOTSET)
             if log_level != logs.NOTSET:
                 lkw = self._log_rpc
                 msg = "RPC %(path)s\norigin=%(origin)s remote=%(remote)s"
                 if 'user' in lkw: msg += " user=0x%(user)016x"
                 _log.log(log_level, msg, event='rpc:start', path=path, cid=cid,
-                         rid=rid, **lkw)
-            await endpoint(self, req)
+                         rid=rpc.rid, **lkw)
+
+            # Run the endpoint.
+            await endpoint(rpc)
+            await rpc.close_send()
             code = http.OK
+        except exceptions.ConnectionClosed:
+            if code is None: code = http.SERVICE_UNAVAILABLE
+            rpc.cancel(code)
         except http.Error as e:
             if e.headers:
                 _log.warning("Ignored headers in RPC error: %(headers)s",
-                             str(e.headers))
-            code = e.code
-            await self.send_error(e.code, e.message)
-        except exceptions.ConnectionClosedOK:
-            code = http.SERVICE_UNAVAILABLE
-        except exceptions.ConnectionClosedError:
-            code = http.SERVICE_UNAVAILABLE
+                             ' '.join(h[0] for h in e.headers))
+            if code is None: code = e.code
+            rpc.abort(e.code, e.message)
         except Exception:
             _log.exception("Uncaught exception", event='rpc:exception')
-            code = http.INTERNAL_SERVER_ERROR
-            await self.send_error(code)
+            if code is None: code = http.INTERNAL_SERVER_ERROR
+            rpc.abort(code)
+        except asyncio.CancelledError as e:
+            _log.error("Cancelled: %(err)s", err=str(e))  # TODO: Remove
+            if code is None: code = http.REQUEST_TIMEOUT
+            rpc.abort(code)
+            raise
         finally:
+            del self.__rpcs[rpc.rid]
+            if code is None: code = http.INTERNAL_SERVER_ERROR
             if log_level != logs.NOTSET:
                 _log.log(log_level, "%(code)s %(phrase)s", event='rpc:end',
-                         code=int(code), phrase=code.phrase, cid=cid, rid=rid,
-                         **lkw)
+                         code=int(code), phrase=code.phrase, cid=cid,
+                         rid=rpc.rid, **lkw)
+            if active is not None: active.dec()
+            if path is not None:
+                websocket_rpc_duration.labels(path, str(code)) \
+                    .observe(time.monotonic() - start)
             context.ctx.reset(token)
 
-    def send(self, resp, final=False):
-        resp['$I'] = req_id.get()
-        if final: resp['$Z'] = 1
+    def send(self, resp):
         return super().send(util.to_json(resp))
-
-    def send_error(self, code, msg=''):
-        resp = {'$E': code}
-        if msg: resp['$M'] = msg
-        return self.send(resp)
 
     @functools.cached_property
     def _log_args(self):
@@ -232,16 +318,34 @@ class Handler(http.Handler, type='ws'):
             if isinstance(res := fn(conn), abc.Awaitable): await res
 
 
-def endpoint(name, require_authn=False, log_level=logs.INFO):
+def stream_endpoint(name, require_authn=False, log_level=logs.INFO):
     def decorator(fn):
         @functools.wraps(fn)
-        async def dfn(self, /, ctx, req):
-            if require_authn and ctx.user is None:
+        async def dfn(self, /, rpc):
+            if require_authn and rpc.conn.user is None:
                 raise http.Error(http.UNAUTHORIZED)
-            await ctx.send(await fn(self, ctx, req), final=True)
+            await fn(self, rpc)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
         dfn._log_level = log_level
+        return dfn
+    return decorator
+
+
+def endpoint(name, require_authn=False, log_level=logs.INFO):
+    def decorator(fn):
+        @stream_endpoint(name, require_authn=require_authn, log_level=log_level)
+        @functools.wraps(fn)
+        async def dfn(self, /, rpc):
+            req = await anext(rpc.reqs)
+            # TODO: Don't propagate ExceptionGroup out of dfn
+            async with util.TaskGroup() as workers:
+                @workers.run
+                async def receiver():
+                    # We expect not further requests.
+                    async for _ in rpc.reqs:
+                        raise http.Error(http.INTERNAL_SERVER_ERROR)
+                await rpc.send(await fn(self, rpc, req), final=True)
         return dfn
 
     if getattr(name, '_endpoint_type', None) == 'wsgi':

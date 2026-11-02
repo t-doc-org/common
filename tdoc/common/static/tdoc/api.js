@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as core from './core.js';
+import * as http from './http.js';
 const {elmt, html, on, qs, qsa} = core;
 
 const backend = new core.Stored('tdoc:api:backend', undefined, sessionStorage);
@@ -47,59 +48,142 @@ class Rpc {
     constructor(conn, path, req) {
         this.conn = conn;
         this.rid = conn.rid;
-        conn.rid = core.nextInt(conn.rid);
-        this.req = req;
-        req.$A = req.$Z = 1;
-        req.$I = this.rid;
-        req.$P = path;
-        ({promise: this.resp, resolve: this.resolve, reject: this.reject} =
+        this.path = path;
+        this.q = [];
+        this.qPoke = new core.CondVar();
+        ({promise: this.canceled, reject: this._cancel} =
             Promise.withResolvers());
+        this.canceled.catch(e => undefined);  // Prevent logging
     }
 
-    start() {
+    async start() {
         this.conn.start(this);
-        this.initiate();
+        await this.conn.connected;
     }
 
-    initiate() {
-        if (this.conn.send(this.req)) delete this.req;
+    finish() {
+        return this.conn.finish(this);
     }
 
-    onMessage(resp) {
-        if (!this.conn.finish(this)) return;
-        delete resp.$Z;
+    cancel(code, msg) {
+        if (this.aborted) return false;
+        this.receiveClosed = this.sendClosed = this.aborted = true;
+        this.closeQueue([code, msg]);
+        this._cancel(new http.Error(code, msg));
+        return true;
+    }
+
+    received(resp) {
         const code = resp.$E;
-        if (code == null) {
-            this.resolve(resp);
-        } else {
-            this.reject(new Error(resp.$M ?? "Request failed",
-                                  {cause: {code}}));
+        if (code != null) {
+            this.cancel(code, resp.$M);
+            return;
+        }
+        if (this.receiveClosed) return;
+        const last = resp.$Z;
+        if (last == null) {
+            this.enqueue(resp);
+            return;
+        }
+        this.receiveClosed = true;
+        if (last !== 0) {
+            delete resp.$Z;
+            this.enqueue(resp);
+        }
+        this.closeQueue();
+    }
+
+    enqueue(resp) {
+        if (this.qClosed) return;
+        this.q.push(resp);
+        this.qPoke.notify();
+    }
+
+    closeQueue(err) {
+        if (this.qClosed) return;
+        this.qClosed = err ?? true;
+        if (err != null) delete this.q;
+        this.qPoke.notify();
+    }
+
+    get resps() {
+        let resps = this._resps;
+        if (resps == null) resps = this._resps = this.iterResps();
+        return resps;
+    }
+
+    async *iterResps() {
+        const cond = () => this.q == null || this.q.length > 0 || this.qClosed;
+        for (;;) {
+            await this.qPoke.wait(cond);
+            const q = this.q, closed = this.qClosed;
+            if (q == null) throw new http.Error(...closed);
+            this.q = [];
+            for (const resp of q) {
+                yield resp;
+                if (this.q == null) throw new http.Error(...this.qClosed);
+            }
+            if (closed) break;
         }
     }
 
-    abort(err) {
-        if (!this.conn.finish(this)) return;
-        this.reject(new Error(err));
-        this.conn.send({$I: this.rid, $E: 408});  // REQUEST_TIMEOUT
+    send(req, final = false) {
+        if (this.sendClosed) throw new Error("Send on closed stream");
+        req.$I = this.rid;
+        if (!this.initiated) {
+            req.$A = 1;
+            req.$P = this.path;
+        }
+        if (final) req.$Z = 1;
+        if (!this.conn.send(req)) {
+            this.sendClosed = true;
+            throw new Error("Disconnected");
+        }
+        if (!this.initiated) this.initiated = true;
+        if (final) this.sendClosed = true;
+    }
+
+    closeSend() {
+        if (this.sendClosed) return;
+        this.sendClosed = true;
+        if (!this.conn.send({$I: this.rid, $Z: 0})) {
+            throw new Error("Disconnected");
+        }
+    }
+
+    abort(code, msg) {
+        if (!this.cancel(code, msg)) return;
+        if (!this.initiated) return;
+        const req = {$I: this.rid, $E: code}
+        if (msg) req.$M = msg;
+        this.conn.send(req);
     }
 }
 
 class Connection {
     static linger = 10000;
+    #rid = 0;
 
     constructor(chan, notBefore) {
         this.chan = chan;
         this.rpcs = new Map();
-        this.rid = 0;
+        ({promise: this.connected, resolve: this.connectedRes} =
+            Promise.withResolvers());
         this.connect(notBefore);  // BG
     }
 
-    get connected() {
+    get rid() {
+        const rid = this.#rid;
+        this.#rid = core.nextInt(rid);
+        return rid;
+    }
+
+    get isConnected() {
         return this.ws != null && this.ws.readyState === WebSocket.OPEN;
     }
 
     send(req) {
-        if (!this.connected) return false;
+        if (!this.isConnected) return false;
         this.ws.send(JSON.stringify(req));
         return true;
     }
@@ -147,27 +231,30 @@ class Connection {
         ws.binaryType = 'arraybuffer';
         on(ws).open(e => {
             this.ws = ws;
-            for (const rpc of this.rpcs.values()) rpc.initiate();
+            this.connectedRes();
         });
         on(ws).message(e => this.onMessage(e));
         on(ws).error(e => {
             this.closed(true);
+            // TODO: Reject this.connected
         });
         on(ws).close(e => {
             this.closed();
-            for (const rpc of this.rpcs.values()) rpc.abort("Disconnected");
+            for (const rpc of this.rpcs.values()) {
+                rpc.abort(http.SERVICE_UNAVAILABLE, "Disconnected");
+            }
         });
         if (this.rpcs.size === 0) this.startLinger();
     }
 
     onMessage(e) {
-        const data = JSON.parse(e.data);
-        const rid = data.$I;
+        const resp = JSON.parse(e.data);
+        const rid = resp.$I;
         if (rid == null) return;
         const rpc = this.rpcs.get(rid);
         if (rpc == null) return;
-        delete data.$I;
-        rpc.onMessage(data);
+        delete resp.$I;
+        rpc.received(resp);
     }
 }
 
@@ -175,14 +262,33 @@ class Channel {
     static backoff = {min: 1000, max: 10000};
     static noBackoffConnDuration = 30000;
 
-    async call(path, req) {
-        const rpc = new Rpc(this.conn, path, req);
+    async stream(path, fn) {
+        const rpc = new Rpc(this.conn, path);
         try {
-            rpc.start();
-            return await rpc.resp;
+            await rpc.start();
+            const res = await fn(rpc);
+            rpc.closeSend();
+            return res;
+        } catch (e) {
+            let code = http.INTERNAL_SERVER_ERROR, msg = "Exception";
+            if (e instanceof http.Error) [code, msg] = [e.code, e.msg];
+            rpc.abort(code, msg);
+            throw e;
         } finally {
-            rpc.abort("Canceled");
+            rpc.finish();
         }
+    }
+
+    async call(path, req) {
+        return await this.stream(path, async rpc => {
+            rpc.send(req, true);
+            let res;
+            for await (const resp of rpc.resps) {
+                if (res != null) throw new Error("Received multiple responses");
+                res = resp;
+            }
+            return res;
+        });
     }
 
     get conn() {
@@ -226,6 +332,35 @@ if (core.debug('health')) {
         for (let i = 0; i < 4; ++i) {
             console.log(await call('/health'));
             await core.sleep(200);
+        }
+    })();  // BG
+}
+if (core.debug('stream')) {
+    (async () => {
+        try {
+            await chan.stream('/stream', async rpc => {
+                const receiver = (async () => {
+                    for await (const resp of rpc.resps) {
+                        console.log(resp);
+                    }
+                })();
+                receiver.catch(e => undefined);  // Prevent logging
+                for (let i = 0; i < 4; ++i) {
+                    if (i === 5) {
+                        rpc.send({i, err: 501, msg: "Some failure"});
+                        // rpc.send({i, cancel: "Some message"});
+                        // throw new http.Error(501, "Some exception");
+                    } else {
+                        rpc.send({i});
+                    }
+                    await Promise.race([core.sleep(200), rpc.canceled]);
+                }
+                rpc.closeSend();
+                await receiver;
+            });
+            console.log(`Stream terminated successfully`);
+        } catch (e) {
+            console.log(`Stream failed: ${e}`);
         }
     })();  // BG
 }
