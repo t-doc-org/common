@@ -96,8 +96,7 @@ class Rpc {
         this.path = path;
         this.q = [];
         this.qPoke = new core.CondVar();
-        ({promise: this.cancelled, reject: this._cancel} =
-            Promise.withResolvers());
+        this.cancelled = new Promise((res, rej) => { this._cancel = rej; });
         this.cancelled.catch(e => undefined);  // Prevent logging
     }
 
@@ -212,8 +211,6 @@ class Connection {
     constructor(chan, notBefore) {
         this.chan = chan;
         this.rpcs = new Map();
-        ({promise: this.connected, resolve: this.connectedRes} =
-            Promise.withResolvers());
         this.connect(notBefore);  // BG
     }
 
@@ -267,6 +264,8 @@ class Connection {
     }
 
     async connect(notBefore) {
+        let resolve, reject;
+        ({promise: this.connected, resolve, reject} = Promise.withResolvers());
         if (notBefore != null) {  // Handle backoff
             const delay = notBefore - performance.now();
             if (delay > 0) await core.sleep(delay);
@@ -276,12 +275,12 @@ class Connection {
         ws.binaryType = 'arraybuffer';
         on(ws).open(e => {
             this.ws = ws;
-            this.connectedRes();
+            resolve();
         });
         on(ws).message(e => this.onMessage(e));
         on(ws).error(e => {
             this.closed(true);
-            // TODO: Reject this.connected
+            reject(new Error("Connection failed"));
         });
         on(ws).close(e => {
             this.closed();
@@ -383,6 +382,7 @@ if (core.debug('health')) {
 if (core.debug('stream')) {
     (async () => {
         try {
+            await core.sleep(2000);
             await chan.stream('/stream', async rpc => {
                 const receiver = (async () => {
                     for await (const resp of rpc.resps) {
