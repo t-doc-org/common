@@ -193,7 +193,7 @@ class Api:
         async for req in ctx.reqs:
             _log.info("req: %(req)s", req=req)
             if (err := req.get('err')) is not None:
-                raise http.Error(err, req.get('msg'))
+                raise ws.Error(err, req.get('msg'))
             if (v := req.get('cancel')) is not None:
                 asyncio.current_task().cancel(v)
             await ctx.send(req)

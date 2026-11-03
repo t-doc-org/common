@@ -5,6 +5,7 @@ import asyncio
 from collections import abc
 from concurrent import futures
 import contextlib
+import enum
 import functools
 import json
 import re
@@ -16,8 +17,6 @@ from websockets import exceptions, frames, protocol
 from websockets.asyncio import server
 
 from . import context, http, logs, util, wsgi
-
-# TODO: Use own RPC error codes and exception type, not HTTP codes
 
 _log = logs.logger(__name__)
 _wlog = logs.logger('websockets')
@@ -40,6 +39,68 @@ websocket_active_rpcs = pc.Gauge(
     documentation="The number of active websocket RPCs.")
 
 
+class Code(enum.IntEnum):
+    OK = 0
+    CANCELLED = 1
+    UNKNOWN = 2
+    INVALID_ARGUMENT = 3
+    DEADLINE_EXCEEDED = 4
+    NOT_FOUND = 5
+    ALREADY_EXISTS = 6
+    PERMISSION_DENIED = 7
+    RESOURCE_EXHAUSTED = 8
+    FAILED_PRECONDITION = 9
+    ABORTED = 10
+    OUT_OF_RANGE = 11
+    UNIMPLEMENTED = 12
+    INTERNAL = 13
+    UNAVAILABLE = 14
+    DATA_LOSS = 15
+    UNAUTHENTICATED = 16
+
+    @staticmethod
+    def from_http(code):
+        if (v := _http_to_rpc.get(code)) is not None: return v
+        if code.is_success: return Code.OK
+        if code.is_server_error: return Code.INTERNAL
+        return Code.UNKNOWN
+
+_http_to_rpc = {
+    http.OK: Code.OK,
+    # Client errors
+    http.BAD_REQUEST: Code.INVALID_ARGUMENT,
+    http.UNAUTHORIZED: Code.UNAUTHENTICATED,
+    http.FORBIDDEN: Code.PERMISSION_DENIED,
+    http.NOT_FOUND: Code.NOT_FOUND,
+    http.REQUEST_TIMEOUT: Code.DEADLINE_EXCEEDED,
+    http.TOO_MANY_REQUESTS: Code.RESOURCE_EXHAUSTED,
+    # Server errors
+    http.NOT_IMPLEMENTED: Code.UNIMPLEMENTED,
+    http.SERVICE_UNAVAILABLE: Code.UNAVAILABLE,
+    http.GATEWAY_TIMEOUT: Code.DEADLINE_EXCEEDED,
+    http.INSUFFICIENT_STORAGE: Code.RESOURCE_EXHAUSTED,
+}
+
+globals().update((v.name, v) for v in Code)
+
+
+class Error(Exception):
+    def __init__(self, code=Code.INTERNAL, message=None):
+        try: code = Code(code)
+        except ValueError: code = Code.UNKNOWN
+        super().__init__(code, message)
+
+    @property
+    def code(self): return self.args[0]
+
+    @property
+    def message(self): return self.args[1]
+
+    def __str__(self):
+        c, m = self.args
+        return f"{c.name}: {m}" if m else c.name
+
+
 def close_str(frame):
     if not (r := frame.reason):
         r = frames.CLOSE_CODE_EXPLANATIONS.get(frame.code, 'unknown')
@@ -56,13 +117,13 @@ class Rpc:
         self.queue.put_nowait(req)
         self.receive_closed = req.pop('$Z', None) is not None
         if self.receive_closed: self.queue.shutdown()
-        self.send_closed = self.canceled = False
+        self.send_closed = self.cancelled = False
 
     def __getattr__(self, name): return getattr(self.conn, name)
 
     def cancel(self, code, msg=None):
-        if self.canceled: return False
-        self.receive_closed = self.send_closed = self.canceled = True
+        if self.cancelled: return False
+        self.receive_closed = self.send_closed = self.cancelled = True
         self.queue.shutdown(True)
         self.task.cancel(f'{code} {msg}' if msg else str(code))
         return True
@@ -85,7 +146,7 @@ class Rpc:
         self.queue.shutdown()
 
     async def send(self, resp, final=False):
-        if self.send_closed: raise http.Error(http.INTERNAL_SERVER_ERROR)
+        if self.send_closed: raise Error(Code.INTERNAL)
         resp['$I'] = self.rid
         if final: resp['$Z'] = 1
         await self.conn.send(resp)
@@ -225,15 +286,15 @@ class Connection(http.Context, server.ServerConnection):
             self.run_disconnected()
 
     async def handle_rpc(self, rpc):
-        code = path = None
+        code, message, path = Code.INTERNAL, None, None
         start, active = time.monotonic(), None
         cid, log_level = self.id.hex, logs.NOTSET
         token = context.ctx.set('rpc:' + secrets.token_hex(8))
         try:
             # Find the endpoint
-            if (path := rpc.path) is None: raise http.Error(http.BAD_REQUEST)
+            if (path := rpc.path) is None: raise Error(Code.INVALID_ARGUMENT)
             if (endpoint := self.__handler.endpoints.get(path)) is None:
-                raise http.Error(http.NOT_FOUND)
+                raise Error(Code.NOT_FOUND)
 
             # Record the active RPC in metrics.
             (active := websocket_active_rpcs.labels(path)).inc()
@@ -250,31 +311,28 @@ class Connection(http.Context, server.ServerConnection):
             # Run the endpoint.
             await endpoint(rpc)
             await rpc.close_send()
-            code = http.OK
+            code = Code.OK
         except exceptions.ConnectionClosed:
-            if code is None: code = http.SERVICE_UNAVAILABLE
-            rpc.cancel(code)
-        except http.Error as e:
-            if e.headers:
-                _log.warning("Ignored headers in RPC error: %(headers)s",
-                             ' '.join(h[0] for h in e.headers))
-            if code is None: code = e.code
-            rpc.abort(e.code, e.message)
+            code, message = Code.UNAVAILABLE, "Connection closed"
+            rpc.cancel(code, message)
+        except Error as e:
+            code, message = e.code, e.message
+            rpc.abort(code, message)
         except Exception:
             _log.exception("Uncaught exception", event='rpc:exception')
-            if code is None: code = http.INTERNAL_SERVER_ERROR
-            rpc.abort(code)
+            code, message = Code.INTERNAL, "Uncaught exception"
+            rpc.abort(code, message)
         except asyncio.CancelledError as e:
-            _log.error("Cancelled: %(err)s", err=str(e))  # TODO: Remove
-            if code is None: code = http.REQUEST_TIMEOUT
-            rpc.abort(code)
+            code, message = Code.CANCELLED, str(e)
+            rpc.abort(code)  # Don't send internal message to client
             raise
         finally:
             del self.__rpcs[rpc.rid]
-            if code is None: code = http.INTERNAL_SERVER_ERROR
             if log_level != logs.NOTSET:
-                _log.log(log_level, "%(code)s %(phrase)s", event='rpc:end',
-                         code=int(code), phrase=code.phrase, cid=cid,
+                if not message:
+                    message = "Completed" if code == Code.OK else "Failed"
+                _log.log(log_level, "%(code)s: %(message)s", event='rpc:end',
+                         code=code.name, message=message or "", cid=cid,
                          rid=rpc.rid, **lkw)
             if active is not None: active.dec()
             if path is not None:
@@ -355,8 +413,11 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
         name = name._endpoint
         @decorator
         @functools.wraps(fn)
-        def dfn(self, /, ctx, req):
-            return ctx.blocking(fn, self, ctx, req)
+        async def dfn(self, /, ctx, req):
+            try:
+                return await ctx.blocking(fn, self, ctx, req)
+            except http.Error as e:
+                raise RpcError(Code.from_http(e.code), e.message) from e
         return dfn
     return decorator
 

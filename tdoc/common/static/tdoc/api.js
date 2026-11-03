@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import * as core from './core.js';
-import * as http from './http.js';
 const {elmt, html, on, qs, qsa} = core;
 
 const backend = new core.Stored('tdoc:api:backend', undefined, sessionStorage);
@@ -44,6 +43,52 @@ async function httpCall(path, opts) {
     });
 }
 
+class Code {
+    static #all = new Map();
+
+    static of(v) {
+        if (v instanceof Code) return v;
+        const code = this.#all.get(v);
+        return code != null ? code : UNKNOWN;
+    }
+
+    constructor(name, value) {
+        this.name = name;
+        this.value = value;
+        this.constructor.#all.set(name, this);
+        this.constructor.#all.set(value, this);
+    }
+
+    toString() { return this.name; }
+}
+
+export const OK = new Code('OK', 0);
+export const CANCELLED = new Code('CANCELLED', 1);
+export const UNKNOWN = new Code('UNKNOWN', 2);
+export const INVALID_ARGUMENT = new Code('INVALID_ARGUMENT', 3);
+export const DEADLINE_EXCEEDED = new Code('DEADLINE_EXCEEDED', 4);
+export const NOT_FOUND = new Code('NOT_FOUND', 5);
+export const ALREADY_EXISTS = new Code('ALREADY_EXISTS', 6);
+export const PERMISSION_DENIED = new Code('PERMISSION_DENIED', 7);
+export const RESOURCE_EXHAUSTED = new Code('RESOURCE_EXHAUSTED', 8);
+export const FAILED_PRECONDITION = new Code('FAILED_PRECONDITION', 9);
+export const ABORTED = new Code('ABORTED', 10);
+export const OUT_OF_RANGE = new Code('OUT_OF_RANGE', 11);
+export const UNIMPLEMENTED = new Code('UNIMPLEMENTED', 12);
+export const INTERNAL = new Code('INTERNAL', 13);
+export const UNAVAILABLE = new Code('UNAVAILABLE', 14);
+export const DATA_LOSS = new Code('DATA_LOSS', 15);
+export const UNAUTHENTICATED = new Code('UNAUTHENTICATED', 16);
+
+export class RpcError extends Error {
+    constructor(code, msg) {
+        code = Code.of(code);
+        super(msg ? `${code}: ${msg}` : `${code}`, {cause: {code}});
+        this.code = code;
+        this.msg = msg;
+    }
+}
+
 class Rpc {
     constructor(conn, path, req) {
         this.conn = conn;
@@ -51,9 +96,9 @@ class Rpc {
         this.path = path;
         this.q = [];
         this.qPoke = new core.CondVar();
-        ({promise: this.canceled, reject: this._cancel} =
+        ({promise: this.cancelled, reject: this._cancel} =
             Promise.withResolvers());
-        this.canceled.catch(e => undefined);  // Prevent logging
+        this.cancelled.catch(e => undefined);  // Prevent logging
     }
 
     async start() {
@@ -69,14 +114,14 @@ class Rpc {
         if (this.aborted) return false;
         this.receiveClosed = this.sendClosed = this.aborted = true;
         this.closeQueue([code, msg]);
-        this._cancel(new http.Error(code, msg));
+        this._cancel(new RpcError(code, msg));
         return true;
     }
 
     received(resp) {
         const code = resp.$E;
         if (code != null) {
-            this.cancel(code, resp.$M);
+            this.cancel(Code.of(code), resp.$M);
             return;
         }
         if (this.receiveClosed) return;
@@ -117,11 +162,11 @@ class Rpc {
         for (;;) {
             await this.qPoke.wait(cond);
             const q = this.q, closed = this.qClosed;
-            if (q == null) throw new http.Error(...closed);
+            if (q == null) throw new RpcError(...closed);
             this.q = [];
             for (const resp of q) {
                 yield resp;
-                if (this.q == null) throw new http.Error(...this.qClosed);
+                if (this.q == null) throw new RpcError(...this.qClosed);
             }
             if (closed) break;
         }
@@ -241,7 +286,7 @@ class Connection {
         on(ws).close(e => {
             this.closed();
             for (const rpc of this.rpcs.values()) {
-                rpc.abort(http.SERVICE_UNAVAILABLE, "Disconnected");
+                rpc.abort(UNAVAILABLE, "Disconnected");
             }
         });
         if (this.rpcs.size === 0) this.startLinger();
@@ -270,8 +315,8 @@ class Channel {
             rpc.closeSend();
             return res;
         } catch (e) {
-            let code = http.INTERNAL_SERVER_ERROR, msg = "Exception";
-            if (e instanceof http.Error) [code, msg] = [e.code, e.msg];
+            let code = INTERNAL, msg = "Exception";
+            if (e instanceof RpcError) [code, msg] = [e.code, e.message];
             rpc.abort(code, msg);
             throw e;
         } finally {
@@ -346,14 +391,14 @@ if (core.debug('stream')) {
                 })();
                 receiver.catch(e => undefined);  // Prevent logging
                 for (let i = 0; i < 4; ++i) {
-                    if (i === 5) {
-                        rpc.send({i, err: 501, msg: "Some failure"});
+                    if (i === 2) {
+                        rpc.send({i, err: NOT_FOUND.value, msg: "Some failure"});
                         // rpc.send({i, cancel: "Some message"});
-                        // throw new http.Error(501, "Some exception");
+                        // throw new RpcError(INVALID_ARGUMENT, "Some exception");
                     } else {
                         rpc.send({i});
                     }
-                    await Promise.race([core.sleep(200), rpc.canceled]);
+                    await Promise.race([core.sleep(200), rpc.cancelled]);
                 }
                 rpc.closeSend();
                 await receiver;

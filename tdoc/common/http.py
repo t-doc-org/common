@@ -24,8 +24,8 @@ def message(code): return f"{code.phrase}: {code.description}"
 
 
 class Error(Exception):
-    def __init__(self, status=INTERNAL_SERVER_ERROR, msg=None, headers=()):
-        super().__init__(Status(status), msg)
+    def __init__(self, status=INTERNAL_SERVER_ERROR, message=None, headers=()):
+        super().__init__(Status(status), message)
         self.headers = headers
 
     @property
