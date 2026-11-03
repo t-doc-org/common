@@ -503,6 +503,37 @@ class AsyncThread(threading.Thread):
 
 
 class TaskGroup(asyncio.TaskGroup):
+    def __init__(self, *, first_exc=False):
+        super().__init__()
+        self.__first_exc = first_exc
+
     def run(self, fn=None, /, **kwargs):
         if fn is not None: return self.create_task(fn(), **kwargs)
         return lambda fn: self.create_task(fn(), **kwargs)
+
+    async def __aexit__(self, typ, value, tb):
+        try:
+            return await super().__aexit__(typ, value, tb)
+        except ExceptionGroup as e:
+            if not self.__first_exc: raise
+            raise first_exception(e, Exception) from None
+        except BaseExceptionGroup as e:
+            if not self.__first_exc: raise
+            raise first_exception(e, BaseException) from None
+        finally:
+            value = e = None
+
+
+def first_exception(eg, typ):
+    stack = [[eg.exceptions, 0]]
+    while stack:
+        es, i = stack[-1]
+        while i < len(es):
+            e = es[i]
+            if isinstance(e, typ): return e
+            if isinstance(e, (BaseExceptionGroup, ExceptionGroup)):
+                stack[-1][1] = i + 1
+                stack.append([e.exceptions, 0])
+                break
+        else:
+            stack.pop()

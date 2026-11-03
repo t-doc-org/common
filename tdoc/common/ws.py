@@ -18,6 +18,8 @@ from websockets.asyncio import server
 
 from . import context, http, logs, util, wsgi
 
+# TODO: Add deadline propagation
+
 _log = logs.logger(__name__)
 _wlog = logs.logger('websockets')
 _wlog.setLevel(logs.DISABLED)  # Disable websockets logging by default
@@ -396,8 +398,7 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             req = await anext(rpc.reqs)
-            # TODO: Don't propagate ExceptionGroup out of dfn
-            async with util.TaskGroup() as workers:
+            async with util.TaskGroup(first_exc=True) as workers:
                 @workers.run
                 async def receiver():
                     # We expect not further requests.
