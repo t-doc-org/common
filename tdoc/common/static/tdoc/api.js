@@ -198,7 +198,7 @@ class Rpc {
     abort(code, msg) {
         if (!this.cancel(code, msg)) return;
         if (!this.initiated) return;
-        const req = {$I: this.rid, $E: code}
+        const req = {$I: this.rid, $E: code.value}
         if (msg) req.$M = msg;
         this.conn.send(req);
     }
@@ -903,4 +903,93 @@ class EventsApi {
     }
 }
 
-export const events = new EventsApi();
+class EventsApi2 {
+    watches = new Map();
+
+    async sub({add, remove}) {
+        remove ??= [];
+        add ??= [];
+        for (const w of remove) this.watches.delete(w.id);
+        for (const w of add) this.watches.set(w.id, w);
+        if (!this.running) {
+            if (this.watches.size === 0) return;
+            this.run();  // BG
+            return;
+        }
+        const rpc = this.rpc;
+        if (rpc == null) return;  // No active RPC
+        const req = {};
+        if (remove.length > 0) {
+            req.remove = [];
+            for (const w of remove) req.remove.push(w.id);
+        }
+        if (add.length > 0) {
+            req.add = [];
+            for (const w of add) req.add.push({wid: w.id, req: w.req});
+        }
+        try { rpc.send(req); } catch (e) {}
+    }
+
+    async run() {
+        this.running = true;
+        try {
+            for (let retries = 0;;) {
+                const start = performance.now();
+                try {
+                    await this.watch();
+                } catch (e) {
+                } finally {
+                    delete this.rpc;
+                }
+                if (performance.now() - start > 30000) {
+                    retries = 0;
+                } else {
+                    await core.sleep(core.backoff({min: 1000, max: 10000},
+                                                  retries++));
+                }
+            }
+        } finally {
+            this.running = false;
+        }
+    }
+
+    async watch() {
+        await chan.stream('/events/watch', async rpc => {
+            const req = {};
+            if (this.watches.size > 0) {
+                const add = req.add = [];
+                for (const w of this.watches.values()) {
+                    add.push({wid: w.id, req: w.req});
+                }
+            }
+            rpc.send(req);
+            this.rpc = rpc;
+            for await (const resp of rpc.resps) {
+                if (resp.data != null) {
+                    await this.onEvent(resp);
+                } else if (resp.failed != null) {
+                    this.reportFailed(resp.failed)
+                }
+            }
+        });
+    }
+
+    async onEvent(resp) {
+        const watch = this.watches.get(resp.wid);
+        if (watch === undefined) return;
+        try {
+            await watch.onEvent(resp.data);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    reportFailed(failed) {
+        for (const wid of failed ?? []) {
+            const w = this.watches.get(wid);
+            if (w !== undefined && w.onFailed) w.onFailed();
+        }
+    }
+}
+
+export const events = core.debug('ws') ? new EventsApi2() : new EventsApi();

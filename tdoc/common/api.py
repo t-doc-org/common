@@ -338,7 +338,8 @@ class EventsApi:
     def stop(self):
         with self.lock:
             self._stop_watchers = True
-            for w in self.watchers.values(): w.stop()
+            watchers = list(self.watchers.values())
+        for w in watchers: w.stop()
 
     def add_observable(self, obs):
         with self.lock:
@@ -429,6 +430,82 @@ class EventsApi:
                 failed.append(wid)
         return failed
 
+    @ws.stream_endpoint('watch')
+    async def ws_watch(self, ctx):
+        async with util.TaskGroup(first_exc=True) as workers:
+            with AsyncWatcher() as watcher:
+                with self.lock:
+                    if self._stop_watchers: raise ws.Error(ws.CANCELLED)
+                    self.watchers[watcher] = watcher
+                    self._last_watcher = None
+                try:
+                    workers.create_task(self.subscribe(ctx, watcher))
+                    async for ev in watcher: await ctx.send(ev)
+                finally:
+                    with self.lock:
+                        del self.watchers[watcher]
+                        if not self.watchers:
+                            self._last_watcher = time.time_ns()
+
+    async def subscribe(self, ctx, watcher):
+        async for req in ctx.reqs:
+            for wid in req.get('remove', []): watcher.unwatch(wid)
+            failed = []
+            for add in req.get('add', []):
+                if (wid := add.get('wid')) is None: continue
+                try:
+                    watcher.watch(wid, self.find_observable(add['req'], ctx))
+                except Exception:
+                    failed.append(wid)
+            if failed: await ctx.send({'failed': failed})
+
+
+class AsyncWatcher:
+    def __init__(self):
+        self.loop = asyncio.get_running_loop()
+        # TODO: Don't use a queue, but get value from observers directly
+        self.queue = asyncio.Queue()
+        self.watches = {}
+
+    def stop(self):
+        async def fn(): self.queue.shutdown(True)
+        asyncio.run_coroutine_threadsafe(fn(), self.loop).result()
+
+    def send(self, wid, msg, name):
+        try:
+            asyncio.get_running_loop()
+            self.queue.put_nowait((wid, msg, name))
+            return
+        except RuntimeError:
+            pass
+        asyncio.run_coroutine_threadsafe(
+            self.queue.put((wid, msg, name)), self.loop).result()
+
+    async def __aiter__(self):
+        while True:
+            try:
+                wid, msg, name = await self.queue.get()
+                event_watcher_notifications.labels(name).inc()
+                # TODO: Avoid back-to-back JSON encoding-decoding
+                yield {'wid': wid, 'data': json.loads(msg)}
+            except asyncio.QueueShutDown:
+                return
+
+    def __enter__(self): return self
+
+    def __exit__(self, typ, value, tb):
+        for wid, obs in self.watches.items(): obs.unwatch(self, wid)
+        self.watches = {}
+
+    def watch(self, wid, obs):
+        if wid in self.watches: return
+        self.watches[wid] = obs
+        obs.watch(self, wid)
+
+    def unwatch(self, wid):
+        if (obs := self.watches.pop(wid, None)) is not None:
+            obs.unwatch(self, wid)
+
 
 class Watcher:
     def __init__(self):
@@ -446,10 +523,10 @@ class Watcher:
         while True:
             try:
                 wid, msg, name = self.queue.get(timeout=1)
+                event_watcher_notifications.labels(name).inc()
                 yield b'{"wid":%d,"data":' % wid
                 yield msg
                 yield b'}\n'
-                event_watcher_notifications.labels(name).inc()
             except queue.Empty:
                 yield b'\n'
             except queue.ShutDown:
