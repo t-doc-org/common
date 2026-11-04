@@ -454,7 +454,8 @@ class EventsApi:
             for add in req.get('add', []):
                 if (wid := add.get('wid')) is None: continue
                 try:
-                    watcher.watch(wid, self.find_observable(add['req'], ctx))
+                    obs = self.find_observable(add['req'], ctx)
+                    await watcher.watch(wid, obs)
                 except Exception:
                     failed.append(wid)
             if failed: await ctx.send({'failed': failed})
@@ -463,33 +464,39 @@ class EventsApi:
 class AsyncWatcher:
     def __init__(self):
         self.loop = asyncio.get_running_loop()
-        # TODO: Don't use a queue, but get value from observers directly
-        self.queue = asyncio.Queue()
         self.watches = {}
+        self.lock = asyncio.Condition()
+        self.queue = {}  # Use a dict to keep insertion order
+        self._stop = False
 
     def stop(self):
-        async def fn(): self.queue.shutdown(True)
-        asyncio.run_coroutine_threadsafe(fn(), self.loop).result()
+        async def fn():
+            async with self.lock:
+                self._stop = True
+                self.lock.notify()
+        # Don't wait for completion to avoid deadlocks.
+        asyncio.run_coroutine_threadsafe(fn(), self.loop)
 
     def send(self, wid, msg, name):
-        try:
-            asyncio.get_running_loop()
-            self.queue.put_nowait((wid, msg, name))
-            return
-        except RuntimeError:
-            pass
-        asyncio.run_coroutine_threadsafe(
-            self.queue.put((wid, msg, name)), self.loop).result()
+        async def fn():
+            async with self.lock:
+                self.queue[wid] = 0
+                self.lock.notify()
+        # Don't wait for completion to avoid deadlocks.
+        asyncio.run_coroutine_threadsafe(fn(), self.loop)
 
     async def __aiter__(self):
+        queue = self.queue
+        cond = lambda: self._stop or queue
         while True:
-            try:
-                wid, msg, name = await self.queue.get()
-                event_watcher_notifications.labels(name).inc()
-                # TODO: Avoid back-to-back JSON encoding-decoding
-                yield {'wid': wid, 'data': json.loads(msg)}
-            except asyncio.QueueShutDown:
-                return
+            async with self.lock:
+                await self.lock.wait_for(cond)
+                if self._stop: return
+                queue.pop(wid := next(iter(queue)))
+            if (obs := self.watches.get(wid)) is None: continue
+            if (data := obs.data) is None: continue
+            event_watcher_notifications.labels(obs.name).inc()
+            yield {'wid': wid, 'data': data}
 
     def __enter__(self): return self
 
@@ -497,10 +504,13 @@ class AsyncWatcher:
         for wid, obs in self.watches.items(): obs.unwatch(self, wid)
         self.watches = {}
 
-    def watch(self, wid, obs):
+    async def watch(self, wid, obs):
         if wid in self.watches: return
         self.watches[wid] = obs
-        obs.watch(self, wid)
+        obs.watch(self, wid, send=False)
+        async with self.lock:
+            self.queue[wid] = 0
+            self.lock.notify()
 
     def unwatch(self, wid):
         if (obs := self.watches.pop(wid, None)) is not None:
@@ -580,17 +590,31 @@ class Observable:
     def hash(req):
         return hashlib.sha256(util.to_json_sorted(req).encode()).digest()
 
-    def __init__(self, key, req):
+    def __init__(self, key, req, data=None):
         self.key = key
         self.req = req
         self.lock = threading.Condition(threading.Lock())
+        self._data = data
         self.watches = set()
+
+    @property
+    def data(self):
+        with self.lock: return self._data
+
+    def set(self, data):
+        with self.lock: self.set_locked(data)
+
+    def set_locked(self, data):
+        if data == self._data: return
+        self._data = data
+        self.send_locked()
 
     stopping = False
 
     def stop_locked(self): pass
 
-    def msg_locked(self): raise NotImplementedError()
+    def msg_locked(self):
+        return None if self._data is None else util.to_json(self._data).encode()
 
     def send_locked(self, watcher=None, wid=None):
         if (msg := self.msg_locked()) is None: return
@@ -602,13 +626,13 @@ class Observable:
         event_observable_notifications \
             .labels(self.name, 'broadcast' if broadcast else 'unicast').inc()
 
-    def watch(self, watcher, wid):
+    def watch(self, watcher, wid, send=True):
         key = (watcher, wid)
         with self.lock:
             if key in self.watches: return
             self.watches.add(key)
             event_watches.labels(self.name).inc()
-            self.send_locked(watcher, wid)
+            if send: self.send_locked(watcher, wid)
 
     def unwatch(self, watcher, wid):
         key = (watcher, wid)
@@ -620,18 +644,9 @@ class Observable:
 
 
 class ValueObservable(Observable):
-    def __init__(self, name, value):
+    def __init__(self, name, data):
         req = {'name': name}
-        super().__init__(self.hash(req), req)
-        self._value = value
-
-    def set(self, value):
-        with self.lock:
-            if value == self._value: return
-            self._value = value
-            self.send_locked()
-
-    def msg_locked(self): return util.to_json(self._value).encode()
+        super().__init__(self.hash(req), req, data)
 
 
 class DynObservable(Observable):
@@ -645,8 +660,8 @@ class DynObservable(Observable):
     @classmethod
     def lookup(cls, name): return cls._observables.get(name)
 
-    def __init__(self, key, req, events):
-        super().__init__(key, req)
+    def __init__(self, key, req, events, data=None):
+        super().__init__(key, req, data)
         self.events = events
 
     def unwatch(self, watcher, wid):
@@ -677,8 +692,7 @@ def limit_interval(interval, burst=1):
 
 class DbObservable(DynObservable):
     def __init__(self, key, req, events, data=None, limit=None):
-        super().__init__(key, req, events)
-        self._data = data
+        super().__init__(key, req, events, data)
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stop = False
         self._poller = threading.Thread(target=self.poll,
@@ -692,9 +706,6 @@ class DbObservable(DynObservable):
     def stop_locked(self):
         self._stop = True
         self.lock.notify()
-
-    def msg_locked(self):
-        return None if self._data is None else util.to_json(self._data).encode()
 
     def wake_keys(self, db): return None
 
@@ -715,9 +726,7 @@ class DbObservable(DynObservable):
                     except Exception:
                         _log.exception("Query exception", event='obs:error')
                     with self.lock:
-                        if queried and data != self._data:
-                            self._data = data
-                            self.send_locked()
+                        if queried: self.set_locked(data)
                         waker.wait(lambda: self._stop, until)
                         if self._stop: break
         except Exception:
