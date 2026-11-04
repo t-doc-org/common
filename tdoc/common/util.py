@@ -502,6 +502,9 @@ class AsyncThread(threading.Thread):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)
 
 
+class CancelTaskGroup(Exception): pass
+
+
 class TaskGroup(asyncio.TaskGroup):
     def __init__(self, *, first_exc=False):
         super().__init__()
@@ -513,7 +516,10 @@ class TaskGroup(asyncio.TaskGroup):
 
     async def __aexit__(self, typ, value, tb):
         try:
-            return await super().__aexit__(typ, value, tb)
+            try:
+                return await super().__aexit__(typ, value, tb)
+            except* CancelTaskGroup:
+                pass
         except ExceptionGroup as e:
             if not self.__first_exc: raise
             raise first_exception(e, Exception) from None
@@ -522,6 +528,15 @@ class TaskGroup(asyncio.TaskGroup):
             raise first_exception(e, BaseException) from None
         finally:
             value = e = None
+
+    # TODO(py-3.15): Remove
+    if not hasattr(asyncio.TaskGroup, 'cancel'):
+        def cancel(self):
+            async def fn(): raise CancelTaskGroup()
+            try:
+                self.create_task(fn())
+            except RuntimeError:
+                pass  # TaskGroup is aborting
 
 
 def first_exception(eg, typ):
