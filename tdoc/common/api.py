@@ -9,7 +9,6 @@ import functools
 import gzip
 import hashlib
 import json
-import queue
 import re
 import secrets
 import threading
@@ -477,7 +476,7 @@ class AsyncWatcher:
         # Don't wait for completion to avoid deadlocks.
         asyncio.run_coroutine_threadsafe(fn(), self.loop)
 
-    def send(self, wid, msg, name):
+    def notify(self, wid):
         async def fn():
             async with self.lock:
                 self.queue[wid] = 0
@@ -507,10 +506,11 @@ class AsyncWatcher:
     async def watch(self, wid, obs):
         if wid in self.watches: return
         self.watches[wid] = obs
-        obs.watch(self, wid, send=False)
         async with self.lock:
             self.queue[wid] = 0
             self.lock.notify()
+        event_observable_notifications.labels(obs.name, 'unicast').inc()
+        obs.watch(self, wid)
 
     def unwatch(self, wid):
         if (obs := self.watches.pop(wid, None)) is not None:
@@ -519,28 +519,37 @@ class AsyncWatcher:
 
 class Watcher:
     def __init__(self):
-        self.queue = queue.Queue()
-        self.lock = threading.Lock()
+        self.lock = threading.Condition()
         self.watches = {}
+        self.queue = {}  # Use a dict to keep insertion order
+        self._stop = False
 
     def stop(self):
-        self.queue.shutdown(True)
+        with self.lock:
+            self._stop = True
+            self.lock.notify()
 
-    def send(self, wid, msg, name):
-        self.queue.put((wid, msg, name))
+    def notify(self, wid):
+        with self.lock:
+            self.queue[wid] = 0
+            self.lock.notify()
 
     def __iter__(self):
+        queue = self.queue
+        cond = lambda: self._stop or queue
         while True:
-            try:
-                wid, msg, name = self.queue.get(timeout=1)
-                event_watcher_notifications.labels(name).inc()
-                yield b'{"wid":%d,"data":' % wid
-                yield msg
-                yield b'}\n'
-            except queue.Empty:
-                yield b'\n'
-            except queue.ShutDown:
-                return
+            with self.lock:
+                if not self.lock.wait_for(cond, timeout=1):
+                    yield b'\n'
+                    continue
+                if self._stop: return
+                queue.pop(wid := next(iter(queue)))
+                if (obs := self.watches.get(wid)) is None: continue
+            if (data := obs.data) is None: continue
+            event_watcher_notifications.labels(obs.name).inc()
+            yield b'{"wid":%d,"data":' % wid
+            yield util.to_json(data).encode()
+            yield b'}\n'
 
     def __enter__(self): return self
 
@@ -553,6 +562,9 @@ class Watcher:
         with self.lock:
             if wid in self.watches: return
             self.watches[wid] = obs
+            self.queue[wid] = 0
+            self.lock.notify()
+        event_observable_notifications.labels(obs.name, 'unicast').inc()
         obs.watch(self, wid)
 
     def unwatch(self, wid):
@@ -607,32 +619,19 @@ class Observable:
     def set_locked(self, data):
         if data == self._data: return
         self._data = data
-        self.send_locked()
+        for watcher, wid in self.watches: watcher.notify(wid)
+        event_observable_notifications.labels(self.name, 'broadcast').inc()
 
     stopping = False
 
     def stop_locked(self): pass
 
-    def msg_locked(self):
-        return None if self._data is None else util.to_json(self._data).encode()
-
-    def send_locked(self, watcher=None, wid=None):
-        if (msg := self.msg_locked()) is None: return
-        broadcast = watcher is None
-        if broadcast:
-            for watcher, wid in self.watches: watcher.send(wid, msg, self.name)
-        else:
-            watcher.send(wid, msg, self.name)
-        event_observable_notifications \
-            .labels(self.name, 'broadcast' if broadcast else 'unicast').inc()
-
-    def watch(self, watcher, wid, send=True):
+    def watch(self, watcher, wid):
         key = (watcher, wid)
         with self.lock:
             if key in self.watches: return
             self.watches.add(key)
             event_watches.labels(self.name).inc()
-            if send: self.send_locked(watcher, wid)
 
     def unwatch(self, watcher, wid):
         key = (watcher, wid)
