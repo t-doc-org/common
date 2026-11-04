@@ -61,7 +61,13 @@ class Code(enum.IntEnum):
     UNAUTHENTICATED = 16
 
     @staticmethod
-    def from_http(code):
+    def of(code):
+        if isinstance(code, Code): return code
+        try: return Code(code)
+        except ValueError: return Code.UNKNOWN
+
+    @staticmethod
+    def of_http(code):
         if (v := _http_to_rpc.get(code)) is not None: return v
         if code.is_success: return Code.OK
         if code.is_server_error: return Code.INTERNAL
@@ -88,9 +94,7 @@ globals().update((v.name, v) for v in Code)
 
 class Error(Exception):
     def __init__(self, code=Code.INTERNAL, message=None):
-        try: code = Code(code)
-        except ValueError: code = Code.UNKNOWN
-        super().__init__(code, message)
+        super().__init__(Code.of(code), message)
 
     @property
     def code(self): return self.args[0]
@@ -127,7 +131,7 @@ class Rpc:
         if self.cancelled: return False
         self.receive_closed = self.send_closed = self.cancelled = True
         self.queue.shutdown(True)
-        self.task.cancel(f'{code} {msg}' if msg else str(code))
+        self.task.cancel(msg or "Cancelled")
         return True
 
     @functools.cached_property
@@ -137,7 +141,7 @@ class Rpc:
 
     async def received(self, req):
         if (code := req.get('$E')) is not None:
-            self.cancel(code, req.get('$M'))
+            self.cancel(Code.of(code), req.get('$M'))
             return
         if self.receive_closed: return
         if (last := req.pop('$Z', None)) is None:
@@ -161,12 +165,15 @@ class Rpc:
 
     def abort(self, code, msg=None):
         if not self.cancel(code, msg): return
-        resp = {'$I': self.rid, '$E': code}
-        if msg: resp['$M'] = msg
-        @self.conn.workers.run
-        async def sender():
-            try: await self.conn.send(resp)
-            except Exception: pass
+        try:
+            @self.conn.workers.run
+            async def sender():
+                resp = {'$I': self.rid, '$E': code}
+                if msg: resp['$M'] = msg
+                try: await self.conn.send(resp)
+                except Exception: pass
+        except RuntimeError:
+            pass  # Connection TaskGroup is aborting
 
 
 class Connection(http.Context, server.ServerConnection):
@@ -325,14 +332,14 @@ class Connection(http.Context, server.ServerConnection):
             code, message = Code.INTERNAL, "Uncaught exception"
             rpc.abort(code, message)
         except asyncio.CancelledError as e:
-            code, message = Code.CANCELLED, str(e)
-            rpc.abort(code)  # Don't send internal message to client
+            code, message = Code.CANCELLED, str(e) or "Cancelled"
+            rpc.abort(code, "Cancelled")
             raise
         finally:
             del self.__rpcs[rpc.rid]
             if log_level != logs.NOTSET:
                 if not message:
-                    message = "Completed" if code == Code.OK else "Failed"
+                    message = "Completed" if code == Code.OK else "<no message>"
                 _log.log(log_level, "%(code)s: %(message)s", event='rpc:end',
                          code=code.name, message=message or "", cid=cid,
                          rid=rpc.rid, **lkw)
@@ -418,7 +425,7 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
             try:
                 return await ctx.blocking(fn, self, ctx, req)
             except http.Error as e:
-                raise RpcError(Code.from_http(e.code), e.message) from e
+                raise RpcError(Code.of_http(e.code), e.message) from e
         return dfn
     return decorator
 
