@@ -18,8 +18,6 @@ from websockets.asyncio import server
 
 from . import context, http, logs, util, wsgi
 
-# TODO: Add deadline propagation
-
 _log = logs.logger(__name__)
 _wlog = logs.logger('websockets')
 _wlog.setLevel(logs.DISABLED)  # Disable websockets logging by default
@@ -119,6 +117,8 @@ class Rpc:
     def __init__(self, conn, rid, req):
         self.conn, self.rid = conn, rid
         self.path = req.pop('$P', None)
+        self.deadline = conn.loop.time() + d / 1000 \
+                        if (d := req.pop('$T', None)) is not None else None
         self.queue = asyncio.Queue(self.queue_size)
         self.queue.put_nowait(req)
         self.receive_closed = req.pop('$Z', None) is not None
@@ -127,11 +127,11 @@ class Rpc:
 
     def __getattr__(self, name): return getattr(self.conn, name)
 
-    def cancel(self, code, msg=None):
+    def cancel(self):
         if self.cancelled: return False
         self.receive_closed = self.send_closed = self.cancelled = True
         self.queue.shutdown(True)
-        self.task.cancel(msg or "Cancelled")
+        self.task.cancel()
         return True
 
     @functools.cached_property
@@ -141,7 +141,7 @@ class Rpc:
 
     async def received(self, req):
         if (code := req.get('$E')) is not None:
-            self.cancel(Code.of(code), req.get('$M'))
+            self.cancel()  # We have no use for the actual error code
             return
         if self.receive_closed: return
         if (last := req.pop('$Z', None)) is None:
@@ -164,7 +164,7 @@ class Rpc:
         await self.conn.send({'$I': self.rid, '$Z': 0})
 
     def abort(self, code, msg=None):
-        if not self.cancel(code, msg): return
+        if not self.cancel(): return
         try:
             @self.conn.workers.run
             async def sender():
@@ -318,22 +318,26 @@ class Connection(http.Context, server.ServerConnection):
                          rid=rpc.rid, **lkw)
 
             # Run the endpoint.
-            await endpoint(rpc)
+            async with asyncio.timeout_at(rpc.deadline):
+                await endpoint(rpc)
             await rpc.close_send()
             code = Code.OK
         except exceptions.ConnectionClosed:
             code, message = Code.UNAVAILABLE, "Connection closed"
-            rpc.cancel(code, message)
+            rpc.cancel()
         except Error as e:
             code, message = e.code, e.message
             rpc.abort(code, message)
+        except asyncio.TimeoutError:
+            code, message = Code.DEADLINE_EXCEEDED, "Deadline exceeded"
+            rpc.abort(code)
         except Exception:
             _log.exception("Uncaught exception", event='rpc:exception')
             code, message = Code.INTERNAL, "Uncaught exception"
-            rpc.abort(code, message)
+            rpc.abort(code)
         except asyncio.CancelledError as e:
             code, message = Code.CANCELLED, str(e) or "Cancelled"
-            rpc.abort(code, "Cancelled")
+            rpc.abort(code)
             raise
         finally:
             del self.__rpcs[rpc.rid]

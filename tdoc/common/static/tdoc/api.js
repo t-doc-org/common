@@ -90,10 +90,11 @@ export class RpcError extends Error {
 }
 
 class Rpc {
-    constructor(conn, path, req) {
+    constructor(conn, path, timeout) {
         this.conn = conn;
         this.rid = conn.rid;
         this.path = path;
+        this.deadline = timeout == null ? null : performance.now() + timeout;
         this.q = [];
         this.qPoke = new core.CondVar();
         this.cancelled = new Promise((res, rej) => { this._cancel = rej; });
@@ -102,11 +103,16 @@ class Rpc {
 
     async start() {
         this.conn.start(this);
-        await this.conn.connected;
+        if (this.deadline != null) {
+            this.timer = setTimeout(() => this.abort(DEADLINE_EXCEEDED),
+                                    this.deadline - performance.now());
+        }
+        await Promise.race([this.conn.connected, this.cancelled]);
     }
 
     finish() {
-        return this.conn.finish(this);
+        if (this.timer != null) clearTimeout(this.timer);
+        this.conn.finish(this);
     }
 
     cancel(code, msg) {
@@ -177,6 +183,11 @@ class Rpc {
         if (!this.initiated) {
             req.$A = 1;
             req.$P = this.path;
+            if (this.deadline != null) {
+                const timeout = this.deadline - performance.now();
+                if (timeout <= 0) throw new RpcError(DEADLINE_EXCEEDED);
+                req.$T = Math.ceil(timeout);
+            }
         }
         if (final) req.$Z = 1;
         if (!this.conn.send(req)) {
@@ -198,19 +209,17 @@ class Rpc {
     abort(code, msg) {
         if (!this.cancel(code, msg)) return;
         if (!this.initiated) return;
-        const req = {$I: this.rid, $E: code.value}
-        if (msg) req.$M = msg;
-        this.conn.send(req);
+        this.conn.send({$I: this.rid, $E: CANCELLED.value});
     }
 }
 
 class Connection {
-    static linger = 10000;
     #rid = 0;
+    rpcs = new Map();
 
-    constructor(chan, notBefore) {
+    constructor(chan, notBefore, lingerDelay) {
         this.chan = chan;
-        this.rpcs = new Map();
+        this.lingerDelay = lingerDelay;
         this.connect(notBefore);  // BG
     }
 
@@ -236,9 +245,8 @@ class Connection {
     }
 
     finish(rpc) {
-        if (!this.rpcs.delete(rpc.rid)) return false;
+        if (!this.rpcs.delete(rpc.rid)) return;
         if (this.rpcs.size === 0) this.startLinger();
-        return true;
     }
 
     startLinger() {
@@ -248,7 +256,7 @@ class Connection {
             this.closing = true;
             this.chan.closed(this);
             if (this.ws != null) this.ws.close();
-        }, this.constructor.linger);
+        }, this.lingerDelay);
     }
 
     stopLinger() {
@@ -303,28 +311,27 @@ class Connection {
 }
 
 class Channel {
-    static backoff = {min: 1000, max: 10000};
-    static noBackoffConnDuration = 30000;
+    connLingerDelay = 10000;
+    backoff = {min: 1000, max: 10000};
+    noBackoffConnDuration = 30000;
 
-    async stream(path, fn) {
-        const rpc = new Rpc(this.conn, path);
+    async stream({path, timeout}, fn) {
+        const rpc = new Rpc(this.conn, path, timeout);
         try {
             await rpc.start();
             const res = await fn(rpc);
             rpc.closeSend();
             return res;
         } catch (e) {
-            let code = INTERNAL, msg = "Exception";
-            if (e instanceof RpcError) [code, msg] = [e.code, e.message];
-            rpc.abort(code, msg);
+            rpc.abort(INTERNAL, "Exception");
             throw e;
         } finally {
             rpc.finish();
         }
     }
 
-    async call(path, req) {
-        return await this.stream(path, async rpc => {
+    async call(opts, req) {
+        return await this.stream(opts, async rpc => {
             rpc.send(req, true);
             let res;
             for await (const resp of rpc.resps) {
@@ -338,7 +345,8 @@ class Channel {
     get conn() {
         let conn = this._conn;
         if (!conn) {
-            conn = this._conn = new Connection(this, this.notBefore);
+            conn = this._conn = new Connection(this, this.notBefore,
+                                               this.connLingerDelay);
         }
         return conn;
     }
@@ -347,14 +355,13 @@ class Channel {
         if (conn !== this._conn) return;
         delete this._conn;
         if (!err || performance.now() >
-                    conn.connectTime + this.constructor.noBackoffConnDuration) {
+                    conn.connectTime + this.noBackoffConnDuration) {
             delete this.retries;
             delete this.notBefore;
         } else {
             if (this.retries == null) this.retries = 0;
             this.notBefore = performance.now()
-                             + core.backoff(this.constructor.backoff,
-                                            this.retries++);
+                             + core.backoff(this.backoff, this.retries++);
         }
     }
 }
@@ -366,7 +373,7 @@ const httpOnlyPaths = {
 
 export async function call(path, req = {}) {
     if (core.debug('ws') && !httpOnlyPaths[path]) {
-        return await chan.call(path, req)
+        return await chan.call({path, timeout: 15000}, req)
     }
     return await httpCall(path, {req});
 }
@@ -383,7 +390,7 @@ if (core.debug('stream')) {
     (async () => {
         try {
             await core.sleep(2000);
-            await chan.stream('/stream', async rpc => {
+            await chan.stream({path: '/stream'}, async rpc => {
                 const receiver = (async () => {
                     for await (const resp of rpc.resps) {
                         console.log(resp);
@@ -954,7 +961,7 @@ class EventsApi2 {
     }
 
     async watch() {
-        await chan.stream('/events/watch', async rpc => {
+        await chan.stream({path: '/events/watch'}, async rpc => {
             const req = {};
             if (this.watches.size > 0) {
                 const add = req.add = [];
