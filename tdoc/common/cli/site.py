@@ -777,7 +777,7 @@ following repositories as soon as possible.</p>\
 
     def hg_status(self, repo, *args):
         proc = self.hg(f'--repository={repo}', 'status', '--template=\\0{path}',
-                       *args, success=None)
+                       *args, success=None, errors='replace')
         return proc.stdout.split('\0')[1:] if proc.returncode == 0 else []
 
     def render_unknown(self, status, unknown):

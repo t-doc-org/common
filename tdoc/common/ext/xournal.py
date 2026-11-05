@@ -100,7 +100,8 @@ def xournalpp_path(app):
             path = p.with_stem(p.stem.replace('-wrapper', ''))
     try:
         subprocess.run([path, '--version'], stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT, check=True, text=True)
+                       stderr=subprocess.STDOUT, check=True, text=True,
+                       errors='replace')
         return path
     except OSError as e:
         _log.error("{xopp}: Unable to run xournalpp: %s", e)
@@ -113,7 +114,7 @@ def render(exe, dst, src):
         dst.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([exe, f'--create-pdf={dst}', src],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                       check=True, text=True)
+                       check=True, text=True, errors='replace')
     except OSError as e:
         _log.error("{xopp}: Unable to run xournalpp: %s", e)
     except subprocess.CalledProcessError as e:
