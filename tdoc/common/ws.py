@@ -394,7 +394,7 @@ def stream_endpoint(name, require_authn=False, log_level=logs.INFO):
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             if require_authn and rpc.conn.user is None:
-                raise RpcError(Code.UNAUTHENTICATED)
+                raise Error(Code.UNAUTHENTICATED)
             await fn(self, rpc)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
@@ -414,7 +414,7 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
                 async def receiver():
                     # We expect not further requests.
                     async for _ in rpc.reqs:
-                        raise RpcError(Code.FAILED_PRECONDITION)
+                        raise Error(Code.FAILED_PRECONDITION)
                 await rpc.send(await fn(self, rpc, req), final=True)
         return dfn
 
@@ -429,7 +429,7 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
             try:
                 return await ctx.blocking(fn, self, ctx, req)
             except http.Error as e:
-                raise RpcError(Code.of_http(e.code), e.message) from e
+                raise Error(Code.of_http(e.code), e.message) from e
         return dfn
     return decorator
 
