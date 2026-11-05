@@ -228,8 +228,8 @@ class Connection(http.Context, server.ServerConnection):
 
     async def process_request(self, req):
         try:
-            await self.__handler.run_connected(self)
             self.server_host = req.headers['Host']
+            await self.__handler.run_connected(self)
             websocket_active_connections.inc()
             self.disconnected(websocket_active_connections.dec)
             log_args = self._log_args
