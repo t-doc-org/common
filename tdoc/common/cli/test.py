@@ -148,7 +148,7 @@ wheel_re = re.compile(r't_doc_common-[^ ]+\.whl')
 def build_wheel(tests, opts):
     p = util.run_uv('build', f'--python={sys.executable}', f'--out-dir={tests}',
                     common=opts.common, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, text=True)
+                    stderr=subprocess.STDOUT, text=True, errors='replace')
     o = opts.stdout
     if (m := wheel_re.search(p.stdout)) is None:
         raise Exception(
@@ -245,8 +245,8 @@ def run_tests(tests, repo, wheel, write, opts):
     def run(*args, cmd=None, **kwargs):
         try:
             return util.run(*args, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, text=True, check=True,
-                            **kwargs)
+                            stderr=subprocess.STDOUT, text=True,
+                            errors='replace', check=True, **kwargs)
         except subprocess.CalledProcessError as e:
             raise AssertionError(
                 f"{o.BOLD}Command failed:{o.NORM} exit status: {e.returncode}\n"
@@ -286,8 +286,9 @@ def run_tests(tests, repo, wheel, write, opts):
     p = subprocess.Popen(
         (sys.executable, '-P', repo_dir / 'run.py', f'--version={wheel}',
          '--', *args),
-        cwd=repo_dir, text=True, bufsize=1, stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cwd=repo_dir, text=True, errors='replace', bufsize=1,
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
     try:
         # Wait for server to report as serving.
         base = None
