@@ -266,7 +266,7 @@ class Connection(http.Context, server.ServerConnection):
                             await rpc.received(req)
                         continue
                     if (rpc := self.__rpcs.get(rid)) is not None:
-                        rpc.abort(http.BAD_REQUEST)
+                        rpc.abort(Code.ALREADY_EXISTS)
                         continue
                     # TODO: Limit the number of in-progress RPCs
                     rpc = Rpc(self, rid, req)
@@ -394,7 +394,7 @@ def stream_endpoint(name, require_authn=False, log_level=logs.INFO):
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             if require_authn and rpc.conn.user is None:
-                raise http.Error(http.UNAUTHORIZED)
+                raise RpcError(Code.UNAUTHENTICATED)
             await fn(self, rpc)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
@@ -414,7 +414,7 @@ def endpoint(name, require_authn=False, log_level=logs.INFO):
                 async def receiver():
                     # We expect not further requests.
                     async for _ in rpc.reqs:
-                        raise http.Error(http.INTERNAL_SERVER_ERROR)
+                        raise RpcError(Code.FAILED_PRECONDITION)
                 await rpc.send(await fn(self, rpc, req), final=True)
         return dfn
 
