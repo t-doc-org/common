@@ -367,54 +367,12 @@ class Channel {
 }
 
 const chan = new Channel();
-const httpOnlyPaths = {
-    '/events/sub': true,
-};
 
 export async function call(path, req = {}) {
-    if (core.debug('ws') && !httpOnlyPaths[path]) {
-        return await chan.call({path, timeout: 15000}, req)
+    if (core.debug('ws')) {
+        return await chan.call({path, timeout: 15000}, req);
     }
     return await httpCall(path, {req});
-}
-
-if (core.debug('health')) {
-    (async () => {
-        for (let i = 0; i < 4; ++i) {
-            console.log(await call('/health'));
-            await core.sleep(200);
-        }
-    })();  // BG
-}
-if (core.debug('stream')) {
-    (async () => {
-        try {
-            await core.sleep(2000);
-            await chan.stream({path: '/stream'}, async rpc => {
-                const receiver = (async () => {
-                    for await (const resp of rpc.resps) {
-                        console.log(resp);
-                    }
-                })();
-                receiver.catch(e => undefined);  // Prevent logging
-                for (let i = 0; i < 4; ++i) {
-                    if (i === 2) {
-                        rpc.send({i, err: NOT_FOUND.value, msg: "Some failure"});
-                        // rpc.send({i, cancel: "Some message"});
-                        // throw new RpcError(INVALID_ARGUMENT, "Some exception");
-                    } else {
-                        rpc.send({i});
-                    }
-                    await Promise.race([core.sleep(200), rpc.cancelled]);
-                }
-                rpc.closeSend();
-                await receiver;
-            });
-            console.log(`Stream terminated successfully`);
-        } catch (e) {
-            console.log(`Stream failed: ${e}`);
-        }
-    })();  // BG
 }
 
 class Auth extends EventTarget {
@@ -807,7 +765,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await call(`/events/sub`, req);
+            const resp = await httpCall(`/events/sub`, {req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }

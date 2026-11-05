@@ -187,16 +187,6 @@ class Api:
 
     ws_health = ws.endpoint(wsgi_health)
 
-    @ws.stream_endpoint('stream', require_authn=True)
-    async def ws_stream(self, ctx):
-        async for req in ctx.reqs:
-            _log.info("req: %(req)s", req=req)
-            if (err := req.get('err')) is not None:
-                raise ws.Error(err, req.get('msg'))
-            if (v := req.get('cancel')) is not None:
-                asyncio.current_task().cancel(v)
-            await ctx.send(req)
-
     @wsgi.endpoint('metrics', methods=(http.GET, http.OPTIONS),
                    require_authn=True, csrf=False)
     @context.tags.add('ep:metrics')
