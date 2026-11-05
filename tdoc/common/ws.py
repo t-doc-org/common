@@ -349,7 +349,7 @@ class Connection(http.Context, server.ServerConnection):
                          rid=rpc.rid, **lkw)
             if active is not None: active.dec()
             if path is not None:
-                websocket_rpc_duration.labels(path, str(code)) \
+                websocket_rpc_duration.labels(path, code.name) \
                     .observe(time.monotonic() - start)
             context.ctx.reset(token)
 
