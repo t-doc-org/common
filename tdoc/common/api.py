@@ -429,7 +429,7 @@ class EventsApi:
                 failed.append(wid)
         return failed
 
-    @ws.stream_endpoint('watch')
+    @ws.stream_endpoint('watch', kind='stream:long')
     async def ws_watch(self, ctx):
         async with util.TaskGroup(first_exc=True) as workers:
             with AsyncWatcher() as watcher:

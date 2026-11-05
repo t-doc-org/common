@@ -29,7 +29,7 @@ websocket_active_connections = pc.Gauge(
     documentation="The number of active websocket connections.")
 websocket_rpc_duration = pc.Histogram(
     subsystem='websocket', name='rpc_duration', unit='seconds',
-    labelnames=('endpoint', 'status'),
+    labelnames=('endpoint', 'kind', 'status'),
     buckets=[0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
              1.0, 2.0, 5.0, 10.0],
     documentation="The duration of websocket RPCs.")
@@ -295,7 +295,7 @@ class Connection(http.Context, server.ServerConnection):
             self.run_disconnected()
 
     async def handle_rpc(self, rpc):
-        code, message, path = Code.INTERNAL, None, None
+        code, message, path, endpoint = Code.INTERNAL, None, None, None
         start, active = time.monotonic(), None
         cid, log_level = self.id.hex, logs.NOTSET
         token = context.ctx.set('rpc:' + secrets.token_hex(8))
@@ -348,8 +348,9 @@ class Connection(http.Context, server.ServerConnection):
                          code=code.name, message=message or "", cid=cid,
                          rid=rpc.rid, **lkw)
             if active is not None: active.dec()
-            if path is not None:
-                websocket_rpc_duration.labels(path, code.name) \
+            if endpoint is not None:
+                websocket_rpc_duration \
+                    .labels(path, endpoint._endpoint_kind, code.name) \
                     .observe(time.monotonic() - start)
             context.ctx.reset(token)
 
@@ -389,7 +390,8 @@ class Handler(http.Handler, type='ws'):
             if isinstance(res := fn(conn), abc.Awaitable): await res
 
 
-def stream_endpoint(name, require_authn=False, log_level=logs.INFO):
+def stream_endpoint(name, kind='stream', require_authn=False,
+                    log_level=logs.INFO):
     def decorator(fn):
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
@@ -398,14 +400,16 @@ def stream_endpoint(name, require_authn=False, log_level=logs.INFO):
             await fn(self, rpc)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
+        dfn._endpoint_kind = kind
         dfn._log_level = log_level
         return dfn
     return decorator
 
 
-def endpoint(name, require_authn=False, log_level=logs.INFO):
+def endpoint(name, kind='unary', require_authn=False, log_level=logs.INFO):
     def decorator(fn):
-        @stream_endpoint(name, require_authn=require_authn, log_level=log_level)
+        @stream_endpoint(name, kind=kind, require_authn=require_authn,
+                         log_level=log_level)
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             req = await anext(rpc.reqs)
