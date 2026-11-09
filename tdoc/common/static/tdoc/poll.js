@@ -107,7 +107,7 @@ class Poll {
         if (!this.open) return;
         const answer = this.answers.indexOf(tr);
         if (answer < 0) return;
-        await api.poll({id: this.id, voter: await core.clientId, answer,
+        await api.poll({id: this.id, answer,
                         vote: !tr.classList.contains('selected')});
     }
 
@@ -164,8 +164,7 @@ customElements.define('tdoc-poll', PollElement);
     }
     if (polls.length === 0) return;
     const watch = new api.Watch(
-        {name: 'poll/votes', voter: await core.clientId,
-         ids: polls.map(p => p.id)},
+        {name: 'poll/votes', ids: polls.map(p => p.id)},
         data => {
             for (const poll of polls) {
                 poll.onVotesUpdate(data.votes[poll.id] ?? []);

@@ -746,6 +746,8 @@ for (const k of [
     'tdoc:domain:api-dev:auth',
     'tdoc:domain:api-staging:auth',
     'tdoc:domain:clientId',
+    // TODO(2027-01-01): Remove the keys below
+    'tdoc:clientId',
 ]) {
     localStorage.removeItem(k);
 }
@@ -866,17 +868,6 @@ export function debug(tag) {
     for (const t of asArray(tag.disable)) _debug.remove(t);
     for (const t of asArray(tag.enable)) _debug.add(t);
 }
-
-// Manage an immutable, globally-unique client ID in local storage.
-export const clientId = (async () => {
-    const stored = new Stored('tdoc:clientId');
-    let id = stored.get();
-    if (id === undefined) {
-        id = await randomId(33);
-        stored.set(id);
-    }
-    return id;
-})();
 
 // Return an exponential backoff delay.
 export function backoff({min, max, mult = 1.3, jitter = 0.4}, retries) {

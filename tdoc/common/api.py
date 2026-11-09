@@ -89,6 +89,11 @@ def handle_db_errors(fn):
     return dfn
 
 
+def voter_id(ctx):
+    return f'u:{uid:016x}' if (uid := ctx.user) is not None \
+           else f'c:{cid}' if (cid := ctx.client) is not None else None
+
+
 static_files = {
     '/robots.txt': ('text/plain', """\
 User-agent: *
@@ -266,8 +271,10 @@ class Api:
                 check(self.has_perm(ctx, db, 'polls:control'))
                 db.polls.clear(origin, ids)
             if 'vote' in req:
-                db.polls.vote(origin, *args(req, 'id', 'voter', 'answer',
-                                            'vote'))
+                id, answer, vote = args(req, 'id', 'answer', 'vote')
+                if (voter := voter_id(ctx)) is None:
+                    raise http.Error(http.BAD_REQUEST)
+                db.polls.vote(origin, id, voter, answer, vote)
         return {}
 
     ws_poll = ws.endpoint(wsgi_poll)
@@ -769,22 +776,24 @@ class PollObservable(DbObservable, name='poll'):
 
 class PollVotesObservable(DbObservable, name='poll/votes'):
     _origin = ReqAttr()
-    voter = ReqAttr()
+    _voter = ReqAttr()
     # TODO: Accept a single ID, once on websockets
     ids = ReqAttr()
 
     @classmethod
     def normalize(cls, req, ctx):
         req['_origin'] = ctx.required_origin
+        if (v := voter_id(ctx)) is None: raise http.Error(http.BAD_REQUEST)
+        req['_voter'] = v
         super().normalize(req, ctx)
         req['ids'].sort()
 
     def wake_keys(self, db):
-        return [db.polls.voter_key(self._origin, poll, self.voter)
+        return [db.polls.voter_key(self._origin, poll, self._voter)
                 for poll in self.ids]
 
     def query(self, db):
-        return db.polls.votes_data(self._origin, self.voter, self.ids), None
+        return db.polls.votes_data(self._origin, self._voter, self.ids), None
 
 
 class EditorObservable(DbObservable, name='editor'):
