@@ -128,6 +128,7 @@ class Api:
         if not ctx.local: ctx.domain = self.domain
         ctx._read_db = lambda: self.store.read_db
         ctx._write_db = lambda: self.store.write_db
+        if endpoint._refresh_client: ctx.set_client_cookie()
         if not endpoint._authn: return
         if token := ctx.token:
             user = None
@@ -145,6 +146,7 @@ class Api:
         if not ctx.local: ctx.domain = self.domain
         ctx._read_db = lambda: self.store.read_db
         ctx._write_db = lambda: self.store.write_db
+        ctx.set_client_cookie()
         if token := ctx.token:
             user = None
             @ctx.blocking
@@ -166,7 +168,7 @@ class Api:
         return db.users.has_perm(origin, ctx.user, perm)
 
     @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, authn=False,
-                   csrf=False)
+                   refresh_client=False, csrf=False)
     def wsgi_default(self, ctx):
         if (sf := static_files.get(ctx.path)) is None:
             raise http.Error(http.NOT_FOUND)

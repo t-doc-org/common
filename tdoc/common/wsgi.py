@@ -261,14 +261,15 @@ class Handler(http.Handler, type='wsgi'):
     def _log_args(ctx, include_query):
         kwargs = {'method': ctx.method,
                   'uri': ctx.uri(include_query=include_query, relative=True),
-                  'origin': ctx.origin, 'remote': ctx.remote_addr}
+                  'origin': ctx.origin, 'remote': ctx.remote_addr,
+                  'client': ctx.client}
         if (v := ctx.user) is not None: kwargs['user'] = v
         return kwargs
 
 
 def endpoint(name, methods=None, final=True, authn=True, require_authn=False,
-             refresh_token=False, csrf=True, log_level=logs.INFO,
-             log_query=True):
+             refresh_client=True, refresh_token=False, csrf=True,
+             log_level=logs.INFO, log_query=True):
     if methods is None: raise TypeError("Missing methods")
     if isinstance(methods, http.Method): methods = (methods,)
     def decorator(fn):
@@ -289,6 +290,7 @@ def endpoint(name, methods=None, final=True, authn=True, require_authn=False,
         dfn._endpoint_type = 'wsgi'
         dfn._authn = authn
         dfn._require_authn = require_authn
+        dfn._refresh_client = refresh_client
         dfn._refresh_token = refresh_token
         dfn._log_level = log_level
         dfn._log_query = log_query
@@ -297,12 +299,12 @@ def endpoint(name, methods=None, final=True, authn=True, require_authn=False,
 
 
 def json_endpoint(name, methods=(http.POST,), require_authn=False,
-                  refresh_token=True, csrf=True, log_level=logs.INFO,
-                  log_query=True):
+                  refresh_client=True, refresh_token=True, csrf=True,
+                  log_level=logs.INFO, log_query=True):
     def decorator(fn):
         @endpoint(name, methods=methods, require_authn=require_authn,
-                  refresh_token=refresh_token, csrf=csrf,
-                  log_level=log_level, log_query=log_query)
+                  refresh_client=refresh_client, refresh_token=refresh_token,
+                  csrf=csrf, log_level=log_level, log_query=log_query)
         @functools.wraps(fn)
         def dfn(self, /, ctx):
             return ctx.respond_json(

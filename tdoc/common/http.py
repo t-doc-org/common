@@ -5,6 +5,7 @@ import contextlib
 import functools
 from http import cookies, HTTPMethod as Method, HTTPStatus as Status
 import re
+import secrets
 import threading
 import time
 from urllib import parse
@@ -59,13 +60,14 @@ def with_hash_params(url, params):
 
 
 class Context:
-    __slots__ = ('local', 'domain', 'user', '_cookies', 'response_headers',
-                 '_read_db', '_write_db')
+    __slots__ = ('local', 'domain', 'client', 'user', '_cookies',
+                 'response_headers', '_read_db', '_write_db')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.local = False
-        self.domain = self.user = self._cookies = self.response_headers = None
+        self.domain = self.client = self.user = None
+        self._cookies = self.response_headers = None
         self._read_db = self._write_db = None
 
     def header(self, name, default=None): raise NotImplementedError()
@@ -91,6 +93,17 @@ class Context:
         if (c := self._cookies) is None:
             c = self._cookies = cookies.SimpleCookie(self.header('Cookie'))
         return c
+
+    def set_client_cookie(self):
+        if (v := self.client) is None:
+            if (m := self.cookies.get(_client_cookie)) is None \
+                    or not (10 <= len(v := m.value) <= 22):
+                v = secrets.token_urlsafe(8)
+            self.client = v
+        c = cookies.SimpleCookie()
+        m = cookie(c, _client_cookie, v, _client_cookie_attrs,
+                   max_age=400 * 24 * 3600)
+        self.add_headers([('Set-Cookie', m)])
 
     @property
     def token(self):
@@ -124,6 +137,13 @@ class Context:
     def write_db(self): return self._write_db()
 
 
+_client_cookie = '__Host-Http-tdoc-client'
+_client_cookie_attrs = {
+    'httponly': True,
+    'path': '/',
+    'samesite': 'Strict',
+    'secure': True,
+}
 _token_cookie = '__Host-Http-tdoc-token'
 _token_cookie_attrs = {
     'httponly': True,

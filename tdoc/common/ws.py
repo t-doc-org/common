@@ -364,6 +364,7 @@ class Connection(http.Context, server.ServerConnection):
             'method': req.method,
             'uri': f'{self.server_origin}{req.path}',
             'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
+            'client': self.client,
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs
@@ -373,6 +374,7 @@ class Connection(http.Context, server.ServerConnection):
         req = self.request
         kwargs = {
             'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
+            'client': self.client,
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs

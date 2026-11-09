@@ -874,7 +874,8 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
         return util.run('hg', *args, capture_output=True, text=True, **kwargs)
 
     @wsgi.endpoint('_cache', methods=(http.GET, http.HEAD), final=False,
-                   authn=False, csrf=False, log_level=logs.DEBUG)
+                   authn=False, refresh_client=False, csrf=False,
+                   log_level=logs.DEBUG)
     def wsgi_cache(self, ctx):
         yield from self.serve_file(ctx, self.opts.cache,
                                    self.fix_cache_path_info,
@@ -908,7 +909,7 @@ Please <a href="https://common.t-doc.org/manual/install.html#requirements">""")
             _log.error("Cache [%(url)s]: %(exc)s", url=url, exc=e)
 
     @wsgi.endpoint('', methods=(http.GET, http.HEAD), final=False, authn=False,
-                   csrf=False, log_level=logs.DEBUG)
+                   refresh_client=False, csrf=False, log_level=logs.DEBUG)
     def wsgi_default(self, ctx):
         with self.lock: base = self.directory
         yield from self.serve_file(ctx, base)
