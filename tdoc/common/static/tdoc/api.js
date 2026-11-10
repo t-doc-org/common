@@ -368,9 +368,10 @@ class Channel {
 }
 
 const chan = new Channel();
+const useWebsocket = core.features.websocket ?? false;
 
 export async function call(path, req = {}) {
-    if (core.debug('ws')) {
+    if (useWebsocket) {
         return await chan.call({path, timeout: 15000}, req);
     }
     return await httpCall(path, {req});
@@ -962,4 +963,4 @@ class EventsApi2 {
     }
 }
 
-export const events = core.debug('ws') ? new EventsApi2() : new EventsApi();
+export const events = useWebsocket ? new EventsApi2() : new EventsApi();
