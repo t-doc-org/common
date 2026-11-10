@@ -45,12 +45,25 @@ export const page = {
         if (!params) return [];
         let found = false;
         const vs = names.map(name => {
-            const v = params.get(name);
-            if (v !== null) {
+            if (name.endsWith('.')) {
+                const v = {}, prefix = name.slice(0, -1);
+                for (const [pn, pv] of params) {
+                    if (!pn.startsWith(prefix)) continue;
+                    v[pn.slice(name.length)] = pv;
+                }
+                const ks = Object.keys(v);
+                if (ks.length === 0) return;
                 found = true;
-                params.delete(name);
+                for (const k of ks) params.delete(name + k);
+                return v;
+            } else {
+                const v = params.get(name);
+                if (v !== null) {
+                    found = true;
+                    params.delete(name);
+                }
+                return v ?? undefined;
             }
-            return v ?? undefined;
         });
         if (found) this.hashParams = params;
         return vs;
@@ -63,7 +76,7 @@ export const page = {
 // changes and any of the parameters are present.
 export function onHashParams(names, fn) {
     const handle = () => {
-        const vs = page.handleHashParams(names);
+        const vs = page.handleHashParams(...names);
         if (vs.some(v => v !== undefined)) return fn(...vs);
     }
     const res = handle();
@@ -867,6 +880,40 @@ export function debug(tag) {
     if (typeof tag === 'string') return _debug.has(tag) || _debug.has('all');
     for (const t of asArray(tag.disable)) _debug.remove(t);
     for (const t of asArray(tag.enable)) _debug.add(t);
+}
+
+// Manage features.
+function mergeFeatures(dst, ...srcs) {
+    for (const src of srcs) {
+        for (const [k, v] of Object.entries(src)) {
+            if (v != null) {
+                dst[k] = v;
+            } else {
+                delete dst[k];
+            }
+        }
+    }
+}
+
+const featuresSession = new StoredJson('tdoc:features', undefined,
+                                       sessionStorage);
+onHashParams(['feature.'], vs => {
+    for (const [k, v] of Object.entries(vs)) vs[k] = JSON.parse(v);
+    const fs = featuresSession.get() ?? {};
+    mergeFeatures(fs, vs);
+    featuresSession.set(fs);
+    location.reload();
+});
+const featuresStore = new StoredJson('tdoc:features', {});
+export const features = featuresStore.get();
+mergeFeatures(features, featuresSession.get() ?? {});
+
+export async function updateFeatures(fn) {
+    try {
+        featuresStore.set(await fn());
+    } catch (e) {
+        console.error(`Failed to fetch features: ${e}`)
+    }
 }
 
 // Return an exponential backoff delay.

@@ -47,6 +47,7 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "websockets>=17.2",
+    "xxhash>=4.1.0",
 ]
 dynamic = ["version"]
 

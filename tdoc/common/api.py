@@ -14,6 +14,7 @@ import secrets
 import threading
 import time
 from urllib import error, parse, request
+import xxhash
 
 import jwt
 import prometheus_client as pc
@@ -89,6 +90,37 @@ def handle_db_errors(fn):
     return dfn
 
 
+class Features:
+    def __init__(self, cfg, features):
+        @functools.lru_cache(maxsize=cfg.get('cache_size', 1024))
+        def get(origin, client, uid):
+            origin_hash = self.hash(origin)
+            client_hash = self.hash(client)
+            uid_hash = self.hash(f'{uid:016x}')
+            fs = {}
+            for name, matchers in features.items():
+                for m in matchers:
+                    if self.matches(m, 'origin', origin_hash, origin) is False:
+                        continue
+                    if not (self.matches(m, 'client', client_hash, client) or
+                            self.matches(m, 'user', uid_hash, uid)):
+                        continue
+                    if (v := m.get('value')) is not None: fs[name] = v
+                    break
+            return fs
+        self.get = get
+
+    @staticmethod
+    def hash(v):
+        return (xxhash.xxh3_64_intdigest(v.encode()) & 0xffffffff) / 0x100000000
+
+    @staticmethod
+    def matches(m, attr, vh, v):
+        vs, vf = m.get(f'{attr}s'), m.get(f'{attr}_fraction')
+        if vs is None and vf is None: return None
+        return (vf is not None and vh < vf) or (vs is not None and (v in vs))
+
+
 def voter_id(ctx):
     return f'u:{uid:016x}' if (uid := ctx.user) is not None \
            else f'c:{cid}' if (cid := ctx.client) is not None else None
@@ -107,6 +139,8 @@ class Api:
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
+        self.features = Features(config.sub('features'),
+                                 config.get('feature', {}))
         self.cache = http.Cache()
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'),
@@ -319,6 +353,13 @@ class Api:
         return info
 
     ws_user = ws.endpoint(wsgi_user)
+
+    @wsgi.json_endpoint('features')
+    @context.tags.add('ep:features')
+    def wsgi_features(self, ctx, req):
+        return self.features.get(ctx.required_origin, ctx.client, ctx.user)
+
+    ws_features = ws.endpoint(wsgi_features)
 
 
 class EventsApi:

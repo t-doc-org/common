@@ -4,6 +4,7 @@
 import * as core from './core.js';
 const {elmt, html, on, qs, qsa} = core;
 
+// Manage the API backend.
 const backend = new core.Stored('tdoc:api:backend', undefined, sessionStorage);
 core.onHashParams(['api'], api => {
     backend.set(api);
@@ -709,20 +710,24 @@ console.info(`[t-doc] API backend: ${url}, user: ${auth.name ?? '<none>'}`);
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
+// Update the feature cache.
+core.updateFeatures(() => httpCall('/features', {req: {}}));  // BG
+
+// Expose API calls.
 export async function editor(req) {
-    return await call(`/editor`, req);
+    return await call('/editor', req);
 }
 
 export async function poll(req) {
-    return await call(`/poll`, req);
+    return await call('/poll', req);
 }
 
 export async function solutions(show) {
-    return await call(`/solutions`, {page: core.page.path, show});
+    return await call('/solutions', {page: core.page.path, show});
 }
 
 export async function terminate(rc = 0) {
-    return await httpCall(`/terminate`, {req: {rc}});
+    return await httpCall('/terminate', {req: {rc}});
 }
 
 export class Watch {
@@ -765,7 +770,7 @@ class EventsApi {
             for (const w of add) req.add.push({wid: w.id, req: w.req});
         }
         try {
-            const resp = await httpCall(`/events/sub`, {req});
+            const resp = await httpCall('/events/sub', {req});
             this.reportFailed(resp.failed);
         } catch (e) {}
     }

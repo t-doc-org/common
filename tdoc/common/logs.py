@@ -1,7 +1,6 @@
 # Copyright 2025 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
-import binascii
 from collections import abc
 import contextlib
 import datetime
@@ -16,6 +15,7 @@ import shutil
 import threading
 import time
 import traceback
+import xxhash
 
 import prometheus_client as pc
 
@@ -147,7 +147,7 @@ _ctx_colors = ['RED', 'GREEN', 'YELLOW', 'BLUE', 'MAGENTA', 'CYAN',
                'LRED', 'LGREEN', 'LYELLOW', 'LBLUE', 'LMAGENTA', 'LCYAN']
 
 def _ctxc(rec, attrs):
-    h = binascii.crc32(rec.get('ctx', '').encode())
+    h = xxhash.xxh3_64_intdigest(rec.get('ctx', '').encode())
     return attrs[_ctx_colors[h % len(_ctx_colors)]]
 
 

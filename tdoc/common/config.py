@@ -27,8 +27,9 @@ class Config:
     def __repr__(self):
         return f'Config(path={self._path}, data={self._data})'
 
-    def keys(self):
-        return self._data.keys()
+    def keys(self): return self._data.keys()
+    def values(self): return self._data.values()
+    def items(self): return self._data.items()
 
     def get(self, key, default=None):
         v = self._data

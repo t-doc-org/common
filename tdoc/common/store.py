@@ -103,6 +103,10 @@ class Users(database.ConnNamespace):
                           where (origin, user) = (?, ?) and group_ in (?, '*'))
         """, (origin, uid, perm))[0])
 
+    def name(self, uid):
+        return self.row("select name from users where id = ?", (uid,),
+                        default=(None,))[0]
+
     def info(self, origin, uid):
         name, = self.row("select name from users where id = ?", (uid,))
         perms = [g for g, in self.execute("""
