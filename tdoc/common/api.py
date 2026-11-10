@@ -116,9 +116,9 @@ class Features:
 
     @staticmethod
     def matches(m, attr, vh, v):
-        vs, vf = m.get(f'{attr}s'), m.get(f'{attr}_fraction')
-        if vs is None and vf is None: return None
-        return (vf is not None and vh < vf) or (vs is not None and (v in vs))
+        vf, vs = m.get(f'{attr}_fraction'), m.get(f'{attr}s')
+        if vf is None and vs is None: return None
+        return (vf is not None and vh < vf) or (vs is not None and v in vs)
 
 
 def voter_id(ctx):
