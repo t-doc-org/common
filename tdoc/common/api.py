@@ -95,8 +95,8 @@ class Features:
         @functools.lru_cache(maxsize=cfg.get('cache_size', 1024))
         def get(origin, client, uid):
             origin_hash = self.hash(origin)
-            client_hash = self.hash(client)
-            uid_hash = self.hash(f'{uid:016x}')
+            client_hash = self.hash(client) if client is not None else 1
+            uid_hash = self.hash(f'{uid:016x}') if uid is not None else 1
             fs = {}
             for name, matchers in features.items():
                 for m in matchers:
