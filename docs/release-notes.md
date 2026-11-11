@@ -3,6 +3,12 @@
 
 # Release notes
 
+(release-0-99)=
+## 0.99 *(2026-11-11)*
+
+- Reimplemented most API endpoints as RPCs over Websockets.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.98...0.99)
+
 (release-0-98)=
 ## 0.98 *(2026-11-01)*
 
