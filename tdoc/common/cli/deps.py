@@ -5,6 +5,7 @@ import contextlib
 import functools
 import json
 import re
+import tempfile
 import webbrowser
 
 from .. import cli, deps, util
@@ -286,12 +287,37 @@ def cmd_generate(opts):
 
 
 def generate_version_reqs(opts, version):
-    reqs = util.requirements(pkgs=[f't-doc-common=={version}'],
-                             only_pkgs=['t-doc-common'], common=opts.common)
-    reqs += util.requirements(no_project=True, common=opts.common)
+    reqs = requirements(opts, pkgs=[f't-doc-common=={version}'],
+                        only_pkgs=['t-doc-common'])
+    reqs += requirements(opts, no_project=True)
     (opts.common / 'config' / f'{version}.req').write_text(reqs, 'utf-8')
 
 
 def generate_group_reqs(opts, group):
-    reqs = util.requirements(only_groups=[group], common=opts.common)
+    reqs = requirements(opts, only_groups=[group])
     (opts.common / 'config' / f'{group}.req').write_text(reqs, 'utf-8')
+
+
+def requirements(opts, *, pkgs=(), only_pkgs=(), only_groups=(),
+                 no_project=False):
+    def export(*args):
+        return util.run_uv(
+            'export', '--no-header', '--no-default-groups',
+            '--format=requirements.txt', *args,
+            *(f'--only-emit-package={p}' for p in only_pkgs),
+            *(f'--only-group={g}' for g in only_groups),
+            *(('--no-emit-project',) if no_project else ()),
+            common=opts.common, capture_output=True, text=True).stdout
+
+    if not pkgs: return export()
+    if (min_python := opts.cfg.get('python.minimum')) is None:
+        raise Exception('Missing python.minimum in config')
+    with tempfile.NamedTemporaryFile('w') as f:
+        f.write(f"""\
+# /// script
+# requires-python = '>={min_python}'
+# dependencies = [{', '.join(f"'{p}'" for p in pkgs)}]
+# ///
+""")
+        f.flush()
+        return export('--no-cache', f'--script={f.name}')

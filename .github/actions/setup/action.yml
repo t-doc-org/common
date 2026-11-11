@@ -37,10 +37,10 @@ runs:
       run: |
         import os
         import tomllib
-        with open('common/config/run.toml', 'rb') as f:
+        with open('common/config/tdoc.toml', 'rb') as f:
           config = tomllib.load(f)
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          f.write(f"version={config["python"]["recommend"]}\n")
+          f.write(f'version={config['python']['recommend']}\n')
     - name: Install Python
       id: python
       uses: actions/setup-python@v7

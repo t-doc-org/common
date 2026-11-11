@@ -5,20 +5,38 @@ import itertools
 import pathlib
 import tomllib
 
-tdoc = 'tdoc.local.toml'
+tdoc_toml = 'tdoc.toml'
+tdoc_local_toml = 'tdoc.local.toml'
+
+
+def merge(data, path):
+    try:
+        with open(path, 'rb') as f:
+            merge_dict(data, tomllib.load(f))
+        return True
+    except OSError:
+        return False
+
+
+def merge_dict(dst, src):
+    for k, sv in src.items():
+        if isinstance(sv, dict) and isinstance(dv := dst.get(k), dict):
+            merge_dict(dv, sv)
+        else:
+            dst[k] = sv
 
 
 class Config:
-    @staticmethod
-    def find(path):
-        for parent in itertools.chain([path], path.parents):
-            if (p := parent / tdoc).is_file(): return p
-
     @classmethod
     def load(cls, path):
         if path is None: return cls({})
-        with path.open('rb') as f:
-            return cls(tomllib.load(f), path)
+        path = path.resolve()
+        data = {}
+        if not merge(data, path / 'config' / tdoc_toml):
+            merge(data, path / '_venv' / tdoc_toml)
+        merge(data, path / tdoc_toml)
+        merge(data, path / tdoc_local_toml)
+        return cls(data, path)
 
     def __init__(self, data, path=pathlib.Path()):
         self._data = data
@@ -53,7 +71,7 @@ class Config:
 
     def as_path(self, v):
         if v is None: return
-        return (self._path.parent / v).resolve() if self._path is not None \
+        return (self._path / v).resolve() if self._path is not None \
                 else pathlib.Path(v).resolve()
 
     def path(self, key, default=None):

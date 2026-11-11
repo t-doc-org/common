@@ -287,12 +287,24 @@ The style to use when documenting roles and directives.
 
 ## CLI and API configuration
 
-The `tdoc` CLI and the API server read their configuration from a
-[TOML](https://toml.io/en/) file.
+The `tdoc` CLI and the API server read their configuration from
+[TOML](https://toml.io/en/) files.
 
-- By default, the CLI looks for a file named `tdoc.local.toml` starting in the
-  current directory and moving up the hierarchy. The default can be overridden
-  with the `--config` option or the `TDOC_CONFIG` environment variable.
+
+- The CLI reads the following files (if present) and merges them, with later
+  files overriding earlier ones.
+
+  - [`config/tdoc.toml`](https://github.com/t-doc-org/common/blob/main/config/tdoc.toml)
+    from the [`common`](https://github.com/t-doc-org/common) repository. It is
+    fetched by the `run.py` script.
+  - `tdoc.toml` at the root of the site repository.
+  - `tdoc.local.toml` at the root of the site repository.
+
+  The location of the site repository is determined by starting from the current
+  directory and looking for files named `run.py` and `docs/conf.py`, and moving up
+  the hierarchy. The location can also be specified explicitly with the
+  `--site-repo` option or the `TDOC_SITE_REPO` environment variable.
+
 - The API server reads the file `tdoc.local.toml` at the root of the `common`
   repository.
 
@@ -509,6 +521,16 @@ This table configures options related to
   accept.
 - `verify_leeway_secs` (default: `60`): The maximum clock skew in seconds to
   accept when verifying JWTs.
+
+### `[python]`
+
+This table configures options related to the Python interpreter.
+
+- `minimum`: The minimum Python version that can be used. The CLI and API refuse
+  to start if the Python version is lower than this.
+- `recommend`: The recommended Python version. If the Python version is lower
+  than this, the local server displays an info or warning message suggesting an
+  upgrade.
 
 ### `[repo]`
 

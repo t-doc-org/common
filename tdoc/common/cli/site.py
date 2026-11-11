@@ -821,8 +821,7 @@ the server to upgrade.</p>""")
 
     @util.suppress(log=_log.p.exception("Python upgrade check", debug=True))
     def render_python_upgrade(self, status):
-        config = util.read_run_toml()
-        vr = config.get('python', {}).get('recommend')
+        vr = self.opts.cfg.get('python.recommend')
         if not vr or sys.version_info >= (vrt := util.version_tuple(vr)): return
         out = io.StringIO()
         out.write(f"""\

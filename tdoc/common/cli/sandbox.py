@@ -55,7 +55,7 @@ def add_image_options(parser):
              "%(default)s). ")
     arg('--python', metavar='VERSION', dest='python', default=None,
         help="The version of Python to install in the sandbox (default: "
-             "python.recommend in run.toml). ")
+             "python.recommend in the config). ")
 
 
 def add_container_options(parser):
@@ -75,8 +75,10 @@ def add_container_options(parser):
 def set_default_python(opts):
     cli.require_common(opts)
     if opts.python is None:
-        run_toml = util.read_toml(opts.common / 'config' / 'run.toml')
-        opts.python = run_toml['python']['recommend']
+        opts.python = opts.cfg.get('python.recommend')
+    if opts.python is None:
+        raise Exception(
+            'Missing python.recommend in config; please specify --python')
 
 
 def container_name(opts):

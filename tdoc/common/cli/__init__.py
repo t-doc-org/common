@@ -44,10 +44,11 @@ def main(argv, stdin, stdout, stderr):
     add_common_options(p)
 
     opts = parser.parse_args(argv[1:])
-    if opts.config is None:
-        opts.config = config.Config.find(pathlib.Path.cwd())
-    opts.cfg = config.Config.load(
-        opts.config.resolve() if opts.config is not None else None)
+    if opts.site_repo is None:
+        opts.site_repo = util.find_site_repo(pathlib.Path.cwd())
+    if opts.site_repo is None:
+        raise Exception("Site repository not found; please specify --site-repo")
+    opts.cfg = config.Config.load(opts.site_repo)
     if (fn := getattr(opts.handler, '_pre_run', None)) is not None:
         if (res := fn(opts)) is not None: return res
     with futures.ThreadPoolExecutor(thread_name_prefix='exec') as exec, \
@@ -81,13 +82,13 @@ def add_common_options(parser):
     arg('--color', dest='color', choices=['auto', 'false', 'true'],
         default='auto',
         help="Control the use of colors in output (default: %(default)s).")
-    arg('--config', metavar='PATH', dest='config', type='path',
-        default=os.environ.get('TDOC_CONFIG'),
-        help="The path to the config file.")
     arg('--debug', action='store_true', dest='debug',
         help="Enable debug functionality.")
     arg('--local', action='store_true', dest='local',
         help="Create databases for local mode.")
+    arg('--site-repo', metavar='PATH', dest='site_repo', type='path',
+        default=os.environ.get('TDOC_SITE_REPO'),
+        help="The path to the site repository.")
 
 
 def add_origin_option(arg):

@@ -259,10 +259,6 @@ def read_toml(path):
         return tomllib.load(f)
 
 
-def read_run_toml():
-    return read_toml(pathlib.Path(sys.prefix).parent / 'run.toml')
-
-
 if sys.platform == 'win32':
     def replace_file(path, target):
         tries = 10
@@ -286,6 +282,11 @@ def write_atomic(path, *args, **kwargs):
         yield f
         f.close()
         replace_file(pathlib.Path(f.name), path)
+
+
+def find_site_repo(path):
+    for parent in itertools.chain([path], path.parents):
+        if is_site_repo(parent): return parent
 
 
 def is_site_repo(path):
@@ -389,29 +390,6 @@ def run_json(*args, object_pairs_hook=Namespace, **kwargs):
 
 def run_uv(*args, common, **kwargs):
     return run('uv', *args, prefix=True, cwd=common, **kwargs)
-
-
-def requirements(*, common, pkgs=(), only_pkgs=(), only_groups=(),
-                 no_project=False):
-    def export(*args):
-        return run_uv('export', '--no-header', '--no-default-groups',
-                      '--format=requirements.txt', *args,
-                      *(f'--only-emit-package={p}' for p in only_pkgs),
-                      *(f'--only-group={g}' for g in only_groups),
-                      *(('--no-emit-project',) if no_project else ()),
-                      common=common, capture_output=True, text=True).stdout
-
-    if not pkgs: return export()
-    run_toml = read_toml(common / 'config' / 'run.toml')
-    with tempfile.NamedTemporaryFile('w') as f:
-        f.write(f"""\
-# /// script
-# requires-python = '>={run_toml['python']['minimum']}'
-# dependencies = [{', '.join(f"'{p}'" for p in pkgs)}]
-# ///
-""")
-        f.flush()
-        return export('--no-cache', f'--script={f.name}')
 
 
 # Use certifi instead of the system CA store for portability.
