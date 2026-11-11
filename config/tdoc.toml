@@ -1,0 +1,18 @@
+[python]
+minimum = "3.13"
+recommend = "3.14.10"
+
+[run]
+package = "t-doc-common"
+version = "stable"
+hermetic = true
+
+[run.versions]
+stable = "0.98"
+previous = "0.97"
+
+[run.defaults]
+command = ["tdoc", "site", "serve"]
+command_10 = ["--open"]
+command-dev = ["tdoc", "site", "serve"]
+command-dev_10 = ["--debug", "--full-builds"]
