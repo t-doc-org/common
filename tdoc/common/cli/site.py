@@ -122,21 +122,30 @@ def add_commands(parser):
 
 def add_sphinx_options(parser):
     arg = parser.add_argument_group("Sphinx options").add_argument
-    arg('--build', metavar='PATH', dest='build', type='path', default='_build',
-        help="The path to the build directory (default: %(default)s).")
-    arg('--source', metavar='PATH', dest='source', type='path', default='docs',
-        help="The path to the source files (default: %(default)s).")
+    arg('--build', metavar='PATH', dest='build', type='path',
+        help="The path to the build directory (default: _build at the root of "
+             "the site repository).")
+    arg('--source', metavar='PATH', dest='source', type='path',
+        help="The path to the source files (default: docs at the root of the "
+             "site repository).")
     arg('--sphinx-opt', metavar='OPT', action='append', dest='sphinx_opts',
         default=[], help="Additional options to pass to sphinx-build.")
 
 
+def set_sphinx_option_defaults(opts):
+    if opts.build is None: opts.build = opts.site_repo / '_build'
+    if opts.source is None: opts.source = opts.site_repo / 'docs'
+
+
 def cmd_build(opts):
+    set_sphinx_option_defaults(opts)
     for target in opts.target:
         res = sphinx_build(opts, target, build=opts.build)
         if res.returncode != 0: return res.returncode
 
 
 def cmd_clean(opts):
+    set_sphinx_option_defaults(opts)
     return sphinx_build(opts, 'clean', build=opts.build).returncode
 
 
@@ -155,6 +164,7 @@ def pre_serve(opts):
 @cli.pre_run(pre_serve)
 def cmd_serve(opts):
     opts.local = True
+    set_sphinx_option_defaults(opts)
     addr = (opts.bind if opts.bind != 'ALL' else '', opts.port)
     families = {info[0] for info in socket.getaddrinfo(
                     addr[0] or None, opts.port, type=socket.SOCK_STREAM,
@@ -494,8 +504,8 @@ build.</p><p><b>Reason:</b> {esc(str(e))}</p>""")
         mtime = self.min_mtime
         pred = lambda path, root: self.opts.ignore.search(str(path)) is None
         for path in itertools.chain([self.opts.source], self.opts.watch):
-            for _, t in self.find_files(path, file_pred=pred, dir_pred=pred,
-                                        missing_ok=True):
+            for _, t in self.find_files(path.resolve(), file_pred=pred,
+                                        dir_pred=pred, missing_ok=True):
                 mtime = max(mtime, t)
         for _, srcs, _, _ in self.list_imports():
             for _, t in srcs: mtime = max(mtime, t)

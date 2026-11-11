@@ -285,6 +285,7 @@ def write_atomic(path, *args, **kwargs):
 
 
 def find_site_repo(path):
+    path = path.resolve()
     for parent in itertools.chain([path], path.parents):
         if is_site_repo(parent): return parent
 
