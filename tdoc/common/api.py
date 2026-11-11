@@ -91,15 +91,21 @@ def handle_db_errors(fn):
 
 
 class Features:
+    defaults = {
+        'websocket': False,
+    }
+
     def __init__(self, cfg, features):
         @functools.lru_cache(maxsize=cfg.get('cache_size', 1024))
-        def get(origin, client, uid):
+        def get(local, origin, client, uid):
             origin_hash = self.hash(origin)
             client_hash = self.hash(client) if client is not None else 1
             uid_hash = self.hash(f'{uid:016x}') if uid is not None else 1
-            fs = {}
+            fs = self.defaults.copy()
             for name, matchers in features.items():
                 for m in matchers:
+                    if (v := m.get('local')) is not None and local != v:
+                        continue
                     if self.matches(m, 'origin', origin_hash, origin) is False:
                         continue
                     if not (self.matches(m, 'client', client_hash, client) or
@@ -357,7 +363,8 @@ class Api:
     @wsgi.json_endpoint('features')
     @context.tags.add('ep:features')
     def wsgi_features(self, ctx, req):
-        return self.features.get(ctx.required_origin, ctx.client, ctx.user)
+        return self.features.get(ctx.local, ctx.required_origin, ctx.client,
+                                 ctx.user)
 
     ws_features = ws.endpoint(wsgi_features)
 

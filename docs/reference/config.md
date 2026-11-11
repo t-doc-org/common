@@ -346,6 +346,8 @@ table to match, all the following conditions must be fulfilled:
 The following table keys can be set:
 
 - `value`: The value of the feature if the attributes match.
+- `local`: When set, match only when running on a local server (`true`) or a
+  deployment server (`false`).
 - `origins`: A list of origins that match.
 - `origin_fraction`: The fraction of origins that should match, based on a hash
   of the request origin.
