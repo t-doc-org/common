@@ -30,18 +30,20 @@ jobs:
           path: repo
       - name: Build HTML (dev)
         if: ${{ inputs.dev }}
+        working-directory: ./repo
         run: |
-          ${{ steps.setup.outputs.python-path }} -P common/run.py \
-              tdoc site build --source=repo/docs --build=_build html
+          ${{ steps.setup.outputs.python-path }} -P ../common/run.py \
+              tdoc site build html
       - name: Build HTML (release)
         if: ${{ !inputs.dev }}
+        working-directory: ./repo
         run: |
-          ${{ steps.setup.outputs.python-path }} -P repo/run.py \
-              tdoc site build --source=repo/docs --build=_build html
+          ${{ steps.setup.outputs.python-path }} -P run.py \
+              tdoc site build html
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: _build/html
+          path: repo/_build/html
 
   deploy:
     name: Deploy to GitHub pages

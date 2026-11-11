@@ -22,8 +22,9 @@ jobs:
         with:
           path: repo
       - name: Run site tests
+        working-directory: ./repo
         run: |
-          ${{ steps.setup.outputs.python-path }} -P repo/run.py \
+          ${{ steps.setup.outputs.python-path }} -P run.py \
               tdoc test site \
               t-doc-org.github.io \
               canb \
