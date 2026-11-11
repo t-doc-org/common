@@ -287,29 +287,25 @@ The style to use when documenting roles and directives.
 
 ## CLI and API configuration
 
-The `tdoc` CLI and the API server read their configuration from
-[TOML](https://toml.io/en/) files.
+The `tdoc` CLI and the API server read their configuration from the following
+[TOML](https://toml.io/en/) files (if present). Their content is merged, with
+settings from later files overriding earlier ones.
 
+- [`config/tdoc.toml`](https://github.com/t-doc-org/common/blob/main/config/tdoc.toml)
+  from the [`common`](https://github.com/t-doc-org/common) repository. The
+  `common` site uses its own copy; for other sites, it is fetched by the
+  `run.py` script.
+- `tdoc.toml` at the root of the site repository.
+- `tdoc.local.toml` at the root of the site repository.
 
-- The CLI reads the following files (if present) and merges them, with later
-  files overriding earlier ones.
+The location of the site repository is determined by starting from the current
+directory, looking for files named `run.py` and `docs/conf.py`, and moving up
+the hierarchy until they are found. The location can also be specified
+explicitly with the `--site-repo` option or the `TDOC_SITE_REPO` environment
+variable.
 
-  - [`config/tdoc.toml`](https://github.com/t-doc-org/common/blob/main/config/tdoc.toml)
-    from the [`common`](https://github.com/t-doc-org/common) repository. It is
-    fetched by the `run.py` script.
-  - `tdoc.toml` at the root of the site repository.
-  - `tdoc.local.toml` at the root of the site repository.
-
-  The location of the site repository is determined by starting from the current
-  directory and looking for files named `run.py` and `docs/conf.py`, and moving up
-  the hierarchy. The location can also be specified explicitly with the
-  `--site-repo` option or the `TDOC_SITE_REPO` environment variable.
-
-- The API server reads the file `tdoc.local.toml` at the root of the `common`
-  repository.
-
-If not specified otherwise, configuration values that represent paths consider
-relative paths as relative to the directory containing the config file.
+If not specified otherwise, configuration values that represent paths **resolve
+relative paths from the root of the site repository**.
 
 ### `[deployment]`
 
