@@ -139,8 +139,8 @@ class Api:
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
-        self.features = Features(config.sub('features'),
-                                 config.get('feature', {}))
+        self.features = Features(config.sub('feature'),
+                                 config.get('features', {}))
         self.cache = http.Cache()
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'),
