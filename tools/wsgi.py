@@ -12,6 +12,4 @@ sys.stderr.write(
     f"[{base.name}] Starting (processes: {mod_wsgi.maximum_processes}, "
     f"threads: {mod_wsgi.threads_per_process})\n")
 
-application = api_mod_wsgi.application(
-    config_path=(base / config.tdoc).resolve(),
-    events_level=logs.NOTSET)
+application = api_mod_wsgi.application(site_repo=base, events_level=logs.NOTSET)
