@@ -52,7 +52,7 @@ runs:
       run: |
         ${{ steps.python.outputs.python-path }} -P -m pip install \
             --require-hashes --only-binary=:all: --no-deps \
-            --requirement=common/config/dev.req
+            --requirement=common/config/requirements/dev.req
     - name: Update system package index
       if: ${{ inputs.build-sites == 'true' }}
       shell: bash

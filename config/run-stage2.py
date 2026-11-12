@@ -380,7 +380,7 @@ class EnvBuilder(venv.EnvBuilder):
     def config(self):
         try:
             data = (self.root / self.tdoc_toml).read_bytes()
-            config = tomllib.loads(data.decode('utf-8'))
+            config = tomllib.loads(data.decode())
         except Exception:
             return self.live_config()
         self.merge_local_configs(config)
@@ -390,7 +390,7 @@ class EnvBuilder(venv.EnvBuilder):
         with self.lock:
             if (c := self._live_config) is not None: return c
             data = self.fetch(self.tdoc_toml)
-            config = tomllib.loads(data.decode('utf-8'))
+            config = tomllib.loads(data.decode())
             self.root.mkdir(exist_ok=True)
             with write_atomic(self.root / self.tdoc_toml, 'wb') as f:
                 f.write(data)
@@ -438,7 +438,7 @@ class EnvBuilder(venv.EnvBuilder):
         hermetic = self.hermetic if self.hermetic is not None \
                    else config_run.get('hermetic', True)
         if not hermetic: return f'{config_run['package']}=={version_num}\n'
-        return self.fetch(f'{version_num}.req').decode('utf-8')
+        return self.fetch(f'requirements/{version_num}.req').decode()
 
     def version_from(self, requirements):
         pat = re.compile(f'(?m)^{re.escape(self.package)}==([^\\s;]+)(?:\\s|$)')
@@ -464,7 +464,7 @@ class EnvBuilder(venv.EnvBuilder):
         env, requirements = Env.env.get()
         pip_args = []
         if is_dev(self.version):
-            dev_req = self.base / 'config' / 'dev.req'
+            dev_req = self.base / 'config' / 'requirements' / 'dev.req'
             env.pip('install', '--require-hashes', '--only-binary=:all:',
                     '--no-deps', f'--requirement={dev_req}',
                     check=True, stdout=self.out, stderr=self.out)

@@ -8,7 +8,7 @@ import re
 import tempfile
 import webbrowser
 
-from .. import cli, deps, util
+from .. import __project__, cli, deps, util
 
 # TODO: check: Suggest only versions satisfying the cooldown
 # TODO: Add support for GitHub actions
@@ -107,7 +107,8 @@ class Checker:
         self.report_packages(pkgs)
 
     def check_requirements(self):
-        for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
+        for p in sorted((self.opts.common / 'config' / 'requirements')
+                        .glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text('utf-8'))
             want_reqs = self.parse_requirements(
                 requirements(self.opts, only_groups=[p.stem]))
@@ -286,15 +287,17 @@ def cmd_generate(opts):
 
 
 def generate_version_reqs(opts, version):
-    reqs = requirements(opts, pkgs=[f't-doc-common=={version}'],
-                        only_pkgs=['t-doc-common'])
+    reqs = requirements(opts, pkgs=[f'{__project__}=={version}'],
+                        only_pkgs=[{__project__}])
     reqs += requirements(opts, no_project=True)
-    (opts.common / 'config' / f'{version}.req').write_text(reqs, 'utf-8')
+    (opts.common / 'config' / 'requirements' / f'{version}.req') \
+        .write_text(reqs, 'utf-8')
 
 
 def generate_group_reqs(opts, group):
     reqs = requirements(opts, only_groups=[group])
-    (opts.common / 'config' / f'{group}.req').write_text(reqs, 'utf-8')
+    (opts.common / 'config' / 'requirements' / f'{group}.req') \
+        .write_text(reqs, 'utf-8')
 
 
 def requirements(opts, *, pkgs=(), only_pkgs=(), only_groups=(),

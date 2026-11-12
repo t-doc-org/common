@@ -82,7 +82,7 @@ class Stage2:
 
     def exec(self, data):
         path = self.venv / self.run_stage2
-        code = compile(data.decode('utf-8'), str(path), 'exec')
+        code = compile(data.decode(), str(path), 'exec')
         mod = {'__name__': path.stem, '__file__': str(path), '__cached__': None,
                '__doc__': None, '__loader__': None, '__package__': None,
                '__spec__': None}

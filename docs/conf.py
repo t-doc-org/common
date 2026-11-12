@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+from tdoc.common import __project__
 from tdoc.common.defaults import *
 
 project = "t-doc"
@@ -22,8 +23,8 @@ html_theme_options = {
     'tdoc_badges': [
         {'href': '@REPO/actions/workflows/package.yml',
          'img': '@REPO/actions/workflows/package.yml/badge.svg'},
-        {'href': 'https://pypi.org/project/t-doc-common/',
-         'img': 'https://img.shields.io/pypi/v/t-doc-common.svg?color=blue'},
+        {'href': f'https://pypi.org/project/{__project__}/',
+         'img': f'https://img.shields.io/pypi/v/{__project__}.svg?color=blue'},
         {'href': '@REPO/actions/workflows/publish.yml',
          'img': '@REPO/actions/workflows/publish.yml/badge.svg'},
         {'href': '/fixes.html', 'img': '/tdoc-fixes.svg'},

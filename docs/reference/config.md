@@ -540,7 +540,7 @@ This table configures options related to repository access.
 This table configures options related to the `run.py` script.
 
 - `hermetic`: When `true`, install the exact versions specified by the versioned
-  [requirements files](https://github.com/t-doc-org/common/blob/main/config/).
+  [requirements files](https://github.com/t-doc-org/common/blob/main/config/requirements).
   When `false`, only specify the version of the package itself, but not of its
   dependencies.
 - `package`: The name of the Python package to use.
