@@ -110,8 +110,7 @@ class Checker:
         for p in sorted((self.opts.common / 'config').glob('[!0-9]*.req')):
             cur_reqs = self.parse_requirements(p.read_text('utf-8'))
             want_reqs = self.parse_requirements(
-                util.requirements(only_groups=[p.stem],
-                                  common=self.opts.common))
+                requirements(self.opts, only_groups=[p.stem]))
             if want_reqs == cur_reqs: continue
             pkgs = []
             for pn in cur_reqs | want_reqs:
