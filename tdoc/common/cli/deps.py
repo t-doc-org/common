@@ -288,7 +288,7 @@ def cmd_generate(opts):
 
 def generate_version_reqs(opts, version):
     reqs = requirements(opts, pkgs=[f'{__project__}=={version}'],
-                        only_pkgs=[{__project__}])
+                        only_pkgs=[__project__])
     reqs += requirements(opts, no_project=True)
     (opts.common / 'config' / 'requirements' / f'{version}.req') \
         .write_text(reqs, 'utf-8')
