@@ -814,3 +814,17 @@
 ## 0.2 *(2024-08-17)*
 
 - First public release.
+- [Full changelog](https://github.com/t-doc-org/common/compare/8ae2347b49b91887c1482b3d5c7264aa56a985b0...0.2)
+
+(release-0-1)=
+## 0.1 *(2024-08-04)*
+
+- Creation of the initial `pyproject.toml`.
+- The version was set to 0.1, so there never actually was a 0.1 release.
+- [Full changelog](https://github.com/t-doc-org/common/compare/f09cb32ebe453499cb75fbd492f74d0e7e12d544...8ae2347b49b91887c1482b3d5c7264aa56a985b0)
+
+(release-0-0)=
+## 0.0 *(2024-07-23)*
+
+- Project creation.
+- [Initial commit](https://github.com/t-doc-org/common/commit/f09cb32ebe453499cb75fbd492f74d0e7e12d544)
