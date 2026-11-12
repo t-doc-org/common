@@ -20,4 +20,4 @@ command-dev_10 = ["--debug", "--full-builds"]
 [[features.websocket]]
 value = true
 local = true
-client_fraction = 0.3
+client_fraction = 0.5
