@@ -193,10 +193,10 @@ def try_int(v):
 
 
 version_re = re.compile(r'[0-9][0-9a-z.!+]*')
-tag_re = re.compile(r'[a-z][a-z0-9-]*')
+named_version_re = re.compile(r'[a-z][a-z0-9-]*')
 
 def is_version(version): return version_re.match(version)
-def is_tag(version): return tag_re.match(version)
+def is_named_version(version): return named_version_re.match(version)
 def is_dev(version): return version == 'dev'
 def is_wheel(version): return pathlib.Path(version).resolve().is_file()
 
@@ -341,8 +341,8 @@ class Env:
 
 class EnvBuilder(venv.EnvBuilder):
     venv_root = '_venv'
-    run_toml = 'run.toml'
-    run_local_toml = 'run.local.toml'
+    tdoc_toml = 'tdoc.toml'
+    tdoc_local_toml = 'tdoc.local.toml'
 
     def __init__(self, base, config, version, hermetic, ssl_ctx, out, debug):
         super().__init__(with_pip=True)
@@ -354,8 +354,9 @@ class EnvBuilder(venv.EnvBuilder):
         self._fetch_thread = None
         self.ssl_ctx = ssl_ctx
         self.out, self.debug = out, debug
-        if version is None: version = self.config['version']
-        if not (is_version(version) or is_tag(version) or is_wheel(version)):
+        if version is None: version = self.config['run']['version']
+        if not (is_version(version) or is_named_version(version)
+                or is_wheel(version)):
             raise Exception(f"Invalid version: {version}")
         self.version, self.hermetic = version, hermetic
 
@@ -373,12 +374,12 @@ class EnvBuilder(venv.EnvBuilder):
 
     @functools.cached_property
     def package(self):
-        return self.config['package']
+        return self.config['run']['package']
 
     @functools.cached_property
     def config(self):
         try:
-            data = (self.root / self.run_toml).read_bytes()
+            data = (self.root / self.tdoc_toml).read_bytes()
             config = tomllib.loads(data.decode('utf-8'))
         except Exception:
             return self.live_config()
@@ -388,10 +389,10 @@ class EnvBuilder(venv.EnvBuilder):
     def live_config(self):
         with self.lock:
             if (c := self._live_config) is not None: return c
-            data = self.fetch(self.run_toml)
+            data = self.fetch(self.tdoc_toml)
             config = tomllib.loads(data.decode('utf-8'))
             self.root.mkdir(exist_ok=True)
-            with write_atomic(self.root / self.run_toml, 'wb') as f:
+            with write_atomic(self.root / self.tdoc_toml, 'wb') as f:
                 f.write(data)
             self.merge_local_configs(config)
             self._live_config = config
@@ -408,8 +409,8 @@ class EnvBuilder(venv.EnvBuilder):
             return f.read()
 
     def merge_local_configs(self, config):
-        self.merge_config(config, self.base / self.run_toml)
-        self.merge_config(config, self.base / self.run_local_toml)
+        self.merge_config(config, self.base / self.tdoc_toml)
+        self.merge_config(config, self.base / self.tdoc_local_toml)
 
     def merge_config(self, config, path):
         with contextlib.suppress(OSError), path.open('rb') as f:
@@ -418,7 +419,7 @@ class EnvBuilder(venv.EnvBuilder):
     @property
     def default_command(self):
         key = 'command-dev' if is_dev(self.version) else 'command'
-        args = [(k, v) for k, v in self.config['defaults'].items()
+        args = [(k, v) for k, v in self.config['run']['defaults'].items()
                 if k == key or k.startswith(key + '_')]
         args.sort()
         return functools.reduce(lambda a, b: a + b, (it[1] for it in args), [])
@@ -427,13 +428,16 @@ class EnvBuilder(venv.EnvBuilder):
         if is_dev(v := self.version): return f'-e {self.base.as_uri()}\n'
         if is_wheel(v): return f'{pathlib.Path(v).resolve().as_uri()}\n'
         if config is None: config = self.config
-        version_num = config.get('tags', {}).get(v) if is_tag(v) else v
+        config_run = config['run']
+        version_num = config_run.get('versions', {}).get(v) \
+                      if is_named_version(v) else v
         if version_num is None:
-            raise Exception(f"Unknown version tag: {v}\nAvailable tags: "
-                            f"{' '.join(sorted(config['tags'].keys()))}")
+            raise Exception(
+                f"Unknown version name: {v}\nAvailable named versions: "
+                f"{' '.join(sorted(config_run['versions'].keys()))}")
         hermetic = self.hermetic if self.hermetic is not None \
-                   else config.get('hermetic', True)
-        if not hermetic: return f'{config['package']}=={version_num}\n'
+                   else config_run.get('hermetic', True)
+        if not hermetic: return f'{config_run['package']}=={version_num}\n'
         return self.fetch(f'{version_num}.req').decode('utf-8')
 
     def version_from(self, requirements):
