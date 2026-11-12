@@ -42,7 +42,6 @@ located below the `docs` directory.
 ├── LICENSE.txt
 ├── README.md
 ├── run.desktop               A desktop entry to run the local server on Linux
-├── run.local.toml            An optional configuration for run.py
 ├── run.py                    An auto-installing wrapper for the CLI
 └── tdoc.local.toml           An optional configuration for the CLI and API
 ```

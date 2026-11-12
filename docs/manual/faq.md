@@ -18,16 +18,17 @@ the `_venv` directory at the root of the document repository.
 If the stable version of the `t-doc-common` package is broken, the previous
 version of the package can be used until a fix is released.
 
-- Create a text file `run.local.toml` at the root of the site repository, and
+- Create a text file `tdoc.local.toml` at the root of the site repository, and
   set its content as follows:
 
   ```{code-block} toml
+  [run]
   version = "previous"
   ```
 
 - Start the local server. This will install and run the previous version.
 
-- To return to the stable version, remove the file `run.local.toml` created
+- To return to the stable version, remove the file `tdoc.local.toml` created
   above.
 
 (faq-specific-version)=
@@ -36,16 +37,17 @@ version of the package can be used until a fix is released.
 - Check the [release notes](/release-notes.md) and find the version of the
   `t-doc-common` package to install, e.g. `0.62`.
 
-- Create a text file `run.local.toml` at the root of the site repository, and
+- Create a text file `tdoc.local.toml` at the root of the site repository, and
   set its content as follows (substitute `0.62` with the desired version):
 
   ```{code-block} toml
+  [run]
   version = "0.62"
   ```
 
 - Start the local server. This will install and run the selected version.
 
-- To return to the stable version, remove the file `run.local.toml` created
+- To return to the stable version, remove the file `tdoc.local.toml` created
   above.
 
 ## Editing

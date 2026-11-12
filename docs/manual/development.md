@@ -91,8 +91,9 @@ script runs commands within the
 into `_venv`.
 
 - **Run the local server with debug settings**, as specified by the
-  `command-dev` default defined in
-  [`run.toml`](https://github.com/t-doc-org/common/blob/main/config/run.toml).
+  `command-dev` setting in the
+  [`[run.defaults]`](/reference/config.md#rundefaults) section of
+  [`tdoc.toml`](https://github.com/t-doc-org/common/blob/main/config/tdoc.toml).
 
   `````{tab-set}
   :sync-group: platform
@@ -152,18 +153,18 @@ into `_venv`.
 
 - To make the local server **trigger a rebuild whenever code within `common`
   changes**, add the following line to the
-  [`[defaults]`](/reference/config.md#defaults) section of `run.local.toml`.
-  This is useful when working on code related to building sites or on
-  client-side code.
+  [`[run.defaults]`](/reference/config.md#rundefaults) section of
+  `tdoc.local.toml`. This is useful when working on code related to building
+  sites or on client-side code.
 
   ```{code-block}
   command-dev_20 = ["--watch=../common/tdoc"]
   ```
 
 - To make the local server **restart for each rebuild**, add the following line
-  to the [`[defaults]`](/reference/config.md#defaults) section of
-  `run.local.toml`. This is useful when working on the local server itself or on
-  API code.
+  to the [`[run.defaults]`](/reference/config.md#rundefaults) section of
+  `tdoc.local.toml`. This is useful when working on the local server itself or
+  on API code.
 
   ```{code-block}
   command-dev_21 = ["--restart-on-change"]

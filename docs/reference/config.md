@@ -295,8 +295,8 @@ settings from later files overriding earlier ones.
   from the [`common`](https://github.com/t-doc-org/common) repository. The
   `common` site uses its own copy; for other sites, it is fetched by the
   `run.py` script.
-- `tdoc.toml` at the root of the site repository.
-- `tdoc.local.toml` at the root of the site repository.
+- `tdoc.toml` (versioned) at the root of the site repository.
+- `tdoc.local.toml` (unversioned) at the root of the site repository.
 
 The location of the site repository is determined by starting from the current
 directory, looking for files named `run.py` and `docs/conf.py`, and moving up
@@ -535,6 +535,39 @@ This table configures options related to repository access.
 - `bcrypt_rounds` (default: `10`): The number of rounds to use when encrypting
   generated repository passwords with bcrypt.
 
+### `[run]`
+
+This table configures options related to the `run.py` script.
+
+- `hermetic`: When `true`, install the exact versions specified by the versioned
+  [requirements files](https://github.com/t-doc-org/common/blob/main/config/).
+  When `false`, only specify the version of the package itself, but not of its
+  dependencies.
+- `package`: The name of the Python package to use.
+- `version`: The version of the Python package to use, either a version, or a
+  name listed in the `[run.versions]` table, or `"dev"` to use an editable
+  package (only relevant for the `common` repository).
+
+### `[run.defaults]`
+
+This table defines the default commands and arguments that `run.py` should use
+when no command and arguments are provided.
+
+- `command`: The default command and arguments to use when `version` isn't
+  `"dev"`.
+- `command_*`: Additional arguments to append to `command`. The values are
+  appended in key order.
+- `command-dev`: The default command and arguments to use when `version` is
+  `"dev"`.
+- `command-dev_*`: Additional arguments to append to `command-dev`. The values
+  are appended in key order.
+
+### `[run.versions]`
+
+This table defines names that can be used in `run.version`, typically to define
+release tracks. The keys are the names, and the values are the version
+corresponding to the name.
+
 ### `[site]`
 
 This table configures options related to site repositories.
@@ -594,39 +627,3 @@ available within the format string:
 - The [ANSI escape sequences](https://en.wikipedia.org/wiki/ANSI_escape_code)
   defined in
   [`ansi_seqs`](https://github.com/t-doc-org/common/blob/main/tdoc/common/console.py).
-
-## `run.py` configuration
-
-The `run.py` script fetches its [TOML](https://toml.io/en/) configuration from
-[`config/run.toml`](https://github.com/t-doc-org/common/blob/main/config/run.toml)
-in the `common` repository, and merges it with two optional files located in the
-same directory as the script, `run.toml` (versioned) and `run.local.toml`
-(unversioned). The local files override the remote one.
-
-### Top-level keys
-
-- `hermetic`: When `true`, install the exact versions specified by the versioned
-  [requirements files](https://github.com/t-doc-org/common/blob/main/config/).
-  When `false`, only specify the version of the package itself, but not of its
-  dependencies.
-- `package`: The name of the Python package to use.
-- `version`: The version of the Python package to use, either a version or a tag
-  listed in the `[tags]` table, or `"dev"` to use an editable package (only
-  relevant for the `common` repository).
-
-### `[defaults]`
-
-- `command`: The default command and arguments to use when no command is
-  specified.
-- `command_*`: Additional arguments to append to `command`. The values are
-  appended in key order.
-- `command-dev`: The default command and arguments to use when no command is
-  specified, and `version` is `"dev"`.
-- `command-dev_*`: Additional arguments to append to `command-dev`. The values
-  are appended in key order.
-
-### `[tags]`
-
-This table defines tags that can be used in `version`, typically to define
-release tracks. The keys are tag names, and the values are the versions
-corresponding to the tag.
