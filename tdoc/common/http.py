@@ -85,7 +85,7 @@ class Context:
     @property
     def required_origin(self):
         if (v := self.header('Origin')) is None:
-            raise Error(http.FORBIDDEN, "Missing Origin: header")
+            raise Error(FORBIDDEN, "Missing Origin: header")
         return v if not self.local else ''
 
     @property
