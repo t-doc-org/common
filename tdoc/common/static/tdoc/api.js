@@ -368,7 +368,7 @@ class Channel {
 }
 
 const chan = new Channel();
-const useWebsocket = core.features.websocket ?? false;
+const useWebsocket = core.config.websocket ?? false;
 
 export async function call(path, req = {}) {
     if (useWebsocket) {
@@ -711,8 +711,8 @@ console.info(`[t-doc] API backend: ${url}, user: ${auth.name ?? '<none>'}`);
 tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
-// Update the feature cache.
-core.updateFeatures(() => httpCall('/features', {req: {}}));  // BG
+// Update the config cache.
+core.updateConfig(() => httpCall('/config', {req: {}}));  // BG
 
 // Expose API calls.
 export async function editor(req) {

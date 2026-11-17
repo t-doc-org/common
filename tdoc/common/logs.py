@@ -15,11 +15,11 @@ import shutil
 import threading
 import time
 import traceback
-import xxhash
 
 import prometheus_client as pc
+import xxhash
 
-from . import context, database, config as _config, console, util
+from . import config as _config, console, context, database, util
 
 logging.addLevelName(1000, 'DISABLED')
 globals().update(logging.getLevelNamesMapping())
@@ -221,7 +221,7 @@ def compress(src, dst):
 @contextlib.contextmanager
 def configure(*, config=None, level=WARNING, stderr=None, stream=False,
               debug=False, on_upgrade=None, db_logs=True):
-    if config is None: config = _config.Config({})
+    if config is None: config = _config.Server({})
     transport = config.get('transport', 'queue')
 
     logging.raiseExceptions = debug

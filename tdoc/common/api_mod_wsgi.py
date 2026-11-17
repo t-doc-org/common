@@ -16,7 +16,7 @@ def application(site_repo, events_level=logs.NOTSET):
     threading.current_thread().name = 'main'
 
     # Load the config and set defaults.
-    cfg = config.Config.load(site_repo)
+    cfg = config.Server.load(site_repo)
     store_config = cfg.sub('store')
     store_config.setdefault('poll_interval',
                             1 if mod_wsgi.maximum_processes > 1 else 0)

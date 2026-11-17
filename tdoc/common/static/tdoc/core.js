@@ -761,6 +761,7 @@ for (const k of [
     'tdoc:domain:clientId',
     // TODO(2027-01-01): Remove the keys below
     'tdoc:clientId',
+    'tdoc:features',
 ]) {
     localStorage.removeItem(k);
 }
@@ -882,8 +883,8 @@ export function debug(tag) {
     for (const t of asArray(tag.enable)) _debug.add(t);
 }
 
-// Manage features.
-function mergeFeatures(dst, ...srcs) {
+// Manage the client config.
+function mergeConfigs(dst, ...srcs) {
     for (const src of srcs) {
         for (const [k, v] of Object.entries(src)) {
             if (v != null) {
@@ -895,24 +896,23 @@ function mergeFeatures(dst, ...srcs) {
     }
 }
 
-const featuresSession = new StoredJson('tdoc:features', undefined,
-                                       sessionStorage);
-onHashParams(['feature.'], vs => {
+const configSession = new StoredJson('tdoc:config', undefined, sessionStorage);
+onHashParams(['config.'], vs => {
     for (const [k, v] of Object.entries(vs)) vs[k] = JSON.parse(v);
-    const fs = featuresSession.get() ?? {};
-    mergeFeatures(fs, vs);
-    featuresSession.set(fs);
+    const fs = configSession.get() ?? {};
+    mergeConfigs(fs, vs);
+    configSession.set(fs);
     location.reload();
 });
-const featuresStore = new StoredJson('tdoc:features', {});
-export const features = featuresStore.get();
-mergeFeatures(features, featuresSession.get() ?? {});
+const configStore = new StoredJson('tdoc:config', {});
+export const config = configStore.get();
+mergeConfigs(config, configSession.get() ?? {});
 
-export async function updateFeatures(fn) {
+export async function updateConfig(fn) {
     try {
-        featuresStore.set(await fn());
+        configStore.set(await fn());
     } catch (e) {
-        console.error(`Failed to fetch features: ${e}`)
+        console.error(`Failed to fetch config: ${e}`)
     }
 }
 

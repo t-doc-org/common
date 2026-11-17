@@ -307,6 +307,41 @@ variable.
 If not specified otherwise, configuration values that represent paths **resolve
 relative paths from the root of the site repository**.
 
+### `[client]`
+
+This table configures options related to client-side functionality.
+
+- `config_cache_size` (default: `1024`): The maximum number of entries in the
+  client config LRU cache.
+
+### `[[client.configs.*]]`
+
+These tables configure the values of client configs depending on request
+attributes. The list name (the part after the last `.`) corresponds to the
+config name. When computing configs, the tables in the list are matched in order
+against request attributes. The first matching table determines the value of the
+config. For a table to match, all the following conditions must be fulfilled:
+
+- There must either be no `origin*` options, or the request origin must match
+  the `origin*` options.
+- The client ID must match the `client*` options, or the user ID must match the
+  `user*` options.
+
+The following table keys can be set:
+
+- `value`: The value of the config if the attributes match.
+- `local`: When set, match only when running on a local server (`true`) or a
+  deployment server (`false`).
+- `origins`: A list of origins that match.
+- `origin_fraction`: The fraction of origins that should match, based on a hash
+  of the request origin.
+- `clients`: A list of client IDs that match.
+- `client_fraction`: The fraction of clients that should match, based on a hash
+  of the client ID.
+- `users`: A list of user IDs that match.
+- `user_fraction`: The fraction of user IDs that should match, based on a hash
+  of the user ID. Anonymous users never match.
+
 ### `[deployment]`
 
 This table configures a multi-site t-doc deployment.
@@ -330,41 +365,6 @@ This table configures the websocket server of the API.
   port.
 - `threads`: The maximum number of worker threads to use for running blocking
   code from asynchronous websocket handlers.
-
-### `[feature]`
-
-This table configures the feature subsystem.
-
-- `cache_size` (default: `1024`): The maximum number of entries in the feature
-  LRU cache.
-
-### `[[features.*]]`
-
-These tables configure the values of features depending on request attributes.
-The list name (the part after the `.`) corresponds to the feature name. When
-computing features, the tables in the list are matched in order against request
-attributes . The first matching table determines the value of the feature. For a
-table to match, all the following conditions must be fulfilled:
-
-- There must either be no `origin*` entries, or the request origin must match
-  the `origin*` entries.
-- The client ID must match the `client*` entries, or the user ID must match the
-  `user*` entries.
-
-The following table keys can be set:
-
-- `value`: The value of the feature if the attributes match.
-- `local`: When set, match only when running on a local server (`true`) or a
-  deployment server (`false`).
-- `origins`: A list of origins that match.
-- `origin_fraction`: The fraction of origins that should match, based on a hash
-  of the request origin.
-- `clients`: A list of client IDs that match.
-- `client_fraction`: The fraction of clients that should match, based on a hash
-  of the client ID.
-- `users`: A list of user IDs that match.
-- `user_fraction`: The fraction of user IDs that should match, based on a hash
-  of the user ID. Anonymous users never match.
 
 ### `[import-files]`
 

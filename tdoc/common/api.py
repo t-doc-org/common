@@ -14,13 +14,13 @@ import secrets
 import threading
 import time
 from urllib import error, parse, request
-import xxhash
 
 import jwt
 import prometheus_client as pc
 from prometheus_client import exposition as pce
 
-from . import context, database, http, logs, store, util, ws, wsgi
+from . import config as _config, context, database, http, logs, store, util, \
+              ws, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
@@ -90,43 +90,6 @@ def handle_db_errors(fn):
     return dfn
 
 
-class Features:
-    defaults = {
-        'websocket': False,
-    }
-
-    def __init__(self, cfg, features):
-        @functools.lru_cache(maxsize=cfg.get('cache_size', 1024))
-        def get(local, origin, client, uid):
-            origin_hash = self.hash(origin)
-            client_hash = self.hash(client) if client is not None else 1
-            uid_hash = self.hash(f'{uid:016x}') if uid is not None else 1
-            fs = self.defaults.copy()
-            for name, matchers in features.items():
-                for m in matchers:
-                    if (v := m.get('local')) is not None and local != v:
-                        continue
-                    if self.matches(m, 'origin', origin_hash, origin) is False:
-                        continue
-                    if not (self.matches(m, 'client', client_hash, client) or
-                            self.matches(m, 'user', uid_hash, uid)):
-                        continue
-                    if (v := m.get('value')) is not None: fs[name] = v
-                    break
-            return fs
-        self.get = get
-
-    @staticmethod
-    def hash(v):
-        return (xxhash.xxh3_64_intdigest(v.encode()) & 0xffffffff) / 0x100000000
-
-    @staticmethod
-    def matches(m, attr, vh, v):
-        vf, vs = m.get(f'{attr}_fraction'), m.get(f'{attr}s')
-        if vf is None and vs is None: return None
-        return (vf is not None and vh < vf) or (vs is not None and v in vs)
-
-
 def voter_id(ctx):
     return f'u:{uid:016x}' if (uid := ctx.user) is not None \
            else f'c:{cid}' if (cid := ctx.client) is not None else None
@@ -145,8 +108,7 @@ class Api:
         self.config = config
         self.store = store
         self.domain = config.get('deployment.domain')
-        self.features = Features(config.sub('feature'),
-                                 config.get('features', {}))
+        self.client_config = _config.Client(config.sub('client'))
         self.cache = http.Cache()
         self.events = EventsApi(self)
         self.auth = OidcAuthApi(self, config.sub('oidc'),
@@ -360,13 +322,14 @@ class Api:
 
     ws_user = ws.endpoint(wsgi_user)
 
-    @wsgi.json_endpoint('features')
-    @context.tags.add('ep:features')
-    def wsgi_features(self, ctx, req):
-        return self.features.get(ctx.local, ctx.required_origin, ctx.client,
-                                 ctx.user)
+    @wsgi.json_endpoint('config')
+    def wsgi_config(self, ctx, req):
+        return self.client_config.get(ctx.local, ctx.required_origin,
+                                      ctx.client, ctx.user)
 
-    ws_features = ws.endpoint(wsgi_features)
+    ws_config = ws.endpoint(wsgi_config)
+    # TODO(1.1): Remove
+    wsgi_features = wsgi.json_endpoint('features')(wsgi_config._fn)
 
 
 class EventsApi:

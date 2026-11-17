@@ -48,7 +48,7 @@ def main(argv, stdin, stdout, stderr):
         opts.site_repo = util.find_site_repo(pathlib.Path.cwd())
     if opts.site_repo is None:
         raise Exception("Site repository not found; please specify --site-repo")
-    opts.cfg = config.Config.load(opts.site_repo)
+    opts.cfg = config.Server.load(opts.site_repo)
     if (fn := getattr(opts.handler, '_pre_run', None)) is not None:
         if (res := fn(opts)) is not None: return res
     with futures.ThreadPoolExecutor(thread_name_prefix='exec') as exec, \
