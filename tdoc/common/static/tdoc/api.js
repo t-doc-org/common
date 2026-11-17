@@ -368,7 +368,7 @@ class Channel {
 }
 
 const chan = new Channel();
-const useWebsocket = core.config.websocket ?? false;
+const useWebsocket = core.config.websocket ?? true;
 
 export async function call(path, req = {}) {
     if (useWebsocket) {

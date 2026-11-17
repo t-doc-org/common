@@ -90,7 +90,7 @@ class Server:
 
 class Client:
     defaults = {
-        'websocket': False,
+        'websocket': True,
     }
 
     def __init__(self, config):
