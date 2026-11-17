@@ -19,6 +19,33 @@ const [url, bes, domain] = (() => {
     return [`${loc.protocol}//${api}${suffix}.${domain}`, suffix, domain];
 })();
 
+// Manage the client config.
+function mergeConfigs(dst, ...srcs) {
+    for (const src of srcs) {
+        for (const [k, v] of Object.entries(src)) {
+            if (v != null) {
+                dst[k] = v;
+            } else {
+                delete dst[k];
+            }
+        }
+    }
+}
+
+const configSession = new core.StoredJson('tdoc:config', undefined,
+                                          sessionStorage);
+core.onHashParams(['config.'], vs => {
+    for (const [k, v] of Object.entries(vs)) vs[k] = JSON.parse(v);
+    const fs = configSession.get() ?? {};
+    mergeConfigs(fs, vs);
+    configSession.set(fs);
+    location.reload();
+});
+const configStore = new core.StoredJson(`tdoc:config${bes}`, {});
+export const config = configStore.get();
+mergeConfigs(config, configSession.get() ?? {});
+
+// Manage the API token.
 const _hasToken = `\
 __Secure-tdoc-token${tdoc.local ? '' : '-' + new URL(url).hostname}=`;
 
@@ -368,7 +395,7 @@ class Channel {
 }
 
 const chan = new Channel();
-const useWebsocket = core.config.websocket ?? true;
+const useWebsocket = config.websocket ?? true;
 
 export async function call(path, req = {}) {
     if (useWebsocket) {
@@ -712,7 +739,17 @@ tdoc.login = () => auth.showLoginModal();
 tdoc.settings = () => auth.showSettingsModal();
 
 // Update the config cache.
-core.updateConfig(() => httpCall('/config', {req: {}}));  // BG
+(async () => {
+    const interval = 60 * 60 * 1000;
+    for (;;) {
+        try {
+            configStore.set(await httpCall('/config', {req: {}}));
+        } catch (e) {
+            console.error(`Failed to fetch config: ${e}`)
+        }
+        await core.sleep(interval * (1 - 0.4 * Math.random()));
+    }
+})();  // BG
 
 // Expose API calls.
 export async function editor(req) {

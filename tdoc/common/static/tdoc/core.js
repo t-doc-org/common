@@ -883,39 +883,6 @@ export function debug(tag) {
     for (const t of asArray(tag.enable)) _debug.add(t);
 }
 
-// Manage the client config.
-function mergeConfigs(dst, ...srcs) {
-    for (const src of srcs) {
-        for (const [k, v] of Object.entries(src)) {
-            if (v != null) {
-                dst[k] = v;
-            } else {
-                delete dst[k];
-            }
-        }
-    }
-}
-
-const configSession = new StoredJson('tdoc:config', undefined, sessionStorage);
-onHashParams(['config.'], vs => {
-    for (const [k, v] of Object.entries(vs)) vs[k] = JSON.parse(v);
-    const fs = configSession.get() ?? {};
-    mergeConfigs(fs, vs);
-    configSession.set(fs);
-    location.reload();
-});
-const configStore = new StoredJson('tdoc:config', {});
-export const config = configStore.get();
-mergeConfigs(config, configSession.get() ?? {});
-
-export async function updateConfig(fn) {
-    try {
-        configStore.set(await fn());
-    } catch (e) {
-        console.error(`Failed to fetch config: ${e}`)
-    }
-}
-
 // Return an exponential backoff delay.
 export function backoff({min, max, mult = 1.3, jitter = 0.4}, retries) {
     let delay = min * mult ** retries;
