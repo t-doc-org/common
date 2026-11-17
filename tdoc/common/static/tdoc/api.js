@@ -749,6 +749,7 @@ tdoc.settings = () => auth.showSettingsModal();
             // cached one, and the session doesn't override them.
             if (configSession.get()?.reload == null && resp.reload != null
                     && resp.reload !== config.reload) {
+                console.info("[t-doc] Reloading page on server request");
                 location.reload();
             }
         } catch (e) {
