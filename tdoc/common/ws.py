@@ -238,7 +238,7 @@ class Connection(http.Context, server.ServerConnection):
             _log.info(msg, event='ws:start', **log_args)
         except http.Error as e:
             return self.respond(e.code, e.message, e.headers)
-        except Exception as e:
+        except Exception:
             _log.exception("Uncaught exception", event='ws:exception',
                            **self._log_args)
             return self.respond(http.INTERNAL_SERVER_ERROR)

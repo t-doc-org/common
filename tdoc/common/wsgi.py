@@ -240,7 +240,7 @@ class Handler(http.Handler, type='wsgi'):
         except http.Error as e:
             yield from ctx.error(e.code, e.message, exc_info=sys.exc_info(),
                                 headers=e.headers)
-        except Exception as e:
+        except Exception:
             if log_args is None: log_args = self._log_args(ctx, log_query)
             _log.exception("Uncaught exception", event='req:exception',
                            **log_args)

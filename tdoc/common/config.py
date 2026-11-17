@@ -122,5 +122,9 @@ class Client:
     @staticmethod
     def matches(m, attr, vh, v):
         vf, vs = m.get(f'{attr}_fraction'), m.get(f'{attr}s')
-        if vf is None and vs is None: return None
-        return (vf is not None and vh < vf) or (vs is not None and v in vs)
+        if vf is not None:
+            vfl, vfh = vf if isinstance(vf, list) else (0, vf)
+        elif vs is None:
+            return None
+        return (vf is not None and vfl <= vh < vfh) \
+               or (vs is not None and v in vs)

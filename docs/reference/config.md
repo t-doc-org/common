@@ -333,14 +333,20 @@ The following table keys can be set:
 - `local`: When set, match only when running on a local server (`true`) or a
   deployment server (`false`).
 - `origins`: A list of origins that match.
-- `origin_fraction`: The fraction of origins that should match, based on a hash
-  of the request origin.
+- `origin_fraction`: The fraction of origins that match.
 - `clients`: A list of client IDs that match.
-- `client_fraction`: The fraction of clients that should match, based on a hash
-  of the client ID.
+- `client_fraction`: The fraction of client IDs that match.
 - `users`: A list of user IDs that match.
-- `user_fraction`: The fraction of user IDs that should match, based on a hash
-  of the user ID. Anonymous users never match.
+- `user_fraction`: The fraction of user IDs that match. Anonymous users never
+  match.
+
+`*_fraction` options operate on a hash that maps the corresponding request
+attribute to the interval $[0; 1[$. The options can be set to one of the
+following values:
+
+- A number `a`: the attribute matches if its hash is in the interval $[0, a[$.
+- A 2-number list `[a, b]`: the attribute matches if its hash is in the interval
+  $[a, b[$.
 
 ### `[deployment]`
 
