@@ -743,7 +743,14 @@ tdoc.settings = () => auth.showSettingsModal();
     const interval = 60 * 60 * 1000;
     for (;;) {
         try {
-            configStore.set(await httpCall('/config', {req: {}}));
+            const resp = await httpCall('/config', {req: {}});
+            configStore.set(resp);
+            // Reload the page if the current reload value differs from the
+            // cached one, and the session doesn't override them.
+            if (configSession.get()?.reload == null && resp.reload != null
+                    && resp.reload !== config.reload) {
+                location.reload();
+            }
         } catch (e) {
             console.error(`Failed to fetch config: ${e}`)
         }

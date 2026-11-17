@@ -348,6 +348,16 @@ following values:
 - A 2-number list `[a, b]`: the attribute matches if its hash is in the interval
   $[a, b[$.
 
+Clients cache their config in local storage. They read the cached config once on
+page load, then update the cached config once and hourly after that. So config
+changes only apply on the next page load.
+
+#### `[[client.configs.reload]]`
+
+This client config allows forcing page reloads for specific clients. If this
+value is set when fetching client configs, and it differs from the previous
+value (or if it wasn't set before), the page reloads.
+
 ### `[deployment]`
 
 This table configures a multi-site t-doc deployment.
