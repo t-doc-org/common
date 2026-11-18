@@ -109,9 +109,10 @@ for i in range(100):
 See the {py:mod}`tdoc.svg` module.
 
 ```{exec} python
-:name: python-graphics
-from tdoc import svg
-
+:name: heart
+:when:
+:editor: none
+:class: hidden
 def paint_heart(c):
   c.path('M -40,-20 A 20,20 0,0,1 0,-20 A 20,20 0,0,1 40,-20 '
          'Q 40,10 0,40 Q -40,10 -40,-20 z',
@@ -120,9 +121,14 @@ def paint_heart(c):
          'M -30,30 0,0 M 34,-34 45,-45'
          'M 35,-45 45,-45 45,-35',
          stroke=svg.Stroke('black', width=2), fill='transparent')
+```
+
+```{exec} python
+:after: heart
+from tdoc import svg
 
 img = svg.Image(400, 100, stroke='darkorange', fill='#c0c0ff',
-                style='width: 100%; height: 100%;')
+                style='width: 100%; height: 100%; background-color: #fff;')
 img.stylesheet = """
 .bold {
   stroke: blue;
@@ -152,10 +158,12 @@ a short sleep between images. **Don't forget to sleep**, otherwise the program
 becomes unstoppable and the page must be reloaded.
 
 ```{exec} python
-:after: python-graphics
+:after: heart
 import random
+from tdoc import svg
 
-img = svg.Image(400, 100, style='width: 100%; height: 100%;')
+img = svg.Image(400, 100,
+                style='width: 100%; height: 100%; background-color: #fff;')
 sym = img.symbol()
 paint_heart(sym)
 hearts = [(img.use(href=sym),
