@@ -20,8 +20,9 @@ info = {
     'cffi': {'version_tag': lambda v: f'v{v}'},
     'chartjs': {
         'name': 'chart.js',
-        'version': '4.5.1',
+        'version': '4.6.1',
         'tag': 'latest',
+        'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
         'release_urls': [
             'https://github.com/chartjs/Chart.js/releases',
@@ -95,7 +96,7 @@ info = {
     },
     'hatchling': {'version_tag': lambda v: f'hatchling-v{v}'},
     'jsxgraph': {
-        'version': '1.13.3',
+        'version': '1.14.3',
         'tag': 'latest',
         'version_tag': lambda v: f'v{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/distrib',
@@ -136,14 +137,14 @@ info = {
         'mathjax-mhchem-font-extension',
     ]},
     'mermaid': {
-        'version': '12.2.0',
+        'version': '12.3.0',
         'tag': 'latest',
         'version_tag': lambda v: f'mermaid@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
     },
     'mermaid-layout-elk': {
         'name': '@mermaid-js/layout-elk',
-        'version': '1.0.1',
+        'version': '1.0.2',
         'tag': 'latest',
         'version_tag': lambda v: f'@mermaid-js/layout-elk@{v}',
         'cdn': lambda n, v: f'{jsdelivr}/npm/{n}@{v}/dist',
@@ -167,7 +168,7 @@ info = {
     },
     'pydata-sphinx-theme': {'version_tag': lambda v: f'v{v}'},
     'pyodide': {
-        'version': '314.0.7',
+        'version': '314.0.8',
         'tag': 'latest',
         'cdn': lambda n, v: f'{jsdelivr}/{n}/v{v}/full',
         'release_urls': [
