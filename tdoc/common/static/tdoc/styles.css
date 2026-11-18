@@ -954,6 +954,11 @@ tdoc-quiz > .controls {
     flex-direction: column;
     row-gap: 0.3rem;
 }
+@media print {
+    tdoc-quiz > .controls {
+        display: none;
+    }
+}
 tdoc-quiz button.tdoc-check:disabled {
     color: var(--pst-color-success);
     border: none;
@@ -1039,6 +1044,12 @@ tdoc-quiz .tdoc-quiz-entry > tr > td:has(.tdoc-quiz-field, .tdoc-check) {
 }
 tdoc-quiz .tdoc-quiz-entry > tr > td:last-child {
     width: 0;
+}
+@media print {
+    tdoc-quiz thead:has(+ .tdoc-quiz-entry) > tr > th:last-child,
+    tdoc-quiz .tdoc-quiz-entry > tr > td:last-child {
+        display: none;
+    }
 }
 
 /* Polls */
@@ -1223,6 +1234,11 @@ tdoc-exec > div.tdoc-exec-controls {
     display: flex;
     flex-direction: column;
     row-gap: 0.3rem;
+}
+@media print {
+    tdoc-exec > div.tdoc-exec-controls {
+        display: none;
+    }
 }
 div.literal-block-wrapper > tdoc-exec {
     margin: 0;
