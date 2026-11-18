@@ -1635,6 +1635,7 @@ html[data-theme=dark] div.graphviz > :is(img.graphviz, object.graphviz, svg) {
 /* Content footer */
 .bd-footer-content .bd-footer-content__inner {
     padding-right: 0;
+    max-width: unset;
 }
 .bd-footer-content .tdoc-version {
     float: right;
