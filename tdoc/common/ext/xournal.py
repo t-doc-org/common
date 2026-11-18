@@ -14,9 +14,8 @@ import threading
 from xml.etree import ElementTree
 
 from docutils import nodes
-from sphinx import addnodes
 from sphinx.environment import collectors
-from sphinx.util import display, docutils, logging, osutil
+from sphinx.util import display, logging, osutil
 
 from .. import ext
 
@@ -102,7 +101,6 @@ def render_xopp(app, builder):
             "rendering xopp files... ", 'brown',
             lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()):
         if (e := task.exception()) is not None:
-            # TODO: Try passing (it[1], -1) as location
             _log.error("{xopp}: %s", e, location=f'{it[1]}:0')
 
 
@@ -123,8 +121,10 @@ def xournalpp_path(app):
 
 
 def process(exe, expand, dst, src):
-    with gzip.open(src) as zf: tree = ElementTree.parse(zf)
-    expand = functools.partial(expand, src)
+    # Load the document and expand roles.
+    with gzip.open(src) as zf:
+        tree = ElementTree.parse(zf)
+    expand = functools.partial(expand, dst, src)
     modified = False
     for el in tree.iterfind('./page/layer//text'):
         if el.text is None: continue
@@ -132,16 +132,24 @@ def process(exe, expand, dst, src):
             el.text = v
             modified = True
 
+    # If no expansion was done, render from the source.
     dst.parent.mkdir(parents=True, exist_ok=True)
     if not modified:
         render(exe, dst, src)
         return
-    # TODO: Use mkdtemp() and keep the same file name
-    with tempfile.NamedTemporaryFile(dir=dst.parent,
-                                     prefix=dst.stem + '.') as f:
-        with gzip.open(f.name, 'wb') as zf:
+
+    # With expansion, write the modified document to a file with the same name
+    # in a tempoary directory (the file name is used as the title of the PDF),
+    # and render from the expanded document.
+    tmp = pathlib.Path(tempfile.mkdtemp(dir=dst.parent, prefix='xournal.'))
+    path = tmp / src.name
+    try:
+        with gzip.open(path, 'wb') as zf:
             tree.write(zf, encoding='utf-8')
-        render(exe, dst, f.name)
+        render(exe, dst, path)
+    finally:
+        path.unlink(missing_ok=True)
+        tmp.rmdir()
 
 
 def render(exe, dst, src):
@@ -155,30 +163,9 @@ def render(exe, dst, src):
         _log.error("{xopp}: Export failed:\n%s", e.stdout, location=f'{src}:0')
 
 
-role_re = re.compile(r'\{([^}]+)\}`([^`]+)`')
+role_re = re.compile(r'\{[^}]+\}`[^`]+`')
 
-def expand_role(app, src, m):
-    env = app.env
-    env.prepare_settings(str(src))
-    try:
-        # This was mostly copied from Builder.read_doc().
-        parser = app.registry.create_source_parser('markdown',
-                                                   config=app.config, env=env)
-        doctree = docutils._parse_str_to_doctree(
-            m[0], filename=src, default_role=app.config.default_role,
-            default_settings=env.settings, env=env, #events=app.events,
-            parser=parser, transforms=app.registry.get_transforms())
-        res = []
-        for pxref in doctree.findall(addnodes.pending_xref):
-            # TODO: Determine the domain from the node
-            xref = env.domains.standard_domain.resolve_xref(
-                env, pxref['refdoc'], app.builder, pxref['reftype'],
-                pxref['reftarget'], pxref, pxref[0])
-            if xref is None:
-                raise Exception(f"Failed to resolve cross-reference: {m[0]}")
-            res.extend(n.astext() for n in xref.findall(nodes.Text))
-        if not res: raise Exception(f"Failed to expand reference: {m[0]}")
-        return ''.join(res)
-    finally:
-        env.current_document.clear()
-        env.ref_context.clear()
+def expand_role(app, dst, src, m):
+    doctree = ext.str_to_doctree(app, str(dst.relative_to(app.outdir)), m[0],
+                                 filename=src, filetype='markdown')
+    return ''.join(n.astext() for n in doctree.findall(nodes.Text))

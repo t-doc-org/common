@@ -17,7 +17,7 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from packaging import version
 import pyjson5
-from sphinx import addnodes, config, errors, locale
+from sphinx import addnodes, config, errors, locale, util as sphinx_util
 from sphinx.builders import html
 from sphinx.domains import rst
 from sphinx.environment import collectors
@@ -227,6 +227,27 @@ def needs_build(dst, src):
     try: dst_st = dst.stat()
     except OSError: return True
     return src_st.st_mtime_ns > dst_st.st_mtime_ns
+
+
+def str_to_doctree(app, docname, content, *, filename=None, filetype=None):
+    env, registry = app.env, app.registry
+    # This was copied from Builder.read_doc().
+    if filename is None: filename = env.doc2path(docname)
+    if filetype is None:
+        filetype = sphinx_util.get_filetype(app.config.source_suffix, filename)
+    env.prepare_settings(docname)
+    try:
+        parser = registry.create_source_parser(filetype, config=app.config,
+                                               env=env)
+        # Don't pass events= to avoid calling the source-read event.
+        return docutils._parse_str_to_doctree(
+            content, filename=filename, default_role=app.config.default_role,
+            default_settings=env.settings, env=env, parser=parser,
+            transforms=registry.get_transforms()
+                       + registry.get_post_transforms())
+    finally:
+        env.current_document.clear()
+        env.ref_context.clear()
 
 
 app_paths_key = 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths'
