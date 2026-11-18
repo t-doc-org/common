@@ -142,4 +142,5 @@ Inline code: `a <= b and b >= c and c != d`{l=py}
 ## Xournal++
 
 {xopp}`This PDF document <xournal.xopp>` ({xopp}`xournal.xopp`) is automatically
-rendered from a [Xournal++](https://xournalpp.github.io/) file.
+rendered from a [Xournal++](https://xournalpp.github.io/) file. Note how the
+document includes {rst:role}`numref` roles that are expanded at render time.

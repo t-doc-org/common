@@ -196,4 +196,7 @@ source directory.
 The text of the role can also contain an explicit link text, followed by the
 path between angle brackets (`` {xopp}`this file <file.xopp>` ``). If no link
 text is provided, the name of the file without extension is used.
+
+Within the `.xopp` document, reference roles (e.g. {rst:role}`numref`) are
+expanded prior to rendering.
 ```

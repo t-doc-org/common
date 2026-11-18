@@ -254,11 +254,7 @@ def map_parallel(app, fn, items, summary=None, color='brown', stringify=str):
                   tasks, summary, color=color, length=len(tasks),
                   verbosity=app.config.verbosity,
                   stringify_func=lambda a: stringify(a[1]))
-        for task, it in its: yield task.result()
-
-
-def sink(items):
-    for it in items: pass
+        yield from its
 
 
 def add_fix(*args, **kwargs):

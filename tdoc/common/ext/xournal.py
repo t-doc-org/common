@@ -2,14 +2,21 @@
 # SPDX-License-Identifier: MIT
 
 import collections
+import functools
+import gzip
 import os
 import pathlib
+import re
 import subprocess
 import sys
+import tempfile
+import threading
+from xml.etree import ElementTree
 
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.environment import collectors
-from sphinx.util import display, logging, osutil
+from sphinx.util import display, docutils, logging, osutil
 
 from .. import ext
 
@@ -87,10 +94,15 @@ def render_xopp(app, builder):
     if not stale: return
 
     # Render xopp files to pdf.
-    ext.sink(ext.map_parallel(
-        app, lambda args: render(exe, *args), stale.items(),
-        "rendering xopp files... ", 'brown',
-        lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()))
+    lock = threading.Lock()
+    def expand(*args):
+        with lock: return expand_role(app, *args)
+    for task, it in ext.map_parallel(
+            app, lambda args: process(exe, expand, *args), stale.items(),
+            "rendering xopp files... ", 'brown',
+            lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()):
+        if (e := task.exception()) is not None:
+            _log.error("{xopp}: %s", e, location=f'{it[1]}:0')
 
 
 def xournalpp_path(app):
@@ -109,13 +121,56 @@ def xournalpp_path(app):
         _log.error("{xopp}: Unable to run xournalpp:\n%s", e.stdout)
 
 
+def process(exe, expand, dst, src):
+    with gzip.open(src) as zf: tree = ElementTree.parse(zf)
+    expand = functools.partial(expand, src)
+    modified = False
+    for el in tree.iterfind('./page/layer//text'):
+        if el.text is None: continue
+        if (v := role_re.sub(expand, el.text)) != el.text:
+            el.text = v
+            modified = True
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if not modified:
+        render(exe, dst, src)
+        return
+    # TODO: Use mkdtemp() and keep the same file name
+    with tempfile.NamedTemporaryFile(dir=dst.parent,
+                                     prefix=dst.stem + '.') as f:
+        with gzip.open(f.name, 'wb') as zf:
+            tree.write(zf, encoding='utf-8')
+        render(exe, dst, f.name)
+
+
 def render(exe, dst, src):
     try:
-        dst.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([exe, f'--create-pdf={dst}', src],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                        check=True, text=True, errors='replace')
     except OSError as e:
         _log.error("{xopp}: Unable to run xournalpp: %s", e)
     except subprocess.CalledProcessError as e:
-        _log.error("{xopp}: Export failed for %s:\n%s", src, e.stdout)
+        _log.error("{xopp}: Export failed:\n%s", e.stdout, location=f'{src}:0')
+
+
+role_re = re.compile(r'\{([^}]+)\}`([^`]+)`')
+
+def expand_role(app, src, m):
+    parser = app.registry.create_source_parser('markdown', config=app.config,
+                                               env=app.env)
+    doctree = docutils._parse_str_to_doctree(
+        m[0], filename=src, default_role=app.config.default_role,
+        default_settings=app.env.settings, env=app.env, events=app.events,
+        parser=parser, transforms=app.registry.get_transforms())
+    res = []
+    for pxref in doctree.findall(addnodes.pending_xref):
+        # TODO: Determine the domain from the node
+        xref = app.env.domains.standard_domain.resolve_xref(
+            app.env, pxref['refdoc'], app.builder, pxref['reftype'],
+            pxref['reftarget'], pxref, pxref[0])
+        if xref is None:
+            raise Exception(f"Failed to resolve cross-reference: {m[0]}")
+        res.extend(n.astext() for n in xref.findall(nodes.Text))
+    if not res: raise Exception(f"Failed to expand reference: {m[0]}")
+    return ''.join(res)
