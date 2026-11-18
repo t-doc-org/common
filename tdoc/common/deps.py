@@ -176,7 +176,9 @@ info = {
         ],
     },
     'rollup': {'version_tag': lambda v: f'v{v}'},
+    'sphinx': {'version_tag': lambda v: f'v{v}'},
     'sphinx-book-theme': {'version_tag': lambda v: f'v{v}'},
+    'sphinx-design': {'version_tag': lambda v: f'v{v}'},
     'sqlite': {
         'name': '@sqlite.org/sqlite-wasm',
         'version': '3.54.1-build1',
