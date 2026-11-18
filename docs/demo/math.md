@@ -296,7 +296,7 @@ jsxgraph.render.trigCircle = el => {
     });
     board.create('angle', [ax1, origin, p], {
       name: '\\(\\alpha\\)', label: {strokeColor: alphaColor},
-      radius: 0.2, orthoType: 'none',
+      radius: 0.2, orthoType: 'sector',
       strokeColor: alphaColor, fillColor: alphaColor, fillOpacity: 0.3,
     });
     board.create('segment', [[0, 0], p], {strokeColor: alphaColor});
