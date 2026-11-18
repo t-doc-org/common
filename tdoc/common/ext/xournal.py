@@ -102,6 +102,7 @@ def render_xopp(app, builder):
             "rendering xopp files... ", 'brown',
             lambda it: osutil._relative_path(it[1], builder.srcdir).as_posix()):
         if (e := task.exception()) is not None:
+            # TODO: Try passing (it[1], -1) as location
             _log.error("{xopp}: %s", e, location=f'{it[1]}:0')
 
 
@@ -157,20 +158,27 @@ def render(exe, dst, src):
 role_re = re.compile(r'\{([^}]+)\}`([^`]+)`')
 
 def expand_role(app, src, m):
-    parser = app.registry.create_source_parser('markdown', config=app.config,
-                                               env=app.env)
-    doctree = docutils._parse_str_to_doctree(
-        m[0], filename=src, default_role=app.config.default_role,
-        default_settings=app.env.settings, env=app.env, events=app.events,
-        parser=parser, transforms=app.registry.get_transforms())
-    res = []
-    for pxref in doctree.findall(addnodes.pending_xref):
-        # TODO: Determine the domain from the node
-        xref = app.env.domains.standard_domain.resolve_xref(
-            app.env, pxref['refdoc'], app.builder, pxref['reftype'],
-            pxref['reftarget'], pxref, pxref[0])
-        if xref is None:
-            raise Exception(f"Failed to resolve cross-reference: {m[0]}")
-        res.extend(n.astext() for n in xref.findall(nodes.Text))
-    if not res: raise Exception(f"Failed to expand reference: {m[0]}")
-    return ''.join(res)
+    env = app.env
+    env.prepare_settings(str(src))
+    try:
+        # This was mostly copied from Builder.read_doc().
+        parser = app.registry.create_source_parser('markdown',
+                                                   config=app.config, env=env)
+        doctree = docutils._parse_str_to_doctree(
+            m[0], filename=src, default_role=app.config.default_role,
+            default_settings=env.settings, env=env, #events=app.events,
+            parser=parser, transforms=app.registry.get_transforms())
+        res = []
+        for pxref in doctree.findall(addnodes.pending_xref):
+            # TODO: Determine the domain from the node
+            xref = env.domains.standard_domain.resolve_xref(
+                env, pxref['refdoc'], app.builder, pxref['reftype'],
+                pxref['reftarget'], pxref, pxref[0])
+            if xref is None:
+                raise Exception(f"Failed to resolve cross-reference: {m[0]}")
+            res.extend(n.astext() for n in xref.findall(nodes.Text))
+        if not res: raise Exception(f"Failed to expand reference: {m[0]}")
+        return ''.join(res)
+    finally:
+        env.current_document.clear()
+        env.ref_context.clear()
