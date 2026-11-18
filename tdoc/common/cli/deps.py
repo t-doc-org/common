@@ -138,14 +138,18 @@ class Checker:
 
 
 forges = {
-    re.compile(r'\bhttps://github\.com/([^/]+/[^/.]+)'): {
-        'releases': lambda m: f'https://github.com/{m[1]}/releases',
-        'diff': lambda m, c, w: f'https://github.com/{m[1]}/compare/{c}..{w}',
-    },
-    re.compile(r'\bhttps://code\.haverbeke\.berlin/([^/]+/[^/.]+)'): {
-        'releases': lambda m: f'https://code.haverbeke.berlin/{m[1]}/tags',
+    re.compile(r'\bhttps://github\.com/([^/]+/[^/]+)'): {
+        'releases': lambda m:
+            f'https://github.com/{m[1].removesuffix('.git')}/releases',
         'diff': lambda m, c, w:
-            f'https://code.haverbeke.berlin/{m[1]}/compare/{c}..{w}',
+            f'https://github.com/{m[1].removesuffix('.git')}/compare/{c}..{w}',
+    },
+    re.compile(r'\bhttps://code\.haverbeke\.berlin/([^/]+/[^/]+)'): {
+        'releases': lambda m:
+            f'https://code.haverbeke.berlin/{m[1].removesuffix('.git')}/tags',
+        'diff': lambda m, c, w:
+            f'https://code.haverbeke.berlin/{m[1].removesuffix('.git')}'
+            f'/compare/{c}..{w}',
     },
 }
 
