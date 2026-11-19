@@ -216,10 +216,6 @@ connection.
 select * from countries where country_code = 'LI';
 ```
 
-```{warning}
-Remote storage is currently experimental.
-```
-
 ## Sequencing
 
 The {rst:dir}`:after: <exec:after>` option allows referencing one or more
