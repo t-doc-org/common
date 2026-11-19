@@ -332,7 +332,8 @@ class Connection(http.Context, server.ServerConnection):
             code, message = Code.DEADLINE_EXCEEDED, "Deadline exceeded"
             rpc.abort(code)
         except Exception:
-            _log.exception("Uncaught exception", event='rpc:exception')
+            _log.exception("Uncaught exception", event='rpc:exception',
+                           path=path, cid=cid, rid=rpc.rid, **self._log_rpc)
             code, message = Code.INTERNAL, "Uncaught exception"
             rpc.abort(code)
         except asyncio.CancelledError as e:
@@ -345,7 +346,7 @@ class Connection(http.Context, server.ServerConnection):
                 if not message:
                     message = "Completed" if code == Code.OK else "<no message>"
                 _log.log(log_level, "%(code)s: %(message)s", event='rpc:end',
-                         code=code.name, message=message or "", cid=cid,
+                         code=code.name, message=message, path=path, cid=cid,
                          rid=rpc.rid, **lkw)
             if active is not None: active.dec()
             if endpoint is not None:
