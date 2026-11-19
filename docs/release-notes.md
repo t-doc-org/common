@@ -3,10 +3,24 @@
 
 # Release notes
 
+(release-1-0)=
+## 1.0 *(2026-11-19)*
+
+- After 2029 changesets and 99 releases over 2 years and 4 months, and growing
+  use by hundreds of students, **it's time to call this a major stable
+  release**. (Also, it makes it easier to count releases.)
+  - A huge thank you to my partner-in-crime &#x2764;&#xfe0f; for all the great
+    ideas and discussions, as well as to our early adopters for their feedback
+    and patience. This wouldn't have been possible without y'all.
+- Added expansion of role references in Xournal++ files rendered by
+  {rst:role}`xopp` roles.
+- Hid {rst:dir}`quiz` and {rst:dir}`exec` controls when printing.
+- [Full changelog](https://github.com/t-doc-org/common/compare/0.99...1.0)
+
 (release-0-99)=
 ## 0.99 *(2026-11-11)*
 
-- Reimplemented most API endpoints as RPCs over Websockets.
+- Reimplemented most API endpoints as RPCs over websockets.
 - [Full changelog](https://github.com/t-doc-org/common/compare/0.98...0.99)
 
 (release-0-98)=
