@@ -114,8 +114,8 @@ class Formatter(logging.Formatter):
             if self.utc else dt.astimezone().isoformat(timespec='microseconds')
         a = self.attrs
         h, m, d, n = a['LCYAN'], a['CYAN'], a['LBLACK'], a['NORM']
-        return \
-            f'{m}{t[:10]}{d}{t[10:11]}{m}{t[11:17]}{h}{t[17:26]}{d}{t[26:]}{n}'
+        return f'{m}{t[:10]}{d}{t[10:11]}{m}{t[11:17]}{h}{t[17:23]}' \
+               f'{m}{t[23:26]}{d}{t[26:]}{n}'
 
 
 class Missing:
