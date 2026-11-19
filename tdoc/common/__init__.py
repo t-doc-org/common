@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: MIT
 
 __project__ = 't-doc-common'
-__version__ = '1.0'
+__version__ = '1.1.dev1'
