@@ -9,6 +9,7 @@ import functools
 import gzip
 import hashlib
 import json
+import pathlib
 import re
 import secrets
 import threading
@@ -19,12 +20,18 @@ import jwt
 import prometheus_client as pc
 from prometheus_client import exposition as pce
 
-from . import config as _config, context, database, http, logs, store, util, \
-              ws, wsgi
+from . import config as _config, context, database, http, logs, metrics, \
+              store, util, ws, wsgi
 
 _log = logs.logger(__name__)
 missing = object()
 
+metrics.gauge(
+    name='python_threads',
+    documentation="The number of Python threads in the process.")
+metrics.gauge(
+    name='process_threads',
+    documentation="The number of threads in the process.")
 event_observables = pc.Gauge(
     subsystem='event', name='observables', labelnames=('name',),
     documentation="The number of active observables.")
@@ -114,12 +121,22 @@ class Api:
         self.auth = OidcAuthApi(self, config.sub('oidc'),
                                 base_path=f'{base_path}/auth')
 
-    def __enter__(self): return self
+    def __enter__(self):
+        self.metrics_stop = metrics.collect(self.set_metrics)
+        return self
 
     def __exit__(self, typ, value, tb):
         _log.debug("Api: stopping")
         self.events.stop()
+        self.metrics_stop()
         _log.debug("Api: done")
+
+    def set_metrics(self, metrics):
+        metrics['python_threads'].add_metric((), threading.active_count())
+        with contextlib.suppress(OSError):
+            stat = pathlib.Path('/proc/self/stat').read_text('utf-8')
+            parts = stat.rsplit(')')[-1].split()
+            metrics['process_threads'].add_metric((), int(parts[17]))
 
     @http.wrap_endpoints(handle_db_errors)
     def endpoints(self, disp):
