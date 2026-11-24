@@ -7,7 +7,7 @@ import re
 import sys
 import threading
 
-from tdoc.common import api, config, http, logs, store, ws, wsgi
+from tdoc.common import api, config, http, logs, store, util, ws, wsgi
 
 _log = logs.logger(__name__)
 
