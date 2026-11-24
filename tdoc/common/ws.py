@@ -441,23 +441,34 @@ def endpoint(name, kind='unary', require_authn=False, log_level=logs.INFO):
     return decorator
 
 
-class Server(util.AsyncThread):
-    def __init__(self, *, host=None, port=0, path=None, perms=0o600,
+class Server:
+    def __init__(self, *, aio=None, host=None, port=0, path=None, perms=0o600,
                  scheme='https', origins=util.no_match,
-                 remote_addr_header=None, threads=None, local=False):
+                 remote_addr_header=None, local=False):
+        self.aio = aio
         self.host, self.port = host, port
         self.path, self.perms = path, perms
         self.scheme = scheme
         self.origins = re.compile(origins)
         self.remote_addr_header = remote_addr_header
-        self.threads = threads
         self.local = local
-        super().__init__(name='ws.Server', stop_on_exit=True)
+
+    def __enter__(self):
+        self.aio.call(self.init()).result()
+        self.task = self.aio.call(self.serve())
+        return self
+
+    def __exit__(self, typ, value, tb):
+        self.task.cancel()
+        with contextlib.suppress(futures.CancelledError):
+            self.task.result()
+        del self.task
+
+    def start_serving(self, dispatcher):
+        self.handler = dispatcher['ws']
+        self.aio.call(self._server.start_serving()).result()
 
     async def init(self):
-        self.loop.set_default_executor(
-            futures.ThreadPoolExecutor(max_workers=self.threads,
-                                       thread_name_prefix='websocket'))
         addr = dict(path=self.path, unix=True) if self.path is not None \
                else dict(host=self.host, port=self.port)
         if self.path is not None: self.path.unlink(missing_ok=True)
@@ -481,10 +492,5 @@ class Server(util.AsyncThread):
         elif self.port == 0 and len(socks := self._server.server.sockets) == 1:
             self.port = socks[0].getsockname()[1]
 
-    async def async_run(self):
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._server.serve_forever()
-
-    def start_serving(self, dispatcher):
-        self.handler = dispatcher['ws']
-        self.call(self._server.start_serving()).result()
+    async def serve(self):
+        await self._server.serve_forever()

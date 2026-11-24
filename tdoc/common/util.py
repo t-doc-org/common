@@ -424,24 +424,24 @@ class Thread(threading.Thread):
         self.join()
 
 
-class AsyncThread(threading.Thread):
-    def __init__(self, *, run=None, init=None, stop_on_exit=False, group=None,
+class AioThread(threading.Thread):
+    def __init__(self, *, stop_on_exit=False, executor_threads=None, group=None,
                  name=None, daemon=None, context=None):
         super().__init__(group=group, name=name, daemon=daemon, context=context)
-        self.__init = init if init is not None else self.init()
-        self.__run = run if run is not None else self.async_run()
         self.__stop_on_exit = stop_on_exit
+        self.__executor_threads = executor_threads
+        self.__lock = threading.Lock()
         self.__running = threading.Event()
-        self.__exception = None
+        self.__stop = asyncio.Event()
 
     def start(self):
         super().start()
         self.__running.wait()
-        if (e := self.__exception) is not None: raise e
 
     def stop(self, *args):
-        # TODO: This fails if the loop has already terminated
-        self.__loop.call_soon_threadsafe(self.__task.cancel)
+        with self.__lock:
+            if (loop := self.__loop) is not None:
+                loop.call_soon_threadsafe(self.__stop.set)
 
     def __enter__(self):
         self.start()
@@ -450,32 +450,22 @@ class AsyncThread(threading.Thread):
     def __exit__(self, typ, value, tb):
         if self.__stop_on_exit: self.stop()
         self.join()
-        if (e := self.__exception) is not None: raise e
 
     def run(self):
         with asyncio.Runner() as runner:
-            self.__loop = runner.get_loop()
-            return runner.run(self._run())
+            loop = runner.get_loop()
+            loop.set_default_executor(
+                futures.ThreadPoolExecutor(max_workers=self.__executor_threads,
+                                           thread_name_prefix=self.name))
+            with self.__lock: self.__loop = loop
+            try:
+                return runner.run(self.__run())
+            finally:
+                with self.__lock: self.__loop = None
 
-    async def _run(self):
-        self.__task = asyncio.current_task()
-        try:
-            await self.__init
-        except BaseException as e:
-            self.__exception = e
-            self.__running.set()
-            return
+    async def __run(self):
         self.__running.set()
-        try:
-            return await self.__run
-        except BaseException as e:
-            self.__exception = e
-
-    @property
-    def loop(self): return self.__loop
-
-    async def init(self): pass
-    async def async_run(self): pass
+        await self.__stop.wait()
 
     def call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)

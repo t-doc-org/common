@@ -49,8 +49,12 @@ def application(site_repo, events_level=logs.NOTSET):
     disp = http.Dispatcher()
     disp.add(app.endpoints(disp))
 
-    # Set up the websocket server.
+    # Set up the asyncio thread.
     dep = cfg.sub('deployment')
+    aio = stack.enter_context(util.AioThread(
+        name='aio', stop_on_exit=True, executor_threads=dep.get('aio_threads')))
+
+    # Set up the websocket server.
     scheme = dep.get('scheme', 'https')
     origins = http.origins(scheme=scheme, domain=domain) \
               if (domain := dep.get('domain')) is not None else util.no_match
@@ -58,10 +62,9 @@ def application(site_repo, events_level=logs.NOTSET):
     host, path = dws.get('host'), dws.path('path')
     if host is not None or path is not None:
         ws_server = stack.enter_context(ws.Server(
-            host=host, port=dws.get('port', 0), path=path,
+            aio=aio, host=host, port=dws.get('port', 0), path=path,
             perms=dws.get('permissions', 0o600), scheme=scheme,
-            origins=origins, remote_addr_header=dws.get('remote_addr_header'),
-            threads=dws.get('threads')))
+            origins=origins, remote_addr_header=dws.get('remote_addr_header')))
         ws_server.start_serving(disp)
 
     return wsgi.cors(

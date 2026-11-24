@@ -306,10 +306,12 @@ def run_tests(tests, repo, wheel, write, opts):
             with util.Thread(target=drain_stdout):
                 try:
                     # Run server tests.
-                    with util.AsyncThread(run=exercise_server_async(
-                            lambda t: write('ws: ' + t), opts, Browser(base))):
+                    with util.AioThread(name='aio', stop_on_exit=True) as aio:
+                        esa = aio.call(exercise_server_async(
+                            lambda t: write('ws: ' + t), opts, Browser(base)))
                         exercise_server(lambda t: write('wsgi: ' + t), opts,
                                         Browser(base))
+                        esa.result()
                     if not opts.interactive:
                         write("Terminating local server\n")
                         Browser(base).call('/_api/terminate', {'rc': 0})
