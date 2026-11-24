@@ -345,8 +345,6 @@ class Api:
                                       ctx.client, ctx.user)
 
     ws_config = ws.endpoint(wsgi_config)
-    # TODO(1.1): Remove
-    wsgi_features = wsgi.json_endpoint('features')(wsgi_config._fn)
 
 
 class EventsApi:
