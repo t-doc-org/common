@@ -173,7 +173,7 @@ class Api:
         ctx.set_client_cookie()
         if token := ctx.token:
             user = None
-            @ctx.blocking
+            @asyncio.to_thread
             def authenticate():
                 with context.tags.add('auth'), ctx.read_db as db:
                     return db.tokens.authenticate(token)

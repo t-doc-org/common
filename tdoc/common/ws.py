@@ -211,9 +211,6 @@ class Connection(http.Context, server.ServerConnection):
         resp.headers.update(headers)
         return resp
 
-    def blocking(self, fn, *args):
-        return self.loop.run_in_executor(None, fn, *args)
-
     async def handshake(self, process_request, process_response, server_header):
         try:
             await super().handshake(process_request, process_response,
@@ -434,7 +431,7 @@ def endpoint(name, kind='unary', require_authn=False, log_level=logs.INFO):
         @functools.wraps(fn)
         async def dfn(self, /, ctx, req):
             try:
-                return await ctx.blocking(fn, self, ctx, req)
+                return await asyncio.to_thread(fn, self, ctx, req)
             except http.Error as e:
                 raise Error(Code.of_http(e.code), e.message) from e
         return dfn
