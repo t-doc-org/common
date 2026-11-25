@@ -51,7 +51,10 @@ def main(argv, stdin, stdout, stderr):
     opts.cfg = config.Server.load(opts.site_repo)
     if (fn := getattr(opts.handler, '_pre_run', None)) is not None:
         if (res := fn(opts)) is not None: return res
-    with futures.ThreadPoolExecutor(thread_name_prefix='exec') as exec, \
+    aio_threads = opts.cfg.get('deployment.aio_threads')
+    with util.AioThread(name='aio', stop_on_exit=True,
+                        executor_threads=aio_threads) as aio, \
+            futures.ThreadPoolExecutor(thread_name_prefix='exec') as exec, \
             util.Timers(exec, _log) as timers, \
             logs.configure(config=opts.cfg.sub('logging'), level=logs.WARNING,
                            stderr=stderr, stream=True, debug=opts.debug,
@@ -60,6 +63,7 @@ def main(argv, stdin, stdout, stderr):
                                                False)):
         _log.info("CLI: %(cmd)s", cmd=' '.join(shlex.quote(a) for a in argv),
                   argv=argv)
+        opts.aio = aio
         opts.exec = exec
         opts.timers = timers
         return opts.handler(opts)
@@ -147,7 +151,7 @@ Would you like to perform the upgrade (y/n)? """)
 
 
 def get_store(opts, allow_mem=False):
-    st = _store.Store(opts.cfg.sub('store'),
+    st = _store.Store(config=opts.cfg.sub('store'), aio=opts.aio,
                       mem_name='store' if allow_mem else None)
     st.check_version(functools.partial(on_upgrade, opts))
     return st

@@ -5,6 +5,7 @@ import asyncio
 import base64
 import collections
 import contextlib
+import contextvars
 import functools
 import gzip
 import hashlib
@@ -111,9 +112,10 @@ Disallow: /
 
 
 class Api:
-    def __init__(self, *, config, store, base_path=''):
+    def __init__(self, *, config, store, aio, base_path=''):
         self.config = config
         self.store = store
+        self.aio = aio
         self.domain = config.get('deployment.domain')
         self.client_config = _config.Client(config.sub('client'))
         self.cache = http.Cache()
@@ -718,48 +720,52 @@ class DbObservable(DynObservable):
     def __init__(self, key, req, events, data=None, limit=None):
         super().__init__(key, req, events, data)
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
-        self._stop = False
-        self._poller = threading.Thread(target=self.poll,
-                                        name=f'obs:{self.key.hex()}')
-        self._poller.start()
+        self._stopping = False
+        # TODO: Call directly once WSGI watching is gone
+        self._poller = events.api.aio.call_sync(
+            asyncio.create_task, self.poll(), context=contextvars.Context())
 
     @property
     def stopping(self):
-        with self.lock: return self._stop
+        with self.lock: return self._stopping
 
     def stop_locked(self):
-        self._stop = True
-        self.lock.notify()
+        self._stopping = True
+        # TODO: Call directly once WSGI watching is gone
+        self.events.api.aio.call_soon(self._poller.cancel)
 
-    def wake_keys(self, db): return None
+    def wake_keys(self): return None
 
-    def poll(self):
+    async def poll(self):
+        context.ctx.set(f'obs:{self.key.hex()}')
         _log.debug("Start: %(cls)s", event='obs:start',
                    cls=self.__class__.__name__)
         try:
             store = self.events.api.store
-            with context.tags.add(f'obs:{self.name}'), \
-                    contextlib.closing(store.connect(mode='ro')) as db, \
-                    store.waker(self.lock, self.wake_keys(db), db,
-                                self._limit) as waker:
-                while True:
-                    queried = False
-                    try:
-                        with db: data, until = self.query(db)
-                        queried = True
-                    except Exception:
-                        _log.exception("Query exception", event='obs:error')
-                    with self.lock:
-                        if queried: self.set_locked(data)
-                        waker.wait(lambda: self._stop, until)
-                        if self._stop: break
+            def query():
+                with store.read_db as db: return self.query(db)
+            cv = asyncio.Condition()
+            with context.tags.add(f'obs:{self.name}'):
+                async with store.waker(self.wake_keys(), self._limit) \
+                        as waker:
+                    while True:
+                        queried = False
+                        try:
+                            data, until = await asyncio.to_thread(query)
+                            queried = True
+                        except Exception:
+                            _log.exception("Query exception", event='obs:error')
+                        if queried:
+                            with self.lock: self.set_locked(data)
+                        await waker.wait(until)
         except Exception:
-            with self.lock: self._stop = True
-            self.remove()
             _log.exception("Uncaught exception", event='obs:exception',
                            cls=self.__class__.__name__)
         finally:
-            _log.debug("End", event='obs:end', cls=self.__class__.__name__)
+            with self.lock: self._stopping = True
+            self.remove()
+            _log.debug("End: %(cls)s", event='obs:end',
+                       cls=self.__class__.__name__)
 
     def query(self, db):
         raise NotImplementedError()
@@ -774,8 +780,8 @@ class SolutionsObservable(DbObservable, name='solutions'):
         req['_origin'] = ctx.required_origin
         super().normalize(req, ctx)
 
-    def wake_keys(self, db):
-        return [db.solutions.show_key(self._origin, self.page)]
+    def wake_keys(self):
+        return [store.Solutions.show_key(self._origin, self.page)]
 
     def query(self, db):
         return {'show': db.solutions.get_show(self._origin, self.page)}, None
@@ -790,8 +796,8 @@ class PollObservable(DbObservable, name='poll'):
         req['_origin'] = ctx.required_origin
         super().normalize(req, ctx)
 
-    def wake_keys(self, db):
-        return [db.polls.poll_key(self._origin, self.id)]
+    def wake_keys(self):
+        return [store.Polls.poll_key(self._origin, self.id)]
 
     def query(self, db):
         data = db.polls.poll_data(self._origin, self.id)
@@ -814,8 +820,8 @@ class PollVotesObservable(DbObservable, name='poll/votes'):
         super().normalize(req, ctx)
         req['ids'].sort()
 
-    def wake_keys(self, db):
-        return [db.polls.voter_key(self._origin, poll, self._voter)
+    def wake_keys(self):
+        return [store.Polls.voter_key(self._origin, poll, self._voter)
                 for poll in self.ids]
 
     def query(self, db):
@@ -834,9 +840,9 @@ class EditorObservable(DbObservable, name='editor'):
         req['_instance'] = f'u:{u:016x}'
         super().normalize(req, ctx)
 
-    def wake_keys(self, db):
-        return [db.editors.instance_key(self._origin, self.editor,
-                                        self._instance)]
+    def wake_keys(self):
+        return [store.Editors.instance_key(self._origin, self.editor,
+                                           self._instance)]
 
     def query(self, db):
         return {'version': db.editors.version(self._origin, self.editor,

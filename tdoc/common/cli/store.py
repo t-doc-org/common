@@ -37,7 +37,7 @@ def add_commands(parser):
 
 
 def cmd_backup(opts):
-    st = store.Store(opts.cfg.sub('store'))
+    st = store.Store(config=opts.cfg.sub('store'), aio=opts.aio)
     if opts.destination is None: opts.destination = cli.backup_path(st)
     with contextlib.closing(st.connect(mode='ro')) as db, db:
         opts.stdout.write(f"Backing up to: {opts.destination}\n")
@@ -45,13 +45,13 @@ def cmd_backup(opts):
 
 
 def cmd_create(opts):
-    st = store.Store(opts.cfg.sub('store'))
+    st = store.Store(config=opts.cfg.sub('store'), aio=opts.aio)
     version = st.create(version=opts.version, local=opts.local)
     opts.stdout.write(f"Created (version: {version}): {st.path}\n")
 
 
 def cmd_upgrade(opts):
-    st = store.Store(opts.cfg.sub('store'))
+    st = store.Store(config=opts.cfg.sub('store'), aio=opts.aio)
     with contextlib.closing(st.connect(mode='rw')) as db:
         with db: version, latest = st.version(db)
         if version == latest:

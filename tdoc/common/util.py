@@ -470,6 +470,23 @@ class AioThread(threading.Thread):
     def call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)
 
+    def call_sync(self, fn, *args, **kwargs):
+        if threading.current_thread() is self: return fn(*args, **kwargs)
+        async def afn(): return fn(*args, **kwargs)
+        return self.call(afn()).result()
+
+    def call_soon(self, fn):
+        if threading.current_thread() is self: return fn()
+        self.__loop.call_soon_threadsafe(fn)
+
+
+running_loop = asyncio._get_running_loop
+
+
+def current_task():
+    if running_loop() is not None and (t := asyncio.current_task()) is not None:
+        return t
+
 
 class CancelTaskGroup(Exception): pass
 

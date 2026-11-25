@@ -63,9 +63,12 @@ _log = logger(__name__)
 class CtxFilter(logging.Filter):
     def filter(self, rec):
         if not hasattr(rec, 'ctx'):
-            if (v := context.ctx.get(None)) is None:
-                v = threading.current_thread().name
-            rec.ctx = v
+            if (v := context.ctx.get(None)) is not None:
+                rec.ctx = v
+            elif (t := util.current_task()) is not None:
+                rec.ctx = t.get_name()
+            else:
+                rec.ctx = threading.current_thread().name
         return True
 
 
@@ -268,7 +271,7 @@ def configure(*, config=None, level=WARNING, stderr=None, stream=False,
 
         for c in config.subs('databases'):
             if not db_logs or not c.get('enabled', True): continue
-            lst = LogStore(c, stderr=stderr)
+            lst = LogStore(config=c, stderr=stderr)
             lst.check_version(on_upgrade)
             stack.enter_context(lst)
             dbh = DatabaseHandler(lst)
@@ -399,8 +402,8 @@ class Connection(database.Connection):
 class LogStore(database.Database):
     WriteConnection = Connection = Connection
 
-    def __init__(self, config, *, stderr=None, **kwargs):
-        super().__init__(config, 'logs', **kwargs)
+    def __init__(self, *, config, stderr=None, **kwargs):
+        super().__init__(config=config, type='logs', **kwargs)
         self.stderr = stderr
         self.flush_interval = config.get('flush_interval', 5)
         self.purge_interval = util.timedelta_to_nsec(util.parse_duration(

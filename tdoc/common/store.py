@@ -1,6 +1,7 @@
 # Copyright 2024 Remy Blank <remy@c-space.org>
 # SPDX-License-Identifier: MIT
 
+import asyncio
 import contextlib
 import functools
 import json
@@ -655,24 +656,26 @@ class Editors(database.ConnNamespace):
 
 
 class Waker:
-    def __init__(self, cv, limit):
-        self.cv = cv
+    def __init__(self, limit):
         self.limit = limit
+        self.cv = asyncio.Condition()
         self._wake = False
 
-    def wait(self, cond, until=None):
+    async def wait(self, until=None):
         if self.limit is not None and (d := self.limit()) > 0:
-            if self.cv.wait_for(cond, d): return
+            await asyncio.sleep(d)
         timeout = None
         if until is not None:
             timeout = until - time.time_ns()
             if timeout <= 0: return
             timeout /= 1_000_000_000
-        self.cv.wait_for(lambda: self._wake or cond(), timeout=timeout)
-        self._wake = False
+        with contextlib.suppress(TimeoutError):
+            async with asyncio.timeout(timeout), self.cv:
+                await self.cv.wait_for(lambda: self._wake)
+                self._wake = False
 
-    def wake(self):
-        with self.cv:
+    async def wake(self):
+        async with self.cv:
             self._wake = True
             self.cv.notify()
 
@@ -689,8 +692,9 @@ class Store(database.Database):
     Connection = Connection
     WriteConnection = WriteConnection
 
-    def __init__(self, config, **kwargs):
-        super().__init__(config, 'store', **kwargs)
+    def __init__(self, *, config, aio, **kwargs):
+        super().__init__(config=config, type='store', **kwargs)
+        self.aio = aio
         self.poll_interval = config.get('poll_interval', 1)
         self.lock = threading.Condition(threading.Lock())
         self.wakers = {}
@@ -718,21 +722,26 @@ class Store(database.Database):
         _log.debug("Store: done")
         return res
 
-    @contextlib.contextmanager
-    def waker(self, cv, keys, db, limit=None):
-        w = Waker(cv, limit)
-        with self.lock:
-            seq_keys = []
-            for key in keys:
-                ws = self.wakers.get(key)
-                if ws is None:
-                    ws = self.wakers[key] = WakerSet()
-                    seq_keys.append(key)
-                ws.add(w)
-            if seq_keys:
-                with db: seqs = db.notifications(seq_keys)
-                for key, seq in seqs.items():
-                    self.wakers[key].seq = seq
+    @contextlib.asynccontextmanager
+    async def waker(self, keys, limit=None):
+        w = Waker(limit)
+        # TODO: Avoid large blocking section if possible (don't query DB if
+        # poll_interval <= 0, reduce blocking section to DB query only)
+        @asyncio.to_thread
+        def register():
+            with self.lock:
+                seq_keys = []
+                for key in keys:
+                    ws = self.wakers.get(key)
+                    if ws is None:
+                        ws = self.wakers[key] = WakerSet()
+                        seq_keys.append(key)
+                    ws.add(w)
+                if seq_keys:
+                    with self.read_db as db: seqs = db.notifications(seq_keys)
+                    for key, seq in seqs.items():
+                        self.wakers[key].seq = seq
+        await register
         try:
             yield w
         finally:
@@ -749,6 +758,7 @@ class Store(database.Database):
 
     @context.tags.add('db:notification')
     def dispatch(self):
+        # TODO: Convert dispatcher to async
         # TODO: Make more resilient against DB errors
         next_poll = None
         if self.poll_interval > 0:
@@ -771,7 +781,9 @@ class Store(database.Database):
                             seqs = db.notifications(list(self.wakers))
                         self._update_waker_seqs(seqs, wakers)
                     next_poll = time.monotonic_ns() + poll_interval
-            for w in wakers: w.wake()
+            async def wake():
+                for w in wakers: await w.wake()
+            self.aio.call(wake()).result()
 
     def _update_waker_seqs(self, seqs, updated):
         for key, seq in seqs.items():

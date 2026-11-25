@@ -176,16 +176,13 @@ def cmd_serve(opts):
         default_port = opts.default_port
 
     dep = opts.cfg.sub('deployment')
-    with util.AioThread(name='aio', stop_on_exit=True,
-                        executor_threads=dep.get('aio_threads')) as aio, \
-            ws.Server(aio=aio, host='127.0.0.1', port=0,
-                      scheme=dep.get('scheme', 'http'), origins='.*',
-                      remote_addr_header='X-Remote-Addr',
-                      local=True) as ws_srv, \
+    with ws.Server(aio=opts.aio, host='127.0.0.1', port=0,
+                   scheme=dep.get('scheme', 'http'), origins='.*',
+                   remote_addr_header='X-Remote-Addr', local=True) as ws_srv, \
             Server(addr, RequestHandler, ws_srv.port) as srv, \
             cli.get_store(opts, allow_mem=True) as st, \
-            api.Api(config=opts.cfg, store=st, base_path=f'/{api_base}') \
-                as api_, \
+            api.Api(config=opts.cfg, store=st, aio=opts.aio,
+                    base_path=f'/{api_base}') as api_, \
             Application(opts, srv, api_) as app:
         disp = http.Dispatcher()
         disp.add(app.endpoints(disp))

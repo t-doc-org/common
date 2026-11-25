@@ -39,20 +39,20 @@ def application(site_repo, events_level=logs.NOTSET):
         def on_event(event, **kwargs):
             _log.log(events_level, "Event %s: %s", event, kwargs)
 
-    # Instantiate the store and the API.
-    st = store.Store(store_config)
-    st.check_version()
-    stack.enter_context(st)
-    app = stack.enter_context(api.Api(config=cfg, store=st))
-
-    # Set up the request dispatcher.
-    disp = http.Dispatcher()
-    disp.add(app.endpoints(disp))
-
     # Set up the asyncio thread.
     dep = cfg.sub('deployment')
     aio = stack.enter_context(util.AioThread(
         name='aio', stop_on_exit=True, executor_threads=dep.get('aio_threads')))
+
+    # Instantiate the store and the API.
+    st = store.Store(config=store_config, aio=aio)
+    st.check_version()
+    stack.enter_context(st)
+    app = stack.enter_context(api.Api(config=cfg, store=st, aio=aio))
+
+    # Set up the request dispatcher.
+    disp = http.Dispatcher()
+    disp.add(app.endpoints(disp))
 
     # Set up the websocket server.
     scheme = dep.get('scheme', 'https')

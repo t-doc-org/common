@@ -170,7 +170,7 @@ class Database:
     Connection = Connection
     WriteConnection = Connection
 
-    def __init__(self, config, type, *, mem_name=None):
+    def __init__(self, *, config, type, mem_name=None):
         self.config = config
         self.type = type
         self.mem_name = mem_name

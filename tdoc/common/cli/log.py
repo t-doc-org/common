@@ -67,7 +67,7 @@ def add_commands(parser):
 @cli.disable_db_logs
 def cmd_backup(opts):
     for c in opts.cfg.subs('logging.databases'):
-        lst = logs.LogStore(c)
+        lst = logs.LogStore(config=c)
         dest = cli.backup_path(lst)
         with contextlib.closing(lst.connect(mode='ro')) as db, db:
             opts.stdout.write(f"Backing up to: {dest}\n")
@@ -77,7 +77,7 @@ def cmd_backup(opts):
 @cli.disable_db_logs
 def cmd_create(opts):
     for c in opts.cfg.subs('logging.databases'):
-        lst = logs.LogStore(c)
+        lst = logs.LogStore(config=c)
         if lst.exists:
             opts.stdout.write(f"Already exists: {lst.path}\n")
             continue
@@ -95,7 +95,7 @@ def cmd_query(opts):
         if i == opts.index: break
     else:
         raise Exception("Invalid log database index")
-    lst = logs.LogStore(c)
+    lst = logs.LogStore(config=c)
     lst.check_version(functools.partial(cli.on_upgrade, opts))
     with contextlib.closing(lst.connect(mode='ro')) as db:
         rid = None
@@ -113,7 +113,7 @@ def cmd_query(opts):
 def cmd_upgrade(opts):
     for i, c in enumerate(opts.cfg.subs('logging.databases')):
         if i > 0: opts.stdout.write('\n')
-        lst = logs.LogStore(c)
+        lst = logs.LogStore(config=c)
         with contextlib.closing(lst.connect(mode='rw')) as db:
             with db: version, latest = lst.version(db)
             if version == latest:
