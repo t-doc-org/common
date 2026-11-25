@@ -175,12 +175,11 @@ class Api:
         ctx.set_client_cookie()
         if token := ctx.token:
             user = None
-            @asyncio.to_thread
-            def authenticate():
-                with context.tags.add('auth'), ctx.read_db as db:
-                    return db.tokens.authenticate(token)
             try:
-                user = await authenticate
+                def authenticate():
+                    with context.tags.add('auth'), ctx.read_db as db:
+                        return db.tokens.authenticate(token)
+                user = await asyncio.to_thread(authenticate)
             except Exception:
                 _log.exception("Authentication failure", event='auth:error')
             if user is None: raise http.Error(http.UNAUTHORIZED)
@@ -722,8 +721,9 @@ class DbObservable(DynObservable):
         self._limit = limit if limit is not None else limit_interval(1, burst=4)
         self._stopping = False
         # TODO: Call directly once WSGI watching is gone
-        self._poller = events.api.aio.call_sync(
-            asyncio.create_task, self.poll(), context=contextvars.Context())
+        self._poller = events.api.aio.create_task(
+            self.poll(), name=f'obs:{self.key.hex()}',
+            context=contextvars.Context())
 
     @property
     def stopping(self):
@@ -732,12 +732,11 @@ class DbObservable(DynObservable):
     def stop_locked(self):
         self._stopping = True
         # TODO: Call directly once WSGI watching is gone
-        self.events.api.aio.call_soon(self._poller.cancel)
+        self.events.api.aio.cancel_task(self._poller)
 
     def wake_keys(self): return None
 
     async def poll(self):
-        context.ctx.set(f'obs:{self.key.hex()}')
         _log.debug("Start: %(cls)s", event='obs:start',
                    cls=self.__class__.__name__)
         try:

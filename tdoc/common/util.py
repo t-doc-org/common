@@ -470,14 +470,22 @@ class AioThread(threading.Thread):
     def call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)
 
-    def call_sync(self, fn, *args, **kwargs):
-        if threading.current_thread() is self: return fn(*args, **kwargs)
-        async def afn(): return fn(*args, **kwargs)
-        return self.call(afn()).result()
+    def create_task(self, *args, **kwargs):
+        if threading.current_thread() is self:
+            return asyncio.create_task(*args, **kwargs)
+        async def create(): return asyncio.create_task(*args, **kwargs)
+        return self.call(create()).result()
 
-    def call_soon(self, fn):
-        if threading.current_thread() is self: return fn()
-        self.__loop.call_soon_threadsafe(fn)
+    def cancel_task(self, task):
+        if threading.current_thread() is self:
+            task.cancel()
+            return
+        self.__loop.call_soon_threadsafe(task.cancel)
+
+    def join_task(self, task):
+        async def join(): await task
+        with contextlib.suppress(futures.CancelledError):
+            self.call(join()).exception()
 
 
 running_loop = asyncio._get_running_loop

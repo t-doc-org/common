@@ -3,6 +3,7 @@
 
 import asyncio
 import contextlib
+import contextvars
 import functools
 import json
 import re
@@ -696,7 +697,7 @@ class Store(database.Database):
         super().__init__(config=config, type='store', **kwargs)
         self.aio = aio
         self.poll_interval = config.get('poll_interval', 1)
-        self.lock = threading.Condition(threading.Lock())
+        self.lock = asyncio.Condition()
         self.wakers = {}
         self._wake = Seqs()
 
@@ -704,20 +705,15 @@ class Store(database.Database):
         _log.debug("Store: %(path)s",
                    path=self.path if self.path is not None else ':in-memory:')
         res = super().__enter__()
-        self.dispatcher_db = self.connect(mode='ro')
-        self.dispatcher = threading.Thread(target=self.dispatch,
-                                           name='store:dispatcher')
-        with self.lock: self._stop = False
-        self.dispatcher.start()
+        self.dispatcher = self.aio.create_task(
+            self.dispatch(), name='store:dispatcher',
+            context=contextvars.Context())
         return res
 
     def __exit__(self, typ, value, tb):
         _log.debug("Store: stopping")
-        with self.lock:
-            self._stop = True
-            self.lock.notify()
-        self.dispatcher.join()
-        self.dispatcher_db.close()
+        self.aio.cancel_task(self.dispatcher)
+        self.aio.join_task(self.dispatcher)
         res = super().__exit__(typ, value, tb)
         _log.debug("Store: done")
         return res
@@ -727,63 +723,61 @@ class Store(database.Database):
         w = Waker(limit)
         # TODO: Avoid large blocking section if possible (don't query DB if
         # poll_interval <= 0, reduce blocking section to DB query only)
-        @asyncio.to_thread
-        def register():
-            with self.lock:
-                seq_keys = []
-                for key in keys:
-                    ws = self.wakers.get(key)
-                    if ws is None:
-                        ws = self.wakers[key] = WakerSet()
-                        seq_keys.append(key)
-                    ws.add(w)
-                if seq_keys:
-                    with self.read_db as db: seqs = db.notifications(seq_keys)
-                    for key, seq in seqs.items():
-                        self.wakers[key].seq = seq
-        await register
+        async with self.lock:
+            seq_keys = []
+            for key in keys:
+                ws = self.wakers.get(key)
+                if ws is None:
+                    ws = self.wakers[key] = WakerSet()
+                    seq_keys.append(key)
+                ws.add(w)
+            if seq_keys:
+                def query():
+                    with self.read_db as db: return db.notifications(seq_keys)
+                seqs = await asyncio.to_thread(query)
+                for key, seq in seqs.items():
+                    self.wakers[key].seq = seq
         try:
             yield w
         finally:
-            with self.lock:
+            async with self.lock:
                 for key in keys:
                     ws = self.wakers[key]
                     ws.remove(w)
                     if not ws: del self.wakers[key]
 
     def notify(self, seqs):
-        with self.lock:
-            self._wake.merge(seqs.items())
-            self.lock.notify()
+        async def notify():
+            async with self.lock:
+                self._wake.merge(seqs.items())
+                self.lock.notify()
+        self.aio.call(notify()).result()
 
-    @context.tags.add('db:notification')
-    def dispatch(self):
-        # TODO: Convert dispatcher to async
+    @context.tags.async_add('db:notification')
+    async def dispatch(self):
         # TODO: Make more resilient against DB errors
         next_poll = None
         if self.poll_interval > 0:
-            poll_interval = int(self.poll_interval * 1_000_000_000)
-            next_poll = time.monotonic_ns() + poll_interval
+            loop = asyncio.get_running_loop()
+            next_poll = loop.time() + self.poll_interval
+            def query(wakers):
+                with self.read_db as db: return db.notifications(wakers)
         while True:
-            with self.lock:
-                timeout = (next_poll - time.monotonic_ns()) / 1_000_000_000 \
-                          if next_poll is not None else None
-                self.lock.wait_for(lambda: self._stop or self._wake,
-                                   timeout=timeout)
-                if self._stop: break
+            # TODO: Reduce locking
+            async with self.lock:
+                with contextlib.suppress(TimeoutError):
+                    async with asyncio.timeout_at(next_poll):
+                        await self.lock.wait_for(lambda: self._wake)
                 wakers = set()
                 self._update_waker_seqs(self._wake, wakers)
                 self._wake.clear()
-                if next_poll is not None and time.monotonic_ns() >= next_poll:
+                if next_poll is not None and (t := loop.time()) >= next_poll:
                     if self.wakers:
                         # TODO: Perform DB query outside of the lock
-                        with self.dispatcher_db as db:
-                            seqs = db.notifications(list(self.wakers))
+                        seqs = await asyncio.to_thread(query, list(self.wakers))
                         self._update_waker_seqs(seqs, wakers)
-                    next_poll = time.monotonic_ns() + poll_interval
-            async def wake():
-                for w in wakers: await w.wake()
-            self.aio.call(wake()).result()
+                    next_poll = t + self.poll_interval
+            for w in wakers: await w.wake()
 
     def _update_waker_seqs(self, seqs, updated):
         for key, seq in seqs.items():

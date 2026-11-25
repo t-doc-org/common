@@ -20,6 +20,7 @@ def application(site_repo, events_level=logs.NOTSET):
     store_config = cfg.sub('store')
     store_config.setdefault('poll_interval',
                             1 if mod_wsgi.maximum_processes > 1 else 0)
+    # TODO: Adjust default to async reality
     store_config.setdefault('pool_size', mod_wsgi.threads_per_process)
 
     stack = contextlib.ExitStack()
