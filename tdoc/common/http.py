@@ -61,14 +61,13 @@ def with_hash_params(url, params):
 
 class Context:
     __slots__ = ('local', 'domain', 'client', 'user', '_cookies',
-                 'response_headers', '_read_db', '_write_db')
+                 'response_headers')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.local = False
         self.domain = self.client = self.user = None
         self._cookies = self.response_headers = None
-        self._read_db = self._write_db = None
 
     def header(self, name, default=None): raise NotImplementedError()
 
@@ -129,12 +128,6 @@ class Context:
     def _has_token(self):
         suffix = '' if self.local else f'-{self.server_host}'
         return f'__Secure-tdoc-token{suffix}'
-
-    @property
-    def read_db(self): return self._read_db()
-
-    @property
-    def write_db(self): return self._write_db()
 
 
 _client_cookie = '__Host-Http-tdoc-client'

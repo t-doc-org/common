@@ -152,14 +152,12 @@ class Api:
 
     def pre_wsgi(self, ctx, endpoint):
         if not ctx.local: ctx.domain = self.domain
-        ctx._read_db = lambda: self.store.read_db
-        ctx._write_db = lambda: self.store.write_db
         if endpoint._refresh_client: ctx.set_client_cookie()
         if not endpoint._authn: return
         if token := ctx.token:
             user = None
             try:
-                with context.tags.add('auth'), ctx.read_db as db:
+                with context.tags.add('auth'), self.store.read_db as db:
                     user = db.tokens.authenticate(token)
             except Exception:
                 _log.exception("Authentication failure", event='auth:error')
@@ -170,14 +168,12 @@ class Api:
 
     async def connected_ws(self, ctx):
         if not ctx.local: ctx.domain = self.domain
-        ctx._read_db = lambda: self.store.read_db
-        ctx._write_db = lambda: self.store.write_db
         ctx.set_client_cookie()
         if token := ctx.token:
             user = None
             try:
                 def authenticate():
-                    with context.tags.add('auth'), ctx.read_db as db:
+                    with context.tags.add('auth'), self.store.read_db as db:
                         return db.tokens.authenticate(token)
                 user = await asyncio.to_thread(authenticate)
             except Exception:
@@ -220,7 +216,7 @@ class Api:
     def wsgi_metrics(self, ctx):
         origin = '' if ctx.local else o if (o := ctx.origin) is not None \
                  else ctx.server_origin
-        with ctx.read_db as db:
+        with self.store.read_db as db:
             check(self.has_perm(ctx, db, 'metrics:read', origin=origin))
         if ctx.method == http.OPTIONS:
             ctx.respond(http.OK, [('Allow', 'OPTIONS,GET')])
@@ -245,18 +241,18 @@ class Api:
         origin = ctx.required_origin
         instance = f'u:{ctx.user:016x}'
         if editor := req.get('init'):
-            with ctx.read_db as db:
+            with self.store.read_db as db:
                 version, text = db.editors.text(origin, editor, instance)
                 return {'version': version, 'text': text, 'instance': instance}
         elif editor := req.get('pull'):
-            with ctx.read_db as db:
+            with self.store.read_db as db:
                 version = arg(req, 'version')
                 updates = db.editors.history(origin, editor, instance, version)
                 return {'updates': updates}
         elif editor := req.get('push'):
             version, client, updates, text = args(req, 'version', 'client',
                                                   'updates', 'text')
-            with ctx.write_db as db:
+            with self.store.write_db as db:
                 success = db.editors.add_updates(
                     origin, editor, instance, version, client,
                     updates, text, ctx.user)
@@ -269,7 +265,7 @@ class Api:
     @context.tags.add('ep:poll')
     def wsgi_poll(self, ctx, req):
         origin = ctx.required_origin
-        with ctx.write_db as db:
+        with self.store.write_db as db:
             if polls := req.get('open'):
                 check(self.has_perm(ctx, db, 'polls:control'))
                 for poll in polls:
@@ -303,12 +299,12 @@ class Api:
     @context.tags.add('ep:repo')
     def wsgi_repo(self, ctx, req):
         if req.get('info'):
-            with ctx.read_db as db:
+            with self.store.read_db as db:
                 enabled, prefix = db.repo.auth(ctx.user)
             return {'user': f'0x{ctx.user:016x}', 'enabled': enabled,
                     'prefix': prefix}
         if req.get('reset'):
-            with ctx.write_db as db:
+            with self.store.write_db as db:
                 if not db.repo.auth(ctx.user)[0]:
                     raise http.Error(http.FORBIDDEN)
                 rounds = self.config.get('repo.bcrypt_rounds', 10)
@@ -324,7 +320,7 @@ class Api:
         origin = ctx.required_origin
         page = arg(req, 'page')
         show = arg(req, 'show', lambda v: v in ('show', 'hide'))
-        with ctx.write_db as db:
+        with self.store.write_db as db:
             check(self.has_perm(ctx, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
@@ -335,7 +331,7 @@ class Api:
     @context.tags.add('ep:user')
     def wsgi_user(self, ctx, req):
         origin = ctx.required_origin
-        with ctx.read_db as db: info = db.users.info(origin, ctx.user)
+        with self.store.read_db as db: info = db.users.info(origin, ctx.user)
         return info
 
     ws_user = ws.endpoint(wsgi_user)
@@ -900,7 +896,7 @@ class OidcAuthApi:
                             for i, icfg in self.issuers.items()]}
         if ctx.user is not None:
             resp['logins'] = logins = []
-            with ctx.read_db as db:
+            with self.api.store.read_db as db:
                 for id_token, updated in db.oidc.logins(ctx.user):
                     if (icfg := self.token_issuer(id_token)) is None: continue
                     name = self.token_name(id_token)
@@ -921,7 +917,7 @@ class OidcAuthApi:
     def wsgi_update(self, ctx, req):
         if remove := req.get('remove'):
             iss, sub = args(remove, 'iss', 'sub')
-            with ctx.write_db as db:
+            with self.api.store.write_db as db:
                 id_token = db.oidc.remove_login(ctx.user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(ctx.user)
                             if self.token_issuer(id_token) is not None)
@@ -987,7 +983,7 @@ class OidcAuthApi:
             # Handle "log in as" in local mode.
             if href_origin != http.origin(redirect_uri):
                 raise http.Error(http.BAD_REQUEST)
-            with ctx.read_db as db:
+            with self.api.store.read_db as db:
                 try:
                     uid = db.users.uid(issuer[6:])
                 except Exception as e:
@@ -1011,7 +1007,7 @@ class OidcAuthApi:
                          code_challenge_method='S256', nonce=nonce,
                          prompt='select_account', redirect_uri=redirect_uri,
                          response_type='code', scope='openid profile email')
-        with ctx.write_db as db:
+        with self.api.store.write_db as db:
             db.oidc.create_state(state_id, state)
         return {'redirect': http.url_replace(url, query=parse.urlencode(query))}
 
@@ -1026,7 +1022,7 @@ class OidcAuthApi:
             raise http.Error(http.BAD_REQUEST, "Missing state")
         state, href, params = state[0], None, None
         try:
-            with ctx.write_db as db:
+            with self.api.store.write_db as db:
                 if (state := db.oidc.state(state)) is None:
                     raise http.Error(http.BAD_REQUEST, "Bad state")
                 href, cnonce = state['href'], state['cnonce']
@@ -1158,7 +1154,7 @@ class OidcAuthApi:
     def wsgi_logout(self, ctx, req):
         ctx.set_token_cookie(None)
         if ctx.user is not None:
-            with ctx.write_db as db:
+            with self.api.store.write_db as db:
                 # Remove the token if the user has at least one login.
                 count = sum(1 for id_token, _ in db.oidc.logins(ctx.user)
                             if self.token_issuer(id_token) is not None)
