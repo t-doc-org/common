@@ -251,6 +251,11 @@ class Connection {
         this.connect(notBefore);  // BG
     }
 
+    close() {
+        this.closing = true;
+        if (this.ws != null) this.ws.close();
+    }
+
     get rid() {
         const rid = this.#rid;
         this.#rid = core.nextInt(rid);
@@ -343,6 +348,10 @@ class Channel {
     backoff = {min: 1000, max: 10000};
     noBackoffConnDuration = 30000;
 
+    close() {
+        if (this._conn != null) this._conn.close();
+    }
+
     async stream({path, timeout}, fn) {
         const rpc = new Rpc(this.conn, path, timeout);
         try {
@@ -395,6 +404,9 @@ class Channel {
 }
 
 const chan = new Channel();
+on(window).freeze(() => { chan.close(); });
+on(window).pagehide(ev => { chan.close(); });
+
 const useWebsocket = config.websocket ?? true;
 
 export async function call(path, req = {}) {
@@ -794,14 +806,25 @@ class EventsApi {
         this.watches = new Map();
     }
 
+    pause() {
+        if (this._pause) return;
+        this._pause = true;
+        if (this.abort != null) this.abort.abort();
+    }
+
+    unpause() {
+        if (!this._pause) return;
+        this._pause = false;
+        if (!this.running && this.watches.size > 0) this.run();  // BG
+    }
+
     async sub({add, remove}) {
         remove ??= [];
         add ??= [];
         for (const w of remove) this.watches.delete(w.id);
         for (const w of add) this.watches.set(w.id, w);
         if (!this.running) {
-            if (this.watches.size === 0) return;
-            this.run();  // Background
+            if (this.watches.size > 0) this.run();  // BG
             return;
         }
         const sid = await this.sid;
@@ -824,7 +847,7 @@ class EventsApi {
     async run() {
         this.running = true;
         try {
-            for (let retries = 0;;) {
+            for (let retries = 0; !this._pause;) {
                 let start = performance.now(), resolve;
                 try {
                     const req = {};
@@ -922,14 +945,25 @@ class EventsApi {
 class EventsApi2 {
     watches = new Map();
 
+    pause() {
+        if (this._pause) return;
+        this._pause = true;
+        if (this.rpc != null) this.rpc.abort(CANCELLED);
+    }
+
+    unpause() {
+        if (!this._pause) return;
+        this._pause = false;
+        if (!this.running && this.watches.size > 0) this.run();  // BG
+    }
+
     async sub({add, remove}) {
         remove ??= [];
         add ??= [];
         for (const w of remove) this.watches.delete(w.id);
         for (const w of add) this.watches.set(w.id, w);
         if (!this.running) {
-            if (this.watches.size === 0) return;
-            this.run();  // BG
+            if (this.watches.size > 0) this.run();  // BG
             return;
         }
         const rpc = this.rpc;
@@ -949,7 +983,7 @@ class EventsApi2 {
     async run() {
         this.running = true;
         try {
-            for (let retries = 0;;) {
+            for (let retries = 0; !this._pause;) {
                 const start = performance.now();
                 try {
                     await this.watch();
@@ -1009,3 +1043,7 @@ class EventsApi2 {
 }
 
 export const events = useWebsocket ? new EventsApi2() : new EventsApi();
+on(window).freeze(() => { events.pause(); });
+on(window).pagehide(ev => { events.pause(); });
+on(window).resume(() => { events.unpause(); });
+on(window).pageshow(() => { events.unpause(); });
