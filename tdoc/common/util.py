@@ -470,6 +470,9 @@ class AioThread(threading.Thread):
     def call(self, coro):
         return asyncio.run_coroutine_threadsafe(coro, self.__loop)
 
+    def call_soon(self, fn):
+        self.__loop.call_soon_threadsafe(fn)
+
     def create_task(self, *args, **kwargs):
         if threading.current_thread() is self:
             return asyncio.create_task(*args, **kwargs)
