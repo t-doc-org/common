@@ -3,6 +3,7 @@
 
 import contextlib
 import mod_wsgi
+import os
 import re
 import sys
 import threading
@@ -20,8 +21,11 @@ def application(site_repo, events_level=logs.NOTSET):
     store_config = cfg.sub('store')
     store_config.setdefault('poll_interval',
                             1 if mod_wsgi.maximum_processes > 1 else 0)
-    # TODO: Adjust default to async reality
-    store_config.setdefault('pool_size', mod_wsgi.threads_per_process)
+    dep = cfg.sub('deployment')
+    aio_threads = dep.get('aio_threads',
+                          min(32, (os.process_cpu_count() or 1) + 4))
+    store_config.setdefault(
+        'pool_size', mod_wsgi.threads_per_process + aio_threads + 4)
 
     stack = contextlib.ExitStack()
     stack.enter_context(logs.configure(config=cfg.sub('logging'),
@@ -41,7 +45,6 @@ def application(site_repo, events_level=logs.NOTSET):
             _log.log(events_level, "Event %s: %s", event, kwargs)
 
     # Set up the asyncio thread.
-    dep = cfg.sub('deployment')
     aio = stack.enter_context(util.AioThread(
         name='aio', stop_on_exit=True, executor_threads=dep.get('aio_threads')))
 
