@@ -43,7 +43,6 @@ Next steps:
    $ hg push
  - In config/tdoc.toml, in [run.versions], move the current value of "stable"
    to "previous", set "stable" to ${version}, commit and push.
-   $ hg commit -m "Roll out ${version} to stable." \\
-       config/tdoc.toml
+   $ hg commit -m "Roll out ${version} to stable." config/tdoc.toml
    $ hg push
 EOF
