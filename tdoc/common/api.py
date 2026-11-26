@@ -25,7 +25,6 @@ from . import config as _config, context, database, http, logs, metrics, \
               store, util, ws, wsgi
 
 _log = logs.logger(__name__)
-missing = object()
 
 metrics.gauge(
     name='python_threads',
@@ -46,22 +45,6 @@ event_observable_notifications = pc.Counter(
 event_watcher_notifications = pc.Counter(
     subsystem='event', name='watcher_notifications', labelnames=('name',),
     documentation="A count of notifications received by watchers.")
-
-
-def arg(data, name, validate=None):
-    if (v := data.get(name, missing)) is missing:
-        raise http.Error(http.BAD_REQUEST, f"Missing argument: {name}")
-    if validate is not None and not validate(v):
-        raise http.Error(http.BAD_REQUEST, f"Invalid argument: {name}")
-    return v
-
-
-def args(data, *names):
-    return tuple(arg(data, n) for n in names)
-
-
-def check(cond, code=http.FORBIDDEN, msg=None):
-    if not cond: raise http.Error(code, msg)
 
 
 def handle_db_errors(fn):
@@ -217,7 +200,7 @@ class Api:
         origin = '' if ctx.local else o if (o := ctx.origin) is not None \
                  else ctx.server_origin
         with self.store.read_db as db:
-            check(self.has_perm(ctx, db, 'metrics:read', origin=origin))
+            ctx.check(self.has_perm(ctx, db, 'metrics:read', origin=origin))
         if ctx.method == http.OPTIONS:
             ctx.respond(http.OK, [('Allow', 'OPTIONS,GET')])
             return [b'']
@@ -246,12 +229,12 @@ class Api:
                 return {'version': version, 'text': text, 'instance': instance}
         elif editor := req.get('pull'):
             with self.store.read_db as db:
-                version = arg(req, 'version')
+                version = ctx.arg(req, 'version')
                 updates = db.editors.history(origin, editor, instance, version)
                 return {'updates': updates}
         elif editor := req.get('push'):
-            version, client, updates, text = args(req, 'version', 'client',
-                                                  'updates', 'text')
+            version, client, updates, text = ctx.args(
+                req, 'version', 'client', 'updates', 'text')
             with self.store.write_db as db:
                 success = db.editors.add_updates(
                     origin, editor, instance, version, client,
@@ -267,27 +250,28 @@ class Api:
         origin = ctx.required_origin
         with self.store.write_db as db:
             if polls := req.get('open'):
-                check(self.has_perm(ctx, db, 'polls:control'))
+                ctx.check(self.has_perm(ctx, db, 'polls:control'))
                 for poll in polls:
-                    mode = arg(poll, 'mode', lambda v: v in ('single', 'multi'))
+                    mode = ctx.arg(poll, 'mode',
+                                   lambda v: v in ('single', 'multi'))
                     expires = None if (exp := poll.get('exp')) is None \
                               else time.time_ns() + exp * 1_000_000
-                    db.polls.open(origin, arg(poll, 'id'), mode,
-                                  arg(poll, 'answers'), expires)
+                    db.polls.open(origin, ctx.arg(poll, 'id'), mode,
+                                  ctx.arg(poll, 'answers'), expires)
             if ids := req.get('close'):
-                check(self.has_perm(ctx, db, 'polls:control'))
+                ctx.check(self.has_perm(ctx, db, 'polls:control'))
                 db.polls.close(origin, ids)
             if ids := req.get('results'):
-                check(self.has_perm(ctx, db, 'polls:control'))
-                db.polls.results(origin, ids, arg(req, 'value'))
+                ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                db.polls.results(origin, ids, ctx.arg(req, 'value'))
             if ids := req.get('solutions'):
-                check(self.has_perm(ctx, db, 'polls:control'))
-                db.polls.solutions(origin, ids, arg(req, 'value'))
+                ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                db.polls.solutions(origin, ids, ctx.arg(req, 'value'))
             if ids := req.get('clear'):
-                check(self.has_perm(ctx, db, 'polls:control'))
+                ctx.check(self.has_perm(ctx, db, 'polls:control'))
                 db.polls.clear(origin, ids)
             if 'vote' in req:
-                id, answer, vote = args(req, 'id', 'answer', 'vote')
+                id, answer, vote = ctx.args(req, 'id', 'answer', 'vote')
                 if (voter := voter_id(ctx)) is None:
                     raise http.Error(http.BAD_REQUEST)
                 db.polls.vote(origin, id, voter, answer, vote)
@@ -318,10 +302,10 @@ class Api:
     @context.tags.add('ep:solutions')
     def wsgi_solutions(self, ctx, req):
         origin = ctx.required_origin
-        page = arg(req, 'page')
-        show = arg(req, 'show', lambda v: v in ('show', 'hide'))
+        page = ctx.arg(req, 'page')
+        show = ctx.arg(req, 'show', lambda v: v in ('show', 'hide'))
         with self.store.write_db as db:
-            check(self.has_perm(ctx, db, 'solutions:write'))
+            ctx.check(self.has_perm(ctx, db, 'solutions:write'))
             db.solutions.set_show(origin, page, show)
         return {}
 
@@ -431,7 +415,7 @@ class EventsApi:
 
     @wsgi.json_endpoint('sub')
     def wsgi_sub(self, ctx, req):
-        sid = arg(req, 'sid')
+        sid = ctx.arg(req, 'sid')
         with self.lock: watcher = self.watchers.get(sid)
         if watcher is None:
             raise http.Error(http.BAD_REQUEST, "Unknown stream ID")
@@ -618,7 +602,7 @@ class Observable:
         for k in list(req):
             if k not in req_attrs: del req[k]
         for k in req_attrs:
-            if not getattr(cls, k).optional: arg(req, k)
+            if not getattr(cls, k).optional: ctx.arg(req, k)
 
     @staticmethod
     def hash(req):
@@ -741,8 +725,7 @@ class DbObservable(DynObservable):
                 with store.read_db as db: return self.query(db)
             cv = asyncio.Condition()
             with context.tags.add(f'obs:{self.name}'):
-                async with store.waker(self.wake_keys(), self._limit) \
-                        as waker:
+                async with store.waker(self.wake_keys(), self._limit) as waker:
                     while True:
                         queried = False
                         try:
@@ -916,7 +899,7 @@ class OidcAuthApi:
     @context.tags.add('ep:auth/update')
     def wsgi_update(self, ctx, req):
         if remove := req.get('remove'):
-            iss, sub = args(remove, 'iss', 'sub')
+            iss, sub = ctx.args(remove, 'iss', 'sub')
             with self.api.store.write_db as db:
                 id_token = db.oidc.remove_login(ctx.user, iss, sub)
                 count = sum(1 for id_token, _ in db.oidc.logins(ctx.user)
@@ -973,7 +956,7 @@ class OidcAuthApi:
     def wsgi_login(self, ctx, req):
         token = ctx.token
         redirect_uri = f'{ctx.server_origin}{self.base_path}/redirect'
-        issuer, cnonce, href = args(req, 'issuer', 'cnonce', 'href')
+        issuer, cnonce, href = ctx.args(req, 'issuer', 'cnonce', 'href')
         if (href_origin := http.origin(href)) != ctx.origin:
             raise http.Error(http.BAD_REQUEST, "Origin mismatch: href")
         state_id = secrets.token_urlsafe()

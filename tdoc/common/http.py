@@ -13,7 +13,7 @@ from urllib import parse
 from . import logs, util
 
 _log = logs.logger(__name__)
-
+missing = object()
 
 # Import names from other modules.
 globals().update((v.name, v) for v in Method)
@@ -128,6 +128,28 @@ class Context:
     def _has_token(self):
         suffix = '' if self.local else f'-{self.server_host}'
         return f'__Secure-tdoc-token{suffix}'
+
+    error_cls = NotImplemented
+    invalid_arg = NotImplemented
+    perm_denied = NotImplemented
+
+    @classmethod
+    def arg(cls, data, name, validate=None):
+        if (v := data.get(name, missing)) is missing:
+            raise cls.error_cls(cls.invalid_arg, f"Missing argument: {name}")
+        if validate is not None and not validate(v):
+            raise cls.error_cls(cls.invalid_arg, f"Invalid argument: {name}")
+        return v
+
+    @classmethod
+    def args(cls, data, *names):
+        return tuple(cls.arg(data, n) for n in names)
+
+    @classmethod
+    def check(cls, cond, code=None, msg=None):
+        if not cond:
+            if code is None: code = cls.perm_denied
+            raise cls.error_cls(code, msg)
 
 
 _client_cookie = '__Host-Http-tdoc-client'

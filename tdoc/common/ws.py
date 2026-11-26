@@ -177,6 +177,10 @@ class Rpc:
 
 
 class Connection(http.Context, server.ServerConnection):
+    error_cls = Error
+    invalid_arg = Code.INVALID_ARGUMENT
+    perm_denied = Code.PERMISSION_DENIED
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         th = self.server.thread

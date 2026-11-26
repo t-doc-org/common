@@ -71,6 +71,10 @@ def cors(origins=util.no_match, methods=(), headers=(), max_age=None,
 class Context(http.Context):
     __slots__ = ('env', '_respond', '_post', 'status')
 
+    error_cls = http.Error
+    invalid_arg = http.BAD_REQUEST
+    perm_denied = http.FORBIDDEN
+
     def __init__(self, env, respond):
         super().__init__()
         self.env = env
