@@ -13,6 +13,7 @@ def cdn_url(key, version=None):
 
 
 info = {
+    'babel': {'version_tag': lambda v: f'v{v}'},
     'certifi': {
         'version_tag':
             lambda v: f'{'.'.join(f'{int(p):02d}' for p in v.split('.'))}',
