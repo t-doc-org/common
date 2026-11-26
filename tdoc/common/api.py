@@ -87,12 +87,12 @@ def handle_db_errors(fn):
             except database.client_errors:
                 _log.exception("Store client error", exc_limit=-1,
                                exc_chain=False, event='store:error:client')
-                raise http.Error(http.BAD_REQUEST)
+                raise ws.Error(ws.INVALID_ARGUMENT)
             except database.Error as e:
                 _log.exception("Store error", exc_limit=-1, exc_chain=False,
                                event='store:error')
-                raise http.Error(http.BAD_REQUEST,
-                                 e.args[0] if e.args else None)
+                raise ws.Error(ws.INVALID_ARGUMENT,
+                               e.args[0] if e.args else None)
     else:
         dfn = fn
     return dfn
