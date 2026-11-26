@@ -8,8 +8,8 @@ version = "stable"
 hermetic = true
 
 [run.versions]
-stable = "1.0"
-previous = "0.99"
+stable = "1.1"
+previous = "1.0"
 
 [run.defaults]
 command = ["tdoc", "site", "serve"]
