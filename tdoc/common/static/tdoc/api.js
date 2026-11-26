@@ -64,7 +64,7 @@ async function httpCall(path, opts) {
         credentials: 'include',
         ...opts,
         headers: {
-            'X-Csrf': '0',
+            'X-Tdoc': tdoc.version,
             ...core.bearerAuthorization(opts?.token),
             ...opts?.headers,
         },
@@ -312,7 +312,7 @@ class Connection {
             if (delay > 0) await core.sleep(delay);
         }
         this.connectTime = performance.now();
-        const ws = new WebSocket(`${url}/ws`);
+        const ws = new WebSocket(`${url}/ws`, [`tdoc-${tdoc.version}`]);
         ws.binaryType = 'arraybuffer';
         on(ws).open(e => {
             this.ws = ws;

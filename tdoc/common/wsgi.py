@@ -16,6 +16,8 @@ import prometheus_client as pc
 
 from . import context, http, logs, util
 
+# TODO(1.2): Remove handling of X-Csrf header
+
 _log = logs.logger(__name__)
 
 http_request_duration = pc.Histogram(
@@ -97,6 +99,7 @@ class Context(http.Context):
                                                       wsgiutil.FileWrapper))
     sec_fetch_site = property(lambda self: self.env.get('HTTP_SEC_FETCH_SITE'))
     csrf = property(lambda self: self.env.get('HTTP_X_CSRF'))
+    version = property(lambda self: self.env.get('HTTP_X_TDOC'))
 
     def uri(self, include_query=False, relative=False):
         uri = wsgiutil.request_uri(self.env, include_query)
@@ -262,7 +265,7 @@ class Handler(http.Handler, type='wsgi'):
         kwargs = {'method': ctx.method,
                   'uri': ctx.uri(include_query=include_query, relative=True),
                   'origin': ctx.origin, 'remote': ctx.remote_addr,
-                  'client': ctx.client}
+                  'client': ctx.client, 'version': ctx.version}
         if (v := ctx.user) is not None: kwargs['user'] = v
         return kwargs
 
@@ -283,7 +286,7 @@ def endpoint(name, methods=None, final=True, authn=True, require_authn=False,
             if require_authn and ctx.user is None:
                 raise http.Error(http.UNAUTHORIZED)
             if csrf and (ctx.sec_fetch_site not in ('same-origin', 'same-site')
-                         or ctx.csrf is None):
+                         or (ctx.version is None and ctx.csrf is None)):
                 raise http.Error(http.FORBIDDEN)
             return fn(self, ctx)
         dfn._endpoint = name

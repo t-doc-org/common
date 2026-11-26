@@ -182,6 +182,7 @@ class Connection(http.Context, server.ServerConnection):
         th = self.server.thread
         self.local = th.local
         self.scheme = th.scheme
+        self.version = None
         self.__handler = th.handler
         self.__disconnected = []
 
@@ -218,27 +219,27 @@ class Connection(http.Context, server.ServerConnection):
         finally:
             if self.protocol.state is not protocol.OPEN:
                 resp = self.response
-                _log.info("%(code)s %(phrase)s", event="ws:end",
+                _log.info("%(code)s %(phrase)s", event="ws:reject",
                           code=int(resp.status_code), phrase=resp.reason_phrase,
-                          **self._log_args)
+                          **self._log_conn)
                 self.run_disconnected()
 
     async def process_request(self, req):
         try:
             self.server_host = req.headers['Host']
             await self.__handler.run_connected(self)
-            websocket_active_connections.inc()
-            self.disconnected(websocket_active_connections.dec)
-            log_args = self._log_args
-            msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
-            if 'user' in log_args: msg += " user=0x%(user)016x"
-            _log.info(msg, event='ws:start', **log_args)
         except http.Error as e:
             return self.respond(e.code, e.message, e.headers)
         except Exception:
             _log.exception("Uncaught exception", event='ws:exception',
-                           **self._log_args)
+                           **self._log_conn)
             return self.respond(http.INTERNAL_SERVER_ERROR)
+
+    def select_subprotocol(self, protocols):
+        for p in protocols:
+            if p.startswith('tdoc-'):
+                self.version = p[5:]
+                return p
 
     def process_response(self, req, resp):
         if resp.status_code == http.SWITCHING_PROTOCOLS \
@@ -246,6 +247,12 @@ class Connection(http.Context, server.ServerConnection):
             for k, v in hs: resp.headers[k] = v
 
     async def handle_connection(self):
+        websocket_active_connections.inc()
+        self.disconnected(websocket_active_connections.dec)
+        log_args = self._log_conn
+        msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
+        if 'user' in log_args: msg += " user=0x%(user)016x"
+        _log.info(msg, event='ws:start', **log_args)
         self.__rpcs = {}
         close_code = NORMAL_CLOSURE
         try:
@@ -274,7 +281,7 @@ class Connection(http.Context, server.ServerConnection):
         except* Exception:
             close_code = INTERNAL_ERROR
             _log.exception("Uncaught exception", event='ws:exception',
-                           **self._log_args)
+                           **log_args)
         finally:
             await self.close(close_code)
             rclose, sclose = self.protocol.close_rcvd, self.protocol.close_sent
@@ -288,7 +295,7 @@ class Connection(http.Context, server.ServerConnection):
                 closure = f's:{close_str(sclose)}, r:{close_str(rclose)}'
             _log.info("Disconnected: %(status)s (%(closure)s)",
                       event="ws:end", status='OK' if ok else 'ERROR',
-                      closure=closure, **self._log_args)
+                      closure=closure, **log_args)
             self.run_disconnected()
 
     async def handle_rpc(self, rpc):
@@ -356,13 +363,13 @@ class Connection(http.Context, server.ServerConnection):
         return super().send(util.to_json(resp))
 
     @functools.cached_property
-    def _log_args(self):
+    def _log_conn(self):
         req = self.request
         kwargs = {
             'method': req.method,
             'uri': f'{self.server_origin}{req.path}',
             'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
-            'client': self.client,
+            'client': self.client, 'version': self.version,
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs
@@ -372,7 +379,7 @@ class Connection(http.Context, server.ServerConnection):
         req = self.request
         kwargs = {
             'origin': req.headers.get('Origin'), 'remote': self.remote_addr,
-            'client': self.client,
+            'client': self.client, 'version': self.version,
         }
         if (v := self.user) is not None: kwargs['user'] = v
         return kwargs
@@ -470,12 +477,14 @@ class Server:
                else dict(host=self.host, port=self.port)
         if self.path is not None: self.path.unlink(missing_ok=True)
         self._server = await server.serve(
-            handler=lambda conn: conn.handle_connection(), start_serving=False,
-            create_connection=Connection, origins=[self.origins],
+            start_serving=False, server_header=None, origins=[self.origins],
+            create_connection=Connection,
             process_request=lambda conn, req: conn.process_request(req),
             process_response=
                 lambda conn, req, resp: conn.process_response(req, resp),
-            server_header=None, **addr)
+            select_subprotocol=lambda conn, ps: conn.select_subprotocol(ps),
+            handler=lambda conn: conn.handle_connection(),
+            **addr)
         self._server.thread = self
         async def handler(connection):
             token = context.ctx.set(f'wsc:{connection.id.hex}')

@@ -20,7 +20,7 @@ from urllib import request
 
 from websockets.asyncio import client
 
-from .. import cli, fixes, http, util
+from .. import cli, fixes, http, util, version
 
 # TODO: Handle SIGTERM
 
@@ -181,8 +181,8 @@ class Browser:
             if isinstance(data, str): data = data.encode()
             headers['Content-Length'] = str(len(data))
         if csrf:
-            headers['X-Csrf'] = '0'
             headers['Sec-Fetch-Site'] = 'same-origin'
+            headers['X-Tdoc'] = version.short
         req = request.Request(url, data=data, headers=headers)
         with self.opener.open(req, **kwargs) as f: resp = f.read()
         return f, resp
@@ -205,8 +205,9 @@ class Browser:
         if (v := req.get_header('Cookie')) is not None:
             headers.append(('Cookie', v))
         # TODO: Figure out why the close_timeout always elapses on close()
-        return client.connect(url, origin=self.base, additional_headers=headers,
-                              proxy=None, user_agent_header=None,
+        return client.connect(url, proxy=None, user_agent_header=None,
+                              origin=self.base, additional_headers=headers,
+                              subprotocols=[f'tdoc-{version.short}'],
                               close_timeout=0.2, create_connection=Connection)
 
 

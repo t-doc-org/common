@@ -25,7 +25,7 @@ from sphinx.ext.intersphinx import _load
 from sphinx.util import display, docutils, fileutil, logging
 
 from . import fixes, patch
-from .. import __version__, deps, util
+from .. import __version__, deps, util, version
 
 if sys.platform == 'win32': import winreg
 
@@ -204,15 +204,6 @@ def meta(env, docname, key, default=None):
         except (KeyError, TypeError):
             return default
     return v
-
-
-def short_version(v):
-    v = version.Version(v)
-    res = v.base_version
-    if (p := v.pre) is not None: res += pre[0][:1]
-    if v.is_postrelease: res += 'p'
-    if v.is_devrelease: res += 'd'
-    return res
 
 
 def repo_relative(env, path):
@@ -456,7 +447,7 @@ def fix_rst_signatures(app, doctree):
 
 
 def set_html_context(app, page, template, context, doctree):
-    context['tdoc_version'] = short_version(__version__)
+    context['tdoc_version'] = version.short
     context.setdefault('html_attrs', {})
     if 'tdoc-local' in app.tags: context['html_attrs']['data-tdoc-local'] = ''
     if v := app.config.license: context['license'] = v
@@ -521,6 +512,7 @@ def tdoc_config(app, page=None, doctree=None, context=None):
         'domain_storage': copy.deepcopy(app.config.tdoc_domain_storage),
         'enable_sab': app.config.tdoc_enable_sab,
         'repos': app.config.tdoc_repos or f'https://rc.{domain}/',
+        'version': version.short,
     }
     if is_local := 'tdoc-local' in app.tags: tdoc['local'] = True
     versions = tdoc['versions'] = meta(app.env, page, 'versions', {}).copy()
@@ -590,10 +582,10 @@ def write_static_files(app, builder):
     if builder.format != 'html': return
 
     # Generate the version badge.
-    version = short_version(__version__)
-    width = 10 + sum(_char_width.get(c, 7) for c in version)
+    v = version.short
+    width = 10 + sum(_char_width.get(c, 7) for c in v)
     (app.outdir / 'tdoc-version.svg').write_text(
-        badge(('t-doc', 40), (version, width), '#007ec6'), 'utf-8')
+        badge(('t-doc', 40), (v, width), '#007ec6'), 'utf-8')
 
     # The file must be at the root of the website, to avoid limiting the scope
     # of the service worker to _static.

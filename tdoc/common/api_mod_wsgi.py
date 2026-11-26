@@ -75,7 +75,7 @@ def application(site_repo, events_level=logs.NOTSET):
         origins=origins,
         methods=('DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'),
         headers=('Authorization', 'Cache-Control', 'Content-Type', 'Cookie',
-                 'X-Csrf'),
+                 'X-Csrf', 'X-Tdoc'),
         max_age=dep.get('access_control_max_age'),
         credentials=True,
     )(disp['wsgi'].handle)
