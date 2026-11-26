@@ -407,13 +407,8 @@ const chan = new Channel();
 on(window).freeze(() => { chan.close(); });
 on(window).pagehide(ev => { chan.close(); });
 
-const useWebsocket = config.websocket ?? true;
-
 export async function call(path, req = {}) {
-    if (useWebsocket) {
-        return await chan.call({path, timeout: 15000}, req);
-    }
-    return await httpCall(path, {req});
+    return await chan.call({path, timeout: 15000}, req);
 }
 
 class Auth extends EventTarget {
@@ -755,7 +750,7 @@ tdoc.settings = () => auth.showSettingsModal();
     const interval = 60 * 60 * 1000;
     for (;;) {
         try {
-            const resp = await httpCall('/config', {req: {}});
+            const resp = await call('/config');
             configStore.set(resp);
             // Reload the page if the current reload value differs from the
             // cached one, and the session doesn't override them.
@@ -802,147 +797,6 @@ export class Watch {
 }
 
 class EventsApi {
-    constructor() {
-        this.watches = new Map();
-    }
-
-    pause() {
-        if (this._pause) return;
-        this._pause = true;
-        if (this.abort != null) this.abort.abort();
-    }
-
-    unpause() {
-        if (!this._pause) return;
-        this._pause = false;
-        if (!this.running && this.watches.size > 0) this.run();  // BG
-    }
-
-    async sub({add, remove}) {
-        remove ??= [];
-        add ??= [];
-        for (const w of remove) this.watches.delete(w.id);
-        for (const w of add) this.watches.set(w.id, w);
-        if (!this.running) {
-            if (this.watches.size > 0) this.run();  // BG
-            return;
-        }
-        const sid = await this.sid;
-        if (sid === undefined) return;  // Current connection failed
-        const req = {sid};
-        if (remove.length > 0) {
-            req.remove = [];
-            for (const w of remove) req.remove.push(w.id);
-        }
-        if (add.length > 0) {
-            req.add = [];
-            for (const w of add) req.add.push({wid: w.id, req: w.req});
-        }
-        try {
-            const resp = await httpCall('/events/sub', {req});
-            this.reportFailed(resp.failed);
-        } catch (e) {}
-    }
-
-    async run() {
-        this.running = true;
-        try {
-            for (let retries = 0; !this._pause;) {
-                let start = performance.now(), resolve;
-                try {
-                    const req = {};
-                    if (this.watches.size > 0) {
-                        req.add = [];
-                        for (const w of this.watches.values()) {
-                            req.add.push({wid: w.id, req: w.req});
-                        }
-                    }
-                    ({promise: this.sid, resolve} = Promise.withResolvers());
-                    await this.stream(req, resolve);
-                } catch (e) {
-                } finally {
-                    resolve();
-                    delete this.sid;
-                }
-                if (performance.now() - start > 30000) retries = 0;
-                await core.sleep(core.backoff({min: 1000, max: 10000},
-                                              retries++));
-            }
-        } finally {
-            this.running = false;
-        }
-    }
-
-    async stream(req, connected) {
-        this.abort = new AbortController();
-        try {
-            const resp = await fetch(`${url}/events/watch`, {
-                method: 'POST', referrer: '',
-                credentials: 'include',
-                headers: {
-                    'Cache-Control': 'no-store',
-                    'Content-Type': 'application/json',
-                    'X-Csrf': '0',
-                },
-                body: JSON.stringify(req),
-                signal: this.abort.signal,
-            });
-            if (resp.status !== 200) return;
-            const reader = resp.body.getReader();
-            try {
-                const buffer = new core.FifoBuffer();
-                for (;;) {
-                  const {value, done} = await reader.read();
-                  if (value) {
-                      let start = buffer.length;
-                      buffer.write(value);
-                      for (;;) {
-                          const pos = buffer.findValue(10, start);
-                          if (pos < 0) break;
-                          const msg = core.dec.decode(buffer.read(pos + 1));
-                          start = 0;
-                          if (connected) {
-                            const data = JSON.parse(msg);
-                            this.sid = data.sid;
-                            connected(data.sid);
-                            connected = undefined;
-                            this.reportFailed(data.failed);
-                          } else if (msg.length > 1) {
-                              await this.onEvent(msg);
-                          }
-                      }
-                  }
-                  if (done) break;
-                }
-            } finally {
-                reader.releaseLock();
-            }
-        } finally {
-            this.abort.abort();
-            delete this.abort;
-        }
-    }
-
-    async onEvent(msg) {
-        const data = JSON.parse(msg);
-        const watch = this.watches.get(data.wid);
-        if (watch === undefined) return;
-        try {
-            await watch.onEvent(data.data);
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    reportFailed(failed) {
-        for (const wid of failed ?? []) {
-            const w = this.watches.get(wid);
-            if (w !== undefined && w.onFailed) w.onFailed();
-        }
-    }
-}
-
-class EventsApi2 {
     watches = new Map();
 
     pause() {
@@ -1042,7 +896,7 @@ class EventsApi2 {
     }
 }
 
-export const events = useWebsocket ? new EventsApi2() : new EventsApi();
+export const events = new EventsApi();
 on(window).freeze(() => { events.pause(); });
 on(window).pagehide(ev => { events.pause(); });
 on(window).resume(() => { events.unpause(); });
