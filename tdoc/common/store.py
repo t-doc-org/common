@@ -742,7 +742,6 @@ class Store(database.Database):
             self._notify.set()
         self.aio.call_soon(notify)
 
-    @context.tags.async_add('db:notification')
     async def dispatch(self):
         # TODO: Make more resilient against DB errors
         next_poll = None
@@ -751,20 +750,21 @@ class Store(database.Database):
             next_poll = loop.time() + self.poll_interval
             def query(wakers):
                 with self.read_db as db: return db.notifications(wakers)
-        while True:
-            with contextlib.suppress(TimeoutError):
-                async with asyncio.timeout_at(next_poll):
-                    await self._notify.wait()
-            self._notify.clear()
-            wakers = set()
-            self._update_waker_seqs(self._wake, wakers)
-            self._wake.clear()
-            if next_poll is not None and (t := loop.time()) >= next_poll:
-                if self.wakers:
-                    seqs = await asyncio.to_thread(query, list(self.wakers))
-                    self._update_waker_seqs(seqs, wakers)
-                next_poll = t + self.poll_interval
-            for w in wakers: w.wake()
+        with context.tags.add('db:notification'):
+            while True:
+                with contextlib.suppress(TimeoutError):
+                    async with asyncio.timeout_at(next_poll):
+                        await self._notify.wait()
+                self._notify.clear()
+                wakers = set()
+                self._update_waker_seqs(self._wake, wakers)
+                self._wake.clear()
+                if next_poll is not None and (t := loop.time()) >= next_poll:
+                    if self.wakers:
+                        seqs = await asyncio.to_thread(query, list(self.wakers))
+                        self._update_waker_seqs(seqs, wakers)
+                    next_poll = t + self.poll_interval
+                for w in wakers: w.wake()
 
     def _update_waker_seqs(self, seqs, updated):
         for key, seq in seqs.items():

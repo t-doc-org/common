@@ -38,14 +38,6 @@ class Var:
         finally:
             self.reset(token)
 
-    @contextlib.asynccontextmanager
-    async def async_add(self, *args):
-        token = self.set(tuple(sorted(set(self.get(()) + args))))
-        try:
-            yield
-        finally:
-            self.reset(token)
-
 
 ctx = Var('ctx')
 tags = Var('tags', default=())
