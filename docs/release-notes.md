@@ -3,6 +3,13 @@
 
 # Release notes
 
+(release-1-1)=
+## 1.1 *(2026-11-26)*
+
+- Fixed hangs of the local server when navigating pages quickly.
+- Reduced the resource usage of observables.
+- [Full changelog](https://github.com/t-doc-org/common/compare/1.0...1.1)
+
 (release-1-0)=
 ## 1.0 *(2026-11-19)*
 

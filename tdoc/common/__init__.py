@@ -4,7 +4,7 @@
 from packaging import version as _version
 
 __project__ = 't-doc-common'
-__version__ = '1.1.dev1'
+__version__ = '1.1'
 
 class Version(_version.Version):
     @property
