@@ -401,14 +401,17 @@ class Handler(http.Handler, type='ws'):
             if isinstance(res := fn(conn), abc.Awaitable): await res
 
 
-def stream_endpoint(name, kind='stream', require_authn=False,
+def stream_endpoint(name, kind='stream', require_authn=False, tags=None,
                     log_level=logs.INFO):
+    if isinstance(tags, str): tags = (tags,)
+    noctx = contextlib.nullcontext() if not tags else None
     def decorator(fn):
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             if require_authn and rpc.conn.user is None:
                 raise Error(Code.UNAUTHENTICATED)
-            await fn(self, rpc)
+            with noctx or context.tags.add(*tags):
+                await fn(self, rpc)
         dfn._endpoint = name
         dfn._endpoint_type = 'ws'
         dfn._endpoint_kind = kind
@@ -417,10 +420,11 @@ def stream_endpoint(name, kind='stream', require_authn=False,
     return decorator
 
 
-def endpoint(name, kind='unary', require_authn=False, log_level=logs.INFO):
+def endpoint(name, kind='unary', require_authn=False, tags=None,
+             log_level=logs.INFO):
     def decorator(fn):
         @stream_endpoint(name, kind=kind, require_authn=require_authn,
-                         log_level=log_level)
+                         tags=tags, log_level=log_level)
         @functools.wraps(fn)
         async def dfn(self, /, rpc):
             req = await anext(rpc.reqs)
@@ -431,20 +435,6 @@ def endpoint(name, kind='unary', require_authn=False, log_level=logs.INFO):
                     async for _ in rpc.reqs:
                         raise Error(Code.FAILED_PRECONDITION)
                 await rpc.send(await fn(self, rpc, req), final=True)
-        return dfn
-
-    if getattr(name, '_endpoint_type', None) == 'wsgi':
-        fn = name._fn
-        require_authn = name._require_authn
-        log_level = name._log_level
-        name = name._endpoint
-        @decorator
-        @functools.wraps(fn)
-        async def dfn(self, /, ctx, req):
-            try:
-                return await asyncio.to_thread(fn, self, ctx, req)
-            except http.Error as e:
-                raise Error(Code.of_http(e.code), e.message) from e
         return dfn
     return decorator
 

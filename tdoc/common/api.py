@@ -191,7 +191,9 @@ class Api:
     def wsgi_health(self, ctx, req):
         return {'auth': ctx.user is not None}
 
-    ws_health = ws.endpoint(wsgi_health)
+    @ws.endpoint('health')
+    async def ws_health(self, ctx, req):
+        return {'auth': ctx.user is not None}
 
     @wsgi.endpoint('metrics', methods=(http.GET, http.OPTIONS),
                    require_authn=True, csrf=False)
@@ -218,6 +220,7 @@ class Api:
         ctx.respond(http.OK, headers)
         return [out]
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('editor', require_authn=True)
     @context.tags.add('ep:editor')
     def wsgi_editor(self, ctx, req):
@@ -242,8 +245,36 @@ class Api:
             return {'success': success}
         raise http.Error(http.BAD_REQUEST)
 
-    ws_editor = ws.endpoint(wsgi_editor)
+    @ws.endpoint('editor', require_authn=True, tags='ep:editor')
+    async def ws_editor(self, ctx, req):
+        origin = ctx.required_origin
+        instance = f'u:{ctx.user:016x}'
+        if editor := req.get('init'):
+            def query():
+                with self.store.read_db as db:
+                    return db.editors.text(origin, editor, instance)
+            version, text = await asyncio.to_thread(query)
+            return {'version': version, 'text': text, 'instance': instance}
+        elif editor := req.get('pull'):
+            version = ctx.arg(req, 'version')
+            def query():
+                with self.store.read_db as db:
+                    return db.editors.history(origin, editor, instance, version)
+            updates = await asyncio.to_thread(query)
+            return {'updates': updates}
+        elif editor := req.get('push'):
+            version, client, updates, text = ctx.args(
+                req, 'version', 'client', 'updates', 'text')
+            def update():
+                with self.store.write_db as db:
+                    return db.editors.add_updates(
+                        origin, editor, instance, version, client,
+                        updates, text, ctx.user)
+            success = await asyncio.to_thread(update)
+            return {'success': success}
+        raise ws.Error(ws.INVALID_ARGUMENT)
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('poll')
     @context.tags.add('ep:poll')
     def wsgi_poll(self, ctx, req):
@@ -277,8 +308,41 @@ class Api:
                 db.polls.vote(origin, id, voter, answer, vote)
         return {}
 
-    ws_poll = ws.endpoint(wsgi_poll)
+    @ws.endpoint('poll', tags='ep:poll')
+    async def ws_poll(self, ctx, req):
+        origin = ctx.required_origin
+        def update():
+            with self.store.write_db as db:
+                if polls := req.get('open'):
+                    ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                    for poll in polls:
+                        mode = ctx.arg(poll, 'mode',
+                                       lambda v: v in ('single', 'multi'))
+                        expires = None if (exp := poll.get('exp')) is None \
+                                  else time.time_ns() + exp * 1_000_000
+                        db.polls.open(origin, ctx.arg(poll, 'id'), mode,
+                                      ctx.arg(poll, 'answers'), expires)
+                if ids := req.get('close'):
+                    ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                    db.polls.close(origin, ids)
+                if ids := req.get('results'):
+                    ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                    db.polls.results(origin, ids, ctx.arg(req, 'value'))
+                if ids := req.get('solutions'):
+                    ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                    db.polls.solutions(origin, ids, ctx.arg(req, 'value'))
+                if ids := req.get('clear'):
+                    ctx.check(self.has_perm(ctx, db, 'polls:control'))
+                    db.polls.clear(origin, ids)
+                if 'vote' in req:
+                    id, answer, vote = ctx.args(req, 'id', 'answer', 'vote')
+                    if (voter := voter_id(ctx)) is None:
+                        raise ws.Error(ws.INVALID_ARGUMENT)
+                    db.polls.vote(origin, id, voter, answer, vote)
+        await asyncio.to_thread(update)
+        return {}
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('repo', require_authn=True)
     @context.tags.add('ep:repo')
     def wsgi_repo(self, ctx, req):
@@ -296,8 +360,27 @@ class Api:
             return {'user': f'0x{ctx.user:016x}', 'password': password}
         raise http.Error(http.BAD_REQUEST)
 
-    ws_repo = ws.endpoint(wsgi_repo)
+    @ws.endpoint('repo', require_authn=True, tags='ep:repo')
+    async def ws_repo(self, ctx, req):
+        if req.get('info'):
+            def query():
+                with self.store.read_db as db:
+                    return db.repo.auth(ctx.user)
+            enabled, prefix = await asyncio.to_thread(query)
+            return {'user': f'0x{ctx.user:016x}', 'enabled': enabled,
+                    'prefix': prefix}
+        if req.get('reset'):
+            def update():
+                with self.store.write_db as db:
+                    if not db.repo.auth(ctx.user)[0]:
+                        raise ws.Error(ws.PERMISSION_DENIED)
+                    rounds = self.config.get('repo.bcrypt_rounds', 10)
+                    return db.repo.new_password(ctx.user, rounds=rounds)
+            password = await asyncio.to_thread(update)
+            return {'user': f'0x{ctx.user:016x}', 'password': password}
+        raise ws.Error(ws.INVALID_ARGUMENT)
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('solutions', require_authn=True)
     @context.tags.add('ep:solutions')
     def wsgi_solutions(self, ctx, req):
@@ -309,8 +392,19 @@ class Api:
             db.solutions.set_show(origin, page, show)
         return {}
 
-    ws_solutions = ws.endpoint(wsgi_solutions)
+    @ws.endpoint('solutions', require_authn=True, tags='ep:solutions')
+    async def ws_solutions(self, ctx, req):
+        origin = ctx.required_origin
+        page = ctx.arg(req, 'page')
+        show = ctx.arg(req, 'show', lambda v: v in ('show', 'hide'))
+        def update():
+            with self.store.write_db as db:
+                ctx.check(self.has_perm(ctx, db, 'solutions:write'))
+                db.solutions.set_show(origin, page, show)
+        await asyncio.to_thread(update)
+        return {}
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('user', require_authn=True)
     @context.tags.add('ep:user')
     def wsgi_user(self, ctx, req):
@@ -318,14 +412,24 @@ class Api:
         with self.store.read_db as db: info = db.users.info(origin, ctx.user)
         return info
 
-    ws_user = ws.endpoint(wsgi_user)
+    @ws.endpoint('user', require_authn=True, tags='ep:user')
+    async def ws_user(self, ctx, req):
+        origin = ctx.required_origin
+        def query():
+            with self.store.read_db as db:
+                return db.users.info(origin, ctx.user)
+        return await asyncio.to_thread(query)
 
+    # TODO(1.4): Remove
     @wsgi.json_endpoint('config')
     def wsgi_config(self, ctx, req):
         return self.client_config.get(ctx.local, ctx.required_origin,
                                       ctx.client, ctx.user)
 
-    ws_config = ws.endpoint(wsgi_config)
+    @ws.endpoint('config')
+    async def ws_config(self, ctx, req):
+        return self.client_config.get(ctx.local, ctx.required_origin,
+                                      ctx.client, ctx.user)
 
 
 class EventsApi:
@@ -399,6 +503,7 @@ class EventsApi:
                     if not self.watchers:
                         self._last_watcher = time.time_ns()
 
+    # TODO(1.3): Remove
     @wsgi.endpoint('watch', methods=http.POST, refresh_token=True)
     def wsgi_watch(self, ctx):
         req = ctx.json
@@ -413,6 +518,7 @@ class EventsApi:
             yield util.to_json(resp).encode() + b'\n'
             yield from watcher
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('sub')
     def wsgi_sub(self, ctx, req):
         sid = ctx.arg(req, 'sid')
@@ -870,6 +976,7 @@ class OidcAuthApi:
         if (v := id_token.get('name')) is not None: return v
         return f'sub:{id_token['sub']}'
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('info')
     @context.tags.add('ep:auth/info')
     def wsgi_info(self, ctx, req):
@@ -891,8 +998,30 @@ class OidcAuthApi:
             logins.sort(key=lambda i: (i['name'], i['issuer']))
         return resp
 
-    ws_info = ws.endpoint(wsgi_info)
+    @ws.endpoint('info', tags='ep:auth/info')
+    async def ws_info(self, ctx, req):
+        resp = {'issuers': [{'issuer': i, 'label': icfg.get('label', i)}
+                            for i, icfg in self.issuers.items()]}
+        if ctx.user is not None:
+            resp['logins'] = logins = []
+            def query():
+                with self.api.store.read_db as db:
+                    for id_token, updated in db.oidc.logins(ctx.user):
+                        if (icfg := self.token_issuer(id_token)) is None:
+                            continue
+                        name = self.token_name(id_token)
+                        logins.append({
+                            'name': name,
+                            'issuer': icfg['label'],
+                            'updated': updated.timestamp(),
+                            'iss': id_token['iss'],
+                            'sub': id_token['sub'],
+                        })
+                logins.sort(key=lambda i: (i['name'], i['issuer']))
+            await asyncio.to_thread(query)
+        return resp
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('update', require_authn=True)
     @context.tags.add('ep:auth/update')
     def wsgi_update(self, ctx, req):
@@ -900,8 +1029,8 @@ class OidcAuthApi:
             iss, sub = ctx.args(remove, 'iss', 'sub')
             with self.api.store.write_db as db:
                 id_token = db.oidc.remove_login(ctx.user, iss, sub)
-                count = sum(1 for id_token, _ in db.oidc.logins(ctx.user)
-                            if self.token_issuer(id_token) is not None)
+                count = sum(1 for it, _ in db.oidc.logins(ctx.user)
+                            if self.token_issuer(it) is not None)
                 if count < 1:
                     raise http.Error(http.FORBIDDEN,
                                      "At least one login is required")
@@ -912,7 +1041,26 @@ class OidcAuthApi:
                           event='oidc:login:remove')
         return {}
 
-    ws_update = ws.endpoint(wsgi_update)
+    @ws.endpoint('update', require_authn=True, tags='ep:auth/update')
+    async def ws_update(self, ctx, req):
+        if remove := req.get('remove'):
+            iss, sub = ctx.args(remove, 'iss', 'sub')
+            def update():
+                with self.api.store.write_db as db:
+                    id_token = db.oidc.remove_login(ctx.user, iss, sub)
+                    count = sum(1 for it, _ in db.oidc.logins(ctx.user)
+                                if self.token_issuer(it) is not None)
+                    if count < 1:
+                        raise ws.Error(ws.FAILED_PRECONDITION,
+                                       "At least one login is required")
+                    return id_token
+            id_token = await asyncio.to_thread(update)
+            if id_token is not None:
+                _log.info("User 0x%(user)016x removed login %(name)s",
+                          user=ctx.user, name=self.token_name(id_token),
+                          iss=id_token['iss'], sub=id_token['sub'],
+                          event='oidc:login:remove')
+        return {}
 
     @wsgi.json_endpoint('token')
     def wsgi_token(self, ctx, req):
@@ -949,6 +1097,7 @@ class OidcAuthApi:
             if iss == issuer.replace('{tenantid}', tid): return
         raise Exception("Invalid issuer")
 
+    # TODO(1.3): Remove
     @wsgi.json_endpoint('login')
     @context.tags.add('ep:auth/login')
     def wsgi_login(self, ctx, req):
@@ -992,7 +1141,51 @@ class OidcAuthApi:
             db.oidc.create_state(state_id, state)
         return {'redirect': http.url_replace(url, query=parse.urlencode(query))}
 
-    ws_login = ws.endpoint(wsgi_login)
+    @ws.endpoint('login', tags='ep:auth/login')
+    async def ws_login(self, ctx, req):
+        token = ctx.token
+        redirect_uri = f'{ctx.server_origin}{self.base_path}/redirect'
+        issuer, cnonce, href = ctx.args(req, 'issuer', 'cnonce', 'href')
+        if (href_origin := http.origin(href)) != ctx.origin:
+            raise ws.Error(ws.INVALID_ARGUMENT, "Origin mismatch: href")
+        state_id = secrets.token_urlsafe()
+        state = {'cnonce': cnonce, 'href': href}
+        query = {'state': state_id}
+        if ctx.local and issuer.startswith('local:'):
+            # Handle "log in as" in local mode.
+            if href_origin != http.origin(redirect_uri):
+                raise ws.Error(ws.INVALID_ARGUMENT)
+            def get_uid():
+                with self.api.store.read_db as db:
+                    try:
+                        return db.users.uid(issuer[6:])
+                    except Exception as e:
+                        raise ws.Error(ws.INVALID_ARGUMENT, str(e))
+            uid = await asyncio.to_thread(get_uid)
+            state.update(login_as=str(uid))
+            url = redirect_uri
+        else:
+            # Handle OIDC login.
+            icfg, disc = self.issuer(issuer)
+            if icfg is None: raise ws.Error(ws.INVALID_ARGUMENT)
+            nonce = secrets.token_urlsafe()
+            # Create the PKCE challenge as per RFC7636
+            # <https://datatracker.ietf.org/doc/html/rfc7636>.
+            verifier = secrets.token_urlsafe(32)
+            challenge = base64.urlsafe_b64encode(hashlib.sha256(
+                verifier.encode('ascii')).digest()).decode('ascii').rstrip('=')
+            state.update(issuer=issuer, nonce=nonce, verifier=verifier,
+                         user=ctx.user, token=token)
+            url = disc['authorization_endpoint']
+            query.update(client_id=icfg['client_id'], code_challenge=challenge,
+                         code_challenge_method='S256', nonce=nonce,
+                         prompt='select_account', redirect_uri=redirect_uri,
+                         response_type='code', scope='openid profile email')
+        def update():
+            with self.api.store.write_db as db:
+                db.oidc.create_state(state_id, state)
+        await asyncio.to_thread(update)
+        return {'redirect': http.url_replace(url, query=parse.urlencode(query))}
 
     @wsgi.endpoint('redirect', methods=http.GET, authn=False, csrf=False,
                    log_query=False)
