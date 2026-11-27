@@ -717,8 +717,7 @@ class DbObservable(DynObservable):
     def wake_keys(self): return None
 
     async def poll(self):
-        _log.debug("Start: %(cls)s", event='obs:start',
-                   cls=self.__class__.__name__)
+        _log.debug("Begin: %(name)s", event='obs:begin', name=self.name)
         try:
             store = self.events.api.store
             def query():
@@ -742,8 +741,7 @@ class DbObservable(DynObservable):
         finally:
             with self.lock: self._stopping = True
             self.remove()
-            _log.debug("End: %(cls)s", event='obs:end',
-                       cls=self.__class__.__name__)
+            _log.debug("End: %(name)s", event='obs:end', name=self.name)
 
     def query(self, db):
         raise NotImplementedError()

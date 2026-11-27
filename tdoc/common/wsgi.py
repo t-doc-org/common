@@ -240,7 +240,7 @@ class Handler(http.Handler, type='wsgi'):
                 msg = "%(method)s %(uri)s\n" \
                       "origin=%(origin)s remote=%(remote)s"
                 if 'user' in log_args: msg += " user=0x%(user)016x"
-                _log.log(log_level, msg, event='req:start', **log_args)
+                _log.log(log_level, msg, event='req:begin', **log_args)
 
             # Run the endpoint.
             yield from endpoint(ctx)

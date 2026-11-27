@@ -256,7 +256,7 @@ class Connection(http.Context, server.ServerConnection):
         log_args = self._log_conn
         msg = "%(method)s %(uri)s\norigin=%(origin)s remote=%(remote)s"
         if 'user' in log_args: msg += " user=0x%(user)016x"
-        _log.info(msg, event='ws:start', **log_args)
+        _log.info(msg, event='ws:begin', **log_args)
         self.__rpcs = {}
         close_code = NORMAL_CLOSURE
         try:
@@ -322,7 +322,7 @@ class Connection(http.Context, server.ServerConnection):
                 lkw = self._log_rpc
                 msg = "RPC %(path)s\norigin=%(origin)s remote=%(remote)s"
                 if 'user' in lkw: msg += " user=0x%(user)016x"
-                _log.log(log_level, msg, event='rpc:start', path=path, cid=cid,
+                _log.log(log_level, msg, event='rpc:begin', path=path, cid=cid,
                          rid=rpc.rid, **lkw)
 
             # Run the endpoint.
